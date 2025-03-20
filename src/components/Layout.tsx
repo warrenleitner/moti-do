@@ -32,6 +32,8 @@ import {
 } from '@mui/icons-material';
 import { lightTheme, darkTheme } from '@/lib/theme';
 import { useAppStore } from '@/store/AppStore';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const drawerWidth = 280;
 
@@ -47,6 +49,7 @@ export default function Layout({ children }: LayoutProps) {
   
   const user = useAppStore((state) => state.user);
   const updateUserPreferences = useAppStore((state) => state.updateUserPreferences);
+  const router = useRouter();
   
   useEffect(() => {
     // Set initial theme based on user preference or system preference
@@ -82,7 +85,19 @@ export default function Layout({ children }: LayoutProps) {
   const drawer = (
     <>
       <Toolbar>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+        <Typography 
+          variant="h6" 
+          component={Link} 
+          href="/" 
+          sx={{ 
+            flexGrow: 1, 
+            textDecoration: 'none',
+            color: 'inherit',
+            '&:hover': {
+              cursor: 'pointer',
+            },
+          }}
+        >
           Moti-Do
         </Typography>
         <IconButton onClick={handleDrawerToggle} sx={{ display: { sm: 'none' } }}>
@@ -108,6 +123,9 @@ export default function Layout({ children }: LayoutProps) {
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton 
+              component={Link} 
+              href={item.path}
+              onClick={() => setMobileOpen(false)}
               sx={{ 
                 borderRadius: 2, 
                 mx: 1,
@@ -146,7 +164,20 @@ export default function Layout({ children }: LayoutProps) {
             >
               <MenuIcon />
             </IconButton>
-            <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+            <Typography 
+              variant="h6" 
+              noWrap 
+              component={Link} 
+              href="/" 
+              sx={{ 
+                flexGrow: 1, 
+                textDecoration: 'none',
+                color: 'inherit',
+                '&:hover': {
+                  cursor: 'pointer',
+                },
+              }}
+            >
               Moti-Do
             </Typography>
             <IconButton color="inherit" onClick={toggleTheme}>

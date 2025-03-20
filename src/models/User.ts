@@ -51,6 +51,9 @@ export interface UserPreferences {
   vacationMode: boolean;
   defaultXPScale: number;
   subtaskDisplay: 'hidden' | 'nested' | 'standalone';
+  notificationsEnabled: boolean;
+  habitReminders: boolean;
+  taskReminders: boolean;
 }
 
 export interface User {
@@ -103,7 +106,10 @@ export function createDefaultUser(): User {
       tagMultipliers: [],
       vacationMode: false,
       defaultXPScale: 1.0,
-      subtaskDisplay: 'nested'
+      subtaskDisplay: 'nested',
+      notificationsEnabled: false,
+      habitReminders: false,
+      taskReminders: false
     }
   };
 } 
