@@ -305,41 +305,35 @@ export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialo
               Recurrence Settings
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel id="recurrence-type-label">Recurrence Type</InputLabel>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth variant="outlined" size="small">
+                  <InputLabel id="recurrence-type-label">Recurrence</InputLabel>
                   <Select
                     labelId="recurrence-type-label"
+                    id="recurrence-type"
                     value={recurrenceType}
-                    label="Recurrence Type"
                     onChange={(e) => setRecurrenceType(e.target.value as RecurrenceType)}
+                    label="Recurrence"
                   >
                     <MenuItem value="daily">Daily</MenuItem>
                     <MenuItem value="weekly">Weekly</MenuItem>
                     <MenuItem value="monthly">Monthly</MenuItem>
                     <MenuItem value="yearly">Yearly</MenuItem>
-                    <MenuItem value="custom">Custom</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel id="interval-label">Repeat every</InputLabel>
-                  <Select
-                    labelId="interval-label"
-                    value={recurrenceInterval}
-                    label="Repeat every"
-                    onChange={(e) => setRecurrenceInterval(Number(e.target.value))}
-                  >
-                    {[...Array(30)].map((_, i) => (
-                      <MenuItem key={i + 1} value={i + 1}>
-                        {i + 1} {recurrenceType === 'daily' ? 'day(s)' : 
-                                recurrenceType === 'weekly' ? 'week(s)' : 
-                                recurrenceType === 'monthly' ? 'month(s)' : 'year(s)'}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Repeat Every"
+                  value={recurrenceInterval}
+                  onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
+                  InputProps={{
+                    inputProps: { min: 1 }
+                  }}
+                  size="small"
+                />
               </Grid>
               
               {recurrenceType === 'weekly' && (
@@ -431,53 +425,57 @@ export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialo
                   </Grid>
                 </Grid>
               )}
-              
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Next Occurrence Settings
-                </Typography>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel id="advance-display-unit-label">Show Next Occurrence</InputLabel>
-                      <Select
-                        labelId="advance-display-unit-label"
-                        value={advanceDisplayUnit}
-                        label="Show Next Occurrence"
-                        onChange={(e) => setAdvanceDisplayUnit(e.target.value as 'immediate' | 'days' | 'weeks' | 'months')}
-                      >
-                        <MenuItem value="immediate">Immediately after completion</MenuItem>
-                        <MenuItem value="days">After specified days</MenuItem>
-                        <MenuItem value="weeks">After specified weeks</MenuItem>
-                        <MenuItem value="months">After specified months</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  
-                  {advanceDisplayUnit !== 'immediate' && (
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        label={`Number of ${advanceDisplayUnit}`}
-                        type="number"
-                        fullWidth
-                        value={advanceDisplayNumber}
-                        onChange={(e) => setAdvanceDisplayNumber(Number(e.target.value))}
-                        inputProps={{ min: 1, max: advanceDisplayUnit === 'days' ? 365 : (advanceDisplayUnit === 'weeks' ? 52 : 12) }}
-                        margin="normal"
-                      />
-                    </Grid>
-                  )}
-                  
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary">
-                      {advanceDisplayUnit === 'immediate' 
-                        ? 'The next occurrence will appear immediately after completion.'
-                        : `The next occurrence will appear ${advanceDisplayNumber} ${advanceDisplayUnit} after completing this habit.`}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </Grid>
             </Grid>
+          </Grid>
+          
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom>
+              Next Occurrence Settings
+            </Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              When should the next occurrence show up after completing a habit?
+            </Typography>
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              type="number"
+              label="Time before next occurrence"
+              value={advanceDisplayNumber}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 1;
+                setAdvanceDisplayNumber(value);
+              }}
+              InputProps={{
+                inputProps: { min: 1 }
+              }}
+              size="small"
+              disabled={advanceDisplayUnit === 'immediate'}
+            />
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth variant="outlined" size="small">
+              <InputLabel id="advance-display-unit-label">Unit</InputLabel>
+              <Select
+                labelId="advance-display-unit-label"
+                id="advance-display-unit"
+                value={advanceDisplayUnit}
+                onChange={(e) => {
+                  setAdvanceDisplayUnit(e.target.value as 'immediate' | 'days' | 'weeks' | 'months');
+                  if (e.target.value === 'immediate') {
+                    setAdvanceDisplayNumber(1);
+                  }
+                }}
+                label="Unit"
+              >
+                <MenuItem value="immediate">Immediate (next day)</MenuItem>
+                <MenuItem value="days">Days before due date</MenuItem>
+                <MenuItem value="weeks">Weeks before due date</MenuItem>
+                <MenuItem value="months">Months before due date</MenuItem>
+              </Select>
+            </FormControl>
           </Grid>
           
           <Grid item xs={12}>

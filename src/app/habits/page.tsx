@@ -40,6 +40,9 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 export default function HabitsPage() {
   const [searchText, setSearchText] = useState('');
   const [sortBy, setSortBy] = useState('score');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [selectedTag, setSelectedTag] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // State for new habit form
@@ -59,13 +62,27 @@ export default function HabitsPage() {
   
   const getActiveHabits = useAppStore((state) => state.getActiveHabits);
   const addHabit = useAppStore((state) => state.addHabit);
+  const projects = useAppStore((state) => state.projects);
+  const tags = useAppStore((state) => state.tags);
   
   const handleSortChange = (event: SelectChangeEvent) => {
     setSortBy(event.target.value);
   };
   
+  const handleSortOrderChange = (event: SelectChangeEvent) => {
+    setSortOrder(event.target.value as 'asc' | 'desc');
+  };
+  
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchText(event.target.value);
+  };
+  
+  const handleProjectChange = (event: SelectChangeEvent) => {
+    setSelectedProject(event.target.value);
+  };
+  
+  const handleTagChange = (event: SelectChangeEvent) => {
+    setSelectedTag(event.target.value);
   };
   
   const handleOpenDialog = () => {
@@ -150,13 +167,27 @@ export default function HabitsPage() {
       );
     }
     
+    // Filter by project
+    if (selectedProject) {
+      habits = habits.filter(habit => habit.projectId === selectedProject);
+    }
+    
+    // Filter by tag
+    if (selectedTag) {
+      habits = habits.filter(habit => habit.tags.includes(selectedTag));
+    }
+    
     // Sort habits
     return habits.sort((a, b) => {
+      let result = 0;
+      
       switch (sortBy) {
         case 'score':
-          return b.score - a.score;
+          result = b.score - a.score;
+          break;
         case 'title':
-          return a.title.localeCompare(b.title);
+          result = a.title.localeCompare(b.title);
+          break;
         case 'importance':
           const importanceOrder = {
             'Defcon One': 0,
@@ -164,7 +195,8 @@ export default function HabitsPage() {
             'Medium': 2,
             'Low': 3,
           };
-          return importanceOrder[a.importance] - importanceOrder[b.importance];
+          result = importanceOrder[a.importance] - importanceOrder[b.importance];
+          break;
         case 'difficulty':
           const difficultyOrder = {
             'Herculean': 0,
@@ -173,12 +205,16 @@ export default function HabitsPage() {
             'Low': 3,
             'Trivial': 4,
           };
-          return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
+          result = difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
+          break;
         case 'streak':
-          return b.streak.current - a.streak.current;
+          result = b.streak.current - a.streak.current;
+          break;
         default:
-          return 0;
+          result = 0;
       }
+      
+      return sortOrder === 'asc' ? result : -result;
     });
   };
   
@@ -191,7 +227,7 @@ export default function HabitsPage() {
       </Typography>
       
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={6}>
           <TextField
             fullWidth
             placeholder="Search habits..."
@@ -204,7 +240,7 @@ export default function HabitsPage() {
             }}
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={3}>
           <FormControl fullWidth size="small" variant="outlined">
             <InputLabel id="sort-label">Sort By</InputLabel>
             <Select
@@ -218,6 +254,57 @@ export default function HabitsPage() {
               <MenuItem value="importance">Importance</MenuItem>
               <MenuItem value="difficulty">Difficulty</MenuItem>
               <MenuItem value="streak">Current Streak</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <FormControl fullWidth size="small" variant="outlined">
+            <InputLabel id="sort-order-label">Order</InputLabel>
+            <Select
+              labelId="sort-order-label"
+              value={sortOrder}
+              onChange={handleSortOrderChange}
+              label="Order"
+            >
+              <MenuItem value="desc">Descending</MenuItem>
+              <MenuItem value="asc">Ascending</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth size="small" variant="outlined">
+            <InputLabel id="project-filter-label">Project</InputLabel>
+            <Select
+              labelId="project-filter-label"
+              value={selectedProject}
+              onChange={handleProjectChange}
+              label="Project"
+            >
+              <MenuItem value="">All Projects</MenuItem>
+              {projects.map(project => (
+                <MenuItem key={project.id} value={project.id}>
+                  {project.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth size="small" variant="outlined">
+            <InputLabel id="tag-filter-label">Tag</InputLabel>
+            <Select
+              labelId="tag-filter-label"
+              value={selectedTag}
+              onChange={handleTagChange}
+              label="Tag"
+            >
+              <MenuItem value="">All Tags</MenuItem>
+              {tags.map(tag => (
+                <MenuItem key={tag.id} value={tag.id}>
+                  {tag.name}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Grid>
