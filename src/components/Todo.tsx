@@ -32,6 +32,7 @@ import {
 import { format } from 'date-fns';
 import { useAppStore } from '@/store/AppStore';
 import { Task, Subtask } from '@/models/Task';
+import TaskEditDialog from './TaskEditDialog';
 
 interface TodoProps {
   task: Task;
@@ -40,6 +41,7 @@ interface TodoProps {
 export default function Todo({ task }: TodoProps) {
   const [expanded, setExpanded] = useState(false);
   const [newSubtask, setNewSubtask] = useState('');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   const projects = useAppStore((state) => state.projects);
   const tags = useAppStore((state) => state.tags);
@@ -75,6 +77,10 @@ export default function Todo({ task }: TodoProps) {
     if (confirm('Are you sure you want to delete this task?')) {
       deleteTask(task.id);
     }
+  };
+  
+  const handleEdit = () => {
+    setEditDialogOpen(true);
   };
   
   const handleAddSubtask = (e: React.FormEvent) => {
@@ -141,262 +147,294 @@ export default function Todo({ task }: TodoProps) {
     .filter(Boolean);
   
   return (
-    <Card 
-      sx={{ 
-        mb: 2, 
-        position: 'relative',
-        opacity: task.completedAt ? 0.7 : 1,
-        borderLeft: project ? `4px solid ${project.color}` : undefined,
-      }}
-    >
-      {task.isNext && (
-        <Box 
-          sx={{ 
-            position: 'absolute', 
-            top: 0, 
-            right: 0,
-            bgcolor: 'primary.main',
-            color: 'white',
-            px: 1,
-            py: 0.5,
-            borderBottomLeftRadius: 8,
-            fontSize: '0.75rem',
-            fontWeight: 'bold',
-          }}
-        >
-          NEXT
-        </Box>
-      )}
-      
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-          <Checkbox 
-            checked={!!task.completedAt} 
-            onChange={handleToggle}
-            sx={{ mt: -1, mr: 1 }}
-          />
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                textDecoration: task.completedAt ? 'line-through' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
-              {task.title}
-              {task.inProgress && (
-                <Chip 
-                  label="In Progress" 
-                  size="small" 
-                  color="secondary" 
-                  sx={{ ml: 1, height: '20px' }}
-                />
-              )}
-            </Typography>
-            
-            {task.description && (
+    <>
+      <Card 
+        sx={{ 
+          mb: 2, 
+          position: 'relative',
+          opacity: task.completedAt ? 0.7 : 1,
+          borderLeft: project ? `4px solid ${project.color}` : undefined,
+        }}
+      >
+        {task.isNext && (
+          <Box 
+            sx={{ 
+              position: 'absolute', 
+              top: 0, 
+              right: 0,
+              bgcolor: 'primary.main',
+              color: 'white',
+              px: 1,
+              py: 0.5,
+              borderBottomLeftRadius: 8,
+              fontSize: '0.75rem',
+              fontWeight: 'bold',
+            }}
+          >
+            NEXT
+          </Box>
+        )}
+        
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+            <Checkbox 
+              checked={!!task.completedAt} 
+              onChange={handleToggle}
+              sx={{ mt: -1, mr: 1 }}
+            />
+            <Box sx={{ flexGrow: 1 }}>
               <Typography 
-                variant="body2" 
-                color="text.secondary" 
-                sx={{ mt: 1, mb: 2 }}
+                variant="h6" 
+                sx={{ 
+                  textDecoration: task.completedAt ? 'line-through' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
               >
-                {task.description}
+                {task.title}
+                {task.inProgress && (
+                  <Chip 
+                    label="In Progress" 
+                    size="small" 
+                    color="secondary" 
+                    sx={{ ml: 1, height: '20px' }}
+                  />
+                )}
               </Typography>
-            )}
-            
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-              {task.dueDate && (
-                <Chip 
-                  icon={<CalendarIcon />}
-                  label={format(new Date(task.dueDate), 'MMM d, yyyy')}
-                  size="small"
-                  variant="outlined"
-                />
+              
+              {task.description && (
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary" 
+                  sx={{ mt: 1, mb: 2 }}
+                >
+                  {task.description}
+                </Typography>
               )}
               
-              {taskTags.map(tag => tag && (
-                <Chip 
-                  key={tag.id}
-                  label={tag.name}
-                  size="small"
-                  sx={{ 
-                    bgcolor: `${tag.color}20`,
-                    color: tag.color,
-                    borderColor: tag.color,
-                  }}
-                  variant="outlined"
-                />
-              ))}
-            </Box>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                fontSize: '0.75rem',
-                color: 'text.secondary',
-                mr: 2,
-              }}>
-                <Box component="span" sx={{ mr: 0.5 }}>Importance:</Box>
-                <Box 
-                  component="span" 
-                  sx={{ 
-                    fontWeight: 'bold',
-                    color: task.importance === 'Defcon One' 
-                      ? 'error.main' 
-                      : task.importance === 'High' 
-                      ? 'warning.main' 
-                      : 'inherit'
-                  }}
-                >
-                  {task.importance}
-                </Box>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                {task.startDate && (
+                  <Chip 
+                    icon={<CalendarIcon />}
+                    label={`Starts: ${format(new Date(task.startDate), 'MMM d, yyyy')}`}
+                    size="small"
+                    variant="outlined"
+                    color="info"
+                  />
+                )}
+                
+                {task.dueDate && (
+                  <Chip 
+                    icon={<CalendarIcon />}
+                    label={`Due: ${format(new Date(task.dueDate), 'MMM d, yyyy')}`}
+                    size="small"
+                    variant="outlined"
+                    color="warning"
+                  />
+                )}
+                
+                {taskTags.map(tag => tag && (
+                  <Chip 
+                    key={tag.id}
+                    label={tag.name}
+                    size="small"
+                    sx={{ 
+                      bgcolor: `${tag.color}20`,
+                      color: tag.color,
+                      borderColor: tag.color,
+                    }}
+                    variant="outlined"
+                  />
+                ))}
               </Box>
               
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                fontSize: '0.75rem',
-                color: 'text.secondary',
-                mr: 2,
-              }}>
-                <Box component="span" sx={{ mr: 0.5 }}>Difficulty:</Box>
-                <Box component="span" sx={{ fontWeight: 'bold' }}>
-                  {task.difficulty}
-                </Box>
-              </Box>
-              
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                fontSize: '0.75rem',
-                color: 'text.secondary',
-              }}>
-                <Box component="span" sx={{ mr: 0.5 }}>Duration:</Box>
-                <Box component="span" sx={{ fontWeight: 'bold' }}>
-                  {task.duration}
-                </Box>
-              </Box>
-              
-              <Box sx={{ flexGrow: 1 }} />
-              
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
-                fontSize: '0.875rem',
-                fontWeight: 'bold',
-                color: 'primary.main',
-              }}>
-                {task.score} pts
-              </Box>
-            </Box>
-            
-            {task.subtasks.length > 0 && (
-              <Box sx={{ mt: 1 }}>
-                <LinearProgress variant="determinate" value={progress} sx={{ mb: 1 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                 <Box sx={{ 
                   display: 'flex', 
-                  justifyContent: 'space-between',
+                  alignItems: 'center', 
+                  fontSize: '0.75rem',
+                  color: 'text.secondary',
+                  mr: 2,
+                }}>
+                  <Box component="span" sx={{ mr: 0.5 }}>Importance:</Box>
+                  <Box 
+                    component="span" 
+                    sx={{ 
+                      fontWeight: 'bold',
+                      color: task.importance === 'Defcon One' 
+                        ? 'error.main' 
+                        : task.importance === 'High' 
+                        ? 'warning.main' 
+                        : 'inherit'
+                    }}
+                  >
+                    {task.importance}
+                  </Box>
+                </Box>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  fontSize: '0.75rem',
+                  color: 'text.secondary',
+                  mr: 2,
+                }}>
+                  <Box component="span" sx={{ mr: 0.5 }}>Difficulty:</Box>
+                  <Box component="span" sx={{ fontWeight: 'bold' }}>
+                    {task.difficulty}
+                  </Box>
+                </Box>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
                   fontSize: '0.75rem',
                   color: 'text.secondary',
                 }}>
-                  <span>Progress</span>
-                  <span>{`${task.subtasks.filter(s => s.completed).length}/${task.subtasks.length} (${progress}%)`}</span>
+                  <Box component="span" sx={{ mr: 0.5 }}>Duration:</Box>
+                  <Box component="span" sx={{ fontWeight: 'bold' }}>
+                    {task.duration}
+                  </Box>
+                </Box>
+                
+                <Box sx={{ flexGrow: 1 }} />
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  fontSize: '0.875rem',
+                  fontWeight: 'bold',
+                  color: 'primary.main',
+                }}>
+                  {task.score} pts
                 </Box>
               </Box>
-            )}
-          </Box>
-          
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <IconButton 
-              size="small" 
-              onClick={handleSetNext}
-              color={task.isNext ? "primary" : "default"}
-              title="Mark as next"
-            >
-              <FlagIcon />
-            </IconButton>
-            
-            <IconButton 
-              size="small" 
-              onClick={handleToggleInProgress}
-              color={task.inProgress ? "secondary" : "default"}
-              title={task.inProgress ? "Stop in-progress" : "Mark as in-progress"}
-            >
-              {task.inProgress ? <StopIcon /> : <PlayIcon />}
-            </IconButton>
-            
-            <IconButton 
-              size="small" 
-              onClick={handleDelete}
-              title="Delete task"
-            >
-              <DeleteIcon />
-            </IconButton>
-            
-            <IconButton 
-              size="small" 
-              onClick={handleExpandClick}
-              title={expanded ? "Collapse" : "Expand"}
-            >
-              {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            </IconButton>
-          </Box>
-        </Box>
-        
-        <Collapse in={expanded} timeout="auto" unmountOnExit>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Subtasks
-            </Typography>
-            
-            <List dense disablePadding>
-              {task.subtasks.map((subtask) => (
-                <ListItem key={subtask.id} disablePadding sx={{ py: 0.5 }}>
-                  <ListItemIcon sx={{ minWidth: 36 }}>
-                    <Checkbox
-                      edge="start"
-                      checked={subtask.completed}
-                      onChange={() => handleSubtaskToggle(subtask)}
-                      size="small"
-                    />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={subtask.title} 
-                    primaryTypographyProps={{ 
-                      variant: 'body2',
-                      style: { 
-                        textDecoration: subtask.completed ? 'line-through' : 'none',
-                      }
-                    }}
-                  />
-                </ListItem>
-              ))}
-            </List>
-            
-            <Box component="form" onSubmit={handleAddSubtask} sx={{ mt: 1, display: 'flex' }}>
-              <TextField
-                size="small"
-                placeholder="Add a subtask"
-                value={newSubtask}
-                onChange={(e) => setNewSubtask(e.target.value)}
-                fullWidth
-                sx={{ mr: 1 }}
-              />
-              <Button 
-                type="submit" 
-                variant="contained" 
-                color="primary" 
-                size="small"
-                startIcon={<AddIcon />}
+              
+              {task.subtasks.length > 0 && (
+                <Box sx={{ mt: 1 }}>
+                  <LinearProgress variant="determinate" value={progress} sx={{ mb: 1 }} />
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    fontSize: '0.75rem',
+                    color: 'text.secondary',
+                  }}>
+                    <span>Progress</span>
+                    <span>{`${task.subtasks.filter(s => s.completed).length}/${task.subtasks.length} (${progress}%)`}</span>
+                  </Box>
+                </Box>
+              )}
+            </Box>
+            <Box sx={{ ml: 1, display: 'flex', flexDirection: 'column' }}>
+              <IconButton 
+                size="small" 
+                onClick={handleEdit}
+                aria-label="edit"
+                sx={{ mb: 0.5 }}
               >
-                Add
-              </Button>
+                <EditIcon fontSize="small" />
+              </IconButton>
+              
+              <IconButton 
+                size="small" 
+                onClick={handleSetNext}
+                aria-label="set as next"
+                color={task.isNext ? "primary" : "default"}
+                sx={{ mb: 0.5 }}
+              >
+                <FlagIcon fontSize="small" />
+              </IconButton>
+              
+              <IconButton 
+                size="small" 
+                onClick={handleToggleInProgress}
+                aria-label={task.inProgress ? "stop progress" : "start progress"}
+                color={task.inProgress ? "secondary" : "default"}
+                sx={{ mb: 0.5 }}
+              >
+                {task.inProgress ? <StopIcon fontSize="small" /> : <PlayIcon fontSize="small" />}
+              </IconButton>
+              
+              <IconButton 
+                size="small" 
+                onClick={handleDelete}
+                aria-label="delete"
+                color="error"
+                sx={{ mb: 0.5 }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+              
+              <IconButton 
+                size="small" 
+                onClick={handleExpandClick}
+                aria-expanded={expanded}
+                aria-label="show more"
+              >
+                {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+              </IconButton>
             </Box>
           </Box>
-        </Collapse>
-      </CardContent>
-    </Card>
+          
+          <Collapse in={expanded} timeout="auto" unmountOnExit>
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Subtasks
+              </Typography>
+              
+              <List dense disablePadding>
+                {task.subtasks.map((subtask) => (
+                  <ListItem key={subtask.id} disablePadding sx={{ py: 0.5 }}>
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      <Checkbox
+                        edge="start"
+                        checked={subtask.completed}
+                        onChange={() => handleSubtaskToggle(subtask)}
+                        size="small"
+                      />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={subtask.title} 
+                      primaryTypographyProps={{ 
+                        variant: 'body2',
+                        style: { 
+                          textDecoration: subtask.completed ? 'line-through' : 'none',
+                        }
+                      }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+              
+              <Box component="form" onSubmit={handleAddSubtask} sx={{ mt: 1, display: 'flex' }}>
+                <TextField
+                  size="small"
+                  placeholder="Add a subtask"
+                  value={newSubtask}
+                  onChange={(e) => setNewSubtask(e.target.value)}
+                  fullWidth
+                  sx={{ mr: 1 }}
+                />
+                <Button 
+                  type="submit" 
+                  variant="contained" 
+                  color="primary" 
+                  size="small"
+                  startIcon={<AddIcon />}
+                >
+                  Add
+                </Button>
+              </Box>
+            </Box>
+          </Collapse>
+        </CardContent>
+      </Card>
+      
+      <TaskEditDialog 
+        open={editDialogOpen} 
+        onClose={() => setEditDialogOpen(false)} 
+        task={task} 
+      />
+    </>
   );
 } 

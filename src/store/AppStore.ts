@@ -400,7 +400,7 @@ export const useAppStore = create<AppState>()(
           
           // Replace existing completion for the same date or add new one
           const existingCompletionIndex = habit.completions.findIndex(
-            (c) => format(c.date, 'yyyy-MM-dd') === dateStr
+            (c) => format(new Date(c.date), 'yyyy-MM-dd') === dateStr
           );
           
           const updatedCompletions = existingCompletionIndex !== -1
@@ -759,9 +759,18 @@ export const useAppStore = create<AppState>()(
       },
       
       getActiveHabits: () => {
+        const today = new Date();
+        const todayStr = format(today, 'yyyy-MM-dd');
+        
         return get().habits.filter((habit) => {
           // Not in the future (if it has a start date)
           if (habit.startDate && isBefore(new Date(), habit.startDate)) return false;
+          
+          // Skip if already completed today
+          const completedToday = habit.completions.some(
+            (c) => format(new Date(c.date), 'yyyy-MM-dd') === todayStr && c.completed
+          );
+          if (completedToday) return false;
           
           return true;
         });
@@ -774,7 +783,7 @@ export const useAppStore = create<AppState>()(
         return get().habits.filter((habit) => {
           // Skip if already completed today
           const completedToday = habit.completions.some(
-            (c) => format(c.date, 'yyyy-MM-dd') === todayStr && c.completed
+            (c) => format(new Date(c.date), 'yyyy-MM-dd') === todayStr && c.completed
           );
           if (completedToday) return false;
           
