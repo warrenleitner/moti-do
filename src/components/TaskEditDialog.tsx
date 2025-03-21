@@ -19,13 +19,18 @@ import {
   Box,
   Typography,
   IconButton,
-  Stack
+  Stack,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Autocomplete
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { Task } from '@/models/Task';
-import { Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Add as AddIcon, Close as CloseIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useAppStore } from '@/store/AppStore';
 
 interface TaskEditDialogProps {
@@ -36,6 +41,7 @@ interface TaskEditDialogProps {
 
 export default function TaskEditDialog({ open, onClose, task }: TaskEditDialogProps) {
   const updateTask = useAppStore((state) => state.updateTask);
+  const tasks = useAppStore((state) => state.tasks);
   const tags = useAppStore((state) => state.tags);
   const projects = useAppStore((state) => state.projects);
 
@@ -48,6 +54,8 @@ export default function TaskEditDialog({ open, onClose, task }: TaskEditDialogPr
   const [duration, setDuration] = useState('Medium');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | undefined>(undefined);
+  const [dependencies, setDependencies] = useState<string[]>([]);
+  const [selectedDependency, setSelectedDependency] = useState<Task | null>(null);
 
   // Initialize form with task data when opened
   useEffect(() => {
@@ -61,6 +69,7 @@ export default function TaskEditDialog({ open, onClose, task }: TaskEditDialogPr
       setDuration(task.duration);
       setSelectedTags(task.tags);
       setSelectedProject(task.projectId);
+      setDependencies(task.dependencies || []);
     }
   }, [task]);
 
@@ -76,7 +85,8 @@ export default function TaskEditDialog({ open, onClose, task }: TaskEditDialogPr
       difficulty: difficulty as Task['difficulty'],
       duration: duration as Task['duration'],
       tags: selectedTags,
-      projectId: selectedProject
+      projectId: selectedProject,
+      dependencies
     });
     
     onClose();
@@ -88,6 +98,31 @@ export default function TaskEditDialog({ open, onClose, task }: TaskEditDialogPr
         ? prev.filter(id => id !== tagId)
         : [...prev, tagId]
     );
+  };
+
+  const handleAddDependency = () => {
+    if (selectedDependency && !dependencies.includes(selectedDependency.id) && selectedDependency.id !== task?.id) {
+      setDependencies([...dependencies, selectedDependency.id]);
+      setSelectedDependency(null);
+    }
+  };
+
+  const handleRemoveDependency = (dependencyId: string) => {
+    setDependencies(dependencies.filter(id => id !== dependencyId));
+  };
+
+  // Get available dependencies (tasks that aren't the current task and aren't already dependencies)
+  const getAvailableTasks = () => {
+    return tasks.filter(t => 
+      t.id !== task?.id && 
+      !dependencies.includes(t.id) &&
+      !t.completedAt // Don't show completed tasks
+    );
+  };
+
+  // Get task by ID
+  const getTaskById = (id: string) => {
+    return tasks.find(t => t.id === id);
   };
 
   if (!task) return null;
@@ -191,6 +226,63 @@ export default function TaskEditDialog({ open, onClose, task }: TaskEditDialogPr
                 <MenuItem value="Odysseyan">Odysseyan</MenuItem>
               </Select>
             </FormControl>
+          </Grid>
+          
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>
+              Dependencies
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={10}>
+                  <Autocomplete
+                    options={getAvailableTasks()}
+                    getOptionLabel={(option) => option.title}
+                    value={selectedDependency}
+                    onChange={(_, newValue) => setSelectedDependency(newValue)}
+                    renderInput={(params) => <TextField {...params} label="Add Dependency" fullWidth />}
+                  />
+                </Grid>
+                <Grid item xs={2} sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Button 
+                    variant="contained" 
+                    onClick={handleAddDependency}
+                    disabled={!selectedDependency}
+                    fullWidth
+                  >
+                    Add
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
+            
+            {dependencies.length > 0 ? (
+              <List>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  This task depends on:
+                </Typography>
+                {dependencies.map((depId) => {
+                  const dependencyTask = getTaskById(depId);
+                  return dependencyTask ? (
+                    <ListItem key={depId} dense divider>
+                      <ListItemText 
+                        primary={dependencyTask.title} 
+                        secondary={dependencyTask.completedAt ? 'Completed' : 'Pending'}
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton edge="end" onClick={() => handleRemoveDependency(depId)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ) : null;
+                })}
+              </List>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                This task has no dependencies.
+              </Typography>
+            )}
           </Grid>
           
           <Grid item xs={12}>

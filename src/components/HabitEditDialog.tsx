@@ -20,13 +20,21 @@ import {
   Typography,
   Checkbox,
   Stack,
-  FormGroup
+  FormGroup,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  IconButton,
+  Autocomplete
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { Habit, RecurrenceType, WeekDay } from '@/models/Habit';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 import { useAppStore } from '@/store/AppStore';
+import { Task } from '@/models/Task';
 
 interface HabitEditDialogProps {
   open: boolean;
@@ -38,15 +46,22 @@ export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialo
   const updateHabit = useAppStore((state) => state.updateHabit);
   const tags = useAppStore((state) => state.tags);
   const projects = useAppStore((state) => state.projects);
+  const tasks = useAppStore((state) => state.tasks);
+  const habits = useAppStore((state) => state.habits);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
+  const [dueDate, setDueDate] = useState<Date | null>(null);
   const [importance, setImportance] = useState('Medium');
   const [difficulty, setDifficulty] = useState('Medium');
   const [duration, setDuration] = useState('Medium');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | undefined>(undefined);
+  
+  // Dependencies
+  const [dependencies, setDependencies] = useState<string[]>([]);
+  const [selectedDependency, setSelectedDependency] = useState<Task | null>(null);
   
   // Recurrence settings
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('daily');
@@ -55,6 +70,11 @@ export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialo
   const [dayOfMonth, setDayOfMonth] = useState(1);
   const [monthOfYear, setMonthOfYear] = useState(1);
   const [isLastDay, setIsLastDay] = useState(false);
+  
+  // Advanced recurrence settings
+  const [advanceDisplay, setAdvanceDisplay] = useState(0);
+  const [advanceDisplayUnit, setAdvanceDisplayUnit] = useState<'immediate' | 'days' | 'weeks' | 'months'>('days');
+  const [advanceDisplayNumber, setAdvanceDisplayNumber] = useState(1);
 
   // Initialize form with habit data when opened
   useEffect(() => {
@@ -62,11 +82,13 @@ export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialo
       setTitle(habit.title);
       setDescription(habit.description || '');
       setStartDate(habit.startDate ? new Date(habit.startDate) : null);
+      setDueDate(habit.dueDate ? new Date(habit.dueDate) : null);
       setImportance(habit.importance);
       setDifficulty(habit.difficulty);
       setDuration(habit.duration);
       setSelectedTags(habit.tags);
       setSelectedProject(habit.projectId);
+      setDependencies(habit.dependencies || []);
       
       // Set recurrence options
       const recurrence = habit.recurrence;
@@ -76,32 +98,65 @@ export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialo
       setDayOfMonth(recurrence.dayOfMonth || 1);
       setMonthOfYear(recurrence.monthOfYear || 1);
       setIsLastDay(recurrence.isLastDay || false);
+      
+      // Set advance display
+      if (recurrence.advanceDisplay !== undefined) {
+        if (recurrence.advanceDisplay === 0) {
+          setAdvanceDisplayUnit('immediate');
+          setAdvanceDisplayNumber(1);
+        } else if (recurrence.advanceDisplay % 30 === 0) {
+          setAdvanceDisplayUnit('months');
+          setAdvanceDisplayNumber(recurrence.advanceDisplay / 30);
+        } else if (recurrence.advanceDisplay % 7 === 0) {
+          setAdvanceDisplayUnit('weeks');
+          setAdvanceDisplayNumber(recurrence.advanceDisplay / 7);
+        } else {
+          setAdvanceDisplayUnit('days');
+          setAdvanceDisplayNumber(recurrence.advanceDisplay);
+        }
+        setAdvanceDisplay(recurrence.advanceDisplay);
+      }
     }
   }, [habit]);
 
   const handleSave = () => {
     if (!habit) return;
     
+    // Calculate advance display days based on unit
+    let calculatedAdvanceDisplay = 0;
+    if (advanceDisplayUnit === 'immediate') {
+      calculatedAdvanceDisplay = 0;
+    } else if (advanceDisplayUnit === 'days') {
+      calculatedAdvanceDisplay = advanceDisplayNumber;
+    } else if (advanceDisplayUnit === 'weeks') {
+      calculatedAdvanceDisplay = advanceDisplayNumber * 7;
+    } else if (advanceDisplayUnit === 'months') {
+      calculatedAdvanceDisplay = advanceDisplayNumber * 30;
+    }
+    
     // Build recurrence rule based on selected type
     const recurrence = {
       type: recurrenceType,
-      interval: recurrenceType === 'daily' ? recurrenceInterval : undefined,
+      interval: recurrenceInterval,
       weekDays: recurrenceType === 'weekly' ? selectedWeekDays : undefined,
       dayOfMonth: recurrenceType === 'monthly' || recurrenceType === 'yearly' ? dayOfMonth : undefined,
       monthOfYear: recurrenceType === 'yearly' ? monthOfYear : undefined,
-      isLastDay: recurrenceType === 'monthly' ? isLastDay : undefined
+      isLastDay: recurrenceType === 'monthly' ? isLastDay : undefined,
+      advanceDisplay: calculatedAdvanceDisplay
     };
     
     updateHabit(habit.id, {
       title,
       description,
       startDate: startDate || undefined,
+      dueDate: dueDate || undefined,
       importance: importance as Habit['importance'],
       difficulty: difficulty as Habit['difficulty'],
       duration: duration as Habit['duration'],
       tags: selectedTags,
       projectId: selectedProject,
-      recurrence
+      recurrence,
+      dependencies
     });
     
     onClose();
@@ -121,6 +176,30 @@ export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialo
         ? prev.filter(d => d !== day)
         : [...prev, day]
     );
+  };
+
+  const handleAddDependency = () => {
+    if (selectedDependency && !dependencies.includes(selectedDependency.id)) {
+      setDependencies([...dependencies, selectedDependency.id]);
+      setSelectedDependency(null);
+    }
+  };
+
+  const handleRemoveDependency = (dependencyId: string) => {
+    setDependencies(dependencies.filter(id => id !== dependencyId));
+  };
+
+  // Get available dependencies (tasks that aren't already dependencies and aren't completed)
+  const getAvailableTasks = () => {
+    return tasks.filter(t => 
+      !dependencies.includes(t.id) &&
+      !t.completedAt // Don't show completed tasks
+    );
+  };
+
+  // Get task by ID
+  const getTaskById = (id: string) => {
+    return tasks.find(t => t.id === id);
   };
 
   if (!habit) return null;
@@ -160,12 +239,12 @@ export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialo
             />
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid item xs={12} md={6}>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
-                label="Start Date"
-                value={startDate}
-                onChange={(date) => setStartDate(date)}
+                label="Initial Due Date"
+                value={dueDate}
+                onChange={(newValue) => setDueDate(newValue)}
                 slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
               />
             </LocalizationProvider>
@@ -222,125 +301,239 @@ export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialo
           </Grid>
           
           <Grid item xs={12}>
-            <Typography variant="subtitle1" gutterBottom sx={{ mt: 1 }}>
-              Recurrence
+            <Typography variant="subtitle1" gutterBottom>
+              Recurrence Settings
             </Typography>
-            
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Recurrence Type</InputLabel>
-              <Select
-                value={recurrenceType}
-                label="Recurrence Type"
-                onChange={(e) => setRecurrenceType(e.target.value as RecurrenceType)}
-              >
-                <MenuItem value="daily">Daily</MenuItem>
-                <MenuItem value="weekly">Weekly</MenuItem>
-                <MenuItem value="monthly">Monthly</MenuItem>
-                <MenuItem value="yearly">Yearly</MenuItem>
-              </Select>
-            </FormControl>
-            
-            {recurrenceType === 'daily' && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Repeat every
-                </Typography>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <TextField
-                    type="number"
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel id="recurrence-type-label">Recurrence Type</InputLabel>
+                  <Select
+                    labelId="recurrence-type-label"
+                    value={recurrenceType}
+                    label="Recurrence Type"
+                    onChange={(e) => setRecurrenceType(e.target.value as RecurrenceType)}
+                  >
+                    <MenuItem value="daily">Daily</MenuItem>
+                    <MenuItem value="weekly">Weekly</MenuItem>
+                    <MenuItem value="monthly">Monthly</MenuItem>
+                    <MenuItem value="yearly">Yearly</MenuItem>
+                    <MenuItem value="custom">Custom</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel id="interval-label">Repeat every</InputLabel>
+                  <Select
+                    labelId="interval-label"
                     value={recurrenceInterval}
-                    onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
-                    inputProps={{ min: 1, max: 30 }}
-                    sx={{ width: 80 }}
-                  />
-                  <Typography>
-                    {recurrenceInterval === 1 ? 'day' : 'days'}
+                    label="Repeat every"
+                    onChange={(e) => setRecurrenceInterval(Number(e.target.value))}
+                  >
+                    {[...Array(30)].map((_, i) => (
+                      <MenuItem key={i + 1} value={i + 1}>
+                        {i + 1} {recurrenceType === 'daily' ? 'day(s)' : 
+                                recurrenceType === 'weekly' ? 'week(s)' : 
+                                recurrenceType === 'monthly' ? 'month(s)' : 'year(s)'}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              {recurrenceType === 'weekly' && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Repeat on
                   </Typography>
-                </Stack>
-              </Box>
-            )}
-            
-            {recurrenceType === 'weekly' && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Repeat on
-                </Typography>
-                <FormGroup row>
-                  {weekdays.map((day) => (
+                  <FormGroup row>
+                    {weekdays.map((day) => (
+                      <FormControlLabel
+                        key={day}
+                        control={
+                          <Checkbox
+                            checked={selectedWeekDays.includes(day)}
+                            onChange={() => handleWeekDayToggle(day)}
+                          />
+                        }
+                        label={day.charAt(0).toUpperCase() + day.slice(1, 3)}
+                      />
+                    ))}
+                  </FormGroup>
+                </Grid>
+              )}
+              
+              {recurrenceType === 'monthly' && (
+                <Grid item xs={12}>
+                  <FormControl fullWidth margin="normal">
                     <FormControlLabel
-                      key={day}
                       control={
-                        <Checkbox
-                          checked={selectedWeekDays.includes(day)}
-                          onChange={() => handleWeekDayToggle(day)}
+                        <Switch
+                          checked={isLastDay}
+                          onChange={(e) => setIsLastDay(e.target.checked)}
                         />
                       }
-                      label={day.charAt(0).toUpperCase() + day.slice(1, 3)}
+                      label="Last day of month"
                     />
-                  ))}
-                </FormGroup>
-              </Box>
-            )}
-            
-            {recurrenceType === 'monthly' && (
-              <Box sx={{ mt: 2 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={isLastDay}
-                      onChange={(e) => setIsLastDay(e.target.checked)}
-                    />
-                  }
-                  label="Last day of month"
-                />
-                
-                {!isLastDay && (
-                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 1 }}>
-                    <Typography variant="subtitle2">
-                      Day of month:
-                    </Typography>
-                    <TextField
-                      type="number"
-                      value={dayOfMonth}
-                      onChange={(e) => setDayOfMonth(parseInt(e.target.value) || 1)}
-                      inputProps={{ min: 1, max: 31 }}
-                      sx={{ width: 80 }}
-                    />
-                  </Stack>
-                )}
-              </Box>
-            )}
-            
-            {recurrenceType === 'yearly' && (
-              <Box sx={{ mt: 2 }}>
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                  <FormControl sx={{ minWidth: 150 }}>
-                    <InputLabel>Month</InputLabel>
-                    <Select
-                      value={monthOfYear}
-                      label="Month"
-                      onChange={(e) => setMonthOfYear(Number(e.target.value))}
-                    >
-                      {months.map((month, index) => (
-                        <MenuItem key={month} value={index + 1}>
-                          {month}
-                        </MenuItem>
-                      ))}
-                    </Select>
+                    {!isLastDay && (
+                      <FormControl fullWidth margin="normal">
+                        <InputLabel id="day-of-month-label">Day of month</InputLabel>
+                        <Select
+                          labelId="day-of-month-label"
+                          value={dayOfMonth}
+                          label="Day of month"
+                          onChange={(e) => setDayOfMonth(Number(e.target.value))}
+                        >
+                          {[...Array(31)].map((_, i) => (
+                            <MenuItem key={i + 1} value={i + 1}>{i + 1}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    )}
                   </FormControl>
+                </Grid>
+              )}
+              
+              {recurrenceType === 'yearly' && (
+                <Grid item xs={12}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <FormControl fullWidth margin="normal">
+                        <InputLabel id="month-of-year-label">Month</InputLabel>
+                        <Select
+                          labelId="month-of-year-label"
+                          value={monthOfYear}
+                          label="Month"
+                          onChange={(e) => setMonthOfYear(Number(e.target.value))}
+                        >
+                          {months.map((month, index) => (
+                            <MenuItem key={index + 1} value={index + 1}>{month}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <FormControl fullWidth margin="normal">
+                        <InputLabel id="yearly-day-label">Day</InputLabel>
+                        <Select
+                          labelId="yearly-day-label"
+                          value={dayOfMonth}
+                          label="Day"
+                          onChange={(e) => setDayOfMonth(Number(e.target.value))}
+                        >
+                          {[...Array(31)].map((_, i) => (
+                            <MenuItem key={i + 1} value={i + 1}>{i + 1}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+                </Grid>
+              )}
+              
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Next Occurrence Settings
+                </Typography>
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth margin="normal">
+                      <InputLabel id="advance-display-unit-label">Show Next Occurrence</InputLabel>
+                      <Select
+                        labelId="advance-display-unit-label"
+                        value={advanceDisplayUnit}
+                        label="Show Next Occurrence"
+                        onChange={(e) => setAdvanceDisplayUnit(e.target.value as 'immediate' | 'days' | 'weeks' | 'months')}
+                      >
+                        <MenuItem value="immediate">Immediately after completion</MenuItem>
+                        <MenuItem value="days">After specified days</MenuItem>
+                        <MenuItem value="weeks">After specified weeks</MenuItem>
+                        <MenuItem value="months">After specified months</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
                   
-                  <Typography variant="subtitle2">
-                    Day:
-                  </Typography>
-                  <TextField
-                    type="number"
-                    value={dayOfMonth}
-                    onChange={(e) => setDayOfMonth(parseInt(e.target.value) || 1)}
-                    inputProps={{ min: 1, max: 31 }}
-                    sx={{ width: 80 }}
+                  {advanceDisplayUnit !== 'immediate' && (
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        label={`Number of ${advanceDisplayUnit}`}
+                        type="number"
+                        fullWidth
+                        value={advanceDisplayNumber}
+                        onChange={(e) => setAdvanceDisplayNumber(Number(e.target.value))}
+                        inputProps={{ min: 1, max: advanceDisplayUnit === 'days' ? 365 : (advanceDisplayUnit === 'weeks' ? 52 : 12) }}
+                        margin="normal"
+                      />
+                    </Grid>
+                  )}
+                  
+                  <Grid item xs={12}>
+                    <Typography variant="body2" color="text.secondary">
+                      {advanceDisplayUnit === 'immediate' 
+                        ? 'The next occurrence will appear immediately after completion.'
+                        : `The next occurrence will appear ${advanceDisplayNumber} ${advanceDisplayUnit} after completing this habit.`}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Grid>
+            </Grid>
+          </Grid>
+          
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" gutterBottom>
+              Dependencies
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={10}>
+                  <Autocomplete
+                    options={getAvailableTasks()}
+                    getOptionLabel={(option) => option.title}
+                    value={selectedDependency}
+                    onChange={(_, newValue) => setSelectedDependency(newValue)}
+                    renderInput={(params) => <TextField {...params} label="Add Dependency" fullWidth />}
                   />
-                </Stack>
-              </Box>
+                </Grid>
+                <Grid item xs={2} sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Button 
+                    variant="contained" 
+                    onClick={handleAddDependency}
+                    disabled={!selectedDependency}
+                    fullWidth
+                  >
+                    Add
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
+            
+            {dependencies.length > 0 ? (
+              <List>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  This habit depends on these tasks:
+                </Typography>
+                {dependencies.map((depId) => {
+                  const dependencyTask = getTaskById(depId);
+                  return dependencyTask ? (
+                    <ListItem key={depId} dense divider>
+                      <ListItemText 
+                        primary={dependencyTask.title} 
+                        secondary={dependencyTask.completedAt ? 'Completed' : 'Pending'}
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton edge="end" onClick={() => handleRemoveDependency(depId)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ) : null;
+                })}
+              </List>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                This habit has no dependencies.
+              </Typography>
             )}
           </Grid>
           

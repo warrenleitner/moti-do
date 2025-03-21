@@ -30,6 +30,7 @@ export interface ScoringWeights {
   inProgress: number;
   dependencyMultiplier: number;
   habitStreakMultiplier: number;
+  baseTaskWeight: number;
 }
 
 export interface ProjectScoreMultiplier {
@@ -100,7 +101,8 @@ export function createDefaultUser(): User {
         isNext: 2,
         inProgress: 1.5,
         dependencyMultiplier: 0.5,
-        habitStreakMultiplier: 0.1
+        habitStreakMultiplier: 0.1,
+        baseTaskWeight: 1
       },
       projectMultipliers: [],
       tagMultipliers: [],
