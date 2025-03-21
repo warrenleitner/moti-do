@@ -79,6 +79,7 @@ export default function SettingsPage() {
   const [difficultyWeight, setDifficultyWeight] = useState(1);
   const [durationWeight, setDurationWeight] = useState(1);
   const [dueDateWeight, setDueDateWeight] = useState(1);
+  const [baseTaskWeight, setBaseTaskWeight] = useState(1);
   
   useEffect(() => {
     // Initialize weights from user preferences
@@ -87,6 +88,7 @@ export default function SettingsPage() {
     setDifficultyWeight(scoringWeights.difficulty.Medium);
     setDurationWeight(scoringWeights.duration.Medium);
     setDueDateWeight(scoringWeights.dueDate);
+    setBaseTaskWeight(scoringWeights.baseTaskWeight || 1);
   }, [user.preferences]);
   
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -170,6 +172,18 @@ export default function SettingsPage() {
   
   const handleVacationToggle = () => {
     toggleVacationMode();
+  };
+  
+  const handleBaseTaskWeightChange = (event: Event, newValue: number | number[]) => {
+    const value = newValue as number;
+    setBaseTaskWeight(value);
+    
+    updateUserPreferences({
+      scoringWeights: {
+        ...user.preferences.scoringWeights,
+        baseTaskWeight: value
+      }
+    });
   };
   
   // Project dialog functions
@@ -273,281 +287,304 @@ export default function SettingsPage() {
           Settings
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Customize your experience and preferences
+          Customize your experience and set your preferences.
         </Typography>
       </Box>
       
-      <Paper sx={{ mb: 3 }}>
-        <Tabs
-          value={tabValue}
+      <Paper sx={{ mb: 4 }}>
+        <Tabs 
+          value={tabValue} 
           onChange={handleTabChange}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="fullWidth"
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
         >
-          <Tab label="General" />
+          <Tab label="Application" />
           <Tab label="Scoring" />
-          <Tab label="Projects" />
           <Tab label="Tags" />
+          <Tab label="Projects" />
         </Tabs>
-      </Paper>
-      
-      {tabValue === 0 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Theme & Display
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Typography variant="subtitle1" gutterBottom>
-                        <DarkModeIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-                        Theme Mode
-                      </Typography>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={user.preferences.theme === 'dark'}
-                            onChange={(e) => 
-                              updateUserPreferences({ 
-                                theme: e.target.checked ? 'dark' : 'light' 
-                              })
-                            }
-                          />
-                        }
-                        label="Dark Mode"
-                      />
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Typography variant="subtitle1" gutterBottom>
-                        <VacationIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-                        Vacation Mode
-                      </Typography>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={user.preferences.vacationMode}
-                            onChange={handleVacationToggle}
-                          />
-                        }
-                        label="Enable Vacation Mode"
-                      />
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        Tasks and habits won't accumulate while you're away
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-        </Grid>
-      )}
-      
-      {tabValue === 1 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Scoring Algorithm
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Adjust the weights used to calculate task and habit scores
-              </Typography>
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Typography gutterBottom>
-                    Importance Weight
-                  </Typography>
-                  <Slider
-                    value={importanceWeight}
-                    min={0.1}
-                    max={2}
-                    step={0.1}
-                    onChange={handleImportanceChange}
-                    valueLabelDisplay="auto"
-                    marks={[
-                      { value: 0.1, label: '0.1' },
-                      { value: 1, label: '1' },
-                      { value: 2, label: '2' }
-                    ]}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography gutterBottom>
-                    Difficulty Weight
-                  </Typography>
-                  <Slider
-                    value={difficultyWeight}
-                    min={0.1}
-                    max={2}
-                    step={0.1}
-                    onChange={handleDifficultyChange}
-                    valueLabelDisplay="auto"
-                    marks={[
-                      { value: 0.1, label: '0.1' },
-                      { value: 1, label: '1' },
-                      { value: 2, label: '2' }
-                    ]}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography gutterBottom>
-                    Duration Weight
-                  </Typography>
-                  <Slider
-                    value={durationWeight}
-                    min={0.1}
-                    max={2}
-                    step={0.1}
-                    onChange={handleDurationChange}
-                    valueLabelDisplay="auto"
-                    marks={[
-                      { value: 0.1, label: '0.1' },
-                      { value: 1, label: '1' },
-                      { value: 2, label: '2' }
-                    ]}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography gutterBottom>
-                    Due Date Urgency Weight
-                  </Typography>
-                  <Slider
-                    value={dueDateWeight}
-                    min={0.1}
-                    max={2}
-                    step={0.1}
-                    onChange={handleDueDateChange}
-                    valueLabelDisplay="auto"
-                    marks={[
-                      { value: 0.1, label: '0.1' },
-                      { value: 1, label: '1' },
-                      { value: 2, label: '2' }
-                    ]}
-                  />
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-        </Grid>
-      )}
-      
-      {tabValue === 2 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">
-                  Projects
+        
+        {/* Application settings tab */}
+        {tabValue === 0 && (
+          <Box sx={{ p: 3 }}>
+            <Grid container spacing={4}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="h6" gutterBottom>
+                  Theme
                 </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={openAddProjectDialog}
-                >
-                  Add Project
-                </Button>
-              </Box>
-              
-              {projects.length > 0 ? (
-                <List>
-                  {projects.map((project) => (
-                    <ListItem
-                      key={project.id}
-                      secondaryAction={
-                        <Box>
-                          <IconButton edge="end" onClick={() => openEditProjectDialog(project)}>
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton edge="end" onClick={() => handleProjectDelete(project.id)}>
-                            <DeleteIcon />
-                          </IconButton>
-                        </Box>
+                <Card variant="outlined" sx={{ mb: 3 }}>
+                  <CardContent>
+                    <FormControlLabel
+                      control={
+                        <Switch 
+                          checked={user.preferences.theme === 'dark'}
+                          onChange={(e) => updateUserPreferences({ theme: e.target.checked ? 'dark' : 'light' })}
+                          icon={<LightModeIcon />}
+                          checkedIcon={<DarkModeIcon />}
+                        />
                       }
-                      divider
-                    >
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box 
-                              sx={{ 
-                                width: 16, 
-                                height: 16, 
-                                borderRadius: '50%', 
-                                bgcolor: project.color,
-                                mr: 1 
-                              }} 
-                            />
-                            {project.name}
+                      label={user.preferences.theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                    />
+                  </CardContent>
+                </Card>
+                
+                <Typography variant="h6" gutterBottom>
+                  Vacation Mode
+                </Typography>
+                <Card variant="outlined">
+                  <CardContent>
+                    <FormControlLabel
+                      control={
+                        <Switch 
+                          checked={user.preferences.vacationMode}
+                          onChange={handleVacationToggle}
+                          icon={<span />}
+                          checkedIcon={<VacationIcon />}
+                        />
+                      }
+                      label={user.preferences.vacationMode ? 'Vacation Mode On' : 'Vacation Mode Off'}
+                    />
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      When vacation mode is on, tasks and habits won't generate XP or contribute to streaks.
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                {/* Add more application settings here */}
+              </Grid>
+            </Grid>
+          </Box>
+        )}
+        
+        {/* Scoring settings tab */}
+        {tabValue === 1 && (
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Task Scoring Weights
+            </Typography>
+            <Card variant="outlined" sx={{ mb: 4 }}>
+              <CardContent>
+                <Box sx={{ mb: 2 }}>
+                  <Typography id="base-task-weight-slider" gutterBottom>
+                    Base Task Weight: {baseTaskWeight}
+                  </Typography>
+                  <Slider
+                    aria-labelledby="base-task-weight-slider"
+                    value={baseTaskWeight}
+                    onChange={handleBaseTaskWeightChange}
+                    step={0.1}
+                    marks
+                    min={0.1}
+                    max={3}
+                    valueLabelDisplay="auto"
+                    sx={{ maxWidth: 500 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    This is the base multiplier applied to all tasks. Higher values make tasks worth more XP overall.
+                  </Typography>
+                </Box>
+                
+                <Divider sx={{ my: 3 }} />
+                
+                <Box sx={{ mb: 2 }}>
+                  <Typography id="importance-weight-slider" gutterBottom>
+                    Importance Weight: {importanceWeight}
+                  </Typography>
+                  <Slider
+                    aria-labelledby="importance-weight-slider"
+                    value={importanceWeight}
+                    onChange={handleImportanceChange}
+                    step={0.1}
+                    marks
+                    min={0.1}
+                    max={3}
+                    valueLabelDisplay="auto"
+                    sx={{ maxWidth: 500 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    Low: {(importanceWeight * 0.5).toFixed(1)}, Medium: {importanceWeight.toFixed(1)}, 
+                    High: {(importanceWeight * 2).toFixed(1)}, Defcon One: {(importanceWeight * 4).toFixed(1)}
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ mb: 2 }}>
+                  <Typography id="difficulty-weight-slider" gutterBottom>
+                    Difficulty Weight: {difficultyWeight}
+                  </Typography>
+                  <Slider
+                    aria-labelledby="difficulty-weight-slider"
+                    value={difficultyWeight}
+                    onChange={handleDifficultyChange}
+                    step={0.1}
+                    marks
+                    min={0.1}
+                    max={3}
+                    valueLabelDisplay="auto"
+                    sx={{ maxWidth: 500 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    Trivial: 0, Low: {(difficultyWeight * 0.5).toFixed(1)}, Medium: {difficultyWeight.toFixed(1)}, 
+                    High: {(difficultyWeight * 2).toFixed(1)}, Herculean: {(difficultyWeight * 3).toFixed(1)}
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ mb: 2 }}>
+                  <Typography id="duration-weight-slider" gutterBottom>
+                    Duration Weight: {durationWeight}
+                  </Typography>
+                  <Slider
+                    aria-labelledby="duration-weight-slider"
+                    value={durationWeight}
+                    onChange={handleDurationChange}
+                    step={0.1}
+                    marks
+                    min={0.1}
+                    max={3}
+                    valueLabelDisplay="auto"
+                    sx={{ maxWidth: 500 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    Trivial: 0, Short: {(durationWeight * 0.5).toFixed(1)}, Medium: {durationWeight.toFixed(1)}, 
+                    Long: {(durationWeight * 2).toFixed(1)}, Odysseyan: {(durationWeight * 3).toFixed(1)}
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ mb: 2 }}>
+                  <Typography id="due-date-weight-slider" gutterBottom>
+                    Due Date Weight: {dueDateWeight}
+                  </Typography>
+                  <Slider
+                    aria-labelledby="due-date-weight-slider"
+                    value={dueDateWeight}
+                    onChange={handleDueDateChange}
+                    step={0.1}
+                    marks
+                    min={0}
+                    max={3}
+                    valueLabelDisplay="auto"
+                    sx={{ maxWidth: 500 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    Higher values increase the importance of due dates in scoring.
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Box>
+        )}
+        
+        {tabValue === 2 && (
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Paper sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">
+                    Projects
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={openAddProjectDialog}
+                  >
+                    Add Project
+                  </Button>
+                </Box>
+                
+                {projects.length > 0 ? (
+                  <List>
+                    {projects.map((project) => (
+                      <ListItem
+                        key={project.id}
+                        secondaryAction={
+                          <Box>
+                            <IconButton edge="end" onClick={() => openEditProjectDialog(project)}>
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton edge="end" onClick={() => handleProjectDelete(project.id)}>
+                              <DeleteIcon />
+                            </IconButton>
                           </Box>
                         }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                  No projects created yet. Add a project to organize your tasks.
-                </Typography>
-              )}
-            </Paper>
+                        divider
+                      >
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Box 
+                                sx={{ 
+                                  width: 16, 
+                                  height: 16, 
+                                  borderRadius: '50%', 
+                                  bgcolor: project.color,
+                                  mr: 1 
+                                }} 
+                              />
+                              {project.name}
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                    No projects created yet. Add a project to organize your tasks.
+                  </Typography>
+                )}
+              </Paper>
+            </Grid>
           </Grid>
-        </Grid>
-      )}
-      
-      {tabValue === 3 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">
-                  Tags
-                </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={openAddTagDialog}
-                >
-                  Add Tag
-                </Button>
-              </Box>
-              
-              {tags.length > 0 ? (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {tags.map((tag) => (
-                    <Chip
-                      key={tag.id}
-                      label={tag.name}
-                      sx={{ 
-                        bgcolor: `${tag.color}20`,
-                        color: tag.color,
-                        borderColor: tag.color,
-                        mb: 1
-                      }}
-                      variant="outlined"
-                      onDelete={() => handleTagDelete(tag.id)}
-                      onClick={() => openEditTagDialog(tag)}
-                    />
-                  ))}
+        )}
+        
+        {tabValue === 3 && (
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Paper sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">
+                    Tags
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={openAddTagDialog}
+                  >
+                    Add Tag
+                  </Button>
                 </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                  No tags created yet. Add tags to categorize your tasks.
-                </Typography>
-              )}
-            </Paper>
+                
+                {tags.length > 0 ? (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {tags.map((tag) => (
+                      <Chip
+                        key={tag.id}
+                        label={tag.name}
+                        sx={{ 
+                          bgcolor: `${tag.color}20`,
+                          color: tag.color,
+                          borderColor: tag.color,
+                          mb: 1
+                        }}
+                        variant="outlined"
+                        onDelete={() => handleTagDelete(tag.id)}
+                        onClick={() => openEditTagDialog(tag)}
+                      />
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                    No tags created yet. Add tags to categorize your tasks.
+                  </Typography>
+                )}
+              </Paper>
+            </Grid>
           </Grid>
-        </Grid>
-      )}
+        )}
+      </Paper>
       
       {/* Project Dialog */}
       <Dialog open={projectDialogOpen} onClose={handleProjectDialogClose}>

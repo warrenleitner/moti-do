@@ -29,6 +29,7 @@ import {
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
   Person as PersonIcon,
+  AccountTree as DependenciesIcon,
 } from '@mui/icons-material';
 import { lightTheme, darkTheme } from '@/lib/theme';
 import { useAppStore } from '@/store/AppStore';
@@ -77,6 +78,7 @@ export default function Layout({ children }: LayoutProps) {
     { text: 'Tasks', icon: <TaskIcon />, path: '/tasks' },
     { text: 'Habits', icon: <HabitIcon />, path: '/habits' },
     { text: 'Calendar', icon: <CalendarIcon />, path: '/calendar' },
+    { text: 'Dependencies', icon: <DependenciesIcon />, path: '/dependencies' },
     { text: 'Tags', icon: <TagIcon />, path: '/tags' },
     { text: 'Projects', icon: <ProjectIcon />, path: '/projects' },
     { text: 'Profile', icon: <PersonIcon />, path: '/profile' },

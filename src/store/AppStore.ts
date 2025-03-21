@@ -150,8 +150,16 @@ export const useAppStore = create<AppState>()(
           
           // Add XP if completing the task
           if (completed && !task.completedAt) {
+            // For tasks with subtasks, we only add the final portion of XP
+            // The rest was already awarded when completing individual subtasks
+            let xpToAdd = task.score;
+            
+            if (task.subtasks.length > 0) {
+              xpToAdd = Math.round(task.score / (task.subtasks.length + 1));
+            }
+            
             get().addXP(
-              task.score,
+              xpToAdd,
               'task_completion',
               `Completed task: ${task.title}`,
               task.id
@@ -209,7 +217,7 @@ export const useAppStore = create<AppState>()(
           
           // If completing a subtask, add a fraction of the task's XP
           if (completed && !task.subtasks[subtaskIndex].completed) {
-            const subtaskXP = Math.round(task.score / task.subtasks.length);
+            const subtaskXP = Math.round(task.score / (task.subtasks.length + 1));
             get().addXP(
               subtaskXP,
               'task_completion',
@@ -611,6 +619,9 @@ export const useAppStore = create<AppState>()(
         if (task.inProgress) {
           score += scoringWeights.inProgress;
         }
+        
+        // Apply base task weight multiplier
+        score *= (scoringWeights.baseTaskWeight || 1);
         
         // Project multiplier
         if (task.projectId) {
