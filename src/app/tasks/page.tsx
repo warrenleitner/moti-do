@@ -16,15 +16,34 @@ import {
   Grid,
   Paper,
   SelectChangeEvent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Stack,
 } from '@mui/material';
-import { Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
+import { Add as AddIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useAppStore } from '@/store/AppStore';
 import Todo from '@/components/Todo';
+import { DifficultyLevel, DurationLevel, ImportanceLevel } from '@/models/Task';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 export default function TasksPage() {
   const [tabValue, setTabValue] = useState(0);
   const [searchText, setSearchText] = useState('');
   const [sortBy, setSortBy] = useState('score');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // State for new task form
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [newTaskImportance, setNewTaskImportance] = useState<ImportanceLevel>('Medium');
+  const [newTaskDifficulty, setNewTaskDifficulty] = useState<DifficultyLevel>('Medium');
+  const [newTaskDuration, setNewTaskDuration] = useState<DurationLevel>('Medium');
+  const [newTaskDueDate, setNewTaskDueDate] = useState<Date | null>(null);
   
   const getActiveTasks = useAppStore((state) => state.getActiveTasks);
   const getFutureTasks = useAppStore((state) => state.getFutureTasks);
@@ -43,13 +62,41 @@ export default function TasksPage() {
     setSearchText(event.target.value);
   };
   
+  const handleOpenDialog = () => {
+    // Reset form fields
+    setNewTaskTitle('');
+    setNewTaskDescription('');
+    setNewTaskImportance('Medium');
+    setNewTaskDifficulty('Medium');
+    setNewTaskDuration('Medium');
+    setNewTaskDueDate(null);
+    
+    // Open dialog
+    setDialogOpen(true);
+  };
+  
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+  };
+  
   const handleAddTask = () => {
+    // Validate form
+    if (!newTaskTitle.trim()) {
+      return; // Don't submit if no title
+    }
+    
+    // Add the task
     addTask({
-      title: 'New task',
-      importance: 'Medium',
-      difficulty: 'Medium',
-      duration: 'Medium',
+      title: newTaskTitle.trim(),
+      description: newTaskDescription.trim() || undefined,
+      importance: newTaskImportance,
+      difficulty: newTaskDifficulty,
+      duration: newTaskDuration,
+      dueDate: newTaskDueDate || undefined
     });
+    
+    // Close dialog
+    setDialogOpen(false);
   };
   
   const getTasks = () => {
@@ -197,7 +244,7 @@ export default function TasksPage() {
               variant="contained"
               color="primary"
               startIcon={<AddIcon />}
-              onClick={handleAddTask}
+              onClick={handleOpenDialog}
             >
               Create Task
             </Button>
@@ -213,10 +260,112 @@ export default function TasksPage() {
           bottom: 16,
           right: 16,
         }}
-        onClick={handleAddTask}
+        onClick={handleOpenDialog}
       >
         <AddIcon />
       </Fab>
+
+      {/* New Task Dialog */}
+      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Create New Task
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseDialog}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={3} sx={{ my: 1 }}>
+            <TextField
+              label="Title"
+              fullWidth
+              required
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              autoFocus
+            />
+            
+            <TextField
+              label="Description"
+              fullWidth
+              multiline
+              rows={3}
+              value={newTaskDescription}
+              onChange={(e) => setNewTaskDescription(e.target.value)}
+            />
+            
+            <FormControl fullWidth>
+              <InputLabel>Importance</InputLabel>
+              <Select
+                value={newTaskImportance}
+                onChange={(e) => setNewTaskImportance(e.target.value as ImportanceLevel)}
+                label="Importance"
+              >
+                <MenuItem value="Low">Low</MenuItem>
+                <MenuItem value="Medium">Medium</MenuItem>
+                <MenuItem value="High">High</MenuItem>
+                <MenuItem value="Defcon One">Defcon One</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <FormControl fullWidth>
+              <InputLabel>Difficulty</InputLabel>
+              <Select
+                value={newTaskDifficulty}
+                onChange={(e) => setNewTaskDifficulty(e.target.value as DifficultyLevel)}
+                label="Difficulty"
+              >
+                <MenuItem value="Trivial">Trivial</MenuItem>
+                <MenuItem value="Low">Low</MenuItem>
+                <MenuItem value="Medium">Medium</MenuItem>
+                <MenuItem value="High">High</MenuItem>
+                <MenuItem value="Herculean">Herculean</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <FormControl fullWidth>
+              <InputLabel>Duration</InputLabel>
+              <Select
+                value={newTaskDuration}
+                onChange={(e) => setNewTaskDuration(e.target.value as DurationLevel)}
+                label="Duration"
+              >
+                <MenuItem value="Trivial">Trivial</MenuItem>
+                <MenuItem value="Short">Short</MenuItem>
+                <MenuItem value="Medium">Medium</MenuItem>
+                <MenuItem value="Long">Long</MenuItem>
+                <MenuItem value="Odysseyan">Odysseyan</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Due Date (Optional)"
+                value={newTaskDueDate}
+                onChange={(newDate) => setNewTaskDueDate(newDate)}
+                slotProps={{ textField: { fullWidth: true } }}
+              />
+            </LocalizationProvider>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button 
+            onClick={handleAddTask} 
+            variant="contained" 
+            disabled={!newTaskTitle.trim()}
+          >
+            Add Task
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 } 

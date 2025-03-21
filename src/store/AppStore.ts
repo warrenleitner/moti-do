@@ -144,6 +144,8 @@ export const useAppStore = create<AppState>()(
           updatedTasks[taskIndex] = {
             ...task,
             completedAt: completed ? new Date() : undefined,
+            isNext: completed ? false : task.isNext,
+            inProgress: completed ? false : task.inProgress
           };
           
           // Add XP if completing the task
