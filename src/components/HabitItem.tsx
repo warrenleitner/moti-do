@@ -32,6 +32,7 @@ import {
 import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useAppStore } from '@/store/AppStore';
 import { Habit } from '@/models/Habit';
+import HabitEditDialog from './HabitEditDialog';
 
 interface HabitItemProps {
   habit: Habit;
@@ -39,33 +40,19 @@ interface HabitItemProps {
 
 export default function HabitItem({ habit }: HabitItemProps) {
   const [expanded, setExpanded] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   const projects = useAppStore((state) => state.projects);
   const tags = useAppStore((state) => state.tags);
   const completeHabit = useAppStore((state) => state.completeHabit);
-  const setTaskAsNext = useAppStore((state) => state.setTaskAsNext);
-  const setTaskInProgress = useAppStore((state) => state.setTaskInProgress);
   const deleteHabit = useAppStore((state) => state.deleteHabit);
   
   const handleToggle = () => {
-    completeHabit(habit.id, !isCompletedToday(), new Date());
-    
-    if (!isCompletedToday()) {
-      // Show confetti animation when completing a habit
-      createConfetti();
-    }
+    completeHabit(habit.id, !isCompletedToday());
   };
   
   const handleExpandClick = () => {
     setExpanded(!expanded);
-  };
-  
-  const handleSetNext = () => {
-    setTaskAsNext(habit.id);
-  };
-  
-  const handleToggleInProgress = () => {
-    setTaskInProgress(habit.id, !habit.inProgress);
   };
   
   const handleDelete = () => {
@@ -74,401 +61,363 @@ export default function HabitItem({ habit }: HabitItemProps) {
     }
   };
   
+  const handleEdit = () => {
+    setEditDialogOpen(true);
+  };
+  
   const isCompletedToday = () => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    return habit.completions.some(
-      c => format(new Date(c.date), 'yyyy-MM-dd') === todayStr && c.completed
+    return habit.completions.some(c => 
+      isToday(new Date(c.date)) && c.completed
     );
   };
   
-  const createConfetti = () => {
-    // Create and animate confetti particles
-    const colors = ['#f44336', '#2196f3', '#ffeb3b', '#4caf50', '#9c27b0'];
+  // Format recurrence rule as text
+  const getRecurrenceText = () => {
+    const { recurrence } = habit;
     
-    for (let i = 0; i < 30; i++) {
-      const confetti = document.createElement('div');
-      confetti.className = 'confetti';
-      confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-      confetti.style.left = `${Math.random() * 100}%`;
-      confetti.style.animationDuration = `${1 + Math.random() * 2}s`;
-      document.body.appendChild(confetti);
-      
-      // Remove confetti after animation
-      setTimeout(() => {
-        confetti.remove();
-      }, 3000);
+    switch (recurrence.type) {
+      case 'daily':
+        if (!recurrence.interval || recurrence.interval === 1) return 'Daily';
+        return `Every ${recurrence.interval} days`;
+        
+      case 'weekly':
+        if (!recurrence.weekDays || recurrence.weekDays.length === 0) return 'Weekly';
+        if (recurrence.weekDays.length === 7) return 'Daily';
+        return `Weekly on ${recurrence.weekDays.map(d => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')}`;
+        
+      case 'monthly':
+        if (recurrence.isLastDay) return 'Monthly on the last day';
+        return `Monthly on day ${recurrence.dayOfMonth}`;
+        
+      case 'yearly':
+        const month = new Date(0, (recurrence.monthOfYear || 1) - 1).toLocaleString('default', { month: 'long' });
+        return `Yearly on ${month} ${recurrence.dayOfMonth || 1}`;
+        
+      default:
+        return 'Custom';
     }
-    
-    // Show XP popup
-    const xpPopup = document.createElement('div');
-    xpPopup.className = 'xp-popup';
-    xpPopup.textContent = `+${habit.score} XP`;
-    xpPopup.style.top = '50%';
-    xpPopup.style.left = '50%';
-    document.body.appendChild(xpPopup);
-    
-    // Remove XP popup after animation
-    setTimeout(() => {
-      xpPopup.remove();
-    }, 1500);
   };
   
-  // Calculate completion percentage
-  const completionPercentage = habit.streak.totalCompletions 
-    ? Math.round((habit.streak.totalCompletions / Math.max(1, habit.streak.totalOccurrences)) * 100)
-    : 0;
+  // Get the current month's calendar days for the habit completion visualization
+  const currentMonthDays = eachDayOfInterval({
+    start: startOfMonth(new Date()),
+    end: endOfMonth(new Date())
+  });
   
-  // Find project and tags details
+  // Check if habit was completed on a specific day
+  const wasCompletedOnDay = (day: Date) => {
+    return habit.completions.some(c => 
+      isSameDay(new Date(c.date), day) && c.completed
+    );
+  };
+  
+  // Get project and tags
   const project = habit.projectId 
-    ? projects.find(p => p.id === habit.projectId)
+    ? projects.find(p => p.id === habit.projectId) 
     : undefined;
-  
+    
   const habitTags = habit.tags
     .map(tagId => tags.find(t => t.id === tagId))
     .filter(Boolean);
   
-  // Create calendar data for the current month
-  const today = new Date();
-  const firstDayOfMonth = startOfMonth(today);
-  const lastDayOfMonth = endOfMonth(today);
-  const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
-  
   return (
-    <Card 
-      sx={{ 
-        mb: 2, 
-        position: 'relative',
-        borderLeft: project ? `4px solid ${project.color}` : undefined,
-      }}
-    >
-      {habit.isNext && (
-        <Box 
-          sx={{ 
-            position: 'absolute', 
-            top: 0, 
-            right: 0,
-            bgcolor: 'primary.main',
-            color: 'white',
-            px: 1,
-            py: 0.5,
-            borderBottomLeftRadius: 8,
-            fontSize: '0.75rem',
-            fontWeight: 'bold',
-          }}
-        >
-          NEXT
-        </Box>
-      )}
-      
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-          <Checkbox 
-            checked={isCompletedToday()} 
-            onChange={handleToggle}
-            sx={{ mt: -1, mr: 1 }}
-          />
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
-              {habit.title}
-              {habit.inProgress && (
+    <>
+      <Card 
+        sx={{ 
+          mb: 2, 
+          position: 'relative',
+          borderLeft: project ? `4px solid ${project.color}` : undefined,
+        }}
+      >
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+            <Checkbox 
+              checked={isCompletedToday()} 
+              onChange={handleToggle}
+              sx={{ mt: -1, mr: 1 }}
+            />
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {habit.title}
+                
                 <Chip 
-                  label="In Progress" 
+                  icon={<FireIcon />}
+                  label={`${habit.streak.current} day streak`}
                   size="small" 
-                  color="secondary" 
+                  color={habit.streak.current >= 3 ? "success" : "default"}
                   sx={{ ml: 1, height: '20px' }}
                 />
-              )}
-            </Typography>
-            
-            {habit.description && (
-              <Typography 
-                variant="body2" 
-                color="text.secondary" 
-                sx={{ mt: 1, mb: 2 }}
-              >
-                {habit.description}
               </Typography>
-            )}
-            
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-              <Chip 
-                icon={<CalendarIcon />}
-                label={getRecurrenceText(habit)}
-                size="small"
-                variant="outlined"
-                color="primary"
-              />
               
-              <Chip 
-                icon={<StreakIcon />}
-                label={`Streak: ${habit.streak.current}`}
-                size="small"
-                variant="outlined"
-                color="secondary"
-              />
-              
-              <Chip 
-                icon={<FireIcon />}
-                label={`Best: ${habit.streak.best}`}
-                size="small"
-                variant="outlined"
-                sx={{ color: '#ff9800', borderColor: '#ff9800' }}
-              />
-              
-              {habitTags.map(tag => tag && (
-                <Chip 
-                  key={tag.id}
-                  label={tag.name}
-                  size="small"
-                  sx={{ 
-                    bgcolor: `${tag.color}20`,
-                    color: tag.color,
-                    borderColor: tag.color,
-                  }}
-                  variant="outlined"
-                />
-              ))}
-            </Box>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                fontSize: '0.75rem',
-                color: 'text.secondary',
-                mr: 2,
-              }}>
-                <Box component="span" sx={{ mr: 0.5 }}>Importance:</Box>
-                <Box 
-                  component="span" 
-                  sx={{ 
-                    fontWeight: 'bold',
-                    color: habit.importance === 'Defcon One' 
-                      ? 'error.main' 
-                      : habit.importance === 'High' 
-                      ? 'warning.main' 
-                      : 'inherit'
-                  }}
+              {habit.description && (
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary" 
+                  sx={{ mt: 1, mb: 2 }}
                 >
-                  {habit.importance}
-                </Box>
+                  {habit.description}
+                </Typography>
+              )}
+              
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                <Chip 
+                  icon={<CalendarIcon />}
+                  label={getRecurrenceText()}
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                />
+                
+                {habit.startDate && (
+                  <Chip 
+                    icon={<CalendarIcon />}
+                    label={`Starts: ${format(new Date(habit.startDate), 'MMM d, yyyy')}`}
+                    size="small"
+                    variant="outlined"
+                    color="info"
+                  />
+                )}
+                
+                {habitTags.map(tag => tag && (
+                  <Chip 
+                    key={tag.id}
+                    label={tag.name}
+                    size="small"
+                    sx={{ 
+                      bgcolor: `${tag.color}20`,
+                      color: tag.color,
+                      borderColor: tag.color,
+                    }}
+                    variant="outlined"
+                  />
+                ))}
               </Box>
               
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                fontSize: '0.75rem',
-                color: 'text.secondary',
-                mr: 2,
-              }}>
-                <Box component="span" sx={{ mr: 0.5 }}>Difficulty:</Box>
-                <Box component="span" sx={{ fontWeight: 'bold' }}>
-                  {habit.difficulty}
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  fontSize: '0.75rem',
+                  color: 'text.secondary',
+                  mr: 2,
+                }}>
+                  <Box component="span" sx={{ mr: 0.5 }}>Importance:</Box>
+                  <Box 
+                    component="span" 
+                    sx={{ 
+                      fontWeight: 'bold',
+                      color: habit.importance === 'Defcon One' 
+                        ? 'error.main' 
+                        : habit.importance === 'High' 
+                        ? 'warning.main' 
+                        : 'inherit'
+                    }}
+                  >
+                    {habit.importance}
+                  </Box>
                 </Box>
-              </Box>
-              
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                fontSize: '0.75rem',
-                color: 'text.secondary',
-              }}>
-                <Box component="span" sx={{ mr: 0.5 }}>Duration:</Box>
-                <Box component="span" sx={{ fontWeight: 'bold' }}>
-                  {habit.duration}
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  fontSize: '0.75rem',
+                  color: 'text.secondary',
+                  mr: 2,
+                }}>
+                  <Box component="span" sx={{ mr: 0.5 }}>Difficulty:</Box>
+                  <Box component="span" sx={{ fontWeight: 'bold' }}>
+                    {habit.difficulty}
+                  </Box>
                 </Box>
-              </Box>
-              
-              <Box sx={{ flexGrow: 1 }} />
-              
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
-                fontSize: '0.875rem',
-                fontWeight: 'bold',
-                color: 'primary.main',
-              }}>
-                {habit.score} pts
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  fontSize: '0.75rem',
+                  color: 'text.secondary',
+                }}>
+                  <Box component="span" sx={{ mr: 0.5 }}>Duration:</Box>
+                  <Box component="span" sx={{ fontWeight: 'bold' }}>
+                    {habit.duration}
+                  </Box>
+                </Box>
+                
+                <Box sx={{ flexGrow: 1 }} />
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  fontSize: '0.875rem',
+                  fontWeight: 'bold',
+                  color: 'primary.main',
+                }}>
+                  {habit.score} pts
+                </Box>
               </Box>
             </Box>
-            
-            <Box sx={{ mt: 1 }}>
-              <LinearProgress 
-                variant="determinate" 
-                value={completionPercentage} 
-                sx={{ mb: 1 }}
-                color="secondary"
-              />
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                fontSize: '0.75rem',
-                color: 'text.secondary',
-              }}>
-                <span>Completion Rate</span>
-                <span>{`${habit.streak.totalCompletions}/${habit.streak.totalOccurrences} (${completionPercentage}%)`}</span>
-              </Box>
+            <Box sx={{ ml: 1, display: 'flex', flexDirection: 'column' }}>
+              <IconButton 
+                size="small" 
+                onClick={handleEdit}
+                aria-label="edit"
+                sx={{ mb: 0.5 }}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+              
+              <IconButton 
+                size="small" 
+                onClick={handleDelete}
+                aria-label="delete"
+                color="error"
+                sx={{ mb: 0.5 }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+              
+              <IconButton 
+                size="small" 
+                onClick={handleExpandClick}
+                aria-expanded={expanded}
+                aria-label="show more"
+              >
+                {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+              </IconButton>
             </Box>
           </Box>
           
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <IconButton 
-              size="small" 
-              onClick={handleSetNext}
-              color={habit.isNext ? "primary" : "default"}
-              title="Mark as next"
-            >
-              <FlagIcon />
-            </IconButton>
-            
-            <IconButton 
-              size="small" 
-              onClick={handleToggleInProgress}
-              color={habit.inProgress ? "secondary" : "default"}
-              title={habit.inProgress ? "Stop in-progress" : "Mark as in-progress"}
-            >
-              {habit.inProgress ? <StopIcon /> : <PlayIcon />}
-            </IconButton>
-            
-            <IconButton 
-              size="small" 
-              onClick={handleDelete}
-              title="Delete habit"
-            >
-              <DeleteIcon />
-            </IconButton>
-            
-            <IconButton 
-              size="small" 
-              onClick={handleExpandClick}
-              title={expanded ? "Collapse" : "Expand"}
-            >
-              {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            </IconButton>
-          </Box>
-        </Box>
-        
-        <Collapse in={expanded} timeout="auto" unmountOnExit>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              {format(today, 'MMMM yyyy')} Calendar
-            </Typography>
-            
-            <Grid container spacing={0.5} sx={{ mt: 1 }}>
-              {daysInMonth.map((day) => {
-                const dateString = format(day, 'yyyy-MM-dd');
-                const isCompleted = habit.streak.completed[dateString];
-                const isToday = isSameDay(day, new Date());
-                
-                return (
-                  <Grid item key={dateString}>
-                    <Box
-                      sx={{
-                        width: 20,
-                        height: 20,
+          <Collapse in={expanded} timeout="auto" unmountOnExit>
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Monthly Overview
+              </Typography>
+              
+              <Grid container spacing={0.5} sx={{ mt: 1 }}>
+                {currentMonthDays.map((day, i) => (
+                  <Grid item key={i}>
+                    <Box 
+                      sx={{ 
+                        width: 24, 
+                        height: 24, 
+                        borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '0.7rem',
-                        borderRadius: '2px',
-                        color: isToday ? 'white' : isCompleted ? 'white' : 'text.secondary',
-                        backgroundColor: isToday 
-                          ? 'primary.main' 
-                          : isCompleted 
-                          ? 'success.main' 
-                          : 'action.disabledBackground',
-                        border: isToday && !isCompleted ? '1px solid' : 'none',
-                        borderColor: 'primary.main',
+                        fontSize: '0.75rem',
+                        bgcolor: wasCompletedOnDay(day) ? 'success.main' : 'grey.100',
+                        color: wasCompletedOnDay(day) ? 'white' : 'text.secondary',
                       }}
                     >
-                      {format(day, 'd')}
+                      {day.getDate()}
                     </Box>
                   </Grid>
-                );
-              })}
-            </Grid>
-            
-            {habit.subtasks.length > 0 && (
+                ))}
+              </Grid>
+              
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" gutterBottom>
-                  Subtasks
+                  Stats
                 </Typography>
                 
-                <List dense disablePadding>
-                  {habit.subtasks.map((subtask) => (
-                    <ListItem key={subtask.id} disablePadding sx={{ py: 0.5 }}>
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        <Checkbox
-                          edge="start"
-                          checked={subtask.completed}
-                          size="small"
-                          disabled
-                        />
-                      </ListItemIcon>
-                      <ListItemText 
-                        primary={subtask.title} 
-                        primaryTypographyProps={{ 
-                          variant: 'body2',
-                          style: { 
-                            textDecoration: subtask.completed ? 'line-through' : 'none',
-                          }
-                        }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
+                <Grid container spacing={2}>
+                  <Grid item xs={6} sm={3}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Current Streak
+                      </Typography>
+                      <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <StreakIcon sx={{ mr: 0.5, color: 'warning.main' }} />
+                        {habit.streak.current} days
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  
+                  <Grid item xs={6} sm={3}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Best Streak
+                      </Typography>
+                      <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <StreakIcon sx={{ mr: 0.5, color: 'success.main' }} />
+                        {habit.streak.best} days
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  
+                  <Grid item xs={6} sm={3}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        This Month
+                      </Typography>
+                      <Typography variant="h6">
+                        {habit.completions.filter(c => 
+                          c.completed && new Date(c.date).getMonth() === new Date().getMonth()
+                        ).length} days
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  
+                  <Grid item xs={6} sm={3}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Total
+                      </Typography>
+                      <Typography variant="h6">
+                        {habit.streak.totalCompletions} times
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
               </Box>
-            )}
-          </Box>
-        </Collapse>
-      </CardContent>
-    </Card>
+              
+              {habit.subtasks.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Subtasks
+                  </Typography>
+                  
+                  <List dense disablePadding>
+                    {habit.subtasks.map((subtask) => (
+                      <ListItem key={subtask.id} disablePadding sx={{ py: 0.5 }}>
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          <Checkbox
+                            edge="start"
+                            checked={subtask.completed}
+                            size="small"
+                            disabled
+                          />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={subtask.title} 
+                          primaryTypographyProps={{ 
+                            variant: 'body2',
+                            style: { 
+                              textDecoration: subtask.completed ? 'line-through' : 'none',
+                            }
+                          }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
+            </Box>
+          </Collapse>
+        </CardContent>
+      </Card>
+      
+      <HabitEditDialog 
+        open={editDialogOpen} 
+        onClose={() => setEditDialogOpen(false)} 
+        habit={habit} 
+      />
+    </>
   );
-}
-
-function getRecurrenceText(habit: Habit): string {
-  const { recurrence } = habit;
-  
-  switch (recurrence.type) {
-    case 'daily':
-      return recurrence.interval === 1 
-        ? 'Daily' 
-        : `Every ${recurrence.interval} days`;
-    
-    case 'weekly':
-      if (recurrence.weekDays?.length === 7) return 'Daily';
-      if (recurrence.weekDays?.length === 5 && 
-          recurrence.weekDays.includes('monday') &&
-          recurrence.weekDays.includes('tuesday') &&
-          recurrence.weekDays.includes('wednesday') &&
-          recurrence.weekDays.includes('thursday') &&
-          recurrence.weekDays.includes('friday')) {
-        return 'Weekdays';
-      }
-      if (recurrence.weekDays?.length === 2 && 
-          recurrence.weekDays.includes('saturday') &&
-          recurrence.weekDays.includes('sunday')) {
-        return 'Weekends';
-      }
-      return `Weekly: ${recurrence.weekDays?.map(day => day.charAt(0).toUpperCase() + day.slice(1, 3)).join(', ')}`;
-    
-    case 'monthly':
-      return recurrence.isLastDay
-        ? 'Last day of month'
-        : `Monthly: Day ${recurrence.dayOfMonth}`;
-    
-    case 'yearly':
-      return `Yearly: ${recurrence.monthOfYear}/${recurrence.dayOfMonth}`;
-    
-    case 'custom':
-    default:
-      return 'Custom';
-  }
 }
  
