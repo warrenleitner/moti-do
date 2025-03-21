@@ -109,9 +109,11 @@ export default function Layout({ children }: LayoutProps) {
       </Toolbar>
       <Box sx={{ px: 2, py: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <IconButton sx={{ mr: 1, bgcolor: theme.palette.primary.main, color: 'white' }}>
-            <PersonIcon />
-          </IconButton>
+          <Link href="/profile" style={{ textDecoration: 'none' }}>
+            <IconButton sx={{ mr: 1, bgcolor: theme.palette.primary.main, color: 'white' }}>
+              <PersonIcon />
+            </IconButton>
+          </Link>
           <Box>
             <Typography variant="body1" fontWeight="bold">
               User

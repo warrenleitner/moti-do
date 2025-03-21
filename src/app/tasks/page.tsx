@@ -35,6 +35,9 @@ export default function TasksPage() {
   const [tabValue, setTabValue] = useState(0);
   const [searchText, setSearchText] = useState('');
   const [sortBy, setSortBy] = useState('score');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [selectedTag, setSelectedTag] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // State for new task form
@@ -49,6 +52,8 @@ export default function TasksPage() {
   const getFutureTasks = useAppStore((state) => state.getFutureTasks);
   const getCompletedTasks = useAppStore((state) => state.getCompletedTasks);
   const addTask = useAppStore((state) => state.addTask);
+  const projects = useAppStore((state) => state.projects);
+  const tags = useAppStore((state) => state.tags);
   
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -58,8 +63,20 @@ export default function TasksPage() {
     setSortBy(event.target.value);
   };
   
+  const handleSortOrderChange = (event: SelectChangeEvent) => {
+    setSortOrder(event.target.value as 'asc' | 'desc');
+  };
+  
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchText(event.target.value);
+  };
+  
+  const handleProjectChange = (event: SelectChangeEvent) => {
+    setSelectedProject(event.target.value);
+  };
+  
+  const handleTagChange = (event: SelectChangeEvent) => {
+    setSelectedTag(event.target.value);
   };
   
   const handleOpenDialog = () => {
@@ -126,17 +143,32 @@ export default function TasksPage() {
       );
     }
     
+    // Filter by project
+    if (selectedProject) {
+      tasks = tasks.filter(task => task.projectId === selectedProject);
+    }
+    
+    // Filter by tag
+    if (selectedTag) {
+      tasks = tasks.filter(task => task.tags.includes(selectedTag));
+    }
+    
     // Sort tasks
     return tasks.sort((a, b) => {
+      let result = 0;
+      
       switch (sortBy) {
         case 'score':
-          return b.score - a.score;
+          result = b.score - a.score;
+          break;
         case 'dueDate':
           if (!a.dueDate) return 1;
           if (!b.dueDate) return -1;
-          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+          result = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+          break;
         case 'title':
-          return a.title.localeCompare(b.title);
+          result = a.title.localeCompare(b.title);
+          break;
         case 'importance':
           const importanceOrder = {
             'Defcon One': 0,
@@ -144,7 +176,8 @@ export default function TasksPage() {
             'Medium': 2,
             'Low': 3,
           };
-          return importanceOrder[a.importance] - importanceOrder[b.importance];
+          result = importanceOrder[a.importance] - importanceOrder[b.importance];
+          break;
         case 'difficulty':
           const difficultyOrder = {
             'Herculean': 0,
@@ -153,7 +186,8 @@ export default function TasksPage() {
             'Low': 3,
             'Trivial': 4,
           };
-          return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
+          result = difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
+          break;
         case 'duration':
           const durationOrder = {
             'Odysseyan': 0,
@@ -162,10 +196,13 @@ export default function TasksPage() {
             'Short': 3,
             'Trivial': 4,
           };
-          return durationOrder[a.duration] - durationOrder[b.duration];
+          result = durationOrder[a.duration] - durationOrder[b.duration];
+          break;
         default:
-          return 0;
+          result = 0;
       }
+      
+      return sortOrder === 'asc' ? result : -result;
     });
   };
   
@@ -192,7 +229,7 @@ export default function TasksPage() {
       </Paper>
       
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={6}>
           <TextField
             fullWidth
             placeholder="Search tasks..."
@@ -205,7 +242,7 @@ export default function TasksPage() {
             }}
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={3}>
           <FormControl fullWidth size="small" variant="outlined">
             <InputLabel id="sort-label">Sort By</InputLabel>
             <Select
@@ -220,6 +257,57 @@ export default function TasksPage() {
               <MenuItem value="importance">Importance</MenuItem>
               <MenuItem value="difficulty">Difficulty</MenuItem>
               <MenuItem value="duration">Duration</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <FormControl fullWidth size="small" variant="outlined">
+            <InputLabel id="sort-order-label">Order</InputLabel>
+            <Select
+              labelId="sort-order-label"
+              value={sortOrder}
+              onChange={handleSortOrderChange}
+              label="Order"
+            >
+              <MenuItem value="desc">Descending</MenuItem>
+              <MenuItem value="asc">Ascending</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth size="small" variant="outlined">
+            <InputLabel id="project-filter-label">Project</InputLabel>
+            <Select
+              labelId="project-filter-label"
+              value={selectedProject}
+              onChange={handleProjectChange}
+              label="Project"
+            >
+              <MenuItem value="">All Projects</MenuItem>
+              {projects.map(project => (
+                <MenuItem key={project.id} value={project.id}>
+                  {project.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth size="small" variant="outlined">
+            <InputLabel id="tag-filter-label">Tag</InputLabel>
+            <Select
+              labelId="tag-filter-label"
+              value={selectedTag}
+              onChange={handleTagChange}
+              label="Tag"
+            >
+              <MenuItem value="">All Tags</MenuItem>
+              {tags.map(tag => (
+                <MenuItem key={tag.id} value={tag.id}>
+                  {tag.name}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Grid>
