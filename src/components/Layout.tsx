@@ -79,6 +79,7 @@ export default function Layout({ children }: LayoutProps) {
     { text: 'Calendar', icon: <CalendarIcon />, path: '/calendar' },
     { text: 'Tags', icon: <TagIcon />, path: '/tags' },
     { text: 'Projects', icon: <ProjectIcon />, path: '/projects' },
+    { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
   
