@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -27,6 +27,8 @@ import {
   Radio,
   RadioGroup,
   Divider,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { Add as AddIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useAppStore } from '@/store/AppStore';
@@ -38,12 +40,19 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 export default function HabitsPage() {
+  const [tabValue, setTabValue] = useState(0);
   const [searchText, setSearchText] = useState('');
   const [sortBy, setSortBy] = useState('score');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  // Fix hydration issues by only rendering date-dependent content on the client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // State for new habit form
   const [newHabitTitle, setNewHabitTitle] = useState('');
@@ -61,9 +70,15 @@ export default function HabitsPage() {
   const [dayOfMonth, setDayOfMonth] = useState(1);
   
   const getActiveHabits = useAppStore((state) => state.getActiveHabits);
+  const getCompletedHabitsToday = useAppStore((state) => state.getCompletedHabitsToday);
+  const getFutureHabits = useAppStore((state) => state.getFutureHabits);
   const addHabit = useAppStore((state) => state.addHabit);
   const projects = useAppStore((state) => state.projects);
   const tags = useAppStore((state) => state.tags);
+  
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
   
   const handleSortChange = (event: SelectChangeEvent) => {
     setSortBy(event.target.value);
@@ -155,7 +170,24 @@ export default function HabitsPage() {
   };
   
   const getHabits = () => {
-    let habits = getActiveHabits();
+    let habits = [];
+    
+    // Only fetch and display habits once client-side code is running
+    if (!mounted) return [];
+    
+    switch (tabValue) {
+      case 0: // Active
+        habits = getActiveHabits();
+        break;
+      case 1: // Completed Today
+        habits = getCompletedHabitsToday();
+        break;
+      case 2: // Future
+        habits = getFutureHabits();
+        break;
+      default:
+        habits = getActiveHabits();
+    }
     
     // Filter by search text
     if (searchText) {
@@ -225,6 +257,20 @@ export default function HabitsPage() {
       <Typography variant="h4" gutterBottom>
         Habits
       </Typography>
+      
+      <Paper sx={{ mb: 3 }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          indicatorColor="primary"
+          textColor="primary"
+          variant="fullWidth"
+        >
+          <Tab label="Active" />
+          <Tab label="Completed Today" />
+          <Tab label="Future" />
+        </Tabs>
+      </Paper>
       
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} md={6}>
@@ -311,7 +357,18 @@ export default function HabitsPage() {
       </Grid>
       
       {habits.length > 0 ? (
-        habits.map((habit) => <HabitItem key={habit.id} habit={habit} />)
+        habits.map((habit) => {
+          // Check if habit is completed today
+          const isCompletedToday = habit.completions.some(c => {
+            const today = new Date();
+            const completionDate = new Date(c.date);
+            return completionDate.getDate() === today.getDate() && 
+                   completionDate.getMonth() === today.getMonth() &&
+                   completionDate.getFullYear() === today.getFullYear() &&
+                   c.completed;
+          });
+          return <HabitItem key={`${habit.id}-${isCompletedToday ? 'completed' : 'active'}`} habit={habit} />;
+        })
       ) : (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" color="text.secondary" gutterBottom>

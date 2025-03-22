@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -39,6 +39,12 @@ export default function TasksPage() {
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  // Fix hydration issues by only rendering date-dependent content on the client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // State for new task form
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -118,6 +124,9 @@ export default function TasksPage() {
   
   const getTasks = () => {
     let tasks = [];
+    
+    // Only fetch and display tasks once client-side code is running
+    if (!mounted) return [];
     
     switch (tabValue) {
       case 0: // Active
@@ -314,7 +323,7 @@ export default function TasksPage() {
       </Grid>
       
       {tasks.length > 0 ? (
-        tasks.map((task) => <Todo key={task.id} task={task} />)
+        tasks.map((task) => <Todo key={`${task.id}-${task.completedAt ? 'completed' : 'active'}`} task={task} />)
       ) : (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" color="text.secondary" gutterBottom>
