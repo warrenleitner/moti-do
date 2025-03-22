@@ -26,10 +26,11 @@ import {
 import { Add as AddIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useAppStore } from '@/store/AppStore';
 import Todo from '@/components/Todo';
-import { DifficultyLevel, DurationLevel, ImportanceLevel } from '@/models/Task';
+import { Task, ImportanceLevel, DifficultyLevel, DurationLevel, createTask } from '@/models/Task';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import TaskEditDialog from '@/components/TaskEditDialog';
 
 export default function TasksPage() {
   const [tabValue, setTabValue] = useState(0);
@@ -46,17 +47,9 @@ export default function TasksPage() {
     setMounted(true);
   }, []);
   
-  // State for new task form
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDescription, setNewTaskDescription] = useState('');
-  const [newTaskImportance, setNewTaskImportance] = useState<ImportanceLevel>('Medium');
-  const [newTaskDifficulty, setNewTaskDifficulty] = useState<DifficultyLevel>('Medium');
-  const [newTaskDuration, setNewTaskDuration] = useState<DurationLevel>('Medium');
-  const [newTaskDueDate, setNewTaskDueDate] = useState<Date | null>(null);
-  
-  const getActiveTasks = useAppStore((state) => state.getActiveTasks);
-  const getFutureTasks = useAppStore((state) => state.getFutureTasks);
-  const getCompletedTasks = useAppStore((state) => state.getCompletedTasks);
+  const activeTasks = useAppStore((state) => state.getActiveTasks());
+  const futureTasks = useAppStore((state) => state.getFutureTasks());
+  const completedTasks = useAppStore((state) => state.getCompletedTasks());
   const addTask = useAppStore((state) => state.addTask);
   const projects = useAppStore((state) => state.projects);
   const tags = useAppStore((state) => state.tags);
@@ -86,15 +79,6 @@ export default function TasksPage() {
   };
   
   const handleOpenDialog = () => {
-    // Reset form fields
-    setNewTaskTitle('');
-    setNewTaskDescription('');
-    setNewTaskImportance('Medium');
-    setNewTaskDifficulty('Medium');
-    setNewTaskDuration('Medium');
-    setNewTaskDueDate(null);
-    
-    // Open dialog
     setDialogOpen(true);
   };
   
@@ -102,68 +86,61 @@ export default function TasksPage() {
     setDialogOpen(false);
   };
   
-  const handleAddTask = () => {
-    // Validate form
-    if (!newTaskTitle.trim()) {
-      return; // Don't submit if no title
-    }
-    
-    // Add the task
-    addTask({
-      title: newTaskTitle.trim(),
-      description: newTaskDescription.trim() || undefined,
-      importance: newTaskImportance,
-      difficulty: newTaskDifficulty,
-      duration: newTaskDuration,
-      dueDate: newTaskDueDate || undefined
-    });
-    
-    // Close dialog
-    setDialogOpen(false);
+  // Create a placeholder task for the edit dialog
+  const newTaskTemplate = createTask({
+    title: '',
+    description: '',
+    importance: 'Medium',
+    difficulty: 'Medium',
+    duration: 'Medium'
+  });
+  
+  const handleTaskSave = (taskData: Partial<Task>) => {
+    addTask(taskData);
+    handleCloseDialog();
   };
   
-  const getTasks = () => {
-    let tasks = [];
+  const getTasks = (): Task[] => {
+    let tasks: Task[] = [];
     
     // Only fetch and display tasks once client-side code is running
     if (!mounted) return [];
     
     switch (tabValue) {
       case 0: // Active
-        tasks = getActiveTasks();
+        tasks = activeTasks;
         break;
       case 1: // Future
-        tasks = getFutureTasks();
+        tasks = futureTasks;
         break;
       case 2: // Completed
-        tasks = getCompletedTasks();
+        tasks = completedTasks;
         break;
       default:
-        tasks = getActiveTasks();
+        tasks = activeTasks;
     }
     
     // Filter by search text
     if (searchText) {
       const searchLower = searchText.toLowerCase();
-      tasks = tasks.filter(
-        (task) =>
-          task.title.toLowerCase().includes(searchLower) ||
-          (task.description && task.description.toLowerCase().includes(searchLower))
+      tasks = tasks.filter((task: Task) => 
+        task.title.toLowerCase().includes(searchLower) ||
+        (task.description && task.description.toLowerCase().includes(searchLower))
       );
     }
     
     // Filter by project
     if (selectedProject) {
-      tasks = tasks.filter(task => task.projectId === selectedProject);
+      tasks = tasks.filter((task: Task) => task.projectId === selectedProject);
     }
     
     // Filter by tag
     if (selectedTag) {
-      tasks = tasks.filter(task => task.tags.includes(selectedTag));
+      tasks = tasks.filter((task: Task) => task.tags.includes(selectedTag));
     }
     
     // Sort tasks
-    return tasks.sort((a, b) => {
+    return tasks.sort((a: Task, b: Task) => {
       let result = 0;
       
       switch (sortBy) {
@@ -323,7 +300,7 @@ export default function TasksPage() {
       </Grid>
       
       {tasks.length > 0 ? (
-        tasks.map((task) => <Todo key={`${task.id}-${task.completedAt ? 'completed' : 'active'}`} task={task} />)
+        tasks.map((task) => <Todo key={`${task.id}-${task.completedAt ? 'completed' : 'active'}-${Date.now()}`} task={task} />)
       ) : (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -363,106 +340,12 @@ export default function TasksPage() {
       </Fab>
 
       {/* New Task Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Create New Task
-          <IconButton
-            aria-label="close"
-            onClick={handleCloseDialog}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={3} sx={{ my: 1 }}>
-            <TextField
-              label="Title"
-              fullWidth
-              required
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              autoFocus
-            />
-            
-            <TextField
-              label="Description"
-              fullWidth
-              multiline
-              rows={3}
-              value={newTaskDescription}
-              onChange={(e) => setNewTaskDescription(e.target.value)}
-            />
-            
-            <FormControl fullWidth>
-              <InputLabel>Importance</InputLabel>
-              <Select
-                value={newTaskImportance}
-                onChange={(e) => setNewTaskImportance(e.target.value as ImportanceLevel)}
-                label="Importance"
-              >
-                <MenuItem value="Low">Low</MenuItem>
-                <MenuItem value="Medium">Medium</MenuItem>
-                <MenuItem value="High">High</MenuItem>
-                <MenuItem value="Defcon One">Defcon One</MenuItem>
-              </Select>
-            </FormControl>
-            
-            <FormControl fullWidth>
-              <InputLabel>Difficulty</InputLabel>
-              <Select
-                value={newTaskDifficulty}
-                onChange={(e) => setNewTaskDifficulty(e.target.value as DifficultyLevel)}
-                label="Difficulty"
-              >
-                <MenuItem value="Trivial">Trivial</MenuItem>
-                <MenuItem value="Low">Low</MenuItem>
-                <MenuItem value="Medium">Medium</MenuItem>
-                <MenuItem value="High">High</MenuItem>
-                <MenuItem value="Herculean">Herculean</MenuItem>
-              </Select>
-            </FormControl>
-            
-            <FormControl fullWidth>
-              <InputLabel>Duration</InputLabel>
-              <Select
-                value={newTaskDuration}
-                onChange={(e) => setNewTaskDuration(e.target.value as DurationLevel)}
-                label="Duration"
-              >
-                <MenuItem value="Trivial">Trivial</MenuItem>
-                <MenuItem value="Short">Short</MenuItem>
-                <MenuItem value="Medium">Medium</MenuItem>
-                <MenuItem value="Long">Long</MenuItem>
-                <MenuItem value="Odysseyan">Odysseyan</MenuItem>
-              </Select>
-            </FormControl>
-            
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Due Date (Optional)"
-                value={newTaskDueDate}
-                onChange={(newDate) => setNewTaskDueDate(newDate)}
-                slotProps={{ textField: { fullWidth: true } }}
-              />
-            </LocalizationProvider>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button 
-            onClick={handleAddTask} 
-            variant="contained" 
-            disabled={!newTaskTitle.trim()}
-          >
-            Add Task
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <TaskEditDialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        onSave={handleTaskSave}
+        task={newTaskTemplate}
+      />
     </Box>
   );
 } 

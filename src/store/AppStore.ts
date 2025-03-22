@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { format, isAfter, isBefore, differenceInDays } from 'date-fns';
+import { format, isAfter, isBefore, differenceInDays, isToday } from 'date-fns';
 
 import { Task, Tag, Project, createTask, Subtask } from '@/models/Task';
 import { Habit, createHabit } from '@/models/Habit';
@@ -13,6 +13,7 @@ interface AppState {
   tags: Tag[];
   projects: Project[];
   user: User;
+  initialized: boolean;
 
   // Task actions
   addTask: (task: Partial<Task>) => void;
@@ -60,6 +61,9 @@ interface AppState {
   getHabitsDueToday: () => Habit[];
   getCompletedHabitsToday: () => Habit[];
   getFutureHabits: () => Habit[];
+
+  // New computed selectors
+  setInitialized: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -70,6 +74,7 @@ export const useAppStore = create<AppState>()(
       tags: [],
       projects: [],
       user: createDefaultUser(),
+      initialized: false,
 
       // Task actions
       addTask: (taskData) => {
@@ -210,6 +215,13 @@ export const useAppStore = create<AppState>()(
             completed,
             completedAt: completed ? new Date() : undefined,
           };
+          
+          // Sort subtasks - uncompleted first, then completed
+          updatedSubtasks.sort((a, b) => {
+            if (a.completed && !b.completed) return 1;
+            if (!a.completed && b.completed) return -1;
+            return 0;
+          });
           
           const updatedTasks = [...state.tasks];
           updatedTasks[taskIndex] = {
@@ -854,6 +866,15 @@ export const useAppStore = create<AppState>()(
           return habit.startDate && isBefore(new Date(), habit.startDate);
         });
       },
+
+      // New computed selectors
+      setInitialized: () => set({ initialized: true }),
+
+      // Computed selectors to filter tasks and habits
+      getActiveTasks: () => get().tasks.filter(task => !task.completedAt),
+      getCompletedTasks: () => get().tasks.filter(task => task.completedAt),
+      getActiveHabits: () => get().habits.filter(habit => !habit.completions.some(c => isToday(new Date(c.date)) && c.completed)),
+      getCompletedHabitsToday: () => get().habits.filter(habit => habit.completions.some(c => isToday(new Date(c.date)) && c.completed)),
     }),
     {
       name: 'moti-do-storage',

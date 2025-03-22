@@ -15,9 +15,10 @@ export default function Home() {
 
   // Sample task and habit data for initial usage
   useEffect(() => {
-    // Only add sample data if there are no tasks or habits
-    if (tasks.length === 0 && habits.length === 0) {
+    const state = useAppStore.getState();
+    if (!state.initialized && tasks.length === 0 && habits.length === 0 && state.tags.length === 0 && state.projects.length === 0) {
       initializeSampleData();
+      state.setInitialized();
     }
   }, [tasks.length, habits.length]);
 

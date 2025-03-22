@@ -33,11 +33,17 @@ import {
 import { Add as AddIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useAppStore } from '@/store/AppStore';
 import HabitItem from '@/components/HabitItem';
-import { DifficultyLevel, DurationLevel, ImportanceLevel } from '@/models/Task';
-import { RecurrenceType, WeekDay } from '@/models/Habit';
+import { 
+  Habit, 
+  RecurrenceType, 
+  WeekDay,
+  createHabit
+} from '@/models/Habit';
+import { ImportanceLevel, DifficultyLevel, DurationLevel } from '@/models/Task';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import HabitEditDialog from '@/components/HabitEditDialog';
 
 export default function HabitsPage() {
   const [tabValue, setTabValue] = useState(0);
@@ -69,9 +75,9 @@ export default function HabitsPage() {
   const [isLastDay, setIsLastDay] = useState(false);
   const [dayOfMonth, setDayOfMonth] = useState(1);
   
-  const getActiveHabits = useAppStore((state) => state.getActiveHabits);
-  const getCompletedHabitsToday = useAppStore((state) => state.getCompletedHabitsToday);
-  const getFutureHabits = useAppStore((state) => state.getFutureHabits);
+  const activeHabits = useAppStore((state) => state.getActiveHabits());
+  const completedHabitsToday = useAppStore((state) => state.getCompletedHabitsToday());
+  const futureHabits = useAppStore((state) => state.getFutureHabits());
   const addHabit = useAppStore((state) => state.addHabit);
   const projects = useAppStore((state) => state.projects);
   const tags = useAppStore((state) => state.tags);
@@ -177,16 +183,16 @@ export default function HabitsPage() {
     
     switch (tabValue) {
       case 0: // Active
-        habits = getActiveHabits();
+        habits = activeHabits;
         break;
       case 1: // Completed Today
-        habits = getCompletedHabitsToday();
+        habits = completedHabitsToday;
         break;
       case 2: // Future
-        habits = getFutureHabits();
+        habits = futureHabits;
         break;
       default:
-        habits = getActiveHabits();
+        habits = activeHabits;
     }
     
     // Filter by search text
@@ -251,6 +257,24 @@ export default function HabitsPage() {
   };
   
   const habits = getHabits();
+  
+  // Create a placeholder habit for the edit dialog
+  const newHabitTemplate = createHabit({
+    title: '',
+    description: '',
+    importance: 'Medium',
+    difficulty: 'Medium',
+    duration: 'Medium',
+    recurrence: {
+      type: 'daily',
+      interval: 1
+    }
+  });
+  
+  const handleHabitSave = (habitData: Partial<Habit>) => {
+    addHabit(habitData);
+    handleCloseDialog();
+  };
   
   return (
     <Box>
@@ -367,7 +391,7 @@ export default function HabitsPage() {
                    completionDate.getFullYear() === today.getFullYear() &&
                    c.completed;
           });
-          return <HabitItem key={`${habit.id}-${isCompletedToday ? 'completed' : 'active'}`} habit={habit} />;
+          return <HabitItem key={`${habit.id}-${isCompletedToday ? 'completed' : 'active'}-${Date.now()}`} habit={habit} />;
         })
       ) : (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
@@ -402,204 +426,12 @@ export default function HabitsPage() {
       </Fab>
       
       {/* New Habit Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Create New Habit
-          <IconButton
-            aria-label="close"
-            onClick={handleCloseDialog}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={3} sx={{ my: 1 }}>
-            <TextField
-              label="Title"
-              fullWidth
-              required
-              value={newHabitTitle}
-              onChange={(e) => setNewHabitTitle(e.target.value)}
-              autoFocus
-            />
-            
-            <TextField
-              label="Description"
-              fullWidth
-              multiline
-              rows={3}
-              value={newHabitDescription}
-              onChange={(e) => setNewHabitDescription(e.target.value)}
-            />
-            
-            <FormControl fullWidth>
-              <InputLabel>Importance</InputLabel>
-              <Select
-                value={newHabitImportance}
-                onChange={(e) => setNewHabitImportance(e.target.value as ImportanceLevel)}
-                label="Importance"
-              >
-                <MenuItem value="Low">Low</MenuItem>
-                <MenuItem value="Medium">Medium</MenuItem>
-                <MenuItem value="High">High</MenuItem>
-                <MenuItem value="Defcon One">Defcon One</MenuItem>
-              </Select>
-            </FormControl>
-            
-            <FormControl fullWidth>
-              <InputLabel>Difficulty</InputLabel>
-              <Select
-                value={newHabitDifficulty}
-                onChange={(e) => setNewHabitDifficulty(e.target.value as DifficultyLevel)}
-                label="Difficulty"
-              >
-                <MenuItem value="Trivial">Trivial</MenuItem>
-                <MenuItem value="Low">Low</MenuItem>
-                <MenuItem value="Medium">Medium</MenuItem>
-                <MenuItem value="High">High</MenuItem>
-                <MenuItem value="Herculean">Herculean</MenuItem>
-              </Select>
-            </FormControl>
-            
-            <FormControl fullWidth>
-              <InputLabel>Duration</InputLabel>
-              <Select
-                value={newHabitDuration}
-                onChange={(e) => setNewHabitDuration(e.target.value as DurationLevel)}
-                label="Duration"
-              >
-                <MenuItem value="Trivial">Trivial</MenuItem>
-                <MenuItem value="Short">Short</MenuItem>
-                <MenuItem value="Medium">Medium</MenuItem>
-                <MenuItem value="Long">Long</MenuItem>
-                <MenuItem value="Odysseyan">Odysseyan</MenuItem>
-              </Select>
-            </FormControl>
-            
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Start Date (Optional)"
-                value={newHabitStartDate}
-                onChange={(newDate: Date | null) => setNewHabitStartDate(newDate)}
-                slotProps={{ textField: { fullWidth: true } }}
-              />
-            </LocalizationProvider>
-            
-            <Divider sx={{ my: 1 }} />
-            
-            <FormControl component="fieldset">
-              <FormLabel component="legend">Recurrence</FormLabel>
-              <RadioGroup
-                value={recurrenceType}
-                onChange={(e) => setRecurrenceType(e.target.value as RecurrenceType)}
-              >
-                <FormControlLabel value="daily" control={<Radio />} label="Daily" />
-                <FormControlLabel value="weekly" control={<Radio />} label="Weekly" />
-                <FormControlLabel value="monthly" control={<Radio />} label="Monthly" />
-              </RadioGroup>
-            </FormControl>
-            
-            {recurrenceType === 'daily' && (
-              <FormControl fullWidth>
-                <InputLabel>Every X Days</InputLabel>
-                <Select
-                  value={interval}
-                  onChange={(e) => setInterval(Number(e.target.value))}
-                  label="Every X Days"
-                >
-                  {[1, 2, 3, 4, 5, 6, 7].map(n => (
-                    <MenuItem key={n} value={n}>
-                      {n === 1 ? 'Every day' : `Every ${n} days`}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-            
-            {recurrenceType === 'weekly' && (
-              <FormControl component="fieldset">
-                <FormLabel component="legend">Repeat on</FormLabel>
-                <FormGroup row>
-                  <FormControlLabel
-                    control={<Checkbox checked={weekDays.includes('monday')} onChange={handleWeekdayChange('monday')} />}
-                    label="Mon"
-                  />
-                  <FormControlLabel
-                    control={<Checkbox checked={weekDays.includes('tuesday')} onChange={handleWeekdayChange('tuesday')} />}
-                    label="Tue"
-                  />
-                  <FormControlLabel
-                    control={<Checkbox checked={weekDays.includes('wednesday')} onChange={handleWeekdayChange('wednesday')} />}
-                    label="Wed"
-                  />
-                  <FormControlLabel
-                    control={<Checkbox checked={weekDays.includes('thursday')} onChange={handleWeekdayChange('thursday')} />}
-                    label="Thu"
-                  />
-                  <FormControlLabel
-                    control={<Checkbox checked={weekDays.includes('friday')} onChange={handleWeekdayChange('friday')} />}
-                    label="Fri"
-                  />
-                  <FormControlLabel
-                    control={<Checkbox checked={weekDays.includes('saturday')} onChange={handleWeekdayChange('saturday')} />}
-                    label="Sat"
-                  />
-                  <FormControlLabel
-                    control={<Checkbox checked={weekDays.includes('sunday')} onChange={handleWeekdayChange('sunday')} />}
-                    label="Sun"
-                  />
-                </FormGroup>
-              </FormControl>
-            )}
-            
-            {recurrenceType === 'monthly' && (
-              <Box>
-                <FormControl component="fieldset">
-                  <RadioGroup
-                    value={isLastDay ? 'last' : 'specific'}
-                    onChange={(e) => setIsLastDay(e.target.value === 'last')}
-                  >
-                    <FormControlLabel value="specific" control={<Radio />} label="On day" />
-                    <FormControlLabel value="last" control={<Radio />} label="On the last day" />
-                  </RadioGroup>
-                </FormControl>
-                
-                {!isLastDay && (
-                  <FormControl fullWidth sx={{ mt: 1 }}>
-                    <InputLabel>Day of month</InputLabel>
-                    <Select
-                      value={dayOfMonth}
-                      onChange={(e) => setDayOfMonth(Number(e.target.value))}
-                      label="Day of month"
-                    >
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                        <MenuItem key={day} value={day}>
-                          {day}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )}
-              </Box>
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button 
-            onClick={handleAddHabit} 
-            variant="contained" 
-            disabled={!newHabitTitle.trim() || (recurrenceType === 'weekly' && weekDays.length === 0)}
-          >
-            Create Habit
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <HabitEditDialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        onSave={handleHabitSave}
+        habit={newHabitTemplate}
+      />
     </Box>
   );
 } 

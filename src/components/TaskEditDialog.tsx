@@ -37,9 +37,10 @@ interface TaskEditDialogProps {
   open: boolean;
   onClose: () => void;
   task: Task | null;
+  onSave?: (taskData: Partial<Task>) => void;
 }
 
-export default function TaskEditDialog({ open, onClose, task }: TaskEditDialogProps) {
+export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEditDialogProps) {
   const updateTask = useAppStore((state) => state.updateTask);
   const tasks = useAppStore((state) => state.tasks);
   const tags = useAppStore((state) => state.tags);
@@ -76,7 +77,7 @@ export default function TaskEditDialog({ open, onClose, task }: TaskEditDialogPr
   const handleSave = () => {
     if (!task) return;
     
-    updateTask(task.id, {
+    const taskData = {
       title,
       description,
       startDate: startDate || undefined,
@@ -87,7 +88,13 @@ export default function TaskEditDialog({ open, onClose, task }: TaskEditDialogPr
       tags: selectedTags,
       projectId: selectedProject,
       dependencies
-    });
+    };
+    
+    if (onSave) {
+      onSave(taskData);
+    } else {
+      updateTask(task.id, taskData);
+    }
     
     onClose();
   };
@@ -129,7 +136,7 @@ export default function TaskEditDialog({ open, onClose, task }: TaskEditDialogPr
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>Edit Task</DialogTitle>
+      <DialogTitle>{task && task.id ? 'Edit Task' : 'Create New Task'}</DialogTitle>
       <DialogContent>
         <Grid container spacing={3} sx={{ mt: 0 }}>
           <Grid item xs={12}>
