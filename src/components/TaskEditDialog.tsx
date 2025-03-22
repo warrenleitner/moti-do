@@ -27,6 +27,7 @@ import {
   Autocomplete
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { DesktopDateTimePicker } from '@mui/x-date-pickers/DesktopDateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { Task } from '@/models/Task';
@@ -46,13 +47,19 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
   const tags = useAppStore((state) => state.tags);
   const projects = useAppStore((state) => state.projects);
 
+  // Define default dates
+  const defaultStart = new Date();
+  defaultStart.setHours(0, 0, 0, 0);
+  const defaultDue = new Date();
+  defaultDue.setHours(23, 59, 59, 999);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [dueDate, setDueDate] = useState<Date | null>(null);
-  const [importance, setImportance] = useState('Medium');
-  const [difficulty, setDifficulty] = useState('Medium');
-  const [duration, setDuration] = useState('Medium');
+  const [startDate, setStartDate] = useState<Date | null>(task && task.startDate ? new Date(task.startDate) : defaultStart);
+  const [dueDate, setDueDate] = useState<Date | null>(task && task.dueDate ? new Date(task.dueDate) : defaultDue);
+  const [importance, setImportance] = useState('Not Set');
+  const [difficulty, setDifficulty] = useState('Not Set');
+  const [duration, setDuration] = useState('Not Set');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | undefined>(undefined);
   const [dependencies, setDependencies] = useState<string[]>([]);
@@ -63,8 +70,8 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
     if (task) {
       setTitle(task.title);
       setDescription(task.description || '');
-      setStartDate(task.startDate ? new Date(task.startDate) : null);
-      setDueDate(task.dueDate ? new Date(task.dueDate) : null);
+      setStartDate(task.startDate ? new Date(task.startDate) : defaultStart);
+      setDueDate(task.dueDate ? new Date(task.dueDate) : defaultDue);
       setImportance(task.importance);
       setDifficulty(task.difficulty);
       setDuration(task.duration);
@@ -77,11 +84,14 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
   const handleSave = () => {
     if (!task) return;
     
+    const adjustedStartDate = startDate ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0) : null;
+    const adjustedDueDate = dueDate ? new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate(), 23, 59, 59) : null;
+    
     const taskData = {
       title,
       description,
-      startDate: startDate || undefined,
-      dueDate: dueDate || undefined,
+      startDate: adjustedStartDate || undefined,
+      dueDate: adjustedDueDate || undefined,
       importance: importance as Task['importance'],
       difficulty: difficulty as Task['difficulty'],
       duration: duration as Task['duration'],
@@ -163,26 +173,28 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
             />
           </Grid>
           
-          <Grid item xs={12} sm={6}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Start Date"
-                value={startDate}
-                onChange={(date) => setStartDate(date)}
-                slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
-              />
-            </LocalizationProvider>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Due Date"
-                value={dueDate}
-                onChange={(date) => setDueDate(date)}
-                slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
-              />
-            </LocalizationProvider>
+          {/* Date/Time Pickers */}
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DesktopDateTimePicker
+                  label="Start Date/Time"
+                  value={startDate}
+                  onChange={(newValue: Date | null) => setStartDate(newValue)}
+                  slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
+                />
+              </LocalizationProvider>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DesktopDateTimePicker
+                  label="Due Date/Time"
+                  value={dueDate}
+                  onChange={(newValue: Date | null) => setDueDate(newValue)}
+                  slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
+                />
+              </LocalizationProvider>
+            </Grid>
           </Grid>
           
           <Grid item xs={12} sm={4}>

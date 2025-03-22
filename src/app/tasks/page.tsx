@@ -22,6 +22,7 @@ import {
   DialogActions,
   IconButton,
   Stack,
+  Collapse,
 } from '@mui/material';
 import { Add as AddIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useAppStore } from '@/store/AppStore';
@@ -31,6 +32,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import TaskEditDialog from '@/components/TaskEditDialog';
+import { TransitionGroup } from 'react-transition-group';
 
 export default function TasksPage() {
   const [tabValue, setTabValue] = useState(0);
@@ -156,31 +158,34 @@ export default function TasksPage() {
           result = a.title.localeCompare(b.title);
           break;
         case 'importance':
-          const importanceOrder = {
+          const importanceOrder: Record<import('@/models/Task').ImportanceLevel, number> = {
             'Defcon One': 0,
             'High': 1,
             'Medium': 2,
             'Low': 3,
+            'Not Set': 4,
           };
           result = importanceOrder[a.importance] - importanceOrder[b.importance];
           break;
         case 'difficulty':
-          const difficultyOrder = {
+          const difficultyOrder: Record<import('@/models/Task').DifficultyLevel, number> = {
             'Herculean': 0,
             'High': 1,
             'Medium': 2,
             'Low': 3,
             'Trivial': 4,
+            'Not Set': 5,
           };
           result = difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
           break;
         case 'duration':
-          const durationOrder = {
+          const durationOrder: Record<import('@/models/Task').DurationLevel, number> = {
             'Odysseyan': 0,
             'Long': 1,
             'Medium': 2,
             'Short': 3,
             'Trivial': 4,
+            'Not Set': 5,
           };
           result = durationOrder[a.duration] - durationOrder[b.duration];
           break;
@@ -300,7 +305,13 @@ export default function TasksPage() {
       </Grid>
       
       {tasks.length > 0 ? (
-        tasks.map((task) => <Todo key={`${task.id}-${task.completedAt ? 'completed' : 'active'}-${Date.now()}`} task={task} />)
+        <TransitionGroup>
+          {tasks.map((task) => (
+            <Collapse key={task.id}>
+              <Todo task={task} />
+            </Collapse>
+          ))}
+        </TransitionGroup>
       ) : (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" color="text.secondary" gutterBottom>

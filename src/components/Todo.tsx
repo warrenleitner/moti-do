@@ -34,6 +34,7 @@ import { format } from 'date-fns';
 import { useAppStore } from '@/store/AppStore';
 import { Task, Subtask } from '@/models/Task';
 import TaskEditDialog from './TaskEditDialog';
+import ScoreBreakdownDialog from '@/components/ScoreBreakdownDialog';
 
 interface TodoProps {
   task: Task;
@@ -44,6 +45,7 @@ export default function Todo({ task }: TodoProps) {
   const [newSubtask, setNewSubtask] = useState('');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [scoreDialogOpen, setScoreDialogOpen] = useState(false);
   
   // Fix hydration issues by only rendering date-dependent content on the client
   useEffect(() => {
@@ -187,6 +189,8 @@ export default function Todo({ task }: TodoProps) {
                            overdueLevel === 2 ? '#ff9800' : 
                            overdueLevel === 3 ? '#f44336' : 
                            undefined;
+  
+  const handleScoreDialogClose = () => setScoreDialogOpen(false);
   
   return (
     <>
@@ -354,7 +358,8 @@ export default function Todo({ task }: TodoProps) {
                     fontSize: '0.875rem',
                     fontWeight: 'bold',
                     color: 'primary.main',
-                  }}>
+                    cursor: 'pointer'
+                  }} onClick={() => setScoreDialogOpen(true)}>
                     {task.score} pts
                   </Box>
                 </Box>
@@ -492,6 +497,8 @@ export default function Todo({ task }: TodoProps) {
         onClose={() => setEditDialogOpen(false)} 
         task={task} 
       />
+      
+      <ScoreBreakdownDialog open={scoreDialogOpen} onClose={handleScoreDialogClose} task={task} />
     </>
   );
 } 

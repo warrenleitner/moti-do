@@ -715,6 +715,11 @@ export const useAppStore = create<AppState>()(
           score *= tagMultiplier;
         }
         
+        // Counter-based habit score: each recorded occurrence adds 1/requiredOccurrences
+        if (habit.requiredOccurrences && habit.requiredOccurrences > 1) {
+          score += (habit.currentOccurrences || 0) / habit.requiredOccurrences;
+        }
+        
         return Math.round(score * 10) / 10;
       },
       
@@ -869,12 +874,6 @@ export const useAppStore = create<AppState>()(
 
       // New computed selectors
       setInitialized: () => set({ initialized: true }),
-
-      // Computed selectors to filter tasks and habits
-      getActiveTasks: () => get().tasks.filter(task => !task.completedAt),
-      getCompletedTasks: () => get().tasks.filter(task => task.completedAt),
-      getActiveHabits: () => get().habits.filter(habit => !habit.completions.some(c => isToday(new Date(c.date)) && c.completed)),
-      getCompletedHabitsToday: () => get().habits.filter(habit => habit.completions.some(c => isToday(new Date(c.date)) && c.completed)),
     }),
     {
       name: 'moti-do-storage',
