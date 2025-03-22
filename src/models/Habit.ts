@@ -53,6 +53,7 @@ export interface Habit {
   startDate?: Date;
   dueDate?: Date;
   createdAt: Date;
+  completedAt?: Date;
   importance: ImportanceLevel;
   difficulty: DifficultyLevel;
   duration: DurationLevel;
@@ -68,6 +69,9 @@ export interface Habit {
   subtaskRecurrenceOption: SubtaskRecurrenceOption;
   streak: HabitStreak;
   completions: HabitCompletion[];
+  currentOccurrences: number;
+  requiredOccurrences: number;
+  occurrenceRecords: Date[];
 }
 
 export function createHabit(habitData: Partial<Habit>): Habit {
@@ -78,7 +82,8 @@ export function createHabit(habitData: Partial<Habit>): Habit {
     icon: habitData.icon,
     startDate: habitData.startDate,
     dueDate: habitData.dueDate,
-    createdAt: new Date(),
+    createdAt: habitData.createdAt || new Date(),
+    completedAt: habitData.completedAt,
     importance: habitData.importance || 'Medium',
     difficulty: habitData.difficulty || 'Medium',
     duration: habitData.duration || 'Medium',
@@ -88,7 +93,7 @@ export function createHabit(habitData: Partial<Habit>): Habit {
     projectId: habitData.projectId,
     isNext: habitData.isNext || false,
     inProgress: habitData.inProgress || false,
-    score: 0, // Will be calculated by the scoring system
+    score: habitData.score || 0,
     history: [],
     recurrence: habitData.recurrence || {
       type: 'daily',
@@ -103,6 +108,9 @@ export function createHabit(habitData: Partial<Habit>): Habit {
       totalCompletions: 0,
       totalOccurrences: 0
     },
-    completions: []
+    completions: [],
+    currentOccurrences: habitData.currentOccurrences || 0,
+    requiredOccurrences: habitData.requiredOccurrences || 1,
+    occurrenceRecords: habitData.occurrenceRecords || []
   };
 } 

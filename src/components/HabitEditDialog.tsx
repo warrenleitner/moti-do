@@ -31,6 +31,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DesktopDateTimePicker } from '@mui/x-date-pickers/DesktopDateTimePicker';
 import { Habit, RecurrenceType, WeekDay } from '@/models/Habit';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { useAppStore } from '@/store/AppStore';
@@ -43,6 +44,12 @@ interface HabitEditDialogProps {
   onSave?: (habitData: Partial<Habit>) => void;
 }
 
+// Define default dates
+const defaultStart = new Date();
+defaultStart.setHours(0, 0, 0, 0);
+const defaultDue = new Date();
+defaultDue.setHours(23, 59, 59, 999);
+
 export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitEditDialogProps) {
   const updateHabit = useAppStore((state) => state.updateHabit);
   const tags = useAppStore((state) => state.tags);
@@ -52,11 +59,11 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [dueDate, setDueDate] = useState<Date | null>(null);
-  const [importance, setImportance] = useState('Medium');
-  const [difficulty, setDifficulty] = useState('Medium');
-  const [duration, setDuration] = useState('Medium');
+  const [startDate, setStartDate] = useState<Date | null>(habit && habit.startDate ? new Date(habit.startDate) : defaultStart);
+  const [dueDate, setDueDate] = useState<Date | null>(habit && habit.dueDate ? new Date(habit.dueDate) : defaultDue);
+  const [importance, setImportance] = useState('Not Set');
+  const [difficulty, setDifficulty] = useState('Not Set');
+  const [duration, setDuration] = useState('Not Set');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | undefined>(undefined);
   
@@ -77,13 +84,16 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
   const [advanceDisplayUnit, setAdvanceDisplayUnit] = useState<'immediate' | 'days' | 'weeks' | 'months'>('days');
   const [advanceDisplayNumber, setAdvanceDisplayNumber] = useState(1);
 
+  // New state for counter-based habit
+  const [requiredOccurrences, setRequiredOccurrences] = useState<number>(habit && habit.requiredOccurrences ? habit.requiredOccurrences : 1);
+
   // Initialize form with habit data when opened
   useEffect(() => {
     if (habit) {
       setTitle(habit.title);
       setDescription(habit.description || '');
-      setStartDate(habit.startDate ? new Date(habit.startDate) : null);
-      setDueDate(habit.dueDate ? new Date(habit.dueDate) : null);
+      setStartDate(habit.startDate ? new Date(habit.startDate) : defaultStart);
+      setDueDate(habit.dueDate ? new Date(habit.dueDate) : defaultDue);
       setImportance(habit.importance);
       setDifficulty(habit.difficulty);
       setDuration(habit.duration);
@@ -117,6 +127,8 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
         }
         setAdvanceDisplay(recurrence.advanceDisplay);
       }
+
+      setRequiredOccurrences(habit.requiredOccurrences || 1);
     }
   }, [habit]);
 
@@ -157,7 +169,8 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
       tags: selectedTags,
       projectId: selectedProject,
       recurrence,
-      dependencies
+      dependencies,
+      requiredOccurrences
     };
     
     if (onSave) {
@@ -246,15 +259,39 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
             />
           </Grid>
           
-          <Grid item xs={12} md={6}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Initial Due Date"
-                value={dueDate}
-                onChange={(newValue) => setDueDate(newValue)}
-                slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
-              />
-            </LocalizationProvider>
+          {/* Date/Time Pickers for Habit */}
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DesktopDateTimePicker
+                  label="Start Date/Time"
+                  value={startDate}
+                  onChange={(newValue: Date | null) => setStartDate(newValue)}
+                  slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
+                />
+              </LocalizationProvider>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DesktopDateTimePicker
+                  label="Due Date/Time"
+                  value={dueDate}
+                  onChange={(newValue: Date | null) => setDueDate(newValue)}
+                  slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
+                />
+              </LocalizationProvider>
+            </Grid>
+          </Grid>
+          
+          <Grid item xs={12} sm={4}>
+            <TextField
+              label="Required Occurrences"
+              type="number"
+              value={requiredOccurrences}
+              onChange={(e) => setRequiredOccurrences(parseInt(e.target.value))}
+              fullWidth
+              margin="normal"
+            />
           </Grid>
           
           <Grid item xs={12} sm={4}>

@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 
-export type ImportanceLevel = 'Low' | 'Medium' | 'High' | 'Defcon One';
-export type DifficultyLevel = 'Trivial' | 'Low' | 'Medium' | 'High' | 'Herculean';
-export type DurationLevel = 'Trivial' | 'Short' | 'Medium' | 'Long' | 'Odysseyan';
+export type ImportanceLevel = 'Not Set' | 'Low' | 'Medium' | 'High' | 'Defcon One';
+export type DifficultyLevel = 'Not Set' | 'Trivial' | 'Low' | 'Medium' | 'High' | 'Herculean';
+export type DurationLevel = 'Not Set' | 'Trivial' | 'Short' | 'Medium' | 'Long' | 'Odysseyan';
 
 export interface Tag {
   id: string;
@@ -64,9 +64,9 @@ export function createTask(taskData: Partial<Task>): Task {
     dueDate: taskData.dueDate,
     createdAt: new Date(),
     completedAt: undefined,
-    importance: taskData.importance || 'Medium',
-    difficulty: taskData.difficulty || 'Medium',
-    duration: taskData.duration || 'Medium',
+    importance: taskData.importance || 'Not Set',
+    difficulty: taskData.difficulty || 'Not Set',
+    duration: taskData.duration || 'Not Set',
     dependencies: taskData.dependencies || [],
     subtasks: taskData.subtasks || [],
     tags: taskData.tags || [],

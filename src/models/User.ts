@@ -63,6 +63,8 @@ export interface User {
   xpTransactions: XPTransaction[];
   badges: Badge[];
   preferences: UserPreferences;
+  scoreBank: number;
+  scoreTransactions: XPTransaction[];
 }
 
 export function createDefaultUser(): User {
@@ -112,6 +114,8 @@ export function createDefaultUser(): User {
       notificationsEnabled: false,
       habitReminders: false,
       taskReminders: false
-    }
+    },
+    scoreBank: 0,
+    scoreTransactions: []
   };
 } 

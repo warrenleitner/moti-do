@@ -24,7 +24,8 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  Button
 } from '@mui/material';
 import { 
   Star as StarIcon,
@@ -40,6 +41,9 @@ import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, star
 import { Task } from '@/models/Task';
 import { Habit } from '@/models/Habit';
 import { User, XPTransaction } from '@/models/User';
+import ScoreBankDialog from '@/components/ScoreBankDialog';
+import ResetProfileDialog from '@/components/ResetProfileDialog';
+import UndoSnackbar from '@/components/UndoSnackbar';
 
 // Chart component using canvas
 const Chart = ({ data, color, height = 100, labels = [] }: { data: number[], color: string, height?: number, labels?: string[] }) => {
@@ -362,6 +366,9 @@ const generateChartData = (tasks: Task[], habits: Habit[], transactions: XPTrans
 
 export default function ProfilePage() {
   const [tabValue, setTabValue] = useState(0);
+  const [scoreBankDialogOpen, setScoreBankDialogOpen] = useState(false);
+  const [resetProfileDialogOpen, setResetProfileDialogOpen] = useState(false);
+  const [undoOpen, setUndoOpen] = useState(false);
   
   const user = useAppStore((state) => state.user);
   const tasks = useAppStore((state) => state.tasks);
@@ -736,6 +743,43 @@ export default function ProfilePage() {
           </Paper>
         </Grid>
       </Grid>
+      
+      {/* Additional User Actions */}
+      <Box sx={{ display: 'flex', gap: 2, my: 2 }}>
+        <Button variant="outlined" onClick={() => setScoreBankDialogOpen(true)}>
+          Score Bank
+        </Button>
+        <Button variant="outlined" color="error" onClick={() => setResetProfileDialogOpen(true)}>
+          Reset Profile
+        </Button>
+      </Box>
+      
+      <ScoreBankDialog 
+        open={scoreBankDialogOpen} 
+        onClose={() => setScoreBankDialogOpen(false)} 
+        user={user}
+      />
+      
+      <ResetProfileDialog 
+        open={resetProfileDialogOpen} 
+        onClose={() => setResetProfileDialogOpen(false)} 
+        onConfirm={() => {
+          // Implement profile reset logic here
+          console.log('Profile has been reset.');
+        }}
+      />
+      
+      {/* Example usage of UndoSnackbar (not fully integrated): */}
+      <UndoSnackbar 
+        open={undoOpen} 
+        message="Action completed" 
+        onUndo={() => {
+          // Implement undo action
+          console.log('Undo action triggered');
+          setUndoOpen(false);
+        }} 
+        onClose={() => setUndoOpen(false)}
+      />
     </Layout>
   );
 } 
