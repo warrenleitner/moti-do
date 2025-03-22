@@ -40,9 +40,10 @@ interface HabitEditDialogProps {
   open: boolean;
   onClose: () => void;
   habit: Habit | null;
+  onSave?: (habitData: Partial<Habit>) => void;
 }
 
-export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialogProps) {
+export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitEditDialogProps) {
   const updateHabit = useAppStore((state) => state.updateHabit);
   const tags = useAppStore((state) => state.tags);
   const projects = useAppStore((state) => state.projects);
@@ -145,7 +146,7 @@ export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialo
       advanceDisplay: calculatedAdvanceDisplay
     };
     
-    updateHabit(habit.id, {
+    const habitData = {
       title,
       description,
       startDate: startDate || undefined,
@@ -157,7 +158,13 @@ export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialo
       projectId: selectedProject,
       recurrence,
       dependencies
-    });
+    };
+    
+    if (onSave) {
+      onSave(habitData);
+    } else {
+      updateHabit(habit.id, habitData);
+    }
     
     onClose();
   };
@@ -212,7 +219,7 @@ export default function HabitEditDialog({ open, onClose, habit }: HabitEditDialo
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>Edit Habit</DialogTitle>
+      <DialogTitle>{habit && habit.id ? 'Edit Habit' : 'Create New Habit'}</DialogTitle>
       <DialogContent>
         <Grid container spacing={3} sx={{ mt: 0 }}>
           <Grid item xs={12}>
