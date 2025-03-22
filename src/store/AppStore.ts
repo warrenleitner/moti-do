@@ -16,7 +16,7 @@ interface AppState {
   initialized: boolean;
 
   // Task actions
-  addTask: (task: Partial<Task>) => void;
+  addTask: (task: Partial<Task>) => Task;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   completeTask: (id: string, completed: boolean) => void;
@@ -99,6 +99,7 @@ export const useAppStore = create<AppState>()(
             },
           ],
         });
+        return updatedTask;
       },
       
       updateTask: (id, updates) => {

@@ -23,6 +23,7 @@ import {
   IconButton,
   Stack,
   Collapse,
+  Snackbar,
 } from '@mui/material';
 import { Add as AddIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useAppStore } from '@/store/AppStore';
@@ -43,6 +44,7 @@ export default function TasksPage() {
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [undoInfo, setUndoInfo] = useState<{ action: string, taskId: string } | null>(null);
   
   // Fix hydration issues by only rendering date-dependent content on the client
   useEffect(() => {
@@ -53,6 +55,7 @@ export default function TasksPage() {
   const futureTasks = useAppStore((state) => state.getFutureTasks());
   const completedTasks = useAppStore((state) => state.getCompletedTasks());
   const addTask = useAppStore((state) => state.addTask);
+  const removeTask = useAppStore((state) => state.removeTask);
   const projects = useAppStore((state) => state.projects);
   const tags = useAppStore((state) => state.tags);
   
@@ -92,14 +95,22 @@ export default function TasksPage() {
   const newTaskTemplate = createTask({
     title: '',
     description: '',
-    importance: 'Medium',
-    difficulty: 'Medium',
-    duration: 'Medium'
+    importance: 'Not Set',
+    difficulty: 'Not Set',
+    duration: 'Not Set'
   });
   
   const handleTaskSave = (taskData: Partial<Task>) => {
-    addTask(taskData);
+    const addedTask = addTask(taskData);
+    setUndoInfo({ action: 'add', taskId: addedTask.id });
     handleCloseDialog();
+  };
+  
+  const handleUndo = () => {
+    if (undoInfo && undoInfo.action === 'add') {
+      removeTask(undoInfo.taskId);
+    }
+    setUndoInfo(null);
   };
   
   const getTasks = (): Task[] => {
@@ -357,6 +368,21 @@ export default function TasksPage() {
         onSave={handleTaskSave}
         task={newTaskTemplate}
       />
+
+      {/* Undo Snackbar */}
+      {undoInfo && (
+        <Snackbar
+          open={true}
+          message={'Task added'}
+          action={
+            <Button color='secondary' size='small' onClick={handleUndo}>
+              Undo
+            </Button>
+          }
+          autoHideDuration={5000}
+          onClose={() => setUndoInfo(null)}
+        />
+      )}
     </Box>
   );
 } 
