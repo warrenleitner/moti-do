@@ -766,6 +766,7 @@ export default function ProfilePage() {
         onConfirm={() => {
           // Implement profile reset logic here
           console.log('Profile has been reset.');
+          alert('Profile has been reset successfully.');
         }}
       />
       

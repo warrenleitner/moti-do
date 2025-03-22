@@ -29,6 +29,8 @@ import {
   Flag as FlagIcon,
   PlayArrow as PlayIcon,
   Stop as StopIcon,
+  Remove as MinusIcon,
+  Add as PlusIcon,
 } from '@mui/icons-material';
 import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useAppStore } from '@/store/AppStore';
@@ -48,6 +50,7 @@ export default function HabitItem({ habit }: HabitItemProps) {
   const tags = useAppStore((state) => state.tags);
   const completeHabit = useAppStore((state) => state.completeHabit);
   const deleteHabit = useAppStore((state) => state.deleteHabit);
+  const updateHabit = useAppStore((state) => state.updateHabit);
   
   useEffect(() => {
     setMounted(true);
@@ -69,6 +72,21 @@ export default function HabitItem({ habit }: HabitItemProps) {
   
   const handleEdit = () => {
     setEditDialogOpen(true);
+  };
+  
+  const handleIncrement = () => {
+    const newCount = habit.currentOccurrences + 1;
+    if (newCount >= habit.requiredOccurrences) {
+      completeHabit(habit.id, true);
+    } else {
+      updateHabit(habit.id, { currentOccurrences: newCount });
+    }
+  };
+  
+  const handleDecrement = () => {
+    if (habit.currentOccurrences > 0) {
+      updateHabit(habit.id, { currentOccurrences: habit.currentOccurrences - 1 });
+    }
   };
   
   const isCompletedToday = () => {
@@ -189,6 +207,19 @@ export default function HabitItem({ habit }: HabitItemProps) {
                     sx={{ ml: 1, height: '20px' }}
                   />
                 </Typography>
+                
+                {/* New counter controls for counter-based habits */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <Typography variant="body2" sx={{ mr: 1 }}>
+                    Progress: {habit.currentOccurrences} / {habit.requiredOccurrences}
+                  </Typography>
+                  <IconButton onClick={handleDecrement} size="small">
+                    <MinusIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton onClick={handleIncrement} size="small">
+                    <PlusIcon fontSize="small" />
+                  </IconButton>
+                </Box>
                 
                 {habit.description && (
                   <Typography 

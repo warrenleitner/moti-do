@@ -83,15 +83,11 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
 
   const handleSave = () => {
     if (!task) return;
-    
-    const adjustedStartDate = startDate ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0) : null;
-    const adjustedDueDate = dueDate ? new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate(), 23, 59, 59) : null;
-    
     const taskData = {
       title,
       description,
-      startDate: adjustedStartDate || undefined,
-      dueDate: adjustedDueDate || undefined,
+      startDate: startDate || undefined,
+      dueDate: dueDate || undefined,
       importance: importance as Task['importance'],
       difficulty: difficulty as Task['difficulty'],
       duration: duration as Task['duration'],
@@ -99,13 +95,11 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
       projectId: selectedProject,
       dependencies
     };
-    
     if (onSave) {
       onSave(taskData);
     } else {
       updateTask(task.id, taskData);
     }
-    
     onClose();
   };
 
