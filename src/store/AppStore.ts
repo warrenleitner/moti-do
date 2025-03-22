@@ -58,6 +58,8 @@ interface AppState {
   getTasksDueToday: () => Task[];
   getActiveHabits: () => Habit[];
   getHabitsDueToday: () => Habit[];
+  getCompletedHabitsToday: () => Habit[];
+  getFutureHabits: () => Habit[];
 }
 
 export const useAppStore = create<AppState>()(
@@ -831,6 +833,25 @@ export const useAppStore = create<AppState>()(
             default:
               return false;
           }
+        });
+      },
+      
+      getCompletedHabitsToday: () => {
+        const today = new Date();
+        const todayStr = format(today, 'yyyy-MM-dd');
+        
+        return get().habits.filter((habit) => {
+          // Filter for habits completed today
+          return habit.completions.some(
+            (c) => format(new Date(c.date), 'yyyy-MM-dd') === todayStr && c.completed
+          );
+        });
+      },
+      
+      getFutureHabits: () => {
+        return get().habits.filter((habit) => {
+          // Has a start date in the future
+          return habit.startDate && isBefore(new Date(), habit.startDate);
         });
       },
     }),

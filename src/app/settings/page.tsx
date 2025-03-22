@@ -280,6 +280,14 @@ export default function SettingsPage() {
     }
   };
   
+  const handleResetStorage = () => {
+    if (confirm('Are you sure you want to reset all data? This will remove all tasks, habits, projects, and tags.')) {
+      localStorage.removeItem('moti-do-storage');
+      alert('Storage has been reset. Please refresh the page to see the changes.');
+      window.location.reload();
+    }
+  };
+  
   return (
     <Layout>
       <Box sx={{ mb: 4 }}>
@@ -677,6 +685,15 @@ export default function SettingsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      <Button
+        variant="contained"
+        color="error"
+        onClick={handleResetStorage}
+        sx={{ mt: 2 }}
+      >
+        Reset All Data
+      </Button>
     </Layout>
   );
 } 

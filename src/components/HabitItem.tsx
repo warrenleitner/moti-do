@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -42,11 +42,16 @@ interface HabitItemProps {
 export default function HabitItem({ habit }: HabitItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   
   const projects = useAppStore((state) => state.projects);
   const tags = useAppStore((state) => state.tags);
   const completeHabit = useAppStore((state) => state.completeHabit);
   const deleteHabit = useAppStore((state) => state.deleteHabit);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const handleToggle = () => {
     completeHabit(habit.id, !isCompletedToday());
@@ -67,6 +72,7 @@ export default function HabitItem({ habit }: HabitItemProps) {
   };
   
   const isCompletedToday = () => {
+    if (!mounted) return false;
     return habit.completions.some(c => 
       isToday(new Date(c.date)) && c.completed
     );
@@ -100,10 +106,10 @@ export default function HabitItem({ habit }: HabitItemProps) {
   };
   
   // Get the current month's calendar days for the habit completion visualization
-  const currentMonthDays = eachDayOfInterval({
+  const currentMonthDays = mounted ? eachDayOfInterval({
     start: startOfMonth(new Date()),
     end: endOfMonth(new Date())
-  });
+  }) : [];
   
   // Check if habit was completed on a specific day
   const wasCompletedOnDay = (day: Date) => {
@@ -123,6 +129,7 @@ export default function HabitItem({ habit }: HabitItemProps) {
   
   // Calculate how overdue the habit is (0 = not overdue, 1-3 = overdue levels)
   const getOverdueLevel = () => {
+    if (!mounted) return 0;
     if (isCompletedToday() || !habit.dueDate) return 0;
     
     const now = new Date();

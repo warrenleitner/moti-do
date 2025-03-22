@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -43,6 +43,12 @@ export default function Todo({ task }: TodoProps) {
   const [expanded, setExpanded] = useState(false);
   const [newSubtask, setNewSubtask] = useState('');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  // Fix hydration issues by only rendering date-dependent content on the client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const projects = useAppStore((state) => state.projects);
   const tags = useAppStore((state) => state.tags);
@@ -97,11 +103,15 @@ export default function Todo({ task }: TodoProps) {
     
     if (!subtask.completed) {
       // Show confetti animation when completing a subtask
-      createConfetti(task.score / (task.subtasks.length + 1));
+      // Calculate the correct fraction of XP for this subtask
+      const subtaskXP = Math.round(task.score / (task.subtasks.length + 1));
+      createConfetti(subtaskXP);
     }
   };
   
   const createConfetti = (xpAmount = task.score) => {
+    if (!mounted) return; // Only run on client side
+    
     // Create and animate confetti particles
     const colors = ['#f44336', '#2196f3', '#ffeb3b', '#4caf50', '#9c27b0'];
     
@@ -149,6 +159,7 @@ export default function Todo({ task }: TodoProps) {
   
   // Calculate how overdue the task is (0 = not overdue, 1-3 = overdue levels)
   const getOverdueLevel = () => {
+    if (!mounted) return 0;
     if (!task.dueDate || task.completedAt) return 0;
     
     const now = new Date();
@@ -164,13 +175,18 @@ export default function Todo({ task }: TodoProps) {
   };
   
   const overdueLevel = getOverdueLevel();
-  const overdueTintColor = overdueLevel === 1 ? 'rgba(255, 235, 59, 0.15)' : 
-                          overdueLevel === 2 ? 'rgba(255, 152, 0, 0.15)' : 
-                          overdueLevel === 3 ? 'rgba(244, 67, 54, 0.15)' : 
+  const overdueTintColor = overdueLevel === 1 ? 'rgba(255, 235, 59, 0.2)' : 
+                          overdueLevel === 2 ? 'rgba(255, 152, 0, 0.25)' : 
+                          overdueLevel === 3 ? 'rgba(244, 67, 54, 0.3)' : 
                           'transparent';
   const overdueTooltip = overdueLevel === 1 ? 'Due today' :
                         overdueLevel === 2 ? '1-2 days overdue' :
                         overdueLevel === 3 ? '3+ days overdue' : '';
+  
+  const overdueBorderColor = overdueLevel === 1 ? '#ffeb3b' : 
+                           overdueLevel === 2 ? '#ff9800' : 
+                           overdueLevel === 3 ? '#f44336' : 
+                           undefined;
   
   return (
     <>
@@ -181,7 +197,12 @@ export default function Todo({ task }: TodoProps) {
             position: 'relative',
             opacity: task.completedAt ? 0.7 : 1,
             borderLeft: project ? `4px solid ${project.color}` : undefined,
-            bgcolor: overdueTintColor
+            ...(overdueLevel > 0 && {
+              bgcolor: overdueTintColor,
+              borderTop: `1px solid ${overdueBorderColor}`,
+              borderRight: `1px solid ${overdueBorderColor}`,
+              borderBottom: `1px solid ${overdueBorderColor}`,
+            })
           }}
         >
           {task.isNext && (
@@ -411,7 +432,14 @@ export default function Todo({ task }: TodoProps) {
                 </Typography>
                 
                 <List dense disablePadding>
-                  {task.subtasks.map((subtask) => (
+                  {task.subtasks
+                    .sort((a, b) => {
+                      // Sort completed tasks to the bottom
+                      if (a.completed && !b.completed) return 1;
+                      if (!a.completed && b.completed) return -1;
+                      return 0;
+                    })
+                    .map((subtask) => (
                     <ListItem key={subtask.id} disablePadding sx={{ py: 0.5 }}>
                       <ListItemIcon sx={{ minWidth: 36 }}>
                         <Checkbox
