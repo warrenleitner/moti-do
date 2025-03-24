@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { 
   Typography, 
-  Paper, 
   Box,
   Grid,
   Card,
@@ -17,11 +16,7 @@ import {
   DialogActions,
   TextField,
   IconButton,
-  List,
-  ListItem,
-  ListItemText,
   Slider,
-  Tooltip,
   InputAdornment
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';

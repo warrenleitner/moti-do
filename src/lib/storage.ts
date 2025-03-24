@@ -2,21 +2,23 @@
  * Storage utility for handling local file-based persistence
  */
 
-// TypeScript declarations for the File System Access API
+// We only need to declare the global window methods that TypeScript doesn't recognize
 declare global {
   interface Window {
-    showSaveFilePicker?: (options?: any) => Promise<FileSystemFileHandle>;
-    showOpenFilePicker?: (options?: any) => Promise<FileSystemFileHandle[]>;
-  }
-  
-  interface FileSystemFileHandle {
-    getFile: () => Promise<File>;
-    createWritable: () => Promise<FileSystemWritableFileStream>;
-  }
-  
-  interface FileSystemWritableFileStream {
-    write: (data: any) => Promise<void>;
-    close: () => Promise<void>;
+    showSaveFilePicker?: (options?: {
+      suggestedName?: string;
+      types?: Array<{
+        description: string;
+        accept: Record<string, string[]>;
+      }>;
+    }) => Promise<FileSystemFileHandle>;
+    showOpenFilePicker?: (options?: {
+      types?: Array<{
+        description: string;
+        accept: Record<string, string[]>;
+      }>;
+      multiple?: boolean;
+    }) => Promise<FileSystemFileHandle[]>;
   }
 }
 
@@ -25,10 +27,10 @@ declare global {
  * @param data - Data to be saved
  * @param filePath - Path to save the file (if browser supports)
  */
-export const saveToLocalFile = async (data: any, filePath?: string): Promise<void> => {
+export const saveToLocalFile = async (data: unknown, filePath?: string): Promise<void> => {
   try {
     // For browsers with File System Access API
-    if ('showSaveFilePicker' in window && !filePath) {
+    if (window.showSaveFilePicker && !filePath) {
       const options = {
         suggestedName: 'moti-do-data.json',
         types: [
@@ -41,8 +43,7 @@ export const saveToLocalFile = async (data: any, filePath?: string): Promise<voi
         ],
       };
       
-      // Using any to bypass TypeScript errors since File System Access API is not fully typed in TS
-      const handle = await (window as any).showSaveFilePicker(options);
+      const handle = await window.showSaveFilePicker(options);
       const writable = await handle.createWritable();
       await writable.write(JSON.stringify(data, null, 2));
       await writable.close();
@@ -70,10 +71,10 @@ export const saveToLocalFile = async (data: any, filePath?: string): Promise<voi
  * Load application data from a specified local file
  * @returns The parsed data from the local file
  */
-export const loadFromLocalFile = async (): Promise<any> => {
+export const loadFromLocalFile = async (): Promise<unknown> => {
   try {
     // For browsers with File System Access API
-    if ('showOpenFilePicker' in window) {
+    if (window.showOpenFilePicker) {
       const options = {
         types: [
           {
@@ -86,8 +87,7 @@ export const loadFromLocalFile = async (): Promise<any> => {
         multiple: false,
       };
       
-      // Using any to bypass TypeScript errors since File System Access API is not fully typed in TS
-      const [handle] = await (window as any).showOpenFilePicker(options);
+      const [handle] = await window.showOpenFilePicker(options);
       const file = await handle.getFile();
       const text = await file.text();
       
@@ -112,7 +112,7 @@ export const loadFromLocalFile = async (): Promise<any> => {
           try {
             const data = JSON.parse(event.target?.result as string);
             resolve(data);
-          } catch (error) {
+          } catch {
             reject(new Error('Invalid JSON file'));
           }
         };

@@ -29,7 +29,7 @@ export default function ResetProfileDialog({ open, onClose, onConfirm }: ResetPr
       <DialogContent>
         <Box sx={{ my: 2 }}>
           <Typography>
-            To reset your profile, please type 'RESET' in the box below. This action cannot be undone.
+            To reset your profile, please type &apos;RESET&apos; in the box below. This action cannot be undone.
           </Typography>
           <TextField
             autoFocus

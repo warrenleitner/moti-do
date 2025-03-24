@@ -24,31 +24,24 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Avatar,
   Chip,
-  InputAdornment
 } from '@mui/material';
 import {
   Brightness4 as DarkModeIcon,
   Brightness7 as LightModeIcon,
   AirplaneTicket as VacationIcon,
-  ColorLens as ColorIcon,
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Save as SaveIcon
 } from '@mui/icons-material';
-import { SketchPicker } from 'react-color';
+import { SketchPicker, ColorResult } from 'react-color';
 import Layout from '@/components/Layout';
 import { useAppStore } from '@/store/AppStore';
+import { Project, Tag } from '@/models/Task';
 
 export default function SettingsPage() {
   const [tabValue, setTabValue] = useState(0);
-  const [colorPickerOpen, setColorPickerOpen] = useState(false);
-  const [colorPickerAnchor, setColorPickerAnchor] = useState<HTMLElement | null>(null);
-  const [selectedColor, setSelectedColor] = useState('#3f51b5');
-  const [tempColor, setTempColor] = useState('#3f51b5');
-  const [colorEditMode, setColorEditMode] = useState<'tag' | 'project'>('tag');
   const [editItemId, setEditItemId] = useState<string | null>(null);
   
   // Dialog states
@@ -194,7 +187,7 @@ export default function SettingsPage() {
     setProjectDialogOpen(true);
   };
   
-  const openEditProjectDialog = (project: any) => {
+  const openEditProjectDialog = (project: Project) => {
     setNewProjectName(project.name);
     setNewProjectColor(project.color);
     setEditItemId(project.id);
@@ -207,7 +200,7 @@ export default function SettingsPage() {
     setEditItemId(null);
   };
   
-  const handleProjectColorChange = (color: any) => {
+  const handleProjectColorChange = (color: ColorResult) => {
     setNewProjectColor(color.hex);
   };
   
@@ -241,7 +234,7 @@ export default function SettingsPage() {
     setTagDialogOpen(true);
   };
   
-  const openEditTagDialog = (tag: any) => {
+  const openEditTagDialog = (tag: Tag) => {
     setNewTagName(tag.name);
     setNewTagColor(tag.color);
     setEditItemId(tag.id);
@@ -254,7 +247,7 @@ export default function SettingsPage() {
     setEditItemId(null);
   };
   
-  const handleTagColorChange = (color: any) => {
+  const handleTagColorChange = (color: ColorResult) => {
     setNewTagColor(color.hex);
   };
   
@@ -355,7 +348,7 @@ export default function SettingsPage() {
                       label={user.preferences.vacationMode ? 'Vacation Mode On' : 'Vacation Mode Off'}
                     />
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      When vacation mode is on, tasks and habits won't generate XP or contribute to streaks.
+                      When vacation mode is on, tasks and habits won&apos;t generate XP or contribute to streaks.
                     </Typography>
                   </CardContent>
                 </Card>

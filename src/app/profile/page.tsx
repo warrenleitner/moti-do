@@ -7,11 +7,8 @@ import {
   Box,
   Grid,
   Card,
-  CardContent,
   Divider,
   LinearProgress,
-  Stack,
-  Chip,
   Tabs,
   Tab,
   Avatar,
@@ -31,9 +28,7 @@ import {
   Star as StarIcon,
   LocalFireDepartment as FireIcon,
   TrendingUp as TrendingUpIcon,
-  EmojiEvents as TrophyIcon,
-  BarChart as BarChartIcon,
-  CalendarMonth as CalendarIcon
+  EmojiEvents as TrophyIcon
 } from '@mui/icons-material';
 import Layout from '@/components/Layout';
 import { useAppStore } from '@/store/AppStore';

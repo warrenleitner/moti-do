@@ -14,35 +14,16 @@ import {
   Grid,
   Paper,
   SelectChangeEvent,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  Stack,
-  Checkbox,
-  FormGroup,
-  FormControlLabel,
-  FormLabel,
-  Radio,
-  RadioGroup,
-  Divider,
   Tabs,
   Tab,
 } from '@mui/material';
-import { Add as AddIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Add as AddIcon, Search as SearchIcon} from '@mui/icons-material';
 import { useAppStore } from '@/store/AppStore';
 import HabitItem from '@/components/HabitItem';
 import { 
   Habit, 
-  RecurrenceType, 
-  WeekDay,
   createHabit
 } from '@/models/Habit';
-import { ImportanceLevel, DifficultyLevel, DurationLevel } from '@/models/Task';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import HabitEditDialog from '@/components/HabitEditDialog';
 
 export default function HabitsPage() {
@@ -59,21 +40,6 @@ export default function HabitsPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
-  
-  // State for new habit form
-  const [newHabitTitle, setNewHabitTitle] = useState('');
-  const [newHabitDescription, setNewHabitDescription] = useState('');
-  const [newHabitImportance, setNewHabitImportance] = useState<ImportanceLevel>('Medium');
-  const [newHabitDifficulty, setNewHabitDifficulty] = useState<DifficultyLevel>('Medium');
-  const [newHabitDuration, setNewHabitDuration] = useState<DurationLevel>('Medium');
-  const [newHabitStartDate, setNewHabitStartDate] = useState<Date | null>(null);
-  
-  // Recurrence settings
-  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('daily');
-  const [interval, setInterval] = useState(1);
-  const [weekDays, setWeekDays] = useState<WeekDay[]>(['monday', 'wednesday', 'friday']);
-  const [isLastDay, setIsLastDay] = useState(false);
-  const [dayOfMonth, setDayOfMonth] = useState(1);
   
   const activeHabits = useAppStore((state) => state.getActiveHabits());
   const completedHabitsToday = useAppStore((state) => state.getCompletedHabitsToday());
@@ -107,71 +73,11 @@ export default function HabitsPage() {
   };
   
   const handleOpenDialog = () => {
-    // Reset form fields
-    setNewHabitTitle('');
-    setNewHabitDescription('');
-    setNewHabitImportance('Medium');
-    setNewHabitDifficulty('Medium');
-    setNewHabitDuration('Medium');
-    setNewHabitStartDate(null);
-    setRecurrenceType('daily');
-    setInterval(1);
-    setWeekDays(['monday', 'wednesday', 'friday']);
-    setIsLastDay(false);
-    setDayOfMonth(1);
-    
     // Open dialog
     setDialogOpen(true);
   };
   
   const handleCloseDialog = () => {
-    setDialogOpen(false);
-  };
-  
-  const handleWeekdayChange = (day: WeekDay) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      setWeekDays([...weekDays, day]);
-    } else {
-      setWeekDays(weekDays.filter(d => d !== day));
-    }
-  };
-  
-  const handleAddHabit = () => {
-    // Validate form
-    if (!newHabitTitle.trim()) {
-      return; // Don't submit if no title
-    }
-    
-    // Prepare recurrence rule
-    const recurrenceRule = {
-      type: recurrenceType,
-      interval: interval,
-    } as any; // Using any to avoid TypeScript errors with the conditional properties
-    
-    // Add type-specific properties
-    if (recurrenceType === 'weekly') {
-      recurrenceRule.weekDays = weekDays;
-    } else if (recurrenceType === 'monthly') {
-      if (isLastDay) {
-        recurrenceRule.isLastDay = true;
-      } else {
-        recurrenceRule.dayOfMonth = dayOfMonth;
-      }
-    }
-    
-    // Add the habit
-    addHabit({
-      title: newHabitTitle.trim(),
-      description: newHabitDescription.trim() || undefined,
-      importance: newHabitImportance,
-      difficulty: newHabitDifficulty,
-      duration: newHabitDuration,
-      startDate: newHabitStartDate || undefined,
-      recurrence: recurrenceRule,
-      subtaskRecurrenceOption: 'default',
-    });
-    
-    // Close dialog
     setDialogOpen(false);
   };
   
@@ -232,6 +138,7 @@ export default function HabitsPage() {
             'High': 1,
             'Medium': 2,
             'Low': 3,
+            'Not Set': 4,
           };
           result = importanceOrder[a.importance] - importanceOrder[b.importance];
           break;
@@ -242,6 +149,7 @@ export default function HabitsPage() {
             'Medium': 2,
             'Low': 3,
             'Trivial': 4,
+            'Not Set': 5,
           };
           result = difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
           break;
@@ -399,7 +307,7 @@ export default function HabitsPage() {
             No habits found
           </Typography>
           <Typography variant="body2" color="text.secondary" paragraph>
-            You don't have any habits yet. Create a new one to start building your routine!
+            You don&apos;t have any habits yet. Create a new one to start building your routine!
           </Typography>
           <Button
             variant="contained"

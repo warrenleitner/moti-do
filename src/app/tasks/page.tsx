@@ -16,22 +16,13 @@ import {
   Grid,
   Paper,
   SelectChangeEvent,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  Stack,
   Collapse,
   Snackbar,
 } from '@mui/material';
-import { Add as AddIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
 import { useAppStore } from '@/store/AppStore';
 import Todo from '@/components/Todo';
-import { Task, ImportanceLevel, DifficultyLevel, DurationLevel, createTask } from '@/models/Task';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { Task, createTask } from '@/models/Task';
 import TaskEditDialog from '@/components/TaskEditDialog';
 import { TransitionGroup } from 'react-transition-group';
 

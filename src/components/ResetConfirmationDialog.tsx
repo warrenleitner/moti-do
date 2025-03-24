@@ -71,7 +71,7 @@ export default function ResetConfirmationDialog({ open, onClose, onConfirm }: Re
     } else if (step === 3) {
       return (
         <Typography>
-          This action is irreversible. Click 'Reset' to finalize resetting your profile.
+          This action is irreversible. Click &apos;Reset&apos; to finalize resetting your profile.
         </Typography>
       );
     }

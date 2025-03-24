@@ -9,7 +9,6 @@ import {
   Checkbox,
   IconButton,
   Chip,
-  LinearProgress,
   Collapse,
   List,
   ListItem,
@@ -26,9 +25,6 @@ import {
   Whatshot as StreakIcon,
   LocalFireDepartment as FireIcon,
   Edit as EditIcon,
-  Flag as FlagIcon,
-  PlayArrow as PlayIcon,
-  Stop as StopIcon,
   Remove as MinusIcon,
   Add as PlusIcon,
 } from '@mui/icons-material';
@@ -36,6 +32,7 @@ import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay
 import { useAppStore } from '@/store/AppStore';
 import { Habit } from '@/models/Habit';
 import HabitEditDialog from './HabitEditDialog';
+import { Project, Tag } from '@/models/Task';
 
 interface HabitItemProps {
   habit: Habit;
@@ -46,10 +43,10 @@ export default function HabitItem({ habit }: HabitItemProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   
-  const projects = useAppStore((state) => state.projects);
-  const tags = useAppStore((state) => state.tags);
   const completeHabit = useAppStore((state) => state.completeHabit);
   const deleteHabit = useAppStore((state) => state.deleteHabit);
+  const projects = useAppStore((state) => state.projects);
+  const tags = useAppStore((state) => state.tags);
   const updateHabit = useAppStore((state) => state.updateHabit);
   
   useEffect(() => {
@@ -138,11 +135,11 @@ export default function HabitItem({ habit }: HabitItemProps) {
   
   // Get project and tags
   const project = habit.projectId 
-    ? projects.find(p => p.id === habit.projectId) 
+    ? projects.find((p: Project) => p.id === habit.projectId) 
     : undefined;
     
   const habitTags = habit.tags
-    .map(tagId => tags.find(t => t.id === tagId))
+    .map((tagId: string) => tags.find((t: Tag) => t.id === tagId))
     .filter(Boolean);
   
   // Calculate how overdue the habit is (0 = not overdue, 1-3 = overdue levels)

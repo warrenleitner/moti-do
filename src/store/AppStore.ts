@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { format, isAfter, isBefore, differenceInDays, isToday } from 'date-fns';
+import { format, isAfter, isBefore, differenceInDays } from 'date-fns';
 
 import { Task, Tag, Project, createTask, Subtask } from '@/models/Task';
-import { Habit, createHabit } from '@/models/Habit';
+import { Habit, createHabit, WeekDay } from '@/models/Habit';
 import { User, createDefaultUser, XPTransaction } from '@/models/User';
 
 interface AppState {
@@ -19,6 +19,7 @@ interface AppState {
   addTask: (task: Partial<Task>) => Task;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
+  removeTask: (id: string) => void;
   completeTask: (id: string, completed: boolean) => void;
   addSubtask: (taskId: string, subtaskTitle: string) => void;
   completeSubtask: (taskId: string, subtaskId: string, completed: boolean) => void;
@@ -136,6 +137,12 @@ export const useAppStore = create<AppState>()(
       },
       
       deleteTask: (id) => {
+        set((state) => ({
+          tasks: state.tasks.filter((t) => t.id !== id),
+        }));
+      },
+      
+      removeTask: (id) => {
         set((state) => ({
           tasks: state.tasks.filter((t) => t.id !== id),
         }));
@@ -397,7 +404,7 @@ export const useAppStore = create<AppState>()(
           const dateStr = format(date, 'yyyy-MM-dd');
           
           // Update streak information
-          let streak = { ...habit.streak };
+          const streak = { ...habit.streak };
           if (completed) {
             streak.completed[dateStr] = true;
             streak.totalCompletions += 1;
@@ -831,8 +838,8 @@ export const useAppStore = create<AppState>()(
                 : true;
               
             case 'weekly': {
-              const dayOfWeek = format(today, 'EEEE').toLowerCase();
-              return recurrence.weekDays?.includes(dayOfWeek as any) || false;
+              const dayOfWeek = format(today, 'EEEE').toLowerCase() as WeekDay;
+              return recurrence.weekDays?.includes(dayOfWeek) || false;
             }
               
             case 'monthly':

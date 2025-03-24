@@ -6,8 +6,6 @@ import {
   Paper, 
   Box,
   Grid,
-  Card,
-  CardContent,
   Badge,
   IconButton,
   Button,
@@ -26,11 +24,10 @@ import {
   TaskAlt as TaskIcon,
   Loop as HabitIcon
 } from '@mui/icons-material';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameMonth, isWithinInterval, getDay } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isWithinInterval, getDay } from 'date-fns';
 import Layout from '@/components/Layout';
 import { useAppStore } from '@/store/AppStore';
-import { Task } from '@/models/Task';
-import { Habit } from '@/models/Habit';
+import { WeekDay } from '@/models/Habit';
 
 export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -87,8 +84,8 @@ export default function CalendarPage() {
       if (habit.recurrence.type === 'daily') return true;
       
       if (habit.recurrence.type === 'weekly') {
-        const dayOfWeek = format(date, 'EEEE').toLowerCase();
-        return habit.recurrence.weekDays?.includes(dayOfWeek as any);
+        const dayOfWeek = format(date, 'EEEE').toLowerCase() as WeekDay;
+        return habit.recurrence.weekDays?.includes(dayOfWeek);
       }
       
       if (habit.recurrence.type === 'monthly') {
@@ -169,7 +166,7 @@ export default function CalendarPage() {
   
   // Create weeks array for grid
   const weeks = [];
-  let calendarCellsCopy = [...calendarCells];
+  const calendarCellsCopy = [...calendarCells];
   
   while (calendarCellsCopy.length > 0) {
     weeks.push(calendarCellsCopy.splice(0, 7));

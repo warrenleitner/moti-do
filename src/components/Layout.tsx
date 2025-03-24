@@ -33,7 +33,6 @@ import {
 } from '@mui/icons-material';
 import { lightTheme, darkTheme } from '@/lib/theme';
 import { useAppStore } from '@/store/AppStore';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 const drawerWidth = 280;
@@ -50,7 +49,6 @@ export default function Layout({ children }: LayoutProps) {
   
   const user = useAppStore((state) => state.user);
   const updateUserPreferences = useAppStore((state) => state.updateUserPreferences);
-  const router = useRouter();
   
   useEffect(() => {
     // Set initial theme based on user preference or system preference

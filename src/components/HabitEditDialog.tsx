@@ -28,7 +28,6 @@ import {
   IconButton,
   Autocomplete
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DesktopDateTimePicker } from '@mui/x-date-pickers/DesktopDateTimePicker';
@@ -55,7 +54,6 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
   const tags = useAppStore((state) => state.tags);
   const projects = useAppStore((state) => state.projects);
   const tasks = useAppStore((state) => state.tasks);
-  const habits = useAppStore((state) => state.habits);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -80,6 +78,7 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
   const [isLastDay, setIsLastDay] = useState(false);
   
   // Advanced recurrence settings
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [advanceDisplay, setAdvanceDisplay] = useState(0);
   const [advanceDisplayUnit, setAdvanceDisplayUnit] = useState<'immediate' | 'days' | 'weeks' | 'months'>('days');
   const [advanceDisplayNumber, setAdvanceDisplayNumber] = useState(1);

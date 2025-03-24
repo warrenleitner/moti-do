@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -12,8 +12,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  FormControlLabel,
-  Switch,
   Grid,
   Chip,
   Box,
@@ -26,12 +24,11 @@ import {
   ListItemSecondaryAction,
   Autocomplete
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { DesktopDateTimePicker } from '@mui/x-date-pickers/DesktopDateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { Task } from '@/models/Task';
-import { Add as AddIcon, Close as CloseIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 import { useAppStore } from '@/store/AppStore';
 
 interface TaskEditDialogProps {
@@ -48,10 +45,16 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
   const projects = useAppStore((state) => state.projects);
 
   // Define default dates
-  const defaultStart = new Date();
-  defaultStart.setHours(0, 0, 0, 0);
-  const defaultDue = new Date();
-  defaultDue.setHours(23, 59, 59, 999);
+  const defaultStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+  const defaultDue = useMemo(() => {
+    const d = new Date();
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }, []);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -79,7 +82,7 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
       setSelectedProject(task.projectId);
       setDependencies(task.dependencies || []);
     }
-  }, [task]);
+  }, [task, defaultDue, defaultStart]);
 
   const handleSave = () => {
     if (!task) return;
@@ -372,4 +375,4 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
       </DialogActions>
     </Dialog>
   );
-} 
+}

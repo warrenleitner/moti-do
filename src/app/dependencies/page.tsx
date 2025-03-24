@@ -25,13 +25,11 @@ import {
   SelectChangeEvent,
   TextField,
   IconButton,
-  Autocomplete,
   CircularProgress
 } from '@mui/material';
 import { 
   Search as SearchIcon, 
   Clear as ClearIcon,
-  FilterList as FilterIcon
 } from '@mui/icons-material';
 import Layout from '@/components/Layout';
 import { useAppStore } from '@/store/AppStore';
@@ -205,7 +203,7 @@ export default function DependenciesPage() {
     setNodes(graphNodes);
     setEdges(graphEdges);
     setIsLoading(false);
-  }, [tasks, selectedTask, selectedProject, selectedTag, searchText, projects, tags]);
+  }, [tasks, selectedTask, selectedProject, selectedTag, searchText, projects, tags, setNodes, setEdges]);
   
   // Generate the graph when dependencies change
   useEffect(() => {

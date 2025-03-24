@@ -173,7 +173,7 @@ export default function Home() {
       {/* Today's Tasks */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h5" gutterBottom>
-          Today's Tasks
+          Today&apos;s Tasks
         </Typography>
         
         {tasksToday.length > 0 ? (
@@ -194,7 +194,7 @@ export default function Home() {
       {/* Today's Habits */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h5" gutterBottom>
-          Today's Habits
+          Today&apos;s Habits
         </Typography>
         
         {habitsToday.length > 0 ? (
