@@ -9,7 +9,7 @@
     "lint": "next lint",
     "ts-check": "tsc --noEmit",
     "depcheck": "depcheck",
-    "validate": "npm install && next build && next lint && tsc --noEmit && depcheck"
+    "validate": "npm install && next build && npm audit && next lint && tsc --noEmit && depcheck"
   },
   "repository": {
     "type": "git",
@@ -58,6 +58,8 @@
     "eslint-config-next": "15.2.4",
     "eslint-plugin-unused-imports": "4.1.4",
     "eslint": "9.23.0",
+    "postcss": "8.4.49",
+    "tailwindcss": "3.4.11",
     "typescript": "5.8.2"
   }
 }

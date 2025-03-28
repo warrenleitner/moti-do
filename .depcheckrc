@@ -1,1 +1,1 @@
-ignores: ["@types/*", "@tailwindcss/*", "autoprefixer" ]
+ignores: ["@types/*", "@tailwindcss/*", "autoprefixer", "postcss", "tailwindcss" ]
