@@ -1,35 +1,33 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Typography, 
-  Paper, 
+import {
   Box,
-  Grid,
+  Typography,
+  Paper,
   Card,
-  Divider,
+  Grid,
   LinearProgress,
-  Tabs,
-  Tab,
-  Avatar,
+  Divider,
   List,
   ListItem,
   ListItemText,
-  ListItemAvatar,
+  Tab,
+  Tabs,
+  TableContainer,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
-  Button
+  Button,
+  Avatar,
+  ListItemAvatar
 } from '@mui/material';
-import { 
-  Star as StarIcon,
-  LocalFireDepartment as FireIcon,
-  TrendingUp as TrendingUpIcon,
-  EmojiEvents as TrophyIcon
-} from '@mui/icons-material';
+import StarIcon from '@mui/icons-material/Star';
+import FireIcon from '@mui/icons-material/LocalFireDepartment';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrophyIcon from '@mui/icons-material/EmojiEvents';
 import Layout from '@/components/Layout';
 import { useAppStore } from '@/store/AppStore';
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
@@ -401,7 +399,7 @@ export default function ProfilePage() {
       </Box>
       
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 3, mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <Avatar 
@@ -438,7 +436,7 @@ export default function ProfilePage() {
             
             <Box sx={{ mb: 2 }}>
               <Grid container spacing={1}>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Card variant="outlined" sx={{ p: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <StarIcon sx={{ color: 'primary.main', mr: 1 }} />
@@ -453,7 +451,7 @@ export default function ProfilePage() {
                     </Box>
                   </Card>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Card variant="outlined" sx={{ p: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <TrendingUpIcon sx={{ color: 'success.main', mr: 1 }} />
@@ -468,7 +466,7 @@ export default function ProfilePage() {
                     </Box>
                   </Card>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Card variant="outlined" sx={{ p: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <FireIcon sx={{ color: 'error.main', mr: 1 }} />
@@ -483,7 +481,7 @@ export default function ProfilePage() {
                     </Box>
                   </Card>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Card variant="outlined" sx={{ p: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <TrophyIcon sx={{ color: 'warning.main', mr: 1 }} />
@@ -575,7 +573,7 @@ export default function ProfilePage() {
           </Paper>
         </Grid>
         
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Paper sx={{ p: 3 }}>
             <Box sx={{ mb: 3 }}>
               <Tabs 
@@ -605,7 +603,7 @@ export default function ProfilePage() {
                 </Box>
                 
                 <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Box sx={{ mb: 3 }}>
                       <Typography variant="body2" color="text.secondary" gutterBottom>
                         Tasks Completed
@@ -613,7 +611,7 @@ export default function ProfilePage() {
                       <Chart data={taskData} color="rgba(76, 175, 80, 0.7)" labels={dateLabels} />
                     </Box>
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Box sx={{ mb: 3 }}>
                       <Typography variant="body2" color="text.secondary" gutterBottom>
                         Habits Completed

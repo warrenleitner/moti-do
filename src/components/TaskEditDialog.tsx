@@ -26,9 +26,9 @@ import {
 } from '@mui/material';
 import { DesktopDateTimePicker } from '@mui/x-date-pickers/DesktopDateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 import { Task } from '@/models/Task';
-import { Delete as DeleteIcon } from '@mui/icons-material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useAppStore } from '@/store/AppStore';
 
 interface TaskEditDialogProps {
@@ -58,8 +58,8 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState<Date | null>(task && task.startDate ? new Date(task.startDate) : defaultStart);
-  const [dueDate, setDueDate] = useState<Date | null>(task && task.dueDate ? new Date(task.dueDate) : defaultDue);
+  const [startDate, setStartDate] = useState<Date | null>(defaultStart);
+  const [dueDate, setDueDate] = useState<Date | null>(defaultDue);
   const [importance, setImportance] = useState('Not Set');
   const [difficulty, setDifficulty] = useState('Not Set');
   const [duration, setDuration] = useState('Not Set');
@@ -70,7 +70,16 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
 
   // Initialize form with task data when opened
   useEffect(() => {
-    if (task) {
+    if (task && (
+      title !== task.title ||
+      description !== (task.description || '') ||
+      importance !== task.importance ||
+      difficulty !== task.difficulty ||
+      duration !== task.duration ||
+      JSON.stringify(selectedTags) !== JSON.stringify(task.tags) ||
+      selectedProject !== task.projectId ||
+      JSON.stringify(dependencies) !== JSON.stringify(task.dependencies || [])
+    )) {
       setTitle(task.title);
       setDescription(task.description || '');
       setStartDate(task.startDate ? new Date(task.startDate) : defaultStart);
@@ -82,7 +91,8 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
       setSelectedProject(task.projectId);
       setDependencies(task.dependencies || []);
     }
-  }, [task, defaultDue, defaultStart]);
+  }, [task, defaultDue, defaultStart, title, description, importance, difficulty, 
+      duration, selectedTags, selectedProject, dependencies]);
 
   const handleSave = () => {
     if (!task) return;
@@ -146,55 +156,60 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
       <DialogTitle>{task && task.id ? 'Edit Task' : 'Create New Task'}</DialogTitle>
       <DialogContent>
         <Grid container spacing={3} sx={{ mt: 0 }}>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               label="Title"
               fullWidth
+              variant="outlined"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              required
-              autoFocus
-              margin="normal"
+              InputProps={{
+                endAdornment: (
+                  <IconButton onClick={() => {}} edge="end" color="error">
+                    <DeleteIcon />
+                  </IconButton>
+                )
+              }}
             />
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               label="Description"
               fullWidth
               multiline
               rows={3}
+              variant="outlined"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              margin="normal"
             />
           </Grid>
           
           {/* Date/Time Pickers */}
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DesktopDateTimePicker
-                  label="Start Date/Time"
+                  label="Start Date"
                   value={startDate}
-                  onChange={(newValue: Date | null) => setStartDate(newValue)}
-                  slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
+                  onChange={(newValue) => setStartDate(newValue)}
+                  slotProps={{ textField: { fullWidth: true } }}
                 />
               </LocalizationProvider>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DesktopDateTimePicker
-                  label="Due Date/Time"
+                  label="Due Date"
                   value={dueDate}
-                  onChange={(newValue: Date | null) => setDueDate(newValue)}
-                  slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
+                  onChange={(newValue) => setDueDate(newValue)}
+                  slotProps={{ textField: { fullWidth: true } }}
                 />
               </LocalizationProvider>
             </Grid>
           </Grid>
           
-          <Grid item xs={12} sm={4}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <FormControl fullWidth margin="normal">
               <InputLabel>Importance</InputLabel>
               <Select
@@ -210,7 +225,7 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
             </FormControl>
           </Grid>
           
-          <Grid item xs={12} sm={4}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <FormControl fullWidth margin="normal">
               <InputLabel>Difficulty</InputLabel>
               <Select
@@ -227,7 +242,7 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
             </FormControl>
           </Grid>
           
-          <Grid item xs={12} sm={4}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <FormControl fullWidth margin="normal">
               <InputLabel>Duration</InputLabel>
               <Select
@@ -244,13 +259,13 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
             </FormControl>
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>
               Dependencies
             </Typography>
             <Box sx={{ mb: 2 }}>
               <Grid container spacing={2}>
-                <Grid item xs={10}>
+                <Grid size={{ xs: 10 }}>
                   <Autocomplete
                     options={getAvailableTasks()}
                     getOptionLabel={(option) => option.title}
@@ -259,7 +274,7 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
                     renderInput={(params) => <TextField {...params} label="Add Dependency" fullWidth />}
                   />
                 </Grid>
-                <Grid item xs={2} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Grid size={{ xs: 2 }} sx={{ display: 'flex', alignItems: 'center' }}>
                   <Button 
                     variant="contained" 
                     onClick={handleAddDependency}
@@ -301,7 +316,7 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
             )}
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>
               Project
             </Typography>
@@ -339,7 +354,7 @@ export default function TaskEditDialog({ open, onClose, task, onSave }: TaskEdit
             </Stack>
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>
               Tags
             </Typography>

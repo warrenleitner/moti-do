@@ -19,22 +19,21 @@ import {
   Button,
   Tooltip,
 } from '@mui/material';
-import { 
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  CalendarToday as CalendarIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  Flag as FlagIcon,
-  PlayArrow as PlayIcon,
-  Stop as StopIcon,
-  Add as AddIcon,
-} from '@mui/icons-material';
-import { format } from 'date-fns';
 import { useAppStore } from '@/store/AppStore';
 import { Task, Subtask } from '@/models/Task';
 import TaskEditDialog from './TaskEditDialog';
 import ScoreBreakdownDialog from '@/components/ScoreBreakdownDialog';
+import { format } from 'date-fns';
+
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import CalendarIcon from '@mui/icons-material/CalendarToday';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import FlagIcon from '@mui/icons-material/Flag';
+import PlayIcon from '@mui/icons-material/PlayArrow';
+import StopIcon from '@mui/icons-material/Stop';
+import AddIcon from '@mui/icons-material/Add';
 
 interface TodoProps {
   task: Task;

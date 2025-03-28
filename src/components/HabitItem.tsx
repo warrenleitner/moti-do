@@ -16,18 +16,17 @@ import {
   ListItemText,
   Grid,
   Tooltip,
+  Paper,
 } from '@mui/material';
-import { 
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  CalendarToday as CalendarIcon,
-  Delete as DeleteIcon,
-  Whatshot as StreakIcon,
-  LocalFireDepartment as FireIcon,
-  Edit as EditIcon,
-  Remove as MinusIcon,
-  Add as PlusIcon,
-} from '@mui/icons-material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import CalendarIcon from '@mui/icons-material/CalendarToday';
+import DeleteIcon from '@mui/icons-material/Delete';
+import StreakIcon from '@mui/icons-material/Whatshot';
+import FireIcon from '@mui/icons-material/LocalFireDepartment';
+import EditIcon from '@mui/icons-material/Edit';
+import MinusIcon from '@mui/icons-material/Remove';
+import PlusIcon from '@mui/icons-material/Add';
 import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useAppStore } from '@/store/AppStore';
 import { Habit } from '@/models/Habit';
@@ -361,23 +360,25 @@ export default function HabitItem({ habit }: HabitItemProps) {
                   Monthly Overview
                 </Typography>
                 
-                <Grid container spacing={0.5} sx={{ mt: 1 }}>
+                <Grid container spacing={1} sx={{ mt: 1 }}>
                   {currentMonthDays.map((day, i) => (
-                    <Grid item key={i}>
+                    <Grid size={{ xs: 'auto' }} key={i}>
                       <Box 
                         sx={{ 
-                          width: 24, 
-                          height: 24, 
+                          width: 36, 
+                          height: 36, 
                           borderRadius: '50%',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '0.75rem',
                           bgcolor: wasCompletedOnDay(day) ? 'success.main' : 'grey.100',
                           color: wasCompletedOnDay(day) ? 'white' : 'text.secondary',
+                          border: isToday(day) ? '1px solid' : 'none',
+                          borderColor: 'primary.main',
+                          fontSize: '0.75rem'
                         }}
                       >
-                        {day.getDate()}
+                        {format(day, 'd')}
                       </Box>
                     </Grid>
                   ))}
@@ -389,65 +390,65 @@ export default function HabitItem({ habit }: HabitItemProps) {
                   </Typography>
                   
                   <Grid container spacing={2}>
-                    <Grid item xs={6} sm={3}>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="body2" color="text.secondary">
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Paper elevation={0} sx={{ p: 1, textAlign: 'center' }}>
+                        <Typography variant="caption" color="textSecondary">
                           Current Streak
                         </Typography>
-                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <StreakIcon sx={{ mr: 0.5, color: 'warning.main' }} />
                           {habit.streak.current} days
                         </Typography>
-                      </Box>
+                      </Paper>
                     </Grid>
                     
-                    <Grid item xs={6} sm={3}>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="body2" color="text.secondary">
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Paper elevation={0} sx={{ p: 1, textAlign: 'center' }}>
+                        <Typography variant="caption" color="textSecondary">
                           Best Streak
                         </Typography>
-                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <StreakIcon sx={{ mr: 0.5, color: 'success.main' }} />
                           {habit.streak.best} days
                         </Typography>
-                      </Box>
+                      </Paper>
                     </Grid>
                     
-                    <Grid item xs={6} sm={3}>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="body2" color="text.secondary">
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Paper elevation={0} sx={{ p: 1, textAlign: 'center' }}>
+                        <Typography variant="caption" color="textSecondary">
                           This Month
                         </Typography>
-                        <Typography variant="h6">
+                        <Typography variant="body1">
                           {habit.completions.filter(c => 
                             c.completed && new Date(c.date).getMonth() === new Date().getMonth()
                           ).length} days
                         </Typography>
-                      </Box>
+                      </Paper>
                     </Grid>
                     
-                    <Grid item xs={6} sm={3}>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="body2" color="text.secondary">
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Paper elevation={0} sx={{ p: 1, textAlign: 'center' }}>
+                        <Typography variant="caption" color="textSecondary">
                           Total
                         </Typography>
-                        <Typography variant="h6">
+                        <Typography variant="body1">
                           {habit.streak.totalCompletions} times
                         </Typography>
-                      </Box>
+                      </Paper>
                     </Grid>
                     
-                    <Grid item xs={6} sm={3}>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="body2" color="text.secondary">
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Paper elevation={0} sx={{ p: 1, textAlign: 'center' }}>
+                        <Typography variant="caption" color="textSecondary">
                           Completion Rate
                         </Typography>
-                        <Typography variant="h6">
+                        <Typography variant="body1">
                           {habit.streak.totalOccurrences > 0 
                             ? Math.round((habit.streak.totalCompletions / habit.streak.totalOccurrences) * 100) 
                             : 0}%
                         </Typography>
-                      </Box>
+                      </Paper>
                     </Grid>
                   </Grid>
                 </Box>

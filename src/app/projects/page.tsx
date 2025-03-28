@@ -19,7 +19,9 @@ import {
   Slider,
   InputAdornment
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import { HexColorPicker } from 'react-colorful';
 import Layout from '@/components/Layout';
 import { useAppStore } from '@/store/AppStore';
@@ -159,7 +161,7 @@ export default function ProjectsPage() {
       
       <Grid container spacing={3}>
         {projects.map(project => (
-          <Grid item xs={12} md={6} lg={4} key={project.id}>
+          <Grid size={{ xs: 12, md: 6, lg: 4 }} key={project.id}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>

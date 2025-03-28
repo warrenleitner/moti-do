@@ -17,13 +17,11 @@ import {
   ListItemText,
   Divider
 } from '@mui/material';
-import {
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  CalendarMonth as CalendarIcon,
-  TaskAlt as TaskIcon,
-  Loop as HabitIcon
-} from '@mui/icons-material';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import CalendarIcon from '@mui/icons-material/CalendarMonth';
+import TaskIcon from '@mui/icons-material/TaskAlt';
+import HabitIcon from '@mui/icons-material/Loop';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isWithinInterval, getDay } from 'date-fns';
 import Layout from '@/components/Layout';
 import { useAppStore } from '@/store/AppStore';

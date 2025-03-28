@@ -17,20 +17,18 @@ import {
   ThemeProvider,
   useMediaQuery,
 } from '@mui/material';
-import {
-  Menu as MenuIcon,
-  CheckCircle as TaskIcon,
-  Repeat as HabitIcon,
-  CalendarToday as CalendarIcon,
-  Tag as TagIcon,
-  Psychology as ProjectIcon,
-  Settings as SettingsIcon,
-  Close as CloseIcon,
-  DarkMode as DarkModeIcon,
-  LightMode as LightModeIcon,
-  Person as PersonIcon,
-  AccountTree as DependenciesIcon,
-} from '@mui/icons-material';
+import MenuIcon from '@mui/icons-material/Menu';
+import TaskIcon from '@mui/icons-material/CheckCircle';
+import HabitIcon from '@mui/icons-material/Repeat';
+import CalendarIcon from '@mui/icons-material/CalendarToday';
+import TagIcon from '@mui/icons-material/Tag';
+import ProjectIcon from '@mui/icons-material/Psychology';
+import SettingsIcon from '@mui/icons-material/Settings';
+import CloseIcon from '@mui/icons-material/Close';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import PersonIcon from '@mui/icons-material/Person';
+import DependenciesIcon from '@mui/icons-material/AccountTree';
 import { lightTheme, darkTheme } from '@/lib/theme';
 import { useAppStore } from '@/store/AppStore';
 import Link from 'next/link';

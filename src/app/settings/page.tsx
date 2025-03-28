@@ -26,15 +26,13 @@ import {
   DialogActions,
   Chip,
 } from '@mui/material';
-import {
-  Brightness4 as DarkModeIcon,
-  Brightness7 as LightModeIcon,
-  AirplaneTicket as VacationIcon,
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Save as SaveIcon
-} from '@mui/icons-material';
+import DarkModeIcon from '@mui/icons-material/Brightness4';
+import LightModeIcon from '@mui/icons-material/Brightness7';
+import VacationIcon from '@mui/icons-material/AirplaneTicket';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SaveIcon from '@mui/icons-material/Save';
 import { SketchPicker, ColorResult } from 'react-color';
 import Layout from '@/components/Layout';
 import { useAppStore } from '@/store/AppStore';
@@ -311,7 +309,7 @@ export default function SettingsPage() {
         {tabValue === 0 && (
           <Box sx={{ p: 3 }}>
             <Grid container spacing={4}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="h6" gutterBottom>
                   Theme
                 </Typography>
@@ -354,7 +352,7 @@ export default function SettingsPage() {
                 </Card>
               </Grid>
               
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 {/* Add more application settings here */}
               </Grid>
             </Grid>
@@ -480,7 +478,7 @@ export default function SettingsPage() {
         
         {tabValue === 2 && (
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Paper sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant="h6">
@@ -543,7 +541,7 @@ export default function SettingsPage() {
         
         {tabValue === 3 && (
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Paper sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant="h6">

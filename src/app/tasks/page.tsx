@@ -18,8 +18,10 @@ import {
   SelectChangeEvent,
   Collapse,
   Snackbar,
+  InputAdornment,
 } from '@mui/material';
-import { Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
 import { useAppStore } from '@/store/AppStore';
 import Todo from '@/components/Todo';
 import { Task, createTask } from '@/models/Task';
@@ -42,13 +44,11 @@ export default function TasksPage() {
     setMounted(true);
   }, []);
   
-  const activeTasks = useAppStore((state) => state.getActiveTasks());
-  const futureTasks = useAppStore((state) => state.getFutureTasks());
-  const completedTasks = useAppStore((state) => state.getCompletedTasks());
+  const getActiveTasks = useAppStore((state) => state.getActiveTasks);
+  const getFutureTasks = useAppStore((state) => state.getFutureTasks);
+  const getCompletedTasks = useAppStore((state) => state.getCompletedTasks);
   const addTask = useAppStore((state) => state.addTask);
   const removeTask = useAppStore((state) => state.removeTask);
-  const projects = useAppStore((state) => state.projects);
-  const tags = useAppStore((state) => state.tags);
   
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -112,16 +112,16 @@ export default function TasksPage() {
     
     switch (tabValue) {
       case 0: // Active
-        tasks = activeTasks;
+        tasks = getActiveTasks();
         break;
       case 1: // Future
-        tasks = futureTasks;
+        tasks = getFutureTasks();
         break;
       case 2: // Completed
-        tasks = completedTasks;
+        tasks = getCompletedTasks();
         break;
       default:
-        tasks = activeTasks;
+        tasks = getActiveTasks();
     }
     
     // Filter by search text
@@ -222,7 +222,7 @@ export default function TasksPage() {
       </Paper>
       
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <TextField
             fullWidth
             placeholder="Search tasks..."
@@ -231,18 +231,23 @@ export default function TasksPage() {
             variant="outlined"
             size="small"
             InputProps={{
-              startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
             }}
           />
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <FormControl fullWidth size="small" variant="outlined">
             <InputLabel id="sort-label">Sort By</InputLabel>
             <Select
               labelId="sort-label"
+              id="sort-select"
+              label="Sort By"
               value={sortBy}
               onChange={handleSortChange}
-              label="Sort By"
             >
               <MenuItem value="score">Score</MenuItem>
               <MenuItem value="dueDate">Due Date</MenuItem>
@@ -253,54 +258,53 @@ export default function TasksPage() {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <FormControl fullWidth size="small" variant="outlined">
             <InputLabel id="sort-order-label">Order</InputLabel>
             <Select
               labelId="sort-order-label"
+              id="sort-order-select"
+              label="Order"
               value={sortOrder}
               onChange={handleSortOrderChange}
-              label="Order"
             >
-              <MenuItem value="desc">Descending</MenuItem>
               <MenuItem value="asc">Ascending</MenuItem>
+              <MenuItem value="desc">Descending</MenuItem>
             </Select>
           </FormControl>
         </Grid>
         
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormControl fullWidth size="small" variant="outlined">
             <InputLabel id="project-filter-label">Project</InputLabel>
             <Select
               labelId="project-filter-label"
+              id="project-filter-select"
+              label="Project"
               value={selectedProject}
               onChange={handleProjectChange}
-              label="Project"
             >
               <MenuItem value="">All Projects</MenuItem>
-              {projects.map(project => (
-                <MenuItem key={project.id} value={project.id}>
-                  {project.name}
-                </MenuItem>
-              ))}
+              <MenuItem value="personal">Personal</MenuItem>
+              <MenuItem value="work">Work</MenuItem>
+              <MenuItem value="study">Study</MenuItem>
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormControl fullWidth size="small" variant="outlined">
             <InputLabel id="tag-filter-label">Tag</InputLabel>
             <Select
               labelId="tag-filter-label"
+              id="tag-filter-select"
+              label="Tag"
               value={selectedTag}
               onChange={handleTagChange}
-              label="Tag"
             >
               <MenuItem value="">All Tags</MenuItem>
-              {tags.map(tag => (
-                <MenuItem key={tag.id} value={tag.id}>
-                  {tag.name}
-                </MenuItem>
-              ))}
+              <MenuItem value="important">Important</MenuItem>
+              <MenuItem value="urgent">Urgent</MenuItem>
+              <MenuItem value="later">Later</MenuItem>
             </Select>
           </FormControl>
         </Grid>

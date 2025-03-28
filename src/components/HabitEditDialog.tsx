@@ -29,10 +29,10 @@ import {
   Autocomplete
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 import { DesktopDateTimePicker } from '@mui/x-date-pickers/DesktopDateTimePicker';
 import { Habit, RecurrenceType, WeekDay } from '@/models/Habit';
-import { Delete as DeleteIcon } from '@mui/icons-material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useAppStore } from '@/store/AppStore';
 import { Task } from '@/models/Task';
 
@@ -234,67 +234,75 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
       <DialogTitle>{habit && habit.id ? 'Edit Habit' : 'Create New Habit'}</DialogTitle>
       <DialogContent>
         <Grid container spacing={3} sx={{ mt: 0 }}>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               label="Title"
               fullWidth
+              variant="outlined"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              required
-              autoFocus
-              margin="normal"
+              InputProps={{
+                endAdornment: (
+                  <IconButton onClick={() => {}} edge="end" color="error">
+                    <DeleteIcon />
+                  </IconButton>
+                )
+              }}
             />
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               label="Description"
               fullWidth
               multiline
-              rows={3}
+              rows={2}
+              variant="outlined"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              margin="normal"
             />
           </Grid>
           
           {/* Date/Time Pickers for Habit */}
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DesktopDateTimePicker
-                  label="Start Date/Time"
+                  label="Start Date"
                   value={startDate}
-                  onChange={(newValue: Date | null) => setStartDate(newValue)}
-                  slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
+                  onChange={(newValue) => setStartDate(newValue)}
+                  slotProps={{ textField: { fullWidth: true } }}
                 />
               </LocalizationProvider>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DesktopDateTimePicker
-                  label="Due Date/Time"
+                  label="End Date"
                   value={dueDate}
-                  onChange={(newValue: Date | null) => setDueDate(newValue)}
-                  slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
+                  onChange={(newValue) => setDueDate(newValue)}
+                  slotProps={{ textField: { fullWidth: true } }}
                 />
               </LocalizationProvider>
             </Grid>
           </Grid>
           
-          <Grid item xs={12} sm={4}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <TextField
               label="Required Occurrences"
               type="number"
-              value={requiredOccurrences}
-              onChange={(e) => setRequiredOccurrences(parseInt(e.target.value))}
               fullWidth
-              margin="normal"
+              variant="outlined"
+              value={requiredOccurrences}
+              onChange={(e) => setRequiredOccurrences(parseInt(e.target.value) || 0)}
+              InputProps={{
+                inputProps: { min: 0 }
+              }}
             />
           </Grid>
           
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth margin="normal">
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <FormControl fullWidth>
               <InputLabel>Importance</InputLabel>
               <Select
                 value={importance}
@@ -309,8 +317,8 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
             </FormControl>
           </Grid>
           
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth margin="normal">
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <FormControl fullWidth>
               <InputLabel>Difficulty</InputLabel>
               <Select
                 value={difficulty}
@@ -326,8 +334,8 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
             </FormControl>
           </Grid>
           
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth margin="normal">
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <FormControl fullWidth>
               <InputLabel>Duration</InputLabel>
               <Select
                 value={duration}
@@ -343,12 +351,12 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
             </FormControl>
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle1" gutterBottom>
               Recurrence Settings
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth variant="outlined" size="small">
                   <InputLabel id="recurrence-type-label">Recurrence</InputLabel>
                   <Select
@@ -365,7 +373,7 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   type="number"
@@ -380,7 +388,7 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
               </Grid>
               
               {recurrenceType === 'weekly' && (
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     Repeat on
                   </Typography>
@@ -402,8 +410,8 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
               )}
               
               {recurrenceType === 'monthly' && (
-                <Grid item xs={12}>
-                  <FormControl fullWidth margin="normal">
+                <Grid size={{ xs: 12 }}>
+                  <FormControl fullWidth>
                     <FormControlLabel
                       control={
                         <Switch
@@ -414,7 +422,7 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
                       label="Last day of month"
                     />
                     {!isLastDay && (
-                      <FormControl fullWidth margin="normal">
+                      <FormControl fullWidth>
                         <InputLabel id="day-of-month-label">Day of month</InputLabel>
                         <Select
                           labelId="day-of-month-label"
@@ -433,10 +441,10 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
               )}
               
               {recurrenceType === 'yearly' && (
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <FormControl fullWidth margin="normal">
+                    <Grid size={{ xs: 6 }}>
+                      <FormControl fullWidth>
                         <InputLabel id="month-of-year-label">Month</InputLabel>
                         <Select
                           labelId="month-of-year-label"
@@ -450,8 +458,8 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
                         </Select>
                       </FormControl>
                     </Grid>
-                    <Grid item xs={6}>
-                      <FormControl fullWidth margin="normal">
+                    <Grid size={{ xs: 6 }}>
+                      <FormControl fullWidth>
                         <InputLabel id="yearly-day-label">Day</InputLabel>
                         <Select
                           labelId="yearly-day-label"
@@ -471,7 +479,7 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
             </Grid>
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle1" gutterBottom>
               Next Occurrence Settings
             </Typography>
@@ -480,7 +488,7 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
             </Typography>
           </Grid>
           
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
               type="number"
@@ -498,7 +506,7 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
             />
           </Grid>
           
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <FormControl fullWidth variant="outlined" size="small">
               <InputLabel id="advance-display-unit-label">Unit</InputLabel>
               <Select
@@ -521,24 +529,27 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
             </FormControl>
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle2" gutterBottom>
               Dependencies
             </Typography>
             <Box sx={{ mb: 2 }}>
               <Grid container spacing={2}>
-                <Grid item xs={10}>
+                <Grid size={{ xs: 10 }}>
                   <Autocomplete
                     options={getAvailableTasks()}
                     getOptionLabel={(option) => option.title}
                     value={selectedDependency}
                     onChange={(_, newValue) => setSelectedDependency(newValue)}
-                    renderInput={(params) => <TextField {...params} label="Add Dependency" fullWidth />}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Task" variant="outlined" fullWidth />
+                    )}
                   />
                 </Grid>
-                <Grid item xs={2} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Grid size={{ xs: 2 }} sx={{ display: 'flex', alignItems: 'center' }}>
                   <Button 
                     variant="contained" 
+                    color="primary" 
                     onClick={handleAddDependency}
                     disabled={!selectedDependency}
                     fullWidth
@@ -578,7 +589,7 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
             )}
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>
               Project
             </Typography>
@@ -616,7 +627,7 @@ export default function HabitEditDialog({ open, onClose, habit, onSave }: HabitE
             </Stack>
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>
               Tags
             </Typography>

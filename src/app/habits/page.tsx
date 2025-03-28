@@ -17,7 +17,8 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import { Add as AddIcon, Search as SearchIcon} from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
 import { useAppStore } from '@/store/AppStore';
 import HabitItem from '@/components/HabitItem';
 import { 
@@ -41,9 +42,9 @@ export default function HabitsPage() {
     setMounted(true);
   }, []);
   
-  const activeHabits = useAppStore((state) => state.getActiveHabits());
-  const completedHabitsToday = useAppStore((state) => state.getCompletedHabitsToday());
-  const futureHabits = useAppStore((state) => state.getFutureHabits());
+  const activeHabits = useAppStore((state) => state.getActiveHabits);
+  const completedHabitsToday = useAppStore((state) => state.getCompletedHabitsToday);
+  const futureHabits = useAppStore((state) => state.getFutureHabits);
   const addHabit = useAppStore((state) => state.addHabit);
   const projects = useAppStore((state) => state.projects);
   const tags = useAppStore((state) => state.tags);
@@ -89,16 +90,16 @@ export default function HabitsPage() {
     
     switch (tabValue) {
       case 0: // Active
-        habits = activeHabits;
+        habits = activeHabits();
         break;
       case 1: // Completed Today
-        habits = completedHabitsToday;
+        habits = completedHabitsToday();
         break;
       case 2: // Future
-        habits = futureHabits;
+        habits = futureHabits();
         break;
       default:
-        habits = activeHabits;
+        habits = activeHabits();
     }
     
     // Filter by search text
@@ -205,7 +206,7 @@ export default function HabitsPage() {
       </Paper>
       
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <TextField
             fullWidth
             placeholder="Search habits..."
@@ -218,7 +219,7 @@ export default function HabitsPage() {
             }}
           />
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <FormControl fullWidth size="small" variant="outlined">
             <InputLabel id="sort-label">Sort By</InputLabel>
             <Select
@@ -235,7 +236,7 @@ export default function HabitsPage() {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <FormControl fullWidth size="small" variant="outlined">
             <InputLabel id="sort-order-label">Order</InputLabel>
             <Select
@@ -250,7 +251,7 @@ export default function HabitsPage() {
           </FormControl>
         </Grid>
         
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormControl fullWidth size="small" variant="outlined">
             <InputLabel id="project-filter-label">Project</InputLabel>
             <Select
@@ -268,7 +269,7 @@ export default function HabitsPage() {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormControl fullWidth size="small" variant="outlined">
             <InputLabel id="tag-filter-label">Tag</InputLabel>
             <Select

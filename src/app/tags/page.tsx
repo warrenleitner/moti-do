@@ -18,7 +18,9 @@ import {
   Slider,
   InputAdornment
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import { HexColorPicker } from 'react-colorful';
 import Layout from '@/components/Layout';
 import { useAppStore } from '@/store/AppStore';

@@ -27,10 +27,8 @@ import {
   IconButton,
   CircularProgress
 } from '@mui/material';
-import { 
-  Search as SearchIcon, 
-  Clear as ClearIcon,
-} from '@mui/icons-material';
+import Search from '@mui/icons-material/Search';
+import Clear from '@mui/icons-material/Clear';
 import Layout from '@/components/Layout';
 import { useAppStore } from '@/store/AppStore';
 
@@ -334,10 +332,16 @@ export default function DependenciesPage() {
                   onClick={() => setSearchText('')}
                   edge="end"
                 >
-                  <ClearIcon />
+                  <IconButton 
+                    size="small" 
+                    onClick={() => setSearchText('')}
+                    edge="end"
+                  >
+                    <Clear />
+                  </IconButton>
                 </IconButton>
               ) : (
-                <SearchIcon color="action" />
+                <Search />
               ),
             }}
           />
@@ -347,7 +351,7 @@ export default function DependenciesPage() {
             onClick={handleClearFilters}
             sx={{ alignSelf: 'center' }}
           >
-            <ClearIcon />
+            <Clear />
           </IconButton>
         </Box>
         
