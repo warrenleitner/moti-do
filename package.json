@@ -4,29 +4,29 @@
   "private": true,
   "description": "A modular web application with a separate CLI backend and React frontend.",
   "scripts": {
-    "dev:ui": "pnpm --filter ui dev",
-    "build:ui": "pnpm --filter ui build",
-    "build:cli": "pnpm --filter cli build",
-    "build:shared": "pnpm --filter shared build",
-    "build": "pnpm build:shared && pnpm build:cli && pnpm build:ui",
+    "dev:ui": "pnpm --filter moti-do-ui dev",
+    "build:ui": "pnpm --filter moti-do-ui build",
+    "build:cli": "pnpm --filter moti-do-cli build",
+    "build:shared": "pnpm --filter moti-do-shared build",
+    "build": "pnpm run build:shared && pnpm run build:cli && pnpm run build:ui",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
-    "test": "pnpm --parallel test"
+    "test": "pnpm --parallel --filter '*' test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^20.11.24",
-    "@typescript-eslint/eslint-plugin": "^7.1.0",
-    "@typescript-eslint/parser": "^7.1.0",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.5",
-    "prettier": "^3.2.5",
-    "typescript": "^5.3.3",
-    "vitest": "^1.3.1"
+    "@types/node": "^22.13.14",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "eslint": "^9.23.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9"
   },
   "packageManager": "pnpm@8.15.1"
-} 
+}
