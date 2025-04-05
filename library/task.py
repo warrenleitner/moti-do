@@ -14,7 +14,7 @@ Note:
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 # -------------------------------------------------------------------
 # Value Classes: Importance, Difficulty, Duration
@@ -99,7 +99,7 @@ DURATION_LEVELS = {
 
 
 # -------------------------------------------------------------------
-# Task Components: Subtask, Recurrence, SuccessTracker, ChangeTracker, ScoreCalculator
+# Task Components: Subtask, Recurrence, HabitTracking, ChangeTracker, ScoreCalculator
 # -------------------------------------------------------------------
 
 @dataclass
@@ -117,79 +117,58 @@ class Subtask:
     order: int
 
 
-# Recurrence Base Class and Derived Classes
-
+# --- NEW/REFACTORED RECURRENCE ---
 @dataclass
 class Recurrence:
     """
-    Base class for task/habit recurrence patterns.
+    Defines the recurrence pattern for a task.
 
     Attributes:
-        units (int): Number of recurrence units (default is 1).
+        frequency (str): The recurrence frequency (e.g., 'daily', 'weekly', 'monthly', 'annually').
+        interval (int): The number of frequency units between occurrences (default 1).
+        start_date (datetime): When the recurrence pattern begins.
+        end_date (Optional[datetime]): When the recurrence pattern ends (if applicable).
+        days_of_week (Optional[List[int]]): For 'weekly' frequency, list of days (0=Mon, 6=Sun).
+        day_of_month (Optional[int]): For 'monthly' frequency, the day of the month (1-31).
     """
-    units: int = 1
+    frequency: str
+    interval: int = 1
+    start_date: datetime = field(default_factory=datetime.now)
+    end_date: Optional[datetime] = None
+    # --- Frequency-specific ---
+    days_of_week: Optional[List[int]] = None # 0=Mon, 6=Sun; relevant for 'weekly'
+    day_of_month: Optional[int] = None # 1-31; relevant for 'monthly'
 
 
-class DailyRecurrence(Recurrence):
-    """
-    Represents a daily recurrence pattern.
-    
-    The 'units' variable represents the number of days between recurrences.
-    """
-    pass  # Specific logic may be implemented later.
-
-
+# --- NEW/REFACTORED HABIT TRACKING ---
 @dataclass
-class WeeklyRecurrence(Recurrence):
+class HabitTracking:
     """
-    Represents a weekly recurrence pattern.
-    
+    Tracks progress and history for tasks managed as habits. Replaces SuccessTracker.
+
     Attributes:
-        days_of_week (List[str]): The weekdays on which recurrence occurs (e.g., ['Monday', 'Wednesday']).
+        tracking_start_date (datetime): When habit tracking began.
+        goal_type (str): Type of goal (e.g., 'daily_completion', 'weekly_times', 'monthly_value').
+        target_value (Optional[int]): Target number for the goal type (e.g., 3 times per week).
+        history (List[Dict[str, any]]): Log of completion status/values per occurrence.
+            Example entry: {'date': datetime, 'status': 'completed'/'missed'/'skipped', 'value': Optional[float]}
+        current_streak (int): Current consecutive successful completions based on goal_type.
+        best_streak (int): Highest recorded streak.
     """
-    days_of_week: List[str] = field(default_factory=list)
-
-
-@dataclass
-class MonthlyRecurrence(Recurrence):
-    """
-    Represents a monthly recurrence pattern.
-    
-    Attributes:
-        day_of_month (int): The day of the month (1-31) when the task recurs.
-    """
-    day_of_month: int = 1
-
-
-class AnnuallyRecurrence(Recurrence):
-    """
-    Represents an annual recurrence pattern.
-    
-    In this pattern, recurrence units are interpreted as years.
-    """
-    pass  # Specific annual logic to be added later.
-
-
-@dataclass
-class SuccessTracker:
-    """
-    Tracks the success history for a habit.
-    
-    Attributes:
-        history (List[dict]): List of records. Each record contains the due date and completion status ('on_time', 'late', 'not_completed').
-        current_streak (int): Current streak of on-time completions.
-        best_streak (int): Record-high streak of on-time completions.
-    """
-    history: List[dict] = field(default_factory=list)
+    tracking_start_date: datetime = field(default_factory=datetime.now)
+    goal_type: str = 'daily_completion'
+    target_value: Optional[int] = None
+    history: List[Dict[str, any]] = field(default_factory=list)
     current_streak: int = 0
     best_streak: int = 0
 
 
+# --- Keep ChangeTracker ---
 @dataclass
 class ChangeTracker:
     """
     Logs every field change on a task.
-    
+
     Attributes:
         changes (List[dict]): Each record contains:
             - timestamp: When the change occurred.
@@ -200,88 +179,127 @@ class ChangeTracker:
     changes: List[dict] = field(default_factory=list)
 
 
+# --- Keep ScoreCalculator ---
 class ScoreCalculator:
     """
     Placeholder for score calculation logic.
-    
+
     This class will eventually calculate task/habit scores using multiple factors,
     including user preferences, task attributes, and dynamic conditions.
-    
+
     Note: Consider refactoring this as a stateless service module separate from the task models.
     """
     pass  # Methods for computing scores will be implemented later.
 
 
 # -------------------------------------------------------------------
-# Primary Task Classes: Task and Habit
+# --- UNIFIED TASK CLASS (Replaces old Task and Habit) ---
 # -------------------------------------------------------------------
 
 @dataclass
 class Task:
     """
-    Represents a generic task in the Moti-Do backend.
+    Unified representation for tasks, recurring tasks, and habits in Moti-Do.
+
+    Determining the type:
+    - Regular Task: `recurrence` is None, `habit_tracking` is None.
+    - Recurring Task: `recurrence` is not None, `habit_tracking` is None.
+    - Habit: `recurrence` is not None, `habit_tracking` is not None.
+      (A non-recurring habit might also be possible if `recurrence` is None but `habit_tracking` is set).
 
     Attributes:
-        name (str): Mandatory task name.
-        emoji (Optional[str]): Optional icon/emoji.
+        name (str): Mandatory task name/title.
         id (str): Auto-generated unique ID.
-        created_date (datetime): Timestamp when the task was created.
-        description (Optional[str]): Markdown formatted description.
-        start_date (Optional[datetime]): Optional start date.
-        start_time (Optional[datetime]): Optional start time.
-        due_date (Optional[datetime]): Optional due date.
-        due_time (Optional[datetime]): Optional due time.
-        importance (Optional[ImportanceLevel]): Instance representing task importance.
-        difficulty (Optional[DifficultyLevel]): Instance representing task difficulty.
-        duration (Optional[DurationLevel]): Instance representing task duration.
-        recurrence (Optional[Recurrence]): Instance defining recurrence settings.
-        subtasks (List[Subtask]): List of subtasks.
-        dependency_ids (List[str]): Task IDs this task depends on.
-        dependent_ids (List[str]): Task IDs that depend on this task.
-        change_tracker (ChangeTracker): Tracks all changes made to this task.
-        status (str): Current status ('active', 'future', or 'completed').
-        tag_ids (List[str]): List of associated tag identifiers.
-        project_id (Optional[str]): Associated project identifier.
+        created_at (datetime): Timestamp of creation.
+        updated_at (datetime): Timestamp of last modification.
+        description (Optional[str]): Markdown formatted notes or description.
+        emoji (Optional[str]): Optional icon/emoji representation.
+
+        # --- Scheduling & Status ---
+        start_date (Optional[datetime]): When the task can be started.
+        due_date (Optional[datetime]): When the task is due.
+        completed_at (Optional[datetime]): Timestamp when the task was completed.
+        status (str): Current status (e.g., "active", "future", "completed", "archived").
+
+        # --- Attributes & Relationships ---
+        importance (Optional[ImportanceLevel]): Importance level instance.
+        difficulty (Optional[DifficultyLevel]): Difficulty level instance.
+        duration (Optional[DurationLevel]): Estimated duration level instance.
+        subtasks (List[Subtask]): List of subtasks associated with this task.
+        dependency_ids (List[str]): List of Task IDs this task depends on.
+        dependent_ids (List[str]): List of Task IDs that depend on this task.
+        tag_ids (List[str]): List of associated Tag IDs.
+        project_id (Optional[str]): ID of the associated Project.
+
+        # --- Tracking & History ---
+        change_tracker (ChangeTracker): Tracks all field changes made to this task.
+
+        # --- Recurrence & Habit ---
+        recurrence (Optional[Recurrence]): Defines recurrence rules if the task repeats.
+        habit_tracking (Optional[HabitTracking]): Tracks progress if the task is treated as a habit.
     """
     name: str
-    emoji: Optional[str] = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    created_date: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
     description: Optional[str] = None
+    emoji: Optional[str] = None
+
+    # Scheduling & Status
     start_date: Optional[datetime] = None
-    start_time: Optional[datetime] = None
     due_date: Optional[datetime] = None
-    due_time: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    status: str = "active"
+
+    # Attributes & Relationships
     importance: Optional[ImportanceLevel] = None
     difficulty: Optional[DifficultyLevel] = None
     duration: Optional[DurationLevel] = None
-    recurrence: Optional[Recurrence] = None
     subtasks: List[Subtask] = field(default_factory=list)
     dependency_ids: List[str] = field(default_factory=list)
     dependent_ids: List[str] = field(default_factory=list)
-    change_tracker: ChangeTracker = field(default_factory=ChangeTracker)
-    status: str = "active"  # Options: "active", "future", "completed"
     tag_ids: List[str] = field(default_factory=list)
     project_id: Optional[str] = None
 
+    # Tracking & History
+    change_tracker: ChangeTracker = field(default_factory=ChangeTracker)
 
-@dataclass
-class Habit(Task):
-    """
-    Represents a habit, a specialized version of a task.
+    # Recurrence & Habit
+    recurrence: Optional[Recurrence] = None
+    habit_tracking: Optional[HabitTracking] = None
 
-    Inherits all attributes from Task and adds:
-        - Recurrence and due_date become mandatory.
-        - count (Optional[int]): Number of times the habit must be completed before the due date.
-          (Mutually exclusive with subtasks.)
-        - success_tracker (SuccessTracker): Tracks the habit's completion history.
-        - refresh_delta (Optional[int]): Days before the next due date to refresh/create a new instance.
-    """
-    recurrence: Recurrence = field(default_factory=Recurrence)
-    due_date: datetime = field(default_factory=datetime.now)
-    count: Optional[int] = None
-    success_tracker: SuccessTracker = field(default_factory=SuccessTracker)
-    refresh_delta: Optional[int] = None
+    def __post_init__(self):
+        """Ensure updated_at reflects creation time initially."""
+        # If updated_at wasn't explicitly set during creation, default it to created_at
+        if self.updated_at == self.created_at and self.created_at is not None:
+             # This check seems redundant given the default factory, but ensures consistency
+             pass # No action needed if defaults work as expected. Consider logic if update needed.
+        # Set updated_at properly upon creation if default_factory wasn't sufficient
+        self.updated_at = self.created_at
+
+
+    # --- Type determination helpers (optional but useful) ---
+    @property
+    def is_recurring(self) -> bool:
+        """Returns True if the task has recurrence rules defined."""
+        return self.recurrence is not None
+
+    @property
+    def is_habit(self) -> bool:
+        """Returns True if the task is being tracked as a habit."""
+        return self.habit_tracking is not None
+
+    @property
+    def task_type(self) -> str:
+        """Returns the type of the task ('habit', 'recurring_task', 'task')."""
+        if self.is_habit:
+            # Typically habits are recurring, but we allow non-recurring habits
+            # if habit_tracking is set but recurrence is not.
+            return "habit"
+        elif self.is_recurring:
+            return "recurring_task"
+        else:
+            return "task"
 
 
 # -------------------------------------------------------------------
