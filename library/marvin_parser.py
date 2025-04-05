@@ -80,6 +80,47 @@ class Category:
     def __repr__(self):
         return f"Category(title='{self.title}', _id='{self._id}', type='{self.type}')"
 
+
+class Subtask:
+    """Represents a subtask within a Task."""
+    def __init__(self,
+                 _id: str, # The subtask's unique ID.
+                 title: str, # The subtask title.
+                 done: bool = False, # Whether the subtask is complete.
+                 rank: Optional[int] = None, # Rank within parent task.
+                 timeEstimate: Optional[int] = None, # Duration estimate in ms.
+                 # Reminder fields based on Task JSDoc, assuming similarity
+                 taskTime: Optional[str] = None, # "HH:mm" time extracted from title.
+                 reminderOffset: Optional[int] = None, # Reminder offset in minutes.
+                 reminderTime: Optional[int] = None, # Unix timestamp (seconds) of the first reminder.
+                 snooze: Optional[int] = None, # Snooze duration in minutes.
+                 autoSnooze: Optional[bool] = None, # Whether to autoSnooze.
+                 remindAt: Optional[str] = None, # Old Reminder format "YYYY-MM-DD HH:mm".
+                 reminder: Optional[Dict] = None, # Old Reminder format {time: str, diff: int}.
+                 # Include other potential fields if they might exist, though not in JSDoc
+                 **kwargs # Catch any unexpected fields
+                 ):
+        self._id = _id
+        self.title = title
+        self.done = done
+        self.rank = rank
+        self.timeEstimate = timeEstimate
+        # Assign reminder fields
+        self.taskTime = taskTime
+        self.reminderOffset = reminderOffset
+        self.reminderTime = reminderTime
+        self.snooze = snooze
+        self.autoSnooze = autoSnooze
+        self.remindAt = remindAt
+        self.reminder = reminder
+
+        # Store any unexpected fields for debugging/completeness
+        self.extra_data = kwargs
+
+    def __repr__(self):
+        return f"Subtask(title='{self.title}', _id='{self._id}', done={self.done})"
+
+
 class Task:
     def __init__(self,
                  _id: str, # The task's unique ID.
@@ -331,12 +372,52 @@ class RecurringTask:
     def __repr__(self):
         return f"RecurringTask(title='{self.title}', _id='{self._id}', type='{self.type}')"
 
+class GoalSection:
+    """Represents a section/phase within a Goal."""
+    def __init__(self,
+                 _id: str, # ID of section.
+                 title: str, # Name of section.
+                 note: Optional[str] = None # The section's note. JSDoc says String, but making Optional based on typical usage.
+                 ):
+        self._id = _id
+        self.title = title
+        self.note = note
+
+    def __repr__(self):
+        return f"GoalSection(title='{self.title}', _id='{self._id}')"
+
+class Challenge:
+    """Represents an anticipated challenge for a Goal."""
+    def __init__(self,
+                 _id: str,
+                 challenge: str,
+                 action: str # What user will do if challenge comes up.
+                 ):
+        self._id = _id
+        self.challenge = challenge
+        self.action = action
+
+    def __repr__(self):
+        return f"Challenge(challenge='{self.challenge}', _id='{self._id}')"
+
+class CheckInQuestion:
+    """Represents a custom question for Goal check-ins."""
+    def __init__(self,
+                 _id: str,
+                 title: str
+                 ):
+        self._id = _id
+        self.title = title
+
+    def __repr__(self):
+        return f"CheckInQuestion(title='{self.title}', _id='{self._id}')"
+
 class Goal:
     def __init__(self,
                  _id: str, # The goal's unique ID.
                  title: str, # The goal's title.
                  status: str, # The goal's status: "backburner", "pending", "active", "done".
-                 sections: List[GoalSection], # Sections/phases of the goal.
+                  sections: List[GoalSection], # Sections/phases of the goal.
                  hasEnd: bool, # Whether this goal is an "End goal" (true) or Ongoing (false).
                  createdAt: int, # Date.now() when created. Not in JSDoc, but present in original code.
                  note: Optional[str] = None, # The goal's note.
@@ -981,41 +1062,58 @@ def parse_json_entry(entry: Dict) -> Any:
     # print(f"Warning: No matching class found for db_type '{db_type}'. Returning raw entry.")
     return entry
 
-# Load the JSON data from the source
-# Get filename from command-line arguments
-if len(sys.argv) < 2:
-    print("Usage: python marvin_parser.py <json_file_path>")
-    sys.exit(1)
+def load_data_from_file(file_path: str) -> DefaultDict[str, Dict[str, Any]]:
+    """Loads Marvin data from a JSON file, parses it into objects, and organizes by type."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            json_data = json.load(file)
+    except FileNotFoundError:
+        print(f"Error: File '{file_path}' not found.")
+        raise # Re-raise the exception
+    except json.JSONDecodeError:
+        print(f"Error: '{file_path}' is not a valid JSON file.")
+        raise # Re-raise the exception
 
-file_path = sys.argv[1]
+    # Parse each entry in the JSON data
+    parsed_entries = [parse_json_entry(entry) for entry in json_data]
 
-# Load the JSON data from the source
-try:
-    with open(file_path, 'r', encoding='utf-8') as file:
-        json_data = json.load(file)
-except FileNotFoundError:
-    print(f"Error: File '{file_path}' not found.")
-    sys.exit(1)
-except json.JSONDecodeError:
-    print(f"Error: '{file_path}' is not a valid JSON file.")
-    sys.exit(1)
+    # Organize entries into tables by class type with _id as the index
+    tables = defaultdict(dict)
+    for entry in parsed_entries:
+        if hasattr(entry, 'db') and hasattr(entry, '_id'):
+            tables[entry.db][entry._id] = entry
+        # Optional: Handle entries that couldn't be fully parsed or didn't fit schema
+        # else:
+        #    print(f"Warning: Could not properly categorize entry: {entry}")
 
-# Parse each entry in the JSON data
-parsed_entries = [parse_json_entry(entry) for entry in json_data]
+    return tables
 
-# Organize entries into tables by class type with _id as the index
-tables = defaultdict(dict)
-for entry in parsed_entries:
-    if hasattr(entry, 'db') and hasattr(entry, '_id'):
-        tables[entry.db][entry._id] = entry
+# Main execution block for running this script directly
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python marvin_parser.py <json_file_path>")
+        sys.exit(1)
 
-# Print the top 3 entries from each table
-print("\n=== Database Tables Summary ===")
-for table_name, table_data in tables.items():
-    print(f"\nTable: {table_name} (Total entries: {len(table_data)})")
-    for i, (entry_id, entry) in enumerate(table_data.items()):
-        if i < 3:  # Only print the first 3 entries
-            print(f"  {i+1}. {entry}")
-        else:
-            break
+    input_file_path = sys.argv[1]
+
+    try:
+        loaded_tables = load_data_from_file(input_file_path)
+
+        # Print the top 3 entries from each table for summary when run directly
+        print("\n=== Database Tables Summary ===")
+        for table_name, table_data in loaded_tables.items():
+            print(f"\nTable: {table_name} (Total entries: {len(table_data)})")
+            count = 0
+            for entry_id, entry in table_data.items():
+                if count < 3:  # Only print the first 3 entries
+                    print(f"  {count+1}. {entry}")
+                    count += 1
+                else:
+                    break
+            if len(table_data) > 3:
+                print("  ...")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        sys.exit(1)
 
