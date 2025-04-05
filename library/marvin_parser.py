@@ -2,10 +2,13 @@ import json
 from typing import List, Optional, Dict, Any, DefaultDict, Union
 import sys
 from collections import defaultdict
-from .fancy_classes import Category, Subtask, Task, RecurringTask, GoalSection, Challenge, CheckInQuestion, Goal, Habit, DayItem, ProfileItem, LocalStorageItem
+# Import both fancy and slim classes
+from .fancy_classes import Category as FancyCategory, Subtask as FancySubtask, Task as FancyTask, RecurringTask as FancyRecurringTask, GoalSection as FancyGoalSection, Challenge as FancyChallenge, CheckInQuestion as FancyCheckInQuestion, Goal as FancyGoal, Habit as FancyHabit, DayItem as FancyDayItem, ProfileItem as FancyProfileItem, LocalStorageItem as FancyLocalStorageItem
+from .slim_classes import Category as SlimCategory, Subtask as SlimSubtask, Task as SlimTask, RecurringTask as SlimRecurringTask, Habit as SlimHabit
+# Slim classes for Goal, DayItem, ProfileItem, LocalStorageItem are not defined, so we won't translate those.
 
 def parse_json_entry(entry: Dict) -> Any:
-    """Parses a JSON entry and returns its Python representation."""
+    """Parses a JSON entry and returns its Python representation using FANCY classes."""
     db_type = entry.get("db")
     original_entry = entry.copy() # Keep original for error reporting
 
@@ -342,7 +345,7 @@ def parse_json_entry(entry: Dict) -> Any:
             # Ensure required args are present
             if 'title' not in kwargs or '_id' not in kwargs or 'type' not in kwargs or 'parentId' not in kwargs or 'createdAt' not in kwargs:
                  raise TypeError(f"Missing required arguments for Category: Need _id, title, type, parentId, createdAt. Got keys: {list(kwargs.keys())}")
-            return Category(**kwargs)
+            return FancyCategory(**kwargs)
         elif db_type == "Tasks":
              if '_id' not in kwargs or 'createdAt' not in kwargs or 'title' not in kwargs or 'parentId' not in kwargs:
                  raise TypeError(f"Missing required arguments for Task: Need _id, createdAt, title, parentId. Got keys: {list(kwargs.keys())}")
@@ -354,11 +357,11 @@ def parse_json_entry(entry: Dict) -> Any:
              if 'imported' in kwargs:
                  kwargs['imported'] = kwargs['imported'] # Map JSON 'imported' to python 'imported' attribute
 
-             return Task(**kwargs)
+             return FancyTask(**kwargs)
         elif db_type == "RecurringTasks":
              if '_id' not in kwargs or 'recurringType' not in kwargs or 'title' not in kwargs or 'parentId' not in kwargs or 'type' not in kwargs or 'createdAt' not in kwargs:
                  raise TypeError(f"Missing required arguments for RecurringTask: Need _id, recurringType, title, parentId, type, createdAt. Got keys: {list(kwargs.keys())}")
-             return RecurringTask(**kwargs)
+             return FancyRecurringTask(**kwargs)
         elif db_type == "Goals":
              if '_id' not in kwargs or 'title' not in kwargs or 'status' not in kwargs or 'sections' not in kwargs or 'hasEnd' not in kwargs or 'createdAt' not in kwargs:
                   raise TypeError(f"Missing required arguments for Goal: Need _id, title, status, sections, hasEnd, createdAt. Got keys: {list(kwargs.keys())}")
@@ -388,23 +391,23 @@ def parse_json_entry(entry: Dict) -> Any:
              if g_fields['g_sec']: kwargs['g_sec'] = g_fields['g_sec']
              if g_fields['g_rank']: kwargs['g_rank'] = g_fields['g_rank']
 
-             return Goal(**kwargs)
+             return FancyGoal(**kwargs)
         elif db_type == "Habits":
              if '_id' not in kwargs or 'title' not in kwargs or 'isPositive' not in kwargs or 'recordType' not in kwargs or 'showInDayView' not in kwargs or 'showInCalendar' not in kwargs or 'sendReminders' not in kwargs or 'createdAt' not in kwargs:
                  raise TypeError(f"Missing required arguments for Habit: Need _id, title, isPositive, recordType, showInDayView, showInCalendar, sendReminders, createdAt. Got keys: {list(kwargs.keys())}")
-             return Habit(**kwargs)
+             return FancyHabit(**kwargs)
         elif db_type == "DayItems":
             if '_id' not in kwargs or 'createdAt' not in kwargs or 'timeGoals' not in kwargs:
                  raise TypeError(f"Missing required arguments for DayItem: Need _id, createdAt, timeGoals. Got keys: {list(kwargs.keys())}")
-            return DayItem(**kwargs)
+            return FancyDayItem(**kwargs)
         elif db_type == "ProfileItems":
             if '_id' not in kwargs or 'val' not in kwargs :
                  raise TypeError(f"Missing required arguments for ProfileItem: Need _id, val. Got keys: {list(kwargs.keys())}")
-            return ProfileItem(**kwargs)
+            return FancyProfileItem(**kwargs)
         elif db_type == "LocalStorageItems":
              if '_id' not in kwargs or 'val' not in kwargs :
                  raise TypeError(f"Missing required arguments for LocalStorageItem: Need _id, val. Got keys: {list(kwargs.keys())}")
-             return LocalStorageItem(**kwargs)
+             return FancyLocalStorageItem(**kwargs)
     except TypeError as e:
         print(f"Error creating object for db '{db_type}' with _id '{original_entry.get('_id', 'N/A')}': {e}")
         # print(f"Original Entry: {original_entry}") # Potentially verbose
@@ -416,8 +419,143 @@ def parse_json_entry(entry: Dict) -> Any:
     # print(f"Warning: No matching class found for db_type '{db_type}'. Returning raw entry.")
     return entry
 
+# --- Translation Functions ---
+
+def translate_fancy_to_slim(fancy_obj: Any) -> Any:
+    """Translates a supported fancy object to its slim equivalent."""
+    if isinstance(fancy_obj, FancyCategory):
+        return SlimCategory(
+            _id=fancy_obj._id,
+            title=fancy_obj.title,
+            parentId=fancy_obj.parentId,
+            createdAt=fancy_obj.createdAt,
+            updatedAt=fancy_obj.updatedAt,
+            done=fancy_obj.done,
+            doneDate=fancy_obj.doneDate,
+            color=fancy_obj.color,
+            icon=fancy_obj.icon,
+            note=fancy_obj.note,
+            db=fancy_obj.db,
+            fieldUpdates=fancy_obj.fieldUpdates
+        )
+    elif isinstance(fancy_obj, FancyTask):
+        # Note: Slim Task's __init__ uses snake_case for field_updates, but expects camelCase from JSON mapping
+        # We pass the attribute as it exists in the fancy object (which was mapped from JSON camelCase)
+        
+        # Translate subtasks if they exist
+        slim_subtasks = None
+        if fancy_obj.subtasks and isinstance(fancy_obj.subtasks, dict):
+            slim_subtasks = {}
+            for sub_id, fancy_subtask in fancy_obj.subtasks.items():
+                if isinstance(fancy_subtask, FancySubtask):
+                    # Translate FancySubtask to SlimSubtask
+                    slim_subtasks[sub_id] = SlimSubtask(
+                        _id=fancy_subtask._id,
+                        title=fancy_subtask.title,
+                        done=fancy_subtask.done,
+                        rank=fancy_subtask.rank
+                        # SlimSubtask doesn't include timeEstimate, reminder fields, etc.
+                    )
+                else:
+                     # If it's not a FancySubtask object already (e.g., raw dict?), pass it through?
+                     # Or log a warning. For now, passing through.
+                     slim_subtasks[sub_id] = fancy_subtask
+
+        return SlimTask(
+            _id=fancy_obj._id,
+            createdAt=fancy_obj.createdAt,
+            title=fancy_obj.title,
+            parentId=fancy_obj.parentId,
+            updatedAt=fancy_obj.updatedAt,
+            dueDate=fancy_obj.dueDate,
+            startDate=fancy_obj.startDate,
+            endDate=fancy_obj.endDate,
+            done=fancy_obj.done,
+            doneAt=fancy_obj.doneAt,
+            duration=fancy_obj.duration,
+            times=fancy_obj.times,
+            isStarred=fancy_obj.isStarred,
+            isFrogged=fancy_obj.isFrogged,
+            recurring=fancy_obj.recurring,
+            recurringTaskId=fancy_obj.recurringTaskId,
+            # Slim Task doesn't explicitly handle Subtask objects in its __init__
+            # Pass the translated slim_subtasks dictionary
+            subtasks=slim_subtasks,
+            labelIds=fancy_obj.labelIds,
+            timeEstimate=fancy_obj.timeEstimate,
+            note=fancy_obj.note,
+            dependsOn=fancy_obj.dependsOn,
+            backburner=fancy_obj.backburner,
+            generatedAt=fancy_obj.generatedAt,
+            echoedAt=fancy_obj.echoedAt,
+            deletedAt=fancy_obj.deletedAt,
+            restoredAt=fancy_obj.restoredAt,
+            rewardPoints=fancy_obj.rewardPoints,
+            taskTime=fancy_obj.taskTime,
+            reminderOffset=fancy_obj.reminderOffset,
+            reminderTime=fancy_obj.reminderTime,
+            db=fancy_obj.db,
+            field_updates=fancy_obj.fieldUpdates # Pass the dict directly
+        )
+    elif isinstance(fancy_obj, FancyRecurringTask):
+        # Slim RecurringTask maps snake_case params (updated_at, field_updates, end_in)
+        # from the fancy object's attributes (which might have different names if mapped)
+        return SlimRecurringTask(
+            _id=fancy_obj._id,
+            type=fancy_obj.type,
+            createdAt=fancy_obj.createdAt,
+            day=fancy_obj.day,
+            date=fancy_obj.date,
+            weekDays=fancy_obj.weekDays,
+            repeat=fancy_obj.repeat,
+            repeatStart=fancy_obj.repeatStart,
+            limitToWeekdays=fancy_obj.limitToWeekdays,
+            dueIn=fancy_obj.dueIn,
+            echoDays=fancy_obj.echoDays,
+            customRecurrence=fancy_obj.customRecurrence,
+            db=fancy_obj.db,
+            updated_at=fancy_obj.updatedAt, # Map fancy camelCase 'updatedAt' to slim snake_case 'updated_at'
+            field_updates=fancy_obj.fieldUpdates, # Map fancy camelCase 'fieldUpdates' to slim snake_case 'field_updates'
+            end_in=fancy_obj.endIn # Map fancy camelCase 'endIn' to slim snake_case 'end_in'
+        )
+    elif isinstance(fancy_obj, FancyHabit):
+         # Slim Habit maps snake_case params (updated_at, field_updates)
+         return SlimHabit(
+            _id=fancy_obj._id,
+            title=fancy_obj.title,
+            isPositive=fancy_obj.isPositive,
+            recordType=fancy_obj.recordType,
+            createdAt=fancy_obj.createdAt,
+            note=fancy_obj.note,
+            color=fancy_obj.color,
+            parentId=fancy_obj.parentId,
+            labelIds=fancy_obj.labelIds,
+            isStarred=fancy_obj.isStarred,
+            isFrogged=fancy_obj.isFrogged,
+            timeEstimate=fancy_obj.timeEstimate,
+            startDate=fancy_obj.startDate,
+            endDate=fancy_obj.endDate,
+            units=fancy_obj.units,
+            period=fancy_obj.period,
+            target=fancy_obj.target,
+            askOn=fancy_obj.askOn,
+            time=fancy_obj.time,
+            showAfterSuccess=fancy_obj.showAfterSuccess,
+            showAfterRecord=fancy_obj.showAfterRecord,
+            done=fancy_obj.done,
+            history=fancy_obj.history,
+            dismissed=fancy_obj.dismissed,
+            db=fancy_obj.db,
+            field_updates=fancy_obj.fieldUpdates, # Map fancy camelCase to slim snake_case
+            updated_at=fancy_obj.updatedAt # Map fancy camelCase to slim snake_case
+         )
+    # If no slim version exists or it's not a supported type, return original object or None/error?
+    # Returning original object for now for unsupported types (Goals, DayItems etc.)
+    return fancy_obj
+
+
 def load_data_from_file(file_path: str) -> DefaultDict[str, Dict[str, Any]]:
-    """Loads Marvin data from a JSON file, parses it into objects, and organizes by type."""
+    """Loads Marvin data, parses into fancy objects, translates to slim objects, and organizes by type."""
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             json_data = json.load(file)
@@ -428,19 +566,31 @@ def load_data_from_file(file_path: str) -> DefaultDict[str, Dict[str, Any]]:
         print(f"Error: '{file_path}' is not a valid JSON file.")
         raise # Re-raise the exception
 
-    # Parse each entry in the JSON data
+    # Parse each entry in the JSON data using fancy classes
     parsed_entries = [parse_json_entry(entry) for entry in json_data]
 
-    # Organize entries into tables by class type with _id as the index
-    tables = defaultdict(dict)
+    # Organize fancy entries into tables by class type with _id as the index
+    fancy_tables = defaultdict(dict)
     for entry in parsed_entries:
+        # Check if it's one of our custom class instances or just raw data
         if hasattr(entry, 'db') and hasattr(entry, '_id'):
-            tables[entry.db][entry._id] = entry
+            fancy_tables[entry.db][entry._id] = entry
         # Optional: Handle entries that couldn't be fully parsed or didn't fit schema
         # else:
         #    print(f"Warning: Could not properly categorize entry: {entry}")
 
-    return tables
+    # Translate fancy objects to slim objects where possible
+    slim_tables = defaultdict(dict)
+    for db_type, table_data in fancy_tables.items():
+        for entry_id, fancy_entry in table_data.items():
+             slim_entry = translate_fancy_to_slim(fancy_entry)
+             # Use the db attribute from the *slim* entry if translation occurred,
+             # otherwise use the original db_type.
+             current_db_type = getattr(slim_entry, 'db', "drop")
+             if current_db_type != "drop":
+                slim_tables[current_db_type][entry_id] = slim_entry
+
+    return slim_tables # Return tables containing slim objects (or original for non-translated)
 
 # Main execution block for running this script directly
 if __name__ == "__main__":
@@ -453,8 +603,8 @@ if __name__ == "__main__":
     try:
         loaded_tables = load_data_from_file(input_file_path)
 
-        # Print the top 3 entries from each table for summary when run directly
-        print("\n=== Database Tables Summary ===")
+        # Print the top 3 entries from each table (now containing slim objects) for summary
+        print("\n=== Database Tables Summary (Slim Objects) ===")
         for table_name, table_data in loaded_tables.items():
             print(f"\nTable: {table_name} (Total entries: {len(table_data)})")
             count = 0
