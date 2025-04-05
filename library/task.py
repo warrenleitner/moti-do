@@ -151,7 +151,7 @@ class WeeklyRecurrence(Recurrence):
 
 
 @dataclass
-class MonthlyRecurrenceRecurrence):
+class MonthlyRecurrence(Recurrence):
     """
     Represents a monthly recurrence pattern.
     
@@ -411,15 +411,19 @@ class User:
         name (str): User name, defaults to "User".
         active_since (datetime): The date/time when the user first became active.
         last_update (datetime): Timestamp updated each time the application runs.
-        xp_log (List[XPLog]): List of XP event records.
         tasks (List[Task]): List of Task and Habit instances.
+        tags (List[Tag]): List of Tag instances.
+        projects (List[Project]): List of Project instances.
+        xp_log (List[XPLog]): List of XP event records.
         xp_ledger (List[LedgerLog]): List of ledger entries for XP adjustments.
         score_preferences (ScorePreferences): Instance holding the user's scoring settings.
     """
     name: str = "User"
     active_since: datetime = field(default_factory=datetime.now)
     last_update: datetime = field(default_factory=datetime.now)
-    xp_log: List[XPLog] = field(default_factory=list)
     tasks: List[Task] = field(default_factory=list)
+    tags: List[Tag] = field(default_factory=list)
+    projects: List[Project] = field(default_factory=list)
+    xp_log: List[XPLog] = field(default_factory=list)
     xp_ledger: List[LedgerLog] = field(default_factory=list)
     score_preferences: ScorePreferences = field(default_factory=ScorePreferences)
