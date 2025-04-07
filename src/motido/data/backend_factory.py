@@ -5,9 +5,10 @@ based on the application's configuration.
 """
 
 from .abstraction import DataManager
-from .json_manager import JsonDataManager
-from .database_manager import DatabaseDataManager
 from .config import load_config
+from .database_manager import DatabaseDataManager
+from .json_manager import JsonDataManager
+
 
 def get_data_manager() -> DataManager:
     """
@@ -21,7 +22,7 @@ def get_data_manager() -> DataManager:
         ValueError: If the configured backend type is unknown.
     """
     config = load_config()
-    backend_type = config.get("backend", "json") # Default to json if missing
+    backend_type = config.get("backend", "json")  # Default to json if missing
 
     if backend_type == "json":
         print("Using JSON backend.")
@@ -32,4 +33,3 @@ def get_data_manager() -> DataManager:
     else:
         # Should ideally not happen due to config loading validation, but good practice
         raise ValueError(f"Unknown backend type configured: '{backend_type}'")
-

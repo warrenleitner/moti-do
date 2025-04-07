@@ -5,13 +5,16 @@ Implementation of the DataManager interface using JSON file storage.
 
 import json
 import os
-from typing import Dict, Any
-from .abstraction import DataManager, DEFAULT_USERNAME
-from motido.core.models import User, Task
+from typing import Any, Dict
+
+from motido.core.models import Task, User
+
+from .abstraction import DEFAULT_USERNAME, DataManager
 from .config import get_config_path
 
 DATA_DIR = "motido_data"
 USERS_FILE = "users.json"
+
 
 class JsonDataManager(DataManager):
     """Manages data persistence using a JSON file."""
@@ -39,7 +42,7 @@ class JsonDataManager(DataManager):
         self._ensure_data_dir_exists()
         if not os.path.exists(self._data_path):
             # Create an empty structure if the file is new
-            self._write_data({}) # Start with an empty JSON object
+            self._write_data({})  # Start with an empty JSON object
             print(f"Initialized empty data file at: {self._data_path}")
         else:
             print(f"Data file already exists at: {self._data_path}")
@@ -48,17 +51,19 @@ class JsonDataManager(DataManager):
         """Reads the entire data structure from the JSON file."""
         self._ensure_data_dir_exists()
         if not os.path.exists(self._data_path):
-            return {} # Return empty dict if file doesn't exist
+            return {}  # Return empty dict if file doesn't exist
 
         try:
-            with open(self._data_path, 'r', encoding='utf-8') as f:
+            with open(self._data_path, "r", encoding="utf-8") as f:
                 # Handle empty file case
                 content = f.read()
                 if not content:
                     return {}
                 return json.loads(content)
         except (json.JSONDecodeError, IOError) as e:
-            print(f"Error reading data file '{self._data_path}': {e}. Returning empty data.")
+            print(
+                f"Error reading data file '{self._data_path}': {e}. Returning empty data."
+            )
             # Consider backup/recovery mechanism here in a real app
             return {}
 
@@ -66,7 +71,7 @@ class JsonDataManager(DataManager):
         """Writes the entire data structure to the JSON file."""
         self._ensure_data_dir_exists()
         try:
-            with open(self._data_path, 'w', encoding='utf-8') as f:
+            with open(self._data_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
         except IOError as e:
             print(f"Error writing data file '{self._data_path}': {e}")
@@ -87,14 +92,13 @@ class JsonDataManager(DataManager):
                 print(f"User '{username}' loaded successfully.")
                 return user
             except TypeError as e:
-                 print(f"Error deserializing user data for '{username}': {e}")
-                 return None # Or handle corrupted data more gracefully
+                print(f"Error deserializing user data for '{username}': {e}")
+                return None  # Or handle corrupted data more gracefully
         else:
             print(f"User '{username}' not found in JSON data.")
             # Optionally create a new user here if desired
             # return User(username=username)
             return None
-
 
     def save_user(self, user: User):
         """Saves a specific user's data to the JSON file."""
@@ -102,12 +106,11 @@ class JsonDataManager(DataManager):
         all_data = self._read_data()
 
         # Serialize tasks
-        tasks_data = [{"id": task.id, "description": task.description} for task in user.tasks]
+        tasks_data = [
+            {"id": task.id, "description": task.description} for task in user.tasks
+        ]
         # Prepare user data for JSON
-        user_data = {
-            "username": user.username,
-            "tasks": tasks_data
-        }
+        user_data = {"username": user.username, "tasks": tasks_data}
 
         # Update the specific user's data in the overall structure
         all_data[user.username] = user_data
@@ -118,4 +121,3 @@ class JsonDataManager(DataManager):
     def backend_type(self) -> str:
         """Returns the backend type."""
         return "json"
-

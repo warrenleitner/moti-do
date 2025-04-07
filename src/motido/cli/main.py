@@ -5,15 +5,16 @@ Provides commands to initialize, create, view, list, and edit tasks.
 """
 
 import argparse
-import sys
 import os
+import sys
 
 # Updated imports
 from motido.core.models import Task, User
+from motido.data.abstraction import DataManager  # For type hinting
 from motido.data.abstraction import DEFAULT_USERNAME
-from motido.data.config import load_config, save_config
 from motido.data.backend_factory import get_data_manager
-from motido.data.abstraction import DataManager # For type hinting
+from motido.data.config import load_config, save_config
+
 
 def handle_init(args):
     """Handles the 'init' command."""
@@ -21,13 +22,14 @@ def handle_init(args):
     config = {"backend": args.backend}
     save_config(config)
     try:
-        manager = get_data_manager() # Get manager based on *new* config
-        manager.initialize() # Initialize the chosen backend
+        manager = get_data_manager()  # Get manager based on *new* config
+        manager.initialize()  # Initialize the chosen backend
         print(f"Initialization complete. Using '{args.backend}' backend.")
     except Exception as e:
         print(f"An error occurred during initialization: {e}")
         # Optionally revert config change or provide more guidance
         sys.exit(1)
+
 
 def handle_create(args, manager: DataManager):
     """Handles the 'create' command."""
@@ -59,7 +61,7 @@ def handle_list(args, manager: DataManager):
     if user and user.tasks:
         print("-" * 30)
         for task in user.tasks:
-            print(task) # Uses Task.__str__
+            print(task)  # Uses Task.__str__
         print("-" * 30)
         print(f"Total tasks: {len(user.tasks)}")
     elif user:
@@ -91,7 +93,7 @@ def handle_view(args, manager: DataManager):
         else:
             print(f"Error: Task with ID prefix '{args.id}' not found.")
             sys.exit(1)
-    except ValueError as e: # Handles ambiguous ID prefix
+    except ValueError as e:  # Handles ambiguous ID prefix
         print(f"Error: {e}")
         sys.exit(1)
     except Exception as e:
@@ -123,7 +125,7 @@ def handle_edit(args, manager: DataManager):
         else:
             print(f"Error: Task with ID prefix '{args.id}' not found.")
             sys.exit(1)
-    except ValueError as e: # Handles ambiguous ID prefix
+    except ValueError as e:  # Handles ambiguous ID prefix
         print(f"Error: {e}")
         sys.exit(1)
     except Exception as e:
@@ -161,10 +163,10 @@ def handle_delete(args, manager: DataManager):
             # Exiting here because the task wasn't found to be deleted
             sys.exit(1)
 
-    except ValueError as e: # Handles ambiguous ID prefix from underlying find
+    except ValueError as e:  # Handles ambiguous ID prefix from underlying find
         print(f"Error: {e}")
         sys.exit(1)
-    except Exception as e: # Catch other unexpected errors during removal logic
+    except Exception as e:  # Catch other unexpected errors during removal logic
         print(f"An unexpected error occurred during deletion: {e}")
         sys.exit(1)
 
@@ -172,14 +174,18 @@ def handle_delete(args, manager: DataManager):
 def main():
     """Main function to parse arguments and dispatch commands."""
     parser = argparse.ArgumentParser(description="Moti-Do: Task Management CLI")
-    subparsers = parser.add_subparsers(dest="command", help="Available commands", required=True)
+    subparsers = parser.add_subparsers(
+        dest="command", help="Available commands", required=True
+    )
 
     # --- Init Command ---
-    parser_init = subparsers.add_parser("init", help="Initialize the application and select backend.")
+    parser_init = subparsers.add_parser(
+        "init", help="Initialize the application and select backend."
+    )
     parser_init.add_argument(
         "--backend",
         choices=["json", "db"],
-        default=load_config().get("backend", "json"), # Default to current or 'json'
+        default=load_config().get("backend", "json"),  # Default to current or 'json'
         help="Specify the data storage backend (json or db).",
     )
     parser_init.set_defaults(func=handle_init)
@@ -187,11 +193,14 @@ def main():
     # --- Create Command ---
     parser_create = subparsers.add_parser("create", help="Create a new task.")
     parser_create.add_argument(
-        "-d", "--description",
+        "-d",
+        "--description",
         required=True,
         help="The description of the task.",
     )
-    parser_create.set_defaults(func=lambda args: handle_create(args, get_data_manager()))
+    parser_create.set_defaults(
+        func=lambda args: handle_create(args, get_data_manager())
+    )
 
     # --- List Command ---
     parser_list = subparsers.add_parser("list", help="List all tasks.")
@@ -207,14 +216,17 @@ def main():
     parser_view.set_defaults(func=lambda args: handle_view(args, get_data_manager()))
 
     # --- Edit Command ---
-    parser_edit = subparsers.add_parser("edit", help="Edit the description of an existing task.")
+    parser_edit = subparsers.add_parser(
+        "edit", help="Edit the description of an existing task."
+    )
     parser_edit.add_argument(
         "--id",
         required=True,
         help="The full or unique partial ID of the task to edit.",
     )
     parser_edit.add_argument(
-        "-d", "--description",
+        "-d",
+        "--description",
         required=True,
         help="The new description for the task.",
     )
@@ -227,7 +239,9 @@ def main():
         required=True,
         help="The full or unique partial ID of the task to delete.",
     )
-    parser_delete.set_defaults(func=lambda args: handle_delete(args, get_data_manager()))
+    parser_delete.set_defaults(
+        func=lambda args: handle_delete(args, get_data_manager())
+    )
 
     # --- Parse Arguments ---
     args = parser.parse_args()
@@ -254,11 +268,13 @@ def main():
         #      print("Error: Application not initialized. Please run 'python cli/main.py init' first.") # Old message
         #      sys.exit(1)
         try:
-           args.func(args) # Call the appropriate handler function
+            args.func(args)  # Call the appropriate handler function
         except Exception as e:
             # Provide a more general error message here
             print(f"An error occurred: {e}")
-            print("If you haven't initialized the application, try running 'motido init'.")
+            print(
+                "If you haven't initialized the application, try running 'motido init'."
+            )
             sys.exit(1)
 
 

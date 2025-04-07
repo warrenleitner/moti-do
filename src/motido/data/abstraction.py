@@ -5,10 +5,12 @@ Ensures all data backends adhere to a common interface.
 """
 
 from abc import ABC, abstractmethod
+
 from motido.core.models import User
 
 # Define a default username for the single-user scenario for now
 DEFAULT_USERNAME = "default_user"
+
 
 class DataManager(ABC):
     """
@@ -53,4 +55,3 @@ class DataManager(ABC):
     def backend_type(self) -> str:
         """Returns the type of the backend (e.g., 'json', 'db')."""
         pass
-
