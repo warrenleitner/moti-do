@@ -1,3 +1,5 @@
+"""Tests for the main CLI module and command handlers."""
+
 import argparse
 from typing import Any
 from unittest.mock import call
@@ -8,7 +10,8 @@ import pytest
 from motido.cli import main as cli_main
 from motido.core.models import Task, User
 from motido.data.abstraction import DEFAULT_USERNAME, DataManager
-from motido.data.config import DEFAULT_BACKEND
+# W0611: Removed unused import
+# from motido.data.config import DEFAULT_BACKEND
 
 
 # Helper to create mock argparse Namespace
@@ -174,21 +177,23 @@ def test_handle_init_exception(mocker: Any) -> None:
 def test_handle_create_success_existing_user(mocker: Any) -> None:
     """Test handle_create successfully creates a task for an existing user."""
     mock_print = mocker.patch("motido.cli.main.print")
-    MockUser = mocker.patch("motido.cli.main.User")  # Mock the User class constructor
-    MockTask = mocker.patch("motido.cli.main.Task")  # Mock the Task class constructor
+    # C0103: Renamed MockUser to mock_user_class
+    mock_user_class = mocker.patch("motido.cli.main.User")
+    # C0103: Renamed MockTask to mock_task_class
+    mock_task_class = mocker.patch("motido.cli.main.Task")
     mock_manager = mocker.MagicMock(spec=DataManager)
     mock_user = mocker.MagicMock(spec=User)
     mock_task = mocker.MagicMock(spec=Task)
     mock_task.id = "task123abc"  # Give mock task an ID
-    MockTask.return_value = mock_task
+    mock_task_class.return_value = mock_task
     mock_manager.load_user.return_value = mock_user
     args = create_mock_args(description="My new task")
 
     cli_main.handle_create(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    MockUser.assert_not_called()  # User exists, no need to create new
-    MockTask.assert_called_once_with(description="My new task")
+    mock_user_class.assert_not_called()  # User exists, no need to create new
+    mock_task_class.assert_called_once_with(description="My new task")
     mock_user.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user)
     mock_print.assert_has_calls(
@@ -202,14 +207,16 @@ def test_handle_create_success_existing_user(mocker: Any) -> None:
 def test_handle_create_success_new_user(mocker: Any) -> None:
     """Test handle_create creates a new user if none exists."""
     mock_print = mocker.patch("motido.cli.main.print")
-    MockUser = mocker.patch("motido.cli.main.User")  # Mock the User class constructor
-    MockTask = mocker.patch("motido.cli.main.Task")  # Mock the Task class constructor
+    # C0103: Renamed MockUser to mock_user_class
+    mock_user_class = mocker.patch("motido.cli.main.User")
+    # C0103: Renamed MockTask to mock_task_class
+    mock_task_class = mocker.patch("motido.cli.main.Task")
     mock_manager = mocker.MagicMock(spec=DataManager)
     mock_user_instance = mocker.MagicMock(spec=User)  # Instance returned by constructor
-    MockUser.return_value = mock_user_instance
+    mock_user_class.return_value = mock_user_instance
     mock_task = mocker.MagicMock(spec=Task)
     mock_task.id = "newtask456"
-    MockTask.return_value = mock_task
+    mock_task_class.return_value = mock_task
     mock_manager.load_user.return_value = None  # Simulate user not found
 
     args = create_mock_args(description="First task")
@@ -217,8 +224,8 @@ def test_handle_create_success_new_user(mocker: Any) -> None:
     cli_main.handle_create(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    MockUser.assert_called_once_with(username=DEFAULT_USERNAME)  # New user created
-    MockTask.assert_called_once_with(description="First task")
+    mock_user_class.assert_called_once_with(username=DEFAULT_USERNAME)  # New user created
+    mock_task_class.assert_called_once_with(description="First task")
     mock_user_instance.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user_instance)
     mock_print.assert_has_calls(
@@ -249,29 +256,31 @@ def test_handle_create_empty_description(mocker: Any) -> None:
 
 
 def test_handle_create_save_error(mocker: Any) -> None:
-    """Test handle_create handles errors during saving."""
+    """Test handle_create handles exceptions during manager.save_user."""
     mock_print = mocker.patch("motido.cli.main.print")
-    MockTask = mocker.patch("motido.cli.main.Task")
+    # C0103: Renamed MockTask to mock_task_class
+    mock_task_class = mocker.patch("motido.cli.main.Task")
     mock_manager = mocker.MagicMock(spec=DataManager)
     mock_user = mocker.MagicMock(spec=User)
     mock_task = mocker.MagicMock(spec=Task)
-    mock_task.id = "task_save_fail"
-    MockTask.return_value = mock_task
+    mock_task.id = "taskfail789"
+    mock_task_class.return_value = mock_task
     mock_manager.load_user.return_value = mock_user
-    error_message = "Cannot write to file"
+    error_message = "Failed to write file"
     mock_manager.save_user.side_effect = Exception(error_message)
-    args = create_mock_args(description="Task that fails saving")
+
+    args = create_mock_args(description="Task to fail save")
 
     with pytest.raises(SystemExit) as excinfo:
         cli_main.handle_create(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    MockTask.assert_called_once_with(description="Task that fails saving")
+    mock_task_class.assert_called_once_with(description="Task to fail save")
     mock_user.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user)
     mock_print.assert_has_calls(
         [
-            call("Creating task: 'Task that fails saving'..."),
+            call("Creating task: 'Task to fail save'..."),
             call(f"Error saving task: {error_message}"),
         ]
     )
@@ -344,50 +353,46 @@ def test_handle_list_user_not_found(mocker: Any) -> None:
 
 
 def test_handle_view_success(mocker: Any) -> None:
-    """Test handle_view finds and prints a task by ID."""
+    """Test handle_view successfully finds and prints a task."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
     mock_user = mocker.MagicMock(spec=User)
-    task_to_view = Task(description="View Me", id="view12345-...")
-    mock_user.find_task_by_id.return_value = task_to_view
+    mock_task = mocker.MagicMock(spec=Task)
+    mock_task.id = "abc-123"
+    mock_task.description = "View this task"
     mock_manager.load_user.return_value = mock_user
-    task_id_prefix = "view123"
-    args = create_mock_args(id=task_id_prefix)
+    mock_user.find_task_by_id.return_value = mock_task
+
+    args = create_mock_args(id="abc")
 
     cli_main.handle_view(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    mock_user.find_task_by_id.assert_called_once_with(task_id_prefix)
-    # Check the sequence of print calls based on the failure message
-    expected_calls = [
-        call(f"Viewing task with ID prefix: '{task_id_prefix}'..."),
-        call("------------------------------"),
-        call(str(task_to_view)),  # The __str__ method handles the formatting
+    mock_user.find_task_by_id.assert_called_once_with("abc")
+    # W0612: Removed unused variable
+    # expected_calls = [
+    #     call("Viewing task with ID prefix: 'abc'..."),
+    #     call("-" * 30),
+    #     call(f"ID:          {mock_task.id}"),
+    #     call(f"Description: {mock_task.description}"),
+    #     call("-" * 30),
+    # ]
+    # We need to check calls specifically because the order matters and other prints might occur
+    # Check the specific calls related to displaying the task
+    calls_to_check = [
+        call("-" * 30),
+        call(f"ID:          {mock_task.id}"),
+        call(f"Description: {mock_task.description}"),
         call("-" * 30),
     ]
-    # Note: The failure message shows 5 calls, but the 5th was the trailing separator.
-    # The core content is the header, separator, task string, separator.
-    # Let's assume the __str__ representation handles the ID/Desc lines.
-    # If the Task.__str__ was also changed, this might need further adjustment.
-    # For now, focusing on fixing based *directly* on the provided trace.
-    # The trace shows:
-    # call("Viewing task with ID prefix: 'view123'..."),
-    # call('------------------------------'),
-    # call('ID:          view12345-...'),  <- This looks like Task.__str__ part 1
-    # call('Description: View Me'),       <- This looks like Task.__str__ part 2
-    # call('------------------------------') <- Trailing separator
-    # Let's refine the assertion based on this detailed trace
-    expected_calls_from_trace = [
-        call(f"Viewing task with ID prefix: '{task_id_prefix}'..."),
-        call("------------------------------"),
-        call("ID:          view12345-..."),  # Assuming __str__ produces these two lines
-        call("Description: View Me"),
-        call("------------------------------"),
-    ]
-    # Using assert_has_calls allows for other calls, but checks order
-    mock_print.assert_has_calls(expected_calls_from_trace)
-    # Check the total call count matches exactly
-    assert mock_print.call_count == len(expected_calls_from_trace)
+    # Get all calls to print
+    actual_calls = mock_print.call_args_list
+
+    # Assert the first call is the "Viewing task..." message
+    assert actual_calls[0] == call("Viewing task with ID prefix: 'abc'...")
+
+    # Assert the subsequent calls match the expected task display calls
+    assert actual_calls[1:] == calls_to_check
 
 
 def test_handle_view_task_not_found(mocker: Any) -> None:
@@ -810,3 +815,8 @@ def test_handle_delete_save_error(mocker: Any) -> None:
         assert excinfo.value.code == 1
     else:
         pytest.skip("handle_delete function not found in cli_main")
+
+
+def test_main_initial_setup() -> None:
+    """Checks if the test setup itself works (placeholder)."""
+    assert True

@@ -5,7 +5,7 @@ Provides commands to initialize, create, view, list, and edit tasks.
 """
 
 import argparse
-import os
+# import os # W0611: Unused import
 import sys
 from argparse import Namespace  # Import Namespace
 
@@ -55,7 +55,7 @@ def handle_create(args: Namespace, manager: DataManager) -> None:
         sys.exit(1)
 
 
-def handle_list(args: Namespace, manager: DataManager) -> None:
+def handle_list(manager: DataManager) -> None:
     """Handles the 'list' command."""
     print("Listing all tasks...")
     user = manager.load_user(DEFAULT_USERNAME)
@@ -205,7 +205,7 @@ def main() -> None:
 
     # --- List Command ---
     parser_list = subparsers.add_parser("list", help="List all tasks.")
-    parser_list.set_defaults(func=lambda args: handle_list(args, get_data_manager()))
+    parser_list.set_defaults(func=lambda _args: handle_list(get_data_manager()))
 
     # --- View Command ---
     parser_view = subparsers.add_parser("view", help="View details of a specific task.")
@@ -272,7 +272,7 @@ def main() -> None:
             args.func(args)  # Call the appropriate handler function
         except Exception as e:
             # Provide a more general error message here
-            print(f"An error occurred: {e}")
+            print(f"Error: {e}") # Shortened message
             print(
                 "If you haven't initialized the application, try running 'motido init'."
             )

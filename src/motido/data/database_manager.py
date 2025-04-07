@@ -155,7 +155,7 @@ class DatabaseDataManager(DataManager):
                 cursor.execute(
                     "DELETE FROM tasks WHERE user_username = ?", (user.username,)
                 )
-                print(f"Deleted existing tasks for user '{user.username}'.")
+                print(f"Deleted existing tasks for '{user.username}'.")
 
                 # Prepare task data for batch insertion
                 tasks_to_insert: List[Tuple[str, str, str]] = [
@@ -169,10 +169,10 @@ class DatabaseDataManager(DataManager):
                         tasks_to_insert,
                     )
                     print(
-                        f"Inserted {len(tasks_to_insert)} tasks for user '{user.username}'."
+                        f"Inserted {len(tasks_to_insert)} tasks for '{user.username}'."
                     )
                 else:
-                    print(f"No tasks to insert for user '{user.username}'.")
+                    print(f"No tasks to insert for '{user.username}'.")
 
                 # No explicit commit needed due to autocommit (isolation_level=None)
                 print(f"User '{user.username}' saved successfully.")
@@ -188,8 +188,9 @@ class DatabaseDataManager(DataManager):
     def _connect(self) -> None:
         """Connects to the SQLite database."""
         # Place DB in the same directory as the config file (within the package data dir)
-        db_path = os.path.join(os.path.dirname(get_config_path()), DB_NAME)
-        print(f"Database path: {db_path}")  # Debugging
+        db_dir = os.path.dirname(get_config_path())
+        db_path = os.path.join(db_dir, DB_NAME)
+        print(f"DB Path: {db_path}")
         self.conn = sqlite3.connect(db_path)
         self.cursor = self.conn.cursor()
 

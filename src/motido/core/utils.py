@@ -1,3 +1,5 @@
+import uuid
+
 # core/utils.py
 """
 Core utility functions. Currently minimal.
@@ -10,6 +12,7 @@ Could include things like validation, formatting, etc. later.
 
 def generate_id() -> str:
     """Generates a unique ID string."""
-    import uuid
+    # C0415: Moved import uuid to top level
+    # import uuid
 
     return str(uuid.uuid4())

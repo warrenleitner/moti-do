@@ -24,7 +24,6 @@ class DataManager(ABC):
         Perform any necessary setup for the backend (e.g., create files/tables).
         This should be idempotent (safe to run multiple times).
         """
-        pass
 
     @abstractmethod
     def load_user(self, username: str = DEFAULT_USERNAME) -> User | None:
@@ -38,7 +37,6 @@ class DataManager(ABC):
             A User object if found, otherwise None.
         """
         # Placeholder for future sync: Check for remote changes before loading
-        pass
 
     @abstractmethod
     def save_user(self, user: User) -> None:
@@ -49,9 +47,8 @@ class DataManager(ABC):
             user: The User object to save.
         """
         # Placeholder for future sync: Push changes to remote after saving
-        pass
 
     @abstractmethod
     def backend_type(self) -> str:
         """Returns the type of the backend (e.g., 'json', 'db')."""
-        pass
+        # W0107: Removed unnecessary pass

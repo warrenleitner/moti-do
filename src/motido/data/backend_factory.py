@@ -27,7 +27,7 @@ def get_data_manager() -> DataManager:
     if backend_type == "json":
         print("Using JSON backend.")
         return JsonDataManager()
-    elif backend_type == "db":
+    if backend_type == "db":
         print("Using Database (SQLite) backend.")
         return DatabaseDataManager()
     else:

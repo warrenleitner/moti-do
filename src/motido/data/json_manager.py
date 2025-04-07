@@ -62,9 +62,9 @@ class JsonDataManager(DataManager):
                 # Cast the result of json.loads
                 return cast(Dict[str, Any], json.loads(content))
         except (json.JSONDecodeError, IOError) as e:
-            print(
-                f"Error reading data file '{self._data_path}': {e}. Returning empty data."
-            )
+            # C0301: Split long print statement
+            print(f"Error reading data file '{self._data_path}': {e}.")
+            print("Returning empty data.")
             # Consider backup/recovery mechanism here in a real app
             return {}
 

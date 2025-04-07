@@ -116,9 +116,13 @@ security = "safety scan"
 # Main check task still references the directly defined tasks
 check = [
     "format",
-    "security",
     "test",
     "coverage",
     "lint",
     "typecheck",
 ] 
+
+check-all = [
+    "check",
+    "security"
+]

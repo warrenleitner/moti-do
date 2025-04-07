@@ -1,6 +1,8 @@
+"""Tests for core utility functions."""
+
 import uuid
 
-import pytest
+# import pytest # W0611: Unused import
 
 from motido.core.utils import generate_id
 

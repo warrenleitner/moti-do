@@ -45,7 +45,7 @@ class User:
         ]
         if len(matching_tasks) == 1:
             return matching_tasks[0]
-        elif len(matching_tasks) > 1:
+        if len(matching_tasks) > 1:
             raise ValueError(
                 f"Ambiguous ID prefix '{task_id_prefix}'. Multiple tasks found."
             )

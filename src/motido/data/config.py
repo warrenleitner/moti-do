@@ -6,8 +6,7 @@ specifically the chosen data backend.
 
 import json
 import os
-from typing import Any, Dict, cast
-from unittest.mock import MagicMock, mock_open, patch
+from typing import Dict, cast
 
 CONFIG_FILENAME = "config.json"
 DEFAULT_BACKEND = "json"  # Default to JSON if no config exists
@@ -39,7 +38,8 @@ def load_config() -> Dict[str, str]:
                 "db",
             ]:
                 print(
-                    f"Warning: Invalid backend '{config_data.get('backend')}' in config. Using default '{DEFAULT_BACKEND}'."
+                    f"Warning: Invalid backend '{config_data.get('backend')}' in config."
+                    f" Using default '{DEFAULT_BACKEND}'."
                 )
                 return {"backend": DEFAULT_BACKEND}
             return config_data
