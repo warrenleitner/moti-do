@@ -378,12 +378,14 @@ def test_handle_list_success(mocker: Any) -> None:
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     expected_calls = [
-        call("Listing all tasks..."),  # Updated header
-        call("-" * 30),
-        call(task1),  # Check the object itself
-        call(task2),  # Check the object itself
-        call("-" * 30),  # Added footer separator
-        call(f"Total tasks: {len(mock_user.tasks)}"),  # Added total count
+        call("Listing all tasks..."),
+        call("-" * 50),
+        call(f"{'ID':12} | {'DESCRIPTION'}"),
+        call("-" * 50),
+        call(f"{task1.id[:8]:12} | {task1.description}"),
+        call(f"{task2.id[:8]:12} | {task2.description}"),
+        call("-" * 50),
+        call(f"Total tasks: {len(mock_user.tasks)}"),
     ]
     mock_print.assert_has_calls(expected_calls)
 
@@ -401,8 +403,7 @@ def test_handle_list_success_no_tasks(mocker: Any) -> None:
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     expected_calls = [
-        call("Listing all tasks..."),  # Updated header
-        # Separator is not printed when no tasks are found
+        call("Listing all tasks..."),
         call("No tasks found."),
     ]
     mock_print.assert_has_calls(expected_calls)
@@ -1072,11 +1073,13 @@ def test_handle_list_sort_by_id_asc(mocker: Any) -> None:
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     expected_calls = [
         call("Listing all tasks..."),
-        call("-" * 30),
-        call(task2),  # aaa ID should be first
-        call(task1),  # bbb ID should be second
-        call(task3),  # ccc ID should be third
-        call("-" * 30),
+        call("-" * 50),
+        call(f"{'ID':12} | {'DESCRIPTION'}"),
+        call("-" * 50),
+        call(f"{task2.id[:8]:12} | {task2.description}"),  # aaa ID should be first
+        call(f"{task1.id[:8]:12} | {task1.description}"),  # bbb ID should be second
+        call(f"{task3.id[:8]:12} | {task3.description}"),  # ccc ID should be third
+        call("-" * 50),
         call(f"Total tasks: {len(mock_user.tasks)}"),
     ]
     mock_print.assert_has_calls(expected_calls)
@@ -1105,11 +1108,19 @@ def test_handle_list_sort_by_id_desc(mocker: Any) -> None:
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     expected_calls = [
         call("Listing all tasks..."),
-        call("-" * 30),
-        call(task3),  # ccc ID should be first (descending)
-        call(task1),  # bbb ID should be second (descending)
-        call(task2),  # aaa ID should be third (descending)
-        call("-" * 30),
+        call("-" * 50),
+        call(f"{'ID':12} | {'DESCRIPTION'}"),
+        call("-" * 50),
+        call(
+            f"{task3.id[:8]:12} | {task3.description}"
+        ),  # ccc ID should be first (descending)
+        call(
+            f"{task1.id[:8]:12} | {task1.description}"
+        ),  # bbb ID should be second (descending)
+        call(
+            f"{task2.id[:8]:12} | {task2.description}"
+        ),  # aaa ID should be third (descending)
+        call("-" * 50),
         call(f"Total tasks: {len(mock_user.tasks)}"),
     ]
     mock_print.assert_has_calls(expected_calls)
@@ -1138,11 +1149,13 @@ def test_handle_list_sort_by_description_asc(mocker: Any) -> None:
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     expected_calls = [
         call("Listing all tasks..."),
-        call("-" * 30),
-        call(task2),  # Apple should be first
-        call(task3),  # Banana should be second
-        call(task1),  # Zebra should be third
-        call("-" * 30),
+        call("-" * 50),
+        call(f"{'ID':12} | {'DESCRIPTION'}"),
+        call("-" * 50),
+        call(f"{task2.id[:8]:12} | {task2.description}"),  # Apple should be first
+        call(f"{task3.id[:8]:12} | {task3.description}"),  # Banana should be second
+        call(f"{task1.id[:8]:12} | {task1.description}"),  # Zebra should be third
+        call("-" * 50),
         call(f"Total tasks: {len(mock_user.tasks)}"),
     ]
     mock_print.assert_has_calls(expected_calls)
@@ -1171,11 +1184,19 @@ def test_handle_list_sort_by_description_desc(mocker: Any) -> None:
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     expected_calls = [
         call("Listing all tasks..."),
-        call("-" * 30),
-        call(task1),  # Zebra should be first (descending)
-        call(task3),  # Banana should be second (descending)
-        call(task2),  # Apple should be third (descending)
-        call("-" * 30),
+        call("-" * 50),
+        call(f"{'ID':12} | {'DESCRIPTION'}"),
+        call("-" * 50),
+        call(
+            f"{task1.id[:8]:12} | {task1.description}"
+        ),  # Zebra should be first (descending)
+        call(
+            f"{task3.id[:8]:12} | {task3.description}"
+        ),  # Banana should be second (descending)
+        call(
+            f"{task2.id[:8]:12} | {task2.description}"
+        ),  # Apple should be third (descending)
+        call("-" * 50),
         call(f"Total tasks: {len(mock_user.tasks)}"),
     ]
     mock_print.assert_has_calls(expected_calls)

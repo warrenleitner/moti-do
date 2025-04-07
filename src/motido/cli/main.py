@@ -80,10 +80,18 @@ def handle_list(args: Namespace, manager: DataManager) -> None:
                     key=lambda task: task.description.lower(), reverse=reverse
                 )
 
-        print("-" * 30)
+        # Display tasks in a table format with headers
+        print("-" * 50)
+        # Print headers
+        print(f"{'ID':12} | {'DESCRIPTION'}")
+        print("-" * 50)
+
+        # Print each task row
         for task in user.tasks:
-            print(task)  # Uses Task.__str__
-        print("-" * 30)
+            # We're still showing only first 8 chars of ID as before
+            print(f"{task.id[:8]:12} | {task.description}")
+
+        print("-" * 50)
         print(f"Total tasks: {len(user.tasks)}")
     elif user:
         print("No tasks found.")
