@@ -30,3 +30,9 @@ motido = "motido.cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]  # look for packages in src/ 
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0", # Or specify the version you prefer
+    "pytest-mock>=3.0", # Add pytest-mock
+] 
