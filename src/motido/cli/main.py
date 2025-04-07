@@ -5,6 +5,7 @@ Provides commands to initialize, create, view, list, and edit tasks.
 """
 
 import argparse
+
 # import os # W0611: Unused import
 import sys
 from argparse import Namespace  # Import Namespace
@@ -272,7 +273,7 @@ def main() -> None:
             args.func(args)  # Call the appropriate handler function
         except Exception as e:
             # Provide a more general error message here
-            print(f"Error: {e}") # Shortened message
+            print(f"Error: {e}")  # Shortened message
             print(
                 "If you haven't initialized the application, try running 'motido init'."
             )

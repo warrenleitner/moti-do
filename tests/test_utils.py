@@ -2,9 +2,9 @@
 
 import uuid
 
-# import pytest # W0611: Unused import
-
 from motido.core.utils import generate_id
+
+# import pytest # W0611: Unused import
 
 
 def test_generate_id_returns_string() -> None:

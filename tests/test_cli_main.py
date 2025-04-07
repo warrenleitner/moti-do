@@ -10,6 +10,7 @@ import pytest
 from motido.cli import main as cli_main
 from motido.core.models import Task, User
 from motido.data.abstraction import DEFAULT_USERNAME, DataManager
+
 # W0611: Removed unused import
 # from motido.data.config import DEFAULT_BACKEND
 
@@ -62,15 +63,26 @@ def test_main_dispatch_list(mocker: Any) -> None:
     """Test main() parses 'list' command and calls handle_list."""
     mocker.patch("sys.argv", ["main.py", "list"])
     mock_handle_list = mocker.patch("motido.cli.main.handle_list")
-    mock_get_manager = mocker.patch("motido.cli.main.get_data_manager")
+    mock_get_manager = mocker.patch(
+        "motido.cli.main.get_data_manager"
+    )  # Should be called for list
     mock_manager_instance = mocker.MagicMock(spec=DataManager)
     mock_get_manager.return_value = mock_manager_instance
-    cli_main.main()
-    mock_handle_list.assert_called_once()
-    args_passed, manager_passed = mock_handle_list.call_args[0]
-    assert args_passed.command == "list"
-    assert manager_passed == mock_manager_instance
+    # No need to mock manager methods like load_user here
+
+    cli_main.main()  # Execute the main function to test dispatch
+
+    # Verify the correct functions were called
     mock_get_manager.assert_called_once()
+    mock_handle_list.assert_called_once()
+
+    # Check the arguments passed to handle_list
+    # It should be called with the manager instance as the first positional arg
+    # based on how the subparser's func is likely set up.
+    args_called, kwargs_called = mock_handle_list.call_args
+    assert len(args_called) == 1
+    assert args_called[0] == mock_manager_instance
+    assert not kwargs_called
 
 
 def test_main_dispatch_view(mocker: Any) -> None:
@@ -80,6 +92,7 @@ def test_main_dispatch_view(mocker: Any) -> None:
     mock_get_manager = mocker.patch("motido.cli.main.get_data_manager")
     mock_manager_instance = mocker.MagicMock(spec=DataManager)
     mock_get_manager.return_value = mock_manager_instance
+    mock_manager_instance.load_user.return_value = mock_manager_instance
     cli_main.main()
     mock_handle_view.assert_called_once()
     args_passed, manager_passed = mock_handle_view.call_args[0]
@@ -96,6 +109,7 @@ def test_main_dispatch_edit(mocker: Any) -> None:
     mock_get_manager = mocker.patch("motido.cli.main.get_data_manager")
     mock_manager_instance = mocker.MagicMock(spec=DataManager)
     mock_get_manager.return_value = mock_manager_instance
+    mock_manager_instance.load_user.return_value = mock_manager_instance
     cli_main.main()
     mock_handle_edit.assert_called_once()
     args_passed, manager_passed = mock_handle_edit.call_args[0]
@@ -224,7 +238,9 @@ def test_handle_create_success_new_user(mocker: Any) -> None:
     cli_main.handle_create(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    mock_user_class.assert_called_once_with(username=DEFAULT_USERNAME)  # New user created
+    mock_user_class.assert_called_once_with(
+        username=DEFAULT_USERNAME
+    )  # New user created
     mock_task_class.assert_called_once_with(description="First task")
     mock_user_instance.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user_instance)
@@ -297,9 +313,8 @@ def test_handle_list_success(mocker: Any) -> None:
     task2 = Task(description="Task Two", id="def67890-...")
     mock_user.tasks = [task1, task2]
     mock_manager.load_user.return_value = mock_user
-    args = create_mock_args(command="list")  # Added command for clarity
 
-    cli_main.handle_list(args, mock_manager)
+    cli_main.handle_list(mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     expected_calls = [
@@ -320,9 +335,8 @@ def test_handle_list_success_no_tasks(mocker: Any) -> None:
     mock_user = mocker.MagicMock(spec=User)
     mock_user.tasks = []
     mock_manager.load_user.return_value = mock_user
-    args = create_mock_args(command="list")
 
-    cli_main.handle_list(args, mock_manager)
+    cli_main.handle_list(mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     expected_calls = [
@@ -338,9 +352,8 @@ def test_handle_list_user_not_found(mocker: Any) -> None:
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
     mock_manager.load_user.return_value = None
-    args = create_mock_args(command="list")
 
-    cli_main.handle_list(args, mock_manager)
+    cli_main.handle_list(mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     # Check the sequence of calls
