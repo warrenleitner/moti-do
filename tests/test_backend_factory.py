@@ -3,10 +3,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from motido.data.abstraction import (  # Import the base class for type checking
-    DataManager,
-)
-
 # Import the factory function and the classes it might return
 from motido.data.backend_factory import get_data_manager
 from motido.data.database_manager import DatabaseDataManager

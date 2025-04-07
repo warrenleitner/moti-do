@@ -3,7 +3,7 @@
 import os
 import sqlite3
 from typing import Any, Tuple
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, call
 
 import pytest
 

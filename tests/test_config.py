@@ -1,7 +1,7 @@
 import json
 import os
 from typing import Any
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import mock_open, patch
 
 # Import functions from the module we are testing
 from motido.data import config as config_module
