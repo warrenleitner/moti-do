@@ -1,8 +1,9 @@
 """Tests for the update functionality of JsonDataManager."""
 
 import os
-import pytest
 from typing import Any, Dict, List, Tuple
+
+import pytest
 
 from motido.core.models import Task, User
 from motido.data.json_manager import (
@@ -13,6 +14,7 @@ from motido.data.json_manager import (
 )
 
 # mypy: disable-error-code="assignment"
+
 
 @pytest.fixture
 def mock_config_path(mocker: Any) -> Tuple[str, str, str]:
@@ -30,6 +32,7 @@ def manager(mock_config_path: Tuple[str, str, str]) -> JsonDataManager:
     """Provides a JsonDataManager instance with mocked config path."""
     # Initialization uses the mocked get_config_path via mock_config_path fixture
     return JsonDataManager()
+
 
 @pytest.fixture
 def sample_user() -> User:
@@ -79,11 +82,11 @@ def test_save_user_update_existing(
     task_b = {"id": "uuid-b", "description": "Task B"}
     task_c = {"id": "uuid-c", "description": "Task C"}
     expected_tasks_data = [task_a, task_b, task_c]
-    
+
     expected_user_data = {
         "username": updated_user.username,
         "tasks": expected_tasks_data,
     }
     expected_final_data = {updated_user.username: expected_user_data}  # type: ignore[assignment]
 
-    mock_write.assert_called_once_with(expected_final_data) 
+    mock_write.assert_called_once_with(expected_final_data)

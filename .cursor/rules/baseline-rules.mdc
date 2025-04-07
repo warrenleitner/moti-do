@@ -3,28 +3,3 @@ description:
 globs: 
 alwaysApply: true
 ---
-**Cursor Project Rules:**
-
-1.  **TypeScript First:** All new code MUST be written in TypeScript. Use `any` sparingly and only with a clear justification comment. Prefer specific types.
-2.  **Strict Typing:** Enable and adhere to strict TypeScript compiler options (`strict: true` in `tsconfig.json`).
-3.  **Modularity:** Design components (both backend logic and UI elements) to be small, focused, and reusable. Avoid monolithic files or functions. Aim for clear separation of concerns.
-4.  **Clear Naming:** Use descriptive names for variables, functions, classes, and files. Follow standard JavaScript/TypeScript naming conventions (e.g., `camelCase` for variables/functions, `PascalCase` for classes/types/components).
-5.  **Comprehensive Documentation (JSDoc):**
-    *   Every exported function, class, type, and significant internal function MUST have a JSDoc comment explaining its purpose, parameters (`@param`), and return value (`@return`).
-    *   For complex logic, add inline comments explaining *why* the code is written a certain way, not just *what* it does.
-    *   Document the purpose and usage of each module/file at the top.
-6.  **Unit Testing (Vitest):**
-    *   Every module/component MUST have corresponding unit tests.
-    *   Aim for high test coverage, focusing on testing logic, edge cases, and potential error conditions.
-    *   Tests should be clear, concise, and easy to understand. Use descriptive test names.
-7.  **Immutability:** Prefer immutable data structures and avoid direct state mutation where possible, especially in the shared logic and UI state management.
-8.  **Error Handling:** Implement robust error handling. Use meaningful error messages. Avoid silencing errors unless explicitly intended and documented.
-9.  **Dependency Management:** Keep dependencies updated. Use `pnpm` for package management. Avoid adding unnecessary dependencies. Clearly define dependencies in each package's `package.json`.
-10. **Code Formatting (Prettier):** Ensure all code is formatted using Prettier before committing. Run `pnpm format` regularly.
-11. **Linting (ESLint):** Ensure all code passes ESLint checks before committing. Run `pnpm lint` regularly. Address linting warnings and errors promptly.
-12. **Backend/Frontend Separation:**
-    *   The `cli` package MUST NOT import directly from the `ui` package.
-    *   The `ui` package MUST interact with the backend logic only through defined APIs or functions exposed by the `shared` package or a dedicated API layer (to be built later).
-    *   Shared types, interfaces, and utility functions that are used by both `cli` and `ui` should reside in the `shared` package.
-13. **Asynchronous Operations:** Use `async/await` for handling promises. Understand promise resolution and rejection. Handle potential errors in asynchronous operations using `try...catch` blocks.
-14. **Explain the WHY:** For each agent action, when summarizing the change, explain WHY it was done that way. 

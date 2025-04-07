@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, Tuple, List, cast
+from typing import Any, Dict, List, Tuple, cast
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
