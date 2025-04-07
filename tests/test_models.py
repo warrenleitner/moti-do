@@ -1,9 +1,14 @@
+"""Tests for the core application models (Task and User)."""
+
 import uuid
 from typing import List
 
 import pytest
 
 from motido.core.models import Task, User
+
+# pylint: disable=redefined-outer-name
+# This disables warnings for pytest fixtures used as function parameters
 
 # --- Task Tests ---
 
@@ -127,7 +132,7 @@ def test_user_find_task_by_ambiguous_partial_id(user_with_tasks: User) -> None:
     partial_id = "abc"  # Matches Task 1 and Task 3
     with pytest.raises(ValueError) as excinfo:
         user_with_tasks.find_task_by_id(partial_id)
-    assert f"Ambiguous ID prefix '{partial_id}'" in str(excinfo.value)
+    assert "Ambiguous ID prefix 'abc'" in str(excinfo.value)
 
 
 def test_user_find_task_by_non_existent_id(user_with_tasks: User) -> None:
@@ -147,7 +152,7 @@ def test_user_find_task_by_empty_string(user_with_tasks: User) -> None:
     """Test finding a task with an empty string (should be ambiguous if >1 task)."""
     with pytest.raises(ValueError) as excinfo:
         user_with_tasks.find_task_by_id("")
-    assert f"Ambiguous ID prefix ''" in str(excinfo.value)
+    assert "Ambiguous ID prefix ''" in str(excinfo.value)
 
 
 def test_user_find_task_by_empty_string_single_task() -> None:

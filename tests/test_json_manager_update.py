@@ -14,6 +14,7 @@ from motido.data.json_manager import (
 )
 
 # mypy: disable-error-code="assignment"
+# pylint: disable=redefined-outer-name
 
 
 @pytest.fixture
@@ -28,7 +29,7 @@ def mock_config_path(mocker: Any) -> Tuple[str, str, str]:
 
 
 @pytest.fixture
-def manager(mock_config_path: Tuple[str, str, str]) -> JsonDataManager:
+def manager() -> JsonDataManager:
     """Provides a JsonDataManager instance with mocked config path."""
     # Initialization uses the mocked get_config_path via mock_config_path fixture
     return JsonDataManager()
@@ -87,7 +88,7 @@ def test_save_user_update_existing(
         "username": updated_user.username,
         "tasks": expected_tasks_data,
     }
-    expected_final_data = {   # type: ignore[assignment]
+    expected_final_data = {  # type: ignore[assignment]
         updated_user.username: expected_user_data
     }
 
