@@ -49,8 +49,9 @@ class User:
             raise ValueError(
                 f"Ambiguous ID prefix '{task_id_prefix}'. Multiple tasks found."
             )
-        else:
-            return None
+        # else:
+
+        return None
 
     def add_task(self, task: Task) -> None:
         """Adds a task to the user's list."""

@@ -30,6 +30,7 @@ def get_data_manager() -> DataManager:
     if backend_type == "db":
         print("Using Database (SQLite) backend.")
         return DatabaseDataManager()
-    else:
-        # Should ideally not happen due to config loading validation, but good practice
-        raise ValueError(f"Unknown backend type configured: '{backend_type}'")
+    #else:
+
+    # Should ideally not happen due to config loading validation, but good practice
+    raise ValueError(f"Unknown backend type configured: '{backend_type}'")

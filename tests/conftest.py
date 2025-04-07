@@ -28,8 +28,8 @@ def mock_config_path(mocker: Any) -> Tuple[str, str, str]:
 
 @pytest.fixture
 def manager(
-    mock_config_path: Tuple[str, str, str],
-) -> JsonDataManager:  # pylint: disable=redefined-outer-name, unused-argument
+    mock_config_path: Tuple[str, str, str],  # pylint: disable=redefined-outer-name, unused-argument
+) -> JsonDataManager:
     """Provides a JsonDataManager instance with mocked config path."""
     # Initialization uses the mocked get_config_path via mock_config_path fixture
     return JsonDataManager()
@@ -46,8 +46,8 @@ def sample_user() -> User:
 
 @pytest.fixture
 def sample_user_data(
-    sample_user: User,
-) -> Dict[str, Dict[str, Any]]:  # pylint: disable=redefined-outer-name
+    sample_user: User,  # pylint: disable=redefined-outer-name
+) -> Dict[str, Dict[str, Any]]:
     """Provides the dictionary representation of sample_user."""
     return {
         sample_user.username: {

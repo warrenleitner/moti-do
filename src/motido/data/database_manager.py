@@ -151,7 +151,8 @@ class DatabaseDataManager(DataManager):
 
                 # Strategy: Delete existing tasks for the user and insert current ones.
                 # This is simpler than diffing but less efficient for large datasets.
-                # For a production app, consider updating existing/deleting removed/inserting new.
+                # For a production app, consider updating existing/deleting
+                # removed/inserting new.
                 cursor.execute(
                     "DELETE FROM tasks WHERE user_username = ?", (user.username,)
                 )
@@ -165,7 +166,8 @@ class DatabaseDataManager(DataManager):
                 # Insert new tasks if any exist
                 if tasks_to_insert:
                     cursor.executemany(
-                        "INSERT INTO tasks (id, description, user_username) VALUES (?, ?, ?)",
+                        "INSERT INTO tasks (id, description, user_username) "
+                        "VALUES (?, ?, ?)",
                         tasks_to_insert,
                     )
                     print(
@@ -187,7 +189,8 @@ class DatabaseDataManager(DataManager):
 
     def _connect(self) -> None:
         """Connects to the SQLite database."""
-        # Place DB in the same directory as the config file (within the package data dir)
+        # Place DB in the same directory as the config file
+        # (within the package data dir)
         db_dir = os.path.dirname(get_config_path())
         db_path = os.path.join(db_dir, DB_NAME)
         print(f"DB Path: {db_path}")

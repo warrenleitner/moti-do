@@ -38,8 +38,8 @@ def load_config() -> Dict[str, str]:
                 "db",
             ]:
                 print(
-                    f"Warning: Invalid backend '{config_data.get('backend')}' in config."
-                    f" Using default '{DEFAULT_BACKEND}'."
+                    f"Warning: Invalid backend '{config_data.get('backend')}' in "
+                    f"config. Using default '{DEFAULT_BACKEND}'."
                 )
                 return {"backend": DEFAULT_BACKEND}
             return config_data

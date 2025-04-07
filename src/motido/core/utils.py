@@ -1,10 +1,10 @@
-import uuid
-
 # core/utils.py
 """
 Core utility functions. Currently minimal.
 Could include things like validation, formatting, etc. later.
 """
+
+import uuid
 
 # This file is intentionally simple for now.
 # We could add helper functions here as the application grows.
