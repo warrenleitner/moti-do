@@ -1,5 +1,7 @@
 """Tests for the main CLI module and command handlers."""
 
+# pylint: disable=too-many-lines
+
 import argparse
 from typing import Any
 from unittest.mock import call
@@ -189,6 +191,33 @@ def test_handle_init_exception(mocker: Any) -> None:
     assert excinfo.value.code == 1
 
 
+def test_handle_init_io_error(mocker: Any) -> None:
+    """Test handle_init handles IOError during manager initialization."""
+    mock_print = mocker.patch("motido.cli.main.print")
+    mock_save_config = mocker.patch("motido.cli.main.save_config")
+    mock_get_manager = mocker.patch("motido.cli.main.get_data_manager")
+    args = create_mock_args(backend="json")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_get_manager.return_value = mock_manager
+    error_message = "IO Error during initialization"
+    mock_manager.initialize.side_effect = IOError(error_message)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_init(args)
+
+    mock_save_config.assert_called_once_with({"backend": "json"})
+    mock_get_manager.assert_called_once()
+    mock_manager.initialize.assert_called_once()
+    mock_print.assert_has_calls(
+        [
+            call("Initializing Moti-Do..."),
+            call(f"An error occurred during initialization: {error_message}"),
+        ]
+    )
+    assert excinfo.type == SystemExit
+    assert excinfo.value.code == 1
+
+
 def test_handle_create_success_existing_user(mocker: Any) -> None:
     """Test handle_create successfully creates a task for an existing user."""
     mock_print = mocker.patch("motido.cli.main.print")
@@ -301,6 +330,37 @@ def test_handle_create_save_error(mocker: Any) -> None:
             call(f"Error saving task: {error_message}"),
         ]
     )
+    assert excinfo.type == SystemExit
+    assert excinfo.value.code == 1
+
+
+def test_handle_create_generic_exception(mocker: Any) -> None:
+    """Test handle_create handles generic exceptions during save_user."""
+    mock_print = mocker.patch("motido.cli.main.print")
+    mock_user_class = mocker.patch("motido.cli.main.User")
+    mock_task_class = mocker.patch("motido.cli.main.Task")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_user = mocker.MagicMock(spec=User)
+    mock_manager.load_user.return_value = mock_user
+
+    # Return our mock when User is instantiated (not needed here)
+    mock_user_class.return_value = mock_user
+
+    # Create a mock task when Task is instantiated
+    mock_task = mocker.MagicMock(spec=Task)
+    mock_task.id = "mock-task-id"
+    mock_task_class.return_value = mock_task
+
+    # Set up the exception
+    error_message = "Unexpected database error"
+    mock_manager.save_user.side_effect = Exception(error_message)
+
+    args = create_mock_args(description="Test task")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_create(args, mock_manager)
+
+    mock_print.assert_any_call(f"Error saving task: {error_message}")
     assert excinfo.type == SystemExit
     assert excinfo.value.code == 1
 
@@ -830,6 +890,157 @@ def test_handle_delete_save_error(mocker: Any) -> None:
         assert excinfo.value.code == 1
     else:
         pytest.skip("handle_delete function not found in cli_main")
+
+
+def test_handle_view_generic_exception(mocker: Any) -> None:
+    """Test handle_view catches generic Exception."""
+    mock_print = mocker.patch("motido.cli.main.print")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_user = mocker.MagicMock(spec=User)
+    mock_manager.load_user.return_value = mock_user
+
+    # Set up unexpected exception
+    error_message = "Unexpected error"
+    mock_user.find_task_by_id.side_effect = Exception(error_message)
+
+    args = create_mock_args(id="task-id")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_view(args, mock_manager)
+
+    mock_print.assert_any_call(f"An unexpected error occurred: {error_message}")
+    assert excinfo.type == SystemExit
+    assert excinfo.value.code == 1
+
+
+def test_handle_edit_generic_exception(mocker: Any) -> None:
+    """Test handle_edit catches generic Exception."""
+    mock_print = mocker.patch("motido.cli.main.print")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_user = mocker.MagicMock(spec=User)
+    mock_manager.load_user.return_value = mock_user
+
+    # Set up unexpected exception
+    error_message = "Unexpected error"
+    mock_user.find_task_by_id.side_effect = Exception(error_message)
+
+    args = create_mock_args(id="task-id", description="Updated description")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_edit(args, mock_manager)
+
+    mock_print.assert_any_call(f"Error saving updated task: {error_message}")
+    assert excinfo.type == SystemExit
+    assert excinfo.value.code == 1
+
+
+def test_handle_delete_generic_exception_during_remove(mocker: Any) -> None:
+    """Test handle_delete catches generic Exception during task removal."""
+    mock_print = mocker.patch("motido.cli.main.print")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_user = mocker.MagicMock(spec=User)
+    mock_manager.load_user.return_value = mock_user
+
+    # Set up unexpected exception
+    error_message = "Unexpected error during removal"
+    mock_user.remove_task.side_effect = Exception(error_message)
+
+    args = create_mock_args(id="task-id")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_delete(args, mock_manager)
+
+    mock_print.assert_any_call(
+        f"An unexpected error occurred during deletion: {error_message}"
+    )
+    assert excinfo.type == SystemExit
+    assert excinfo.value.code == 1
+
+
+def test_handle_delete_generic_exception_during_save(mocker: Any) -> None:
+    """Test handle_delete catches generic Exception during save after deletion."""
+    mock_print = mocker.patch("motido.cli.main.print")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_user = mocker.MagicMock(spec=User)
+    mock_manager.load_user.return_value = mock_user
+
+    # Configure removal to succeed but save to fail
+    mock_user.remove_task.return_value = True
+    error_message = "Unexpected error during save"
+    mock_manager.save_user.side_effect = Exception(error_message)
+
+    args = create_mock_args(id="task-id")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_delete(args, mock_manager)
+
+    mock_print.assert_any_call(f"Error saving after deleting task: {error_message}")
+    assert excinfo.type == SystemExit
+    assert excinfo.value.code == 1
+
+
+def test_main_error_handling(mocker: Any) -> None:
+    """Test main() handles errors in command execution."""
+    mocker.patch("sys.argv", ["main.py", "list"])
+    mock_error = IOError("Failed to access data")
+    mock_print = mocker.patch("motido.cli.main.print")
+
+    # Create a function that raises an error
+    def mock_func(args: Any) -> None:
+        raise mock_error
+
+    # Mock parser and args
+    mock_args = mocker.MagicMock()
+    mock_args.command = "list"  # Not "init"
+    mock_args.func = mock_func
+
+    # Mock parse_args to return our mock_args
+    mocker.patch("argparse.ArgumentParser.parse_args", return_value=mock_args)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.main()
+
+    # Verify error message was printed
+    mock_print.assert_any_call(f"Error: {mock_error}")
+    mock_print.assert_any_call(
+        "If you haven't initialized the application, try running 'motido init'."
+    )
+
+    # Verify exit code
+    assert excinfo.type == SystemExit
+    assert excinfo.value.code == 1
+
+
+def test_main_generic_exception_handling(mocker: Any) -> None:
+    """Test main() handles generic exceptions in command execution."""
+    mocker.patch("sys.argv", ["main.py", "list"])
+    mock_error = Exception("Unexpected error")
+    mock_print = mocker.patch("motido.cli.main.print")
+
+    # Create a function that raises an error
+    def mock_func(args: Any) -> None:
+        raise mock_error
+
+    # Mock args
+    mock_args = mocker.MagicMock()
+    mock_args.command = "list"  # Not "init"
+    mock_args.func = mock_func
+
+    # Mock parse_args to return our mock_args
+    mocker.patch("argparse.ArgumentParser.parse_args", return_value=mock_args)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.main()
+
+    # Verify error message was printed
+    mock_print.assert_any_call(f"Error: {mock_error}")
+    mock_print.assert_any_call(
+        "If you haven't initialized the application, try running 'motido init'."
+    )
+
+    # Verify exit code
+    assert excinfo.type == SystemExit
+    assert excinfo.value.code == 1
 
 
 def test_main_initial_setup() -> None:

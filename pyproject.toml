@@ -107,7 +107,7 @@ format = [
     { cmd = "black ." },
     { cmd = "isort ." }
 ]
-lint = "pylint src tests"
+lint = "pylint src tests --fail-under=10"
 typecheck = "mypy src tests"
 test = "pytest"
 coverage = "pytest --cov=motido --cov-report=term-missing --cov-fail-under=80"

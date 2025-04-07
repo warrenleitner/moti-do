@@ -482,3 +482,73 @@ def test_backend_type(manager: DatabaseDataManager) -> None:
 # (_get_connection is used). If they are indeed unused, they could be removed from the
 # source code. We are not testing them here as they aren't part of the current public
 # interface usage.
+
+
+def test_init_connection_attributes(manager: DatabaseDataManager) -> None:
+    """Test that __init__ initializes connection attributes correctly."""
+    assert manager.conn is None
+    assert manager.cursor is None
+
+
+def test_connect_method(
+    manager: DatabaseDataManager,
+    mocker: Any,
+) -> None:
+    """Test the _connect method properly initializes a connection."""
+    # Mock dependencies
+    mock_get_config_path = mocker.patch(
+        "motido.data.database_manager.get_config_path",
+        return_value="/fake/config/path/config.json",
+    )
+    mock_sqlite_connect = mocker.patch("sqlite3.connect")
+    mock_conn = MagicMock(spec=sqlite3.Connection)
+    mock_cursor = MagicMock(spec=sqlite3.Cursor)
+    mock_sqlite_connect.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cursor
+
+    # Call the method
+    manager._connect()
+
+    # Verify behavior
+    mock_get_config_path.assert_called_once()
+    expected_db_path = os.path.join(
+        os.path.dirname("/fake/config/path/config.json"), DB_NAME
+    )
+    mock_sqlite_connect.assert_called_once_with(expected_db_path)
+    assert manager.conn == mock_conn
+    assert manager.cursor == mock_cursor
+
+
+def test_close_method_with_connection(
+    manager: DatabaseDataManager,
+    mocker: Any,
+) -> None:
+    """Test the _close method properly closes an open connection."""
+    # Set up a mock connection
+    mock_conn = MagicMock(spec=sqlite3.Connection)
+    mock_cursor = MagicMock(spec=sqlite3.Cursor)
+
+    # Manually set the connection and cursor
+    manager.conn = mock_conn
+    manager.cursor = mock_cursor
+
+    # Call the method
+    manager._close()
+
+    # Verify behavior
+    mock_conn.commit.assert_called_once()
+    mock_conn.close.assert_called_once()
+    assert manager.conn is None
+    assert manager.cursor is None
+
+
+def test_close_method_without_connection(manager: DatabaseDataManager) -> None:
+    """Test the _close method handles the case where there's no connection."""
+    # Ensure conn is None
+    manager.conn = None
+    manager.cursor = None
+
+    # Call the method (should not raise any exceptions)
+    manager._close()
+
+    # No assertions needed for this test case - just checking it doesn't fail
