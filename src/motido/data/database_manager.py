@@ -5,7 +5,7 @@ Implementation of the DataManager interface using SQLite database storage.
 
 import os
 import sqlite3
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from motido.core.models import Task, User
 
@@ -18,9 +18,12 @@ DB_NAME = "motido.db"
 class DatabaseDataManager(DataManager):
     """Manages data persistence using an SQLite database."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initializes the Database data manager."""
         self._db_path = self._get_db_path()
+        # Initialize connection and cursor attributes for _connect/_close methods
+        self.conn: Optional[sqlite3.Connection] = None
+        self.cursor: Optional[sqlite3.Cursor] = None
 
     def _get_db_path(self) -> str:
         """Constructs the full path to the SQLite database file."""
@@ -28,7 +31,7 @@ class DatabaseDataManager(DataManager):
         data_dir_path = os.path.join(project_root, "data")
         return os.path.join(data_dir_path, DB_NAME)
 
-    def _ensure_data_dir_exists(self):
+    def _ensure_data_dir_exists(self) -> None:
         """Creates the data directory if it doesn't exist."""
         os.makedirs(os.path.dirname(self._db_path), exist_ok=True)
 
@@ -45,7 +48,7 @@ class DatabaseDataManager(DataManager):
             print(f"Error connecting to database '{self._db_path}': {e}")
             raise  # Re-raise the exception to signal connection failure
 
-    def _create_tables(self, conn: sqlite3.Connection):
+    def _create_tables(self, conn: sqlite3.Connection) -> None:
         """Creates the necessary database tables if they don't exist."""
         try:
             cursor = conn.cursor()
@@ -74,7 +77,7 @@ class DatabaseDataManager(DataManager):
         except sqlite3.Error as e:
             print(f"Error creating database tables: {e}")
 
-    def initialize(self):
+    def initialize(self) -> None:
         """Initializes the database by creating tables if needed."""
         print(f"Initializing database at: {self._db_path}")
         try:
@@ -123,7 +126,7 @@ class DatabaseDataManager(DataManager):
             print(f"Error loading user '{username}' from motido.database: {e}")
             return None
 
-    def _ensure_user_exists(self, conn: sqlite3.Connection, username: str):
+    def _ensure_user_exists(self, conn: sqlite3.Connection, username: str) -> None:
         """Ensures the user exists in the users table, inserting if necessary."""
         try:
             cursor = conn.cursor()
@@ -136,7 +139,7 @@ class DatabaseDataManager(DataManager):
             print(f"Error ensuring user '{username}' exists: {e}")
             # Decide how to handle this - maybe raise an exception?
 
-    def save_user(self, user: User):
+    def save_user(self, user: User) -> None:
         """Saves the user and their tasks to the database."""
         print(f"Saving user '{user.username}' to database...")
         try:
@@ -182,7 +185,7 @@ class DatabaseDataManager(DataManager):
         """Returns the backend type."""
         return "db"
 
-    def _connect(self):
+    def _connect(self) -> None:
         """Connects to the SQLite database."""
         # Place DB in the same directory as the config file (within the package data dir)
         db_path = os.path.join(os.path.dirname(get_config_path()), DB_NAME)
@@ -190,7 +193,7 @@ class DatabaseDataManager(DataManager):
         self.conn = sqlite3.connect(db_path)
         self.cursor = self.conn.cursor()
 
-    def _close(self):
+    def _close(self) -> None:
         """Closes the database connection."""
         if self.conn:
             self.conn.commit()  # Ensure changes are saved before closing

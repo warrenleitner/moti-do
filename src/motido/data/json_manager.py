@@ -5,7 +5,7 @@ Implementation of the DataManager interface using JSON file storage.
 
 import json
 import os
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 from motido.core.models import Task, User
 
@@ -19,7 +19,7 @@ USERS_FILE = "users.json"
 class JsonDataManager(DataManager):
     """Manages data persistence using a JSON file."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initializes the JSON data manager."""
         self._data_path = self._get_data_path()
 
@@ -30,11 +30,11 @@ class JsonDataManager(DataManager):
         data_dir_path = os.path.join(package_data_dir, DATA_DIR)
         return os.path.join(data_dir_path, USERS_FILE)
 
-    def _ensure_data_dir_exists(self):
+    def _ensure_data_dir_exists(self) -> None:
         """Creates the data directory if it doesn't exist."""
         os.makedirs(os.path.dirname(self._data_path), exist_ok=True)
 
-    def initialize(self):
+    def initialize(self) -> None:
         """
         Ensures the data directory exists.
         Creates an empty data file if it doesn't exist.
@@ -59,7 +59,8 @@ class JsonDataManager(DataManager):
                 content = f.read()
                 if not content:
                     return {}
-                return json.loads(content)
+                # Cast the result of json.loads
+                return cast(Dict[str, Any], json.loads(content))
         except (json.JSONDecodeError, IOError) as e:
             print(
                 f"Error reading data file '{self._data_path}': {e}. Returning empty data."
@@ -67,7 +68,7 @@ class JsonDataManager(DataManager):
             # Consider backup/recovery mechanism here in a real app
             return {}
 
-    def _write_data(self, data: Dict[str, Any]):
+    def _write_data(self, data: Dict[str, Any]) -> None:
         """Writes the entire data structure to the JSON file."""
         self._ensure_data_dir_exists()
         try:
@@ -100,7 +101,7 @@ class JsonDataManager(DataManager):
             # return User(username=username)
             return None
 
-    def save_user(self, user: User):
+    def save_user(self, user: User) -> None:
         """Saves a specific user's data to the JSON file."""
         print(f"Saving user '{user.username}' to JSON...")
         all_data = self._read_data()

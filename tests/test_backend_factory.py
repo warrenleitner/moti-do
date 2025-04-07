@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -17,8 +18,8 @@ from motido.data.json_manager import JsonDataManager
 @patch("motido.data.backend_factory.DatabaseDataManager")  # Keep this mocked
 @patch("motido.data.backend_factory.print")  # Mock print
 def test_get_data_manager_json_backend(
-    mock_print, mock_db_manager, mock_json_manager, mock_load_config
-):
+    mock_print: Any, mock_db_manager: Any, mock_json_manager: Any, mock_load_config: Any
+) -> None:
     """Test factory returns JsonDataManager for 'json' config."""
     # Configure mocks
     mock_load_config.return_value = {"backend": "json"}
@@ -42,8 +43,8 @@ def test_get_data_manager_json_backend(
 @patch("motido.data.backend_factory.DatabaseDataManager")
 @patch("motido.data.backend_factory.print")  # Mock print
 def test_get_data_manager_db_backend(
-    mock_print, mock_db_manager, mock_json_manager, mock_load_config
-):
+    mock_print: Any, mock_db_manager: Any, mock_json_manager: Any, mock_load_config: Any
+) -> None:
     """Test factory returns DatabaseDataManager for 'db' config."""
     # Configure mocks
     mock_load_config.return_value = {"backend": "db"}
@@ -67,8 +68,8 @@ def test_get_data_manager_db_backend(
 @patch("motido.data.backend_factory.DatabaseDataManager")  # Keep this mocked
 @patch("motido.data.backend_factory.print")  # Mock print
 def test_get_data_manager_default_backend(
-    mock_print, mock_db_manager, mock_json_manager, mock_load_config
-):
+    mock_print: Any, mock_db_manager: Any, mock_json_manager: Any, mock_load_config: Any
+) -> None:
     """Test factory defaults to JsonDataManager when backend key is missing."""
     # Configure mocks
     mock_load_config.return_value = {}  # Simulate missing key
@@ -92,8 +93,8 @@ def test_get_data_manager_default_backend(
 @patch("motido.data.backend_factory.DatabaseDataManager")
 @patch("motido.data.backend_factory.print")  # Mock print
 def test_get_data_manager_unknown_backend(
-    mock_print, mock_db_manager, mock_json_manager, mock_load_config
-):
+    mock_print: Any, mock_db_manager: Any, mock_json_manager: Any, mock_load_config: Any
+) -> None:
     """Test factory raises ValueError for unknown backend type."""
     # Configure mocks
     unknown_backend_type = "invalid_backend"

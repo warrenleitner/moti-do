@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Any
 from unittest.mock import MagicMock, mock_open, patch
 
 # Import functions from the module we are testing
@@ -15,7 +16,7 @@ MOCK_CONFIG_PATH = f"/fake/dir/{CONFIG_FILENAME}"  # A predictable path for test
 
 @patch("motido.data.config.os.path.dirname")
 @patch("motido.data.config.os.path.abspath")
-def test_get_config_path_structure(mock_abspath, mock_dirname):
+def test_get_config_path_structure(mock_abspath: Any, mock_dirname: Any) -> None:
     """Test that get_config_path returns the expected path format."""
     mock_dirname.return_value = "/fake/package/data"
     # The input to abspath doesn't matter much here as dirname is mocked
@@ -33,7 +34,7 @@ def test_get_config_path_structure(mock_abspath, mock_dirname):
 
 @patch("motido.data.config.get_config_path", return_value=MOCK_CONFIG_PATH)
 @patch("motido.data.config.os.path.exists", return_value=False)
-def test_load_config_file_not_exists(mock_exists, mock_get_path):
+def test_load_config_file_not_exists(mock_exists: Any, mock_get_path: Any) -> None:
     """Test loading config when the file doesn't exist."""
     config = config_module.load_config()
     assert config == {"backend": DEFAULT_BACKEND}
@@ -42,7 +43,7 @@ def test_load_config_file_not_exists(mock_exists, mock_get_path):
 
 @patch("motido.data.config.get_config_path", return_value=MOCK_CONFIG_PATH)
 @patch("motido.data.config.os.path.exists", return_value=True)
-def test_load_config_valid_json_backend(mock_exists, mock_get_path):
+def test_load_config_valid_json_backend(mock_exists: Any, mock_get_path: Any) -> None:
     """Test loading a valid config with 'json' backend."""
     mock_file_content = json.dumps({"backend": "json"})
     m_open = mock_open(read_data=mock_file_content)
@@ -54,7 +55,7 @@ def test_load_config_valid_json_backend(mock_exists, mock_get_path):
 
 @patch("motido.data.config.get_config_path", return_value=MOCK_CONFIG_PATH)
 @patch("motido.data.config.os.path.exists", return_value=True)
-def test_load_config_valid_db_backend(mock_exists, mock_get_path):
+def test_load_config_valid_db_backend(mock_exists: Any, mock_get_path: Any) -> None:
     """Test loading a valid config with 'db' backend."""
     mock_file_content = json.dumps({"backend": "db"})
     m_open = mock_open(read_data=mock_file_content)
@@ -66,7 +67,9 @@ def test_load_config_valid_db_backend(mock_exists, mock_get_path):
 @patch("motido.data.config.get_config_path", return_value=MOCK_CONFIG_PATH)
 @patch("motido.data.config.os.path.exists", return_value=True)
 @patch("motido.data.config.print")  # Mock print to check warning
-def test_load_config_invalid_json(mock_print, mock_exists, mock_get_path):
+def test_load_config_invalid_json(
+    mock_print: Any, mock_exists: Any, mock_get_path: Any
+) -> None:
     """Test loading config with invalid JSON content."""
     m_open = mock_open()
     # Simulate JSONDecodeError by having json.load raise it
@@ -82,7 +85,9 @@ def test_load_config_invalid_json(mock_print, mock_exists, mock_get_path):
 @patch("motido.data.config.get_config_path", return_value=MOCK_CONFIG_PATH)
 @patch("motido.data.config.os.path.exists", return_value=True)
 @patch("motido.data.config.print")  # Mock print to check warning
-def test_load_config_missing_backend_key(mock_print, mock_exists, mock_get_path):
+def test_load_config_missing_backend_key(
+    mock_print: Any, mock_exists: Any, mock_get_path: Any
+) -> None:
     """Test loading config with missing 'backend' key."""
     mock_file_content = json.dumps({"other_key": "value"})
     m_open = mock_open(read_data=mock_file_content)
@@ -96,7 +101,9 @@ def test_load_config_missing_backend_key(mock_print, mock_exists, mock_get_path)
 @patch("motido.data.config.get_config_path", return_value=MOCK_CONFIG_PATH)
 @patch("motido.data.config.os.path.exists", return_value=True)
 @patch("motido.data.config.print")  # Mock print to check warning
-def test_load_config_invalid_backend_value(mock_print, mock_exists, mock_get_path):
+def test_load_config_invalid_backend_value(
+    mock_print: Any, mock_exists: Any, mock_get_path: Any
+) -> None:
     """Test loading config with an invalid value for 'backend'."""
     mock_file_content = json.dumps({"backend": "unsupported_backend"})
     m_open = mock_open(read_data=mock_file_content)
@@ -113,7 +120,9 @@ def test_load_config_invalid_backend_value(mock_print, mock_exists, mock_get_pat
 @patch("motido.data.config.get_config_path", return_value=MOCK_CONFIG_PATH)
 @patch("motido.data.config.os.path.exists", return_value=True)
 @patch("motido.data.config.print")  # Mock print to check error
-def test_load_config_io_error(mock_print, mock_exists, mock_get_path):
+def test_load_config_io_error(
+    mock_print: Any, mock_exists: Any, mock_get_path: Any
+) -> None:
     """Test loading config when an IOError occurs."""
     m_open = mock_open()
     # Simulate IOError on open
@@ -132,7 +141,9 @@ def test_load_config_io_error(mock_print, mock_exists, mock_get_path):
 @patch("motido.data.config.get_config_path", return_value=MOCK_CONFIG_PATH)
 @patch("json.dump")
 @patch("motido.data.config.print")  # Mock print to check message
-def test_save_config_success(mock_print, mock_json_dump, mock_get_path):
+def test_save_config_success(
+    mock_print: Any, mock_json_dump: Any, mock_get_path: Any
+) -> None:
     """Test successfully saving the configuration."""
     config_to_save = {"backend": "db", "extra": "data"}
     m_open = mock_open()
@@ -148,7 +159,7 @@ def test_save_config_success(mock_print, mock_json_dump, mock_get_path):
 
 @patch("motido.data.config.get_config_path", return_value=MOCK_CONFIG_PATH)
 @patch("motido.data.config.print")  # Mock print to check error
-def test_save_config_io_error(mock_print, mock_get_path):
+def test_save_config_io_error(mock_print: Any, mock_get_path: Any) -> None:
     """Test saving config when an IOError occurs."""
     config_to_save = {"backend": "json"}
     m_open = mock_open()

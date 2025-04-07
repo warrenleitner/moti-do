@@ -6,6 +6,8 @@ specifically the chosen data backend.
 
 import json
 import os
+from typing import Any, Dict, cast
+from unittest.mock import MagicMock, mock_open, patch
 
 CONFIG_FILENAME = "config.json"
 DEFAULT_BACKEND = "json"  # Default to JSON if no config exists
@@ -18,7 +20,7 @@ def get_config_path() -> str:
     return os.path.join(package_data_dir, CONFIG_FILENAME)
 
 
-def load_config() -> dict:
+def load_config() -> Dict[str, str]:
     """
     Loads the configuration from the config file.
     Returns default config if the file doesn't exist.
@@ -29,20 +31,24 @@ def load_config() -> dict:
         return {"backend": DEFAULT_BACKEND}
     try:
         with open(config_path, "r", encoding="utf-8") as f:
-            config = json.load(f)
+            # Cast the result of json.load to the expected type
+            config_data = cast(Dict[str, str], json.load(f))
             # Basic validation
-            if "backend" not in config or config["backend"] not in ["json", "db"]:
+            if "backend" not in config_data or config_data["backend"] not in [
+                "json",
+                "db",
+            ]:
                 print(
-                    f"Warning: Invalid backend '{config.get('backend')}' in config. Using default '{DEFAULT_BACKEND}'."
+                    f"Warning: Invalid backend '{config_data.get('backend')}' in config. Using default '{DEFAULT_BACKEND}'."
                 )
                 return {"backend": DEFAULT_BACKEND}
-            return config
+            return config_data
     except (json.JSONDecodeError, IOError) as e:
         print(f"Error loading config file '{config_path}': {e}. Using default config.")
         return {"backend": DEFAULT_BACKEND}
 
 
-def save_config(config: dict):
+def save_config(config: Dict[str, str]) -> None:
     """Saves the configuration dictionary to the config file."""
     config_path = get_config_path()
     try:

@@ -7,6 +7,7 @@ Provides commands to initialize, create, view, list, and edit tasks.
 import argparse
 import os
 import sys
+from argparse import Namespace  # Import Namespace
 
 # Updated imports
 from motido.core.models import Task, User
@@ -16,7 +17,7 @@ from motido.data.backend_factory import get_data_manager
 from motido.data.config import load_config, save_config
 
 
-def handle_init(args):
+def handle_init(args: Namespace) -> None:
     """Handles the 'init' command."""
     print("Initializing Moti-Do...")
     config = {"backend": args.backend}
@@ -31,7 +32,7 @@ def handle_init(args):
         sys.exit(1)
 
 
-def handle_create(args, manager: DataManager):
+def handle_create(args: Namespace, manager: DataManager) -> None:
     """Handles the 'create' command."""
     if (not args.description) or args.description == "":
         print("Error: Task description cannot be empty.")
@@ -54,7 +55,7 @@ def handle_create(args, manager: DataManager):
         sys.exit(1)
 
 
-def handle_list(args, manager: DataManager):
+def handle_list(args: Namespace, manager: DataManager) -> None:
     """Handles the 'list' command."""
     print("Listing all tasks...")
     user = manager.load_user(DEFAULT_USERNAME)
@@ -71,7 +72,7 @@ def handle_list(args, manager: DataManager):
         print("Hint: Run 'motido init' first if you haven't already.")
 
 
-def handle_view(args, manager: DataManager):
+def handle_view(args: Namespace, manager: DataManager) -> None:
     """Handles the 'view' command."""
     if not args.id:
         print("Error: Please provide a task ID prefix using --id.")
@@ -101,7 +102,7 @@ def handle_view(args, manager: DataManager):
         sys.exit(1)
 
 
-def handle_edit(args, manager: DataManager):
+def handle_edit(args: Namespace, manager: DataManager) -> None:
     """Handles the 'edit' command."""
     if not args.id or not args.description:
         print("Error: Both --id and --description are required for editing.")
@@ -133,7 +134,7 @@ def handle_edit(args, manager: DataManager):
         sys.exit(1)
 
 
-def handle_delete(args, manager: DataManager):
+def handle_delete(args: Namespace, manager: DataManager) -> None:
     """Handles the 'delete' command."""
     if not args.id:
         # This check might be redundant if argparse requires it, but good practice.
@@ -171,7 +172,7 @@ def handle_delete(args, manager: DataManager):
         sys.exit(1)
 
 
-def main():
+def main() -> None:
     """Main function to parse arguments and dispatch commands."""
     parser = argparse.ArgumentParser(description="Moti-Do: Task Management CLI")
     subparsers = parser.add_subparsers(

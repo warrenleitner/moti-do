@@ -19,7 +19,7 @@ class DataManager(ABC):
     """
 
     @abstractmethod
-    def initialize(self):
+    def initialize(self) -> None:
         """
         Perform any necessary setup for the backend (e.g., create files/tables).
         This should be idempotent (safe to run multiple times).
@@ -41,7 +41,7 @@ class DataManager(ABC):
         pass
 
     @abstractmethod
-    def save_user(self, user: User):
+    def save_user(self, user: User) -> None:
         """
         Saves user data to the persistence layer.
 

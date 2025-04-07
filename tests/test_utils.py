@@ -5,13 +5,13 @@ import pytest
 from motido.core.utils import generate_id
 
 
-def test_generate_id_returns_string():
+def test_generate_id_returns_string() -> None:
     """Test that generate_id returns a string."""
     new_id = generate_id()
     assert isinstance(new_id, str)
 
 
-def test_generate_id_format():
+def test_generate_id_format() -> None:
     """Test that generate_id returns a string in UUID format."""
     new_id = generate_id()
     # Basic check for UUID format (length 36, dashes in correct places)
@@ -24,7 +24,7 @@ def test_generate_id_format():
     uuid.UUID(new_id, version=4)  # This will raise ValueError if invalid
 
 
-def test_generate_id_uniqueness():
+def test_generate_id_uniqueness() -> None:
     """Test that subsequent calls to generate_id return different IDs."""
     id1 = generate_id()
     id2 = generate_id()

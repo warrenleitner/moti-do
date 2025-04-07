@@ -17,7 +17,7 @@ class Task:
     # The ID is represented as a string for easier serialization (JSON, DB).
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
-    def __str__(self):
+    def __str__(self) -> str:
         """String representation for simple display."""
         return f"ID: {self.id[:8]} | Description: {self.description}"  # Show partial ID
 
@@ -52,7 +52,7 @@ class User:
         else:
             return None
 
-    def add_task(self, task: Task):
+    def add_task(self, task: Task) -> None:
         """Adds a task to the user's list."""
         self.tasks.append(task)
 

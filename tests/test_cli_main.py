@@ -1,4 +1,5 @@
 import argparse
+from typing import Any
 from unittest.mock import call
 
 import pytest
@@ -11,11 +12,11 @@ from motido.data.config import DEFAULT_BACKEND
 
 
 # Helper to create mock argparse Namespace
-def create_mock_args(**kwargs):
+def create_mock_args(**kwargs: Any) -> argparse.Namespace:
     return argparse.Namespace(**kwargs)
 
 
-def test_main_dispatch_init(mocker):
+def test_main_dispatch_init(mocker: Any) -> None:
     """Test main() parses 'init' command and calls handle_init."""
     mocker.patch("sys.argv", ["main.py", "init", "--backend", "db"])
     mock_handle_init = mocker.patch("motido.cli.main.handle_init")
@@ -33,7 +34,7 @@ def test_main_dispatch_init(mocker):
     mock_get_manager.assert_not_called()
 
 
-def test_main_dispatch_create(mocker):
+def test_main_dispatch_create(mocker: Any) -> None:
     """Test main() parses 'create' command and calls handle_create via lambda."""
     mocker.patch("sys.argv", ["main.py", "create", "-d", "New task"])
     mock_handle_create = mocker.patch("motido.cli.main.handle_create")
@@ -54,7 +55,7 @@ def test_main_dispatch_create(mocker):
     mock_get_manager.assert_called_once()  # Ensure manager was fetched
 
 
-def test_main_dispatch_list(mocker):
+def test_main_dispatch_list(mocker: Any) -> None:
     """Test main() parses 'list' command and calls handle_list."""
     mocker.patch("sys.argv", ["main.py", "list"])
     mock_handle_list = mocker.patch("motido.cli.main.handle_list")
@@ -69,7 +70,7 @@ def test_main_dispatch_list(mocker):
     mock_get_manager.assert_called_once()
 
 
-def test_main_dispatch_view(mocker):
+def test_main_dispatch_view(mocker: Any) -> None:
     """Test main() parses 'view' command and calls handle_view."""
     mocker.patch("sys.argv", ["main.py", "view", "--id", "abc"])
     mock_handle_view = mocker.patch("motido.cli.main.handle_view")
@@ -85,7 +86,7 @@ def test_main_dispatch_view(mocker):
     mock_get_manager.assert_called_once()
 
 
-def test_main_dispatch_edit(mocker):
+def test_main_dispatch_edit(mocker: Any) -> None:
     """Test main() parses 'edit' command and calls handle_edit."""
     mocker.patch("sys.argv", ["main.py", "edit", "--id", "abc", "-d", "Updated"])
     mock_handle_edit = mocker.patch("motido.cli.main.handle_edit")
@@ -102,7 +103,7 @@ def test_main_dispatch_edit(mocker):
     mock_get_manager.assert_called_once()
 
 
-def test_main_invalid_command(mocker):
+def test_main_invalid_command(mocker: Any) -> None:
     """Test main() handles invalid command by exiting."""
     mocker.patch("sys.argv", ["main.py", "invalid_command"])
     # Mock internal print to suppress stderr during failed parse_args
@@ -119,7 +120,7 @@ def test_main_invalid_command(mocker):
     mock_print_message.assert_called()
 
 
-def test_handle_init_success(mocker):
+def test_handle_init_success(mocker: Any) -> None:
     """Test handle_init successfully initializes with a chosen backend."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_save_config = mocker.patch("motido.cli.main.save_config")
@@ -142,7 +143,7 @@ def test_handle_init_success(mocker):
     )
 
 
-def test_handle_init_exception(mocker):
+def test_handle_init_exception(mocker: Any) -> None:
     """Test handle_init handles exceptions during manager initialization."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_save_config = mocker.patch("motido.cli.main.save_config")
@@ -170,7 +171,7 @@ def test_handle_init_exception(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_create_success_existing_user(mocker):
+def test_handle_create_success_existing_user(mocker: Any) -> None:
     """Test handle_create successfully creates a task for an existing user."""
     mock_print = mocker.patch("motido.cli.main.print")
     MockUser = mocker.patch("motido.cli.main.User")  # Mock the User class constructor
@@ -198,7 +199,7 @@ def test_handle_create_success_existing_user(mocker):
     )
 
 
-def test_handle_create_success_new_user(mocker):
+def test_handle_create_success_new_user(mocker: Any) -> None:
     """Test handle_create creates a new user if none exists."""
     mock_print = mocker.patch("motido.cli.main.print")
     MockUser = mocker.patch("motido.cli.main.User")  # Mock the User class constructor
@@ -229,7 +230,7 @@ def test_handle_create_success_new_user(mocker):
     )
 
 
-def test_handle_create_empty_description(mocker):
+def test_handle_create_empty_description(mocker: Any) -> None:
     """Test handle_create exits if description is empty."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -247,7 +248,7 @@ def test_handle_create_empty_description(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_create_save_error(mocker):
+def test_handle_create_save_error(mocker: Any) -> None:
     """Test handle_create handles errors during saving."""
     mock_print = mocker.patch("motido.cli.main.print")
     MockTask = mocker.patch("motido.cli.main.Task")
@@ -278,7 +279,7 @@ def test_handle_create_save_error(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_list_success(mocker):
+def test_handle_list_success(mocker: Any) -> None:
     """Test handle_list prints tasks correctly."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -303,7 +304,7 @@ def test_handle_list_success(mocker):
     mock_print.assert_has_calls(expected_calls)
 
 
-def test_handle_list_success_no_tasks(mocker):
+def test_handle_list_success_no_tasks(mocker: Any) -> None:
     """Test handle_list handles user with no tasks."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -323,7 +324,7 @@ def test_handle_list_success_no_tasks(mocker):
     mock_print.assert_has_calls(expected_calls)
 
 
-def test_handle_list_user_not_found(mocker):
+def test_handle_list_user_not_found(mocker: Any) -> None:
     """Test handle_list handles case where user is not found."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -342,7 +343,7 @@ def test_handle_list_user_not_found(mocker):
     mock_print.assert_has_calls(expected_calls)
 
 
-def test_handle_view_success(mocker):
+def test_handle_view_success(mocker: Any) -> None:
     """Test handle_view finds and prints a task by ID."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -389,7 +390,7 @@ def test_handle_view_success(mocker):
     assert mock_print.call_count == len(expected_calls_from_trace)
 
 
-def test_handle_view_task_not_found(mocker):
+def test_handle_view_task_not_found(mocker: Any) -> None:
     """Test handle_view handles task not found by ID."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -417,7 +418,7 @@ def test_handle_view_task_not_found(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_view_user_not_found(mocker):
+def test_handle_view_user_not_found(mocker: Any) -> None:
     """Test handle_view handles user not found."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -441,7 +442,7 @@ def test_handle_view_user_not_found(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_view_ambiguous_id(mocker):
+def test_handle_view_ambiguous_id(mocker: Any) -> None:
     """Test handle_view handles ambiguous ID prefix."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -468,7 +469,7 @@ def test_handle_view_ambiguous_id(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_view_no_id_arg(mocker):
+def test_handle_view_no_id_arg(mocker: Any) -> None:
     """Test handle_view exits if --id argument is missing (simulated)."""
     # This scenario is typically caught by argparse, but we test the handler logic
     # assuming argparse somehow passed args without 'id' (though unlikely with setup).
@@ -495,7 +496,7 @@ def test_handle_view_no_id_arg(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_edit_success(mocker):
+def test_handle_edit_success(mocker: Any) -> None:
     """Test handle_edit successfully edits a task description."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -528,7 +529,7 @@ def test_handle_edit_success(mocker):
     assert mock_print.call_count == len(expected_calls)  # Ensure no extra calls
 
 
-def test_handle_edit_task_not_found(mocker):
+def test_handle_edit_task_not_found(mocker: Any) -> None:
     """Test handle_edit handles task not found by ID."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -555,7 +556,7 @@ def test_handle_edit_task_not_found(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_edit_user_not_found(mocker):
+def test_handle_edit_user_not_found(mocker: Any) -> None:
     """Test handle_edit handles user not found."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -581,7 +582,7 @@ def test_handle_edit_user_not_found(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_edit_missing_description(mocker):
+def test_handle_edit_missing_description(mocker: Any) -> None:
     """Test handle_edit exits if --description is missing (simulated)."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -596,7 +597,7 @@ def test_handle_edit_missing_description(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_edit_missing_id(mocker):
+def test_handle_edit_missing_id(mocker: Any) -> None:
     """Test handle_edit exits if --id is missing (simulated)."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -611,7 +612,7 @@ def test_handle_edit_missing_id(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_edit_missing_both(mocker):
+def test_handle_edit_missing_both(mocker: Any) -> None:
     """Test handle_edit exits if both --id and --description are missing (simulated)."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -626,7 +627,7 @@ def test_handle_edit_missing_both(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_edit_ambiguous_id(mocker):
+def test_handle_edit_ambiguous_id(mocker: Any) -> None:
     """Test handle_edit handles ambiguous ID prefix."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -654,7 +655,7 @@ def test_handle_edit_ambiguous_id(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_edit_save_error(mocker):
+def test_handle_edit_save_error(mocker: Any) -> None:
     """Test handle_edit handles errors during saving."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -688,7 +689,7 @@ def test_handle_edit_save_error(mocker):
     assert excinfo.value.code == 1
 
 
-def test_handle_delete_success(mocker):
+def test_handle_delete_success(mocker: Any) -> None:
     """Test handle_delete successfully removes a task."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -717,7 +718,7 @@ def test_handle_delete_success(mocker):
         pytest.skip("handle_delete function not found in cli_main")
 
 
-def test_handle_delete_task_not_found(mocker):
+def test_handle_delete_task_not_found(mocker: Any) -> None:
     """Test handle_delete handles task not found by ID."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -749,7 +750,7 @@ def test_handle_delete_task_not_found(mocker):
         pytest.skip("handle_delete function not found in cli_main")
 
 
-def test_handle_delete_user_not_found(mocker):
+def test_handle_delete_user_not_found(mocker: Any) -> None:
     """Test handle_delete handles user not found."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -778,7 +779,7 @@ def test_handle_delete_user_not_found(mocker):
         pytest.skip("handle_delete function not found in cli_main")
 
 
-def test_handle_delete_save_error(mocker):
+def test_handle_delete_save_error(mocker: Any) -> None:
     """Test handle_delete handles errors during saving after removal."""
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
