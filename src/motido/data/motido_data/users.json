@@ -1,0 +1,15 @@
+{
+    "default_user": {
+        "username": "default_user",
+        "tasks": [
+            {
+                "id": "977243fc-7736-40a1-bf19-5012263e9b36",
+                "description": "Task 1"
+            },
+            {
+                "id": "aa7c5da8-e0c0-4bd5-8ced-935e762500c5",
+                "description": "Task 2"
+            }
+        ]
+    }
+}

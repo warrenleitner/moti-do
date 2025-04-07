@@ -80,12 +80,10 @@ def test_main_dispatch_list(mocker: Any) -> None:
     mock_handle_list.assert_called_once()
 
     # Check the arguments passed to handle_list
-    # It should be called with the manager instance as the first positional arg
-    # based on how the subparser's func is likely set up.
-    args_called, kwargs_called = mock_handle_list.call_args
-    assert len(args_called) == 1
-    assert args_called[0] == mock_manager_instance
-    assert not kwargs_called
+    # It should be called with args and manager instance
+    args_passed, manager_passed = mock_handle_list.call_args[0]
+    assert args_passed.command == "list"
+    assert manager_passed == mock_manager_instance
 
 
 def test_main_dispatch_view(mocker: Any) -> None:
@@ -374,8 +372,9 @@ def test_handle_list_success(mocker: Any) -> None:
     task2 = Task(description="Task Two", id="def67890-...")
     mock_user.tasks = [task1, task2]
     mock_manager.load_user.return_value = mock_user
+    args = create_mock_args(sort_by=None, sort_order="asc")
 
-    cli_main.handle_list(mock_manager)
+    cli_main.handle_list(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     expected_calls = [
@@ -396,8 +395,9 @@ def test_handle_list_success_no_tasks(mocker: Any) -> None:
     mock_user = mocker.MagicMock(spec=User)
     mock_user.tasks = []
     mock_manager.load_user.return_value = mock_user
+    args = create_mock_args(sort_by=None, sort_order="asc")
 
-    cli_main.handle_list(mock_manager)
+    cli_main.handle_list(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     expected_calls = [
@@ -413,8 +413,9 @@ def test_handle_list_user_not_found(mocker: Any) -> None:
     mock_print = mocker.patch("motido.cli.main.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
     mock_manager.load_user.return_value = None
+    args = create_mock_args(sort_by=None, sort_order="asc")
 
-    cli_main.handle_list(mock_manager)
+    cli_main.handle_list(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     # Check the sequence of calls
@@ -1046,3 +1047,160 @@ def test_main_generic_exception_handling(mocker: Any) -> None:
 def test_main_initial_setup() -> None:
     """Checks if the test setup itself works (placeholder)."""
     assert True
+
+
+def test_handle_list_sort_by_id_asc(mocker: Any) -> None:
+    """Test handle_list sorts tasks by ID in ascending order."""
+    mock_print = mocker.patch("motido.cli.main.print")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_user = mocker.MagicMock(spec=User)
+
+    # Create tasks with IDs in non-sorted order
+    task1 = Task(description="Task B", id="bbb12345-...")
+    task2 = Task(description="Task A", id="aaa67890-...")
+    task3 = Task(description="Task C", id="ccc54321-...")
+
+    # Set up tasks in random order
+    mock_user.tasks = [task1, task2, task3]
+    mock_manager.load_user.return_value = mock_user
+
+    # Sort by ID in ascending order
+    args = create_mock_args(sort_by="id", sort_order="asc")
+    cli_main.handle_list(args, mock_manager)
+
+    # Verify tasks were printed in correct sorted order (by ID)
+    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
+    expected_calls = [
+        call("Listing all tasks..."),
+        call("-" * 30),
+        call(task2),  # aaa ID should be first
+        call(task1),  # bbb ID should be second
+        call(task3),  # ccc ID should be third
+        call("-" * 30),
+        call(f"Total tasks: {len(mock_user.tasks)}"),
+    ]
+    mock_print.assert_has_calls(expected_calls)
+
+
+def test_handle_list_sort_by_id_desc(mocker: Any) -> None:
+    """Test handle_list sorts tasks by ID in descending order."""
+    mock_print = mocker.patch("motido.cli.main.print")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_user = mocker.MagicMock(spec=User)
+
+    # Create tasks with IDs in non-sorted order
+    task1 = Task(description="Task B", id="bbb12345-...")
+    task2 = Task(description="Task A", id="aaa67890-...")
+    task3 = Task(description="Task C", id="ccc54321-...")
+
+    # Set up tasks in random order
+    mock_user.tasks = [task1, task2, task3]
+    mock_manager.load_user.return_value = mock_user
+
+    # Sort by ID in descending order
+    args = create_mock_args(sort_by="id", sort_order="desc")
+    cli_main.handle_list(args, mock_manager)
+
+    # Verify tasks were printed in correct sorted order (by ID descending)
+    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
+    expected_calls = [
+        call("Listing all tasks..."),
+        call("-" * 30),
+        call(task3),  # ccc ID should be first (descending)
+        call(task1),  # bbb ID should be second (descending)
+        call(task2),  # aaa ID should be third (descending)
+        call("-" * 30),
+        call(f"Total tasks: {len(mock_user.tasks)}"),
+    ]
+    mock_print.assert_has_calls(expected_calls)
+
+
+def test_handle_list_sort_by_description_asc(mocker: Any) -> None:
+    """Test handle_list sorts tasks by description in ascending order."""
+    mock_print = mocker.patch("motido.cli.main.print")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_user = mocker.MagicMock(spec=User)
+
+    # Create tasks with descriptions in non-sorted order
+    task1 = Task(description="Zebra task", id="111-...")
+    task2 = Task(description="Apple task", id="222-...")
+    task3 = Task(description="Banana task", id="333-...")
+
+    # Set up tasks in random order
+    mock_user.tasks = [task1, task2, task3]
+    mock_manager.load_user.return_value = mock_user
+
+    # Sort by description in ascending order
+    args = create_mock_args(sort_by="description", sort_order="asc")
+    cli_main.handle_list(args, mock_manager)
+
+    # Verify tasks were printed in correct sorted order (by description)
+    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
+    expected_calls = [
+        call("Listing all tasks..."),
+        call("-" * 30),
+        call(task2),  # Apple should be first
+        call(task3),  # Banana should be second
+        call(task1),  # Zebra should be third
+        call("-" * 30),
+        call(f"Total tasks: {len(mock_user.tasks)}"),
+    ]
+    mock_print.assert_has_calls(expected_calls)
+
+
+def test_handle_list_sort_by_description_desc(mocker: Any) -> None:
+    """Test handle_list sorts tasks by description in descending order."""
+    mock_print = mocker.patch("motido.cli.main.print")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_user = mocker.MagicMock(spec=User)
+
+    # Create tasks with descriptions in non-sorted order
+    task1 = Task(description="Zebra task", id="111-...")
+    task2 = Task(description="Apple task", id="222-...")
+    task3 = Task(description="Banana task", id="333-...")
+
+    # Set up tasks in random order
+    mock_user.tasks = [task1, task2, task3]
+    mock_manager.load_user.return_value = mock_user
+
+    # Sort by description in descending order
+    args = create_mock_args(sort_by="description", sort_order="desc")
+    cli_main.handle_list(args, mock_manager)
+
+    # Verify tasks were printed in correct sorted order (by description descending)
+    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
+    expected_calls = [
+        call("Listing all tasks..."),
+        call("-" * 30),
+        call(task1),  # Zebra should be first (descending)
+        call(task3),  # Banana should be second (descending)
+        call(task2),  # Apple should be third (descending)
+        call("-" * 30),
+        call(f"Total tasks: {len(mock_user.tasks)}"),
+    ]
+    mock_print.assert_has_calls(expected_calls)
+
+
+def test_main_dispatch_list_with_sort_options(mocker: Any) -> None:
+    """Test main() parses 'list' command with sorting options."""
+    mocker.patch(
+        "sys.argv",
+        ["main.py", "list", "--sort-by", "description", "--sort-order", "desc"],
+    )
+    mock_handle_list = mocker.patch("motido.cli.main.handle_list")
+    mock_get_manager = mocker.patch("motido.cli.main.get_data_manager")
+    mock_manager_instance = mocker.MagicMock(spec=DataManager)
+    mock_get_manager.return_value = mock_manager_instance
+
+    cli_main.main()  # Execute the main function to test dispatch
+
+    # Verify the correct functions were called
+    mock_get_manager.assert_called_once()
+    mock_handle_list.assert_called_once()
+
+    # Check that sort options were correctly passed to handle_list
+    args_passed, manager_passed = mock_handle_list.call_args[0]
+    assert args_passed.command == "list"
+    assert args_passed.sort_by == "description"
+    assert args_passed.sort_order == "desc"
+    assert manager_passed == mock_manager_instance

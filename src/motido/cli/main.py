@@ -62,11 +62,24 @@ def handle_create(args: Namespace, manager: DataManager) -> None:
         sys.exit(1)
 
 
-def handle_list(manager: DataManager) -> None:
+def handle_list(args: Namespace, manager: DataManager) -> None:
     """Handles the 'list' command."""
     print("Listing all tasks...")
     user = manager.load_user(DEFAULT_USERNAME)
     if user and user.tasks:
+        # Sort tasks if sort_by is specified
+        if hasattr(args, "sort_by") and args.sort_by:
+            reverse = False
+            if hasattr(args, "sort_order") and args.sort_order == "desc":
+                reverse = True
+
+            if args.sort_by == "id":
+                user.tasks.sort(key=lambda task: task.id, reverse=reverse)
+            elif args.sort_by == "description":
+                user.tasks.sort(
+                    key=lambda task: task.description.lower(), reverse=reverse
+                )
+
         print("-" * 30)
         for task in user.tasks:
             print(task)  # Uses Task.__str__
@@ -229,7 +242,18 @@ def main() -> None:
 
     # --- List Command ---
     parser_list = subparsers.add_parser("list", help="List all tasks.")
-    parser_list.set_defaults(func=lambda _args: handle_list(get_data_manager()))
+    parser_list.add_argument(
+        "--sort-by",
+        choices=["id", "description"],
+        help="Field to sort tasks by.",
+    )
+    parser_list.add_argument(
+        "--sort-order",
+        choices=["asc", "desc"],
+        default="asc",
+        help="Sort order: ascending (asc) or descending (desc).",
+    )
+    parser_list.set_defaults(func=lambda args: handle_list(args, get_data_manager()))
 
     # --- View Command ---
     parser_view = subparsers.add_parser("view", help="View details of a specific task.")

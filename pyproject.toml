@@ -110,7 +110,7 @@ format = [
 lint = "pylint src tests --fail-under=10"
 typecheck = "mypy src tests"
 test = "pytest"
-coverage = "pytest --cov=motido --cov-report=term-missing --cov-fail-under=80"
+coverage = "pytest --cov=motido --cov-report=term-missing --cov-fail-under=100"
 security = "safety scan"
 
 # Main check task still references the directly defined tasks
