@@ -33,6 +33,11 @@ where = ["src"]  # look for packages in src/
 
 [project.optional-dependencies]
 test = [
-    "pytest>=7.0", # Or specify the version you prefer
+    "pytest>=8.3.5", # Or specify the version you prefer
     "pytest-mock>=3.0", # Add pytest-mock
+]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
 ] 

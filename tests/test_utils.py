@@ -1,6 +1,6 @@
 import unittest
 import uuid
-from src.motido.core.utils import generate_id
+from motido.core.utils import generate_id
 
 class TestUtils(unittest.TestCase):
     """Tests for core utility functions."""

@@ -2,19 +2,19 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 # Import the factory function and the classes it might return
-from src.motido.data.backend_factory import get_data_manager
-from src.motido.data.json_manager import JsonDataManager
-from src.motido.data.database_manager import DatabaseDataManager
-from src.motido.data.abstraction import DataManager # Import the base class for type checking
+from motido.data.backend_factory import get_data_manager
+from motido.data.json_manager import JsonDataManager
+from motido.data.database_manager import DatabaseDataManager
+from motido.data.abstraction import DataManager # Import the base class for type checking
 
 
 class TestBackendFactory(unittest.TestCase):
     """Tests for the data manager factory function."""
 
-    @patch('src.motido.data.backend_factory.load_config')
-    @patch('src.motido.data.backend_factory.JsonDataManager')
-    @patch('src.motido.data.backend_factory.DatabaseDataManager') # Keep this mocked
-    @patch('src.motido.data.backend_factory.print') # Mock print
+    @patch('motido.data.backend_factory.load_config')
+    @patch('motido.data.backend_factory.JsonDataManager')
+    @patch('motido.data.backend_factory.DatabaseDataManager') # Keep this mocked
+    @patch('motido.data.backend_factory.print') # Mock print
     def test_get_data_manager_json_backend(self, mock_print, mock_db_manager, mock_json_manager, mock_load_config):
         """Test factory returns JsonDataManager for 'json' config."""
         # Configure mocks
@@ -33,10 +33,10 @@ class TestBackendFactory(unittest.TestCase):
         self.assertEqual(manager, mock_json_instance)
         mock_print.assert_called_once_with("Using JSON backend.")
 
-    @patch('src.motido.data.backend_factory.load_config')
-    @patch('src.motido.data.backend_factory.JsonDataManager') # Keep this mocked
-    @patch('src.motido.data.backend_factory.DatabaseDataManager')
-    @patch('src.motido.data.backend_factory.print') # Mock print
+    @patch('motido.data.backend_factory.load_config')
+    @patch('motido.data.backend_factory.JsonDataManager') # Keep this mocked
+    @patch('motido.data.backend_factory.DatabaseDataManager')
+    @patch('motido.data.backend_factory.print') # Mock print
     def test_get_data_manager_db_backend(self, mock_print, mock_db_manager, mock_json_manager, mock_load_config):
         """Test factory returns DatabaseDataManager for 'db' config."""
         # Configure mocks
@@ -55,10 +55,10 @@ class TestBackendFactory(unittest.TestCase):
         self.assertEqual(manager, mock_db_instance)
         mock_print.assert_called_once_with("Using Database (SQLite) backend.")
 
-    @patch('src.motido.data.backend_factory.load_config')
-    @patch('src.motido.data.backend_factory.JsonDataManager')
-    @patch('src.motido.data.backend_factory.DatabaseDataManager') # Keep this mocked
-    @patch('src.motido.data.backend_factory.print') # Mock print
+    @patch('motido.data.backend_factory.load_config')
+    @patch('motido.data.backend_factory.JsonDataManager')
+    @patch('motido.data.backend_factory.DatabaseDataManager') # Keep this mocked
+    @patch('motido.data.backend_factory.print') # Mock print
     def test_get_data_manager_default_backend(self, mock_print, mock_db_manager, mock_json_manager, mock_load_config):
         """Test factory defaults to JsonDataManager when backend key is missing."""
         # Configure mocks
@@ -77,10 +77,10 @@ class TestBackendFactory(unittest.TestCase):
         self.assertEqual(manager, mock_json_instance)
         mock_print.assert_called_once_with("Using JSON backend.") # Check default message
 
-    @patch('src.motido.data.backend_factory.load_config')
-    @patch('src.motido.data.backend_factory.JsonDataManager')
-    @patch('src.motido.data.backend_factory.DatabaseDataManager')
-    @patch('src.motido.data.backend_factory.print') # Mock print
+    @patch('motido.data.backend_factory.load_config')
+    @patch('motido.data.backend_factory.JsonDataManager')
+    @patch('motido.data.backend_factory.DatabaseDataManager')
+    @patch('motido.data.backend_factory.print') # Mock print
     def test_get_data_manager_unknown_backend(self, mock_print, mock_db_manager, mock_json_manager, mock_load_config):
         """Test factory raises ValueError for unknown backend type."""
         # Configure mocks

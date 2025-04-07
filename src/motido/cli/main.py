@@ -31,7 +31,7 @@ def handle_init(args):
 
 def handle_create(args, manager: DataManager):
     """Handles the 'create' command."""
-    if not args.description:
+    if (not args.description) or args.description == "":
         print("Error: Task description cannot be empty.")
         sys.exit(1)
 
