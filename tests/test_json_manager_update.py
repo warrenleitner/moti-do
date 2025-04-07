@@ -1,61 +1,18 @@
 """Tests for the update functionality of JsonDataManager."""
 
-import os
-from typing import Any, Dict, Tuple
-
-import pytest
+from typing import Any, Dict
 
 from motido.core.models import Task, User
-from motido.data.json_manager import (
-    DATA_DIR,
-    DEFAULT_USERNAME,
-    USERS_FILE,
-    JsonDataManager,
-)
+from motido.data.json_manager import JsonDataManager
 
 # mypy: disable-error-code="assignment"
 # pylint: disable=redefined-outer-name
 
-
-@pytest.fixture
-def mock_config_path(mocker: Any) -> Tuple[str, str, str]:
-    """Mocks get_config_path to return a predictable directory."""
-    mock_path = "/fake/config/dir/config.json"
-    mocker.patch("motido.data.json_manager.get_config_path", return_value=mock_path)
-    # Expected data directory based on the mocked config path
-    expected_data_dir = "/fake/config/dir/" + DATA_DIR
-    expected_data_file = os.path.join(expected_data_dir, USERS_FILE)
-    return mock_path, expected_data_dir, expected_data_file
-
-
-@pytest.fixture
-def manager() -> JsonDataManager:
-    """Provides a JsonDataManager instance with mocked config path."""
-    # Initialization uses the mocked get_config_path via mock_config_path fixture
-    return JsonDataManager()
-
-
-@pytest.fixture
-def sample_user() -> User:
-    """Provides a sample User object."""
-    user = User(username=DEFAULT_USERNAME)
-    user.add_task(Task(description="Task A", id="uuid-a"))
-    user.add_task(Task(description="Task B", id="uuid-b"))
-    return user
-
-
-@pytest.fixture
-def sample_user_data(sample_user: User) -> Dict[str, Dict[str, Any]]:
-    """Provides the dictionary representation of sample_user."""
-    return {
-        sample_user.username: {
-            "username": sample_user.username,
-            "tasks": [
-                {"id": "uuid-a", "description": "Task A"},
-                {"id": "uuid-b", "description": "Task B"},
-            ],
-        }
-    }
+# All fixtures are now imported from conftest.py:
+# - mock_config_path
+# - manager
+# - sample_user
+# - sample_user_data
 
 
 def test_save_user_update_existing(
