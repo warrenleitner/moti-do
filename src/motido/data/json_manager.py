@@ -7,10 +7,11 @@ import json
 import os
 from typing import Dict, Any
 from .abstraction import DataManager, DEFAULT_USERNAME
-from core.models import User, Task
+from motido.core.models import User, Task
+from .config import get_config_path
 
-DATA_DIR = "data"
-JSON_FILENAME = "data.json"
+DATA_DIR = "motido_data"
+USERS_FILE = "users.json"
 
 class JsonDataManager(DataManager):
     """Manages data persistence using a JSON file."""
@@ -20,11 +21,11 @@ class JsonDataManager(DataManager):
         self._data_path = self._get_data_path()
 
     def _get_data_path(self) -> str:
-        """Constructs the full path to the JSON data file."""
-        # Assumes data is one level down from the project root
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        data_dir_path = os.path.join(project_root, DATA_DIR)
-        return os.path.join(data_dir_path, JSON_FILENAME)
+        """Gets the path to the main data file (users.json)."""
+        # Place data directory at the same level as the config file (within the package)
+        package_data_dir = os.path.dirname(get_config_path())
+        data_dir_path = os.path.join(package_data_dir, DATA_DIR)
+        return os.path.join(data_dir_path, USERS_FILE)
 
     def _ensure_data_dir_exists(self):
         """Creates the data directory if it doesn't exist."""

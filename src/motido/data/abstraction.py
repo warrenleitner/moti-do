@@ -5,7 +5,7 @@ Ensures all data backends adhere to a common interface.
 """
 
 from abc import ABC, abstractmethod
-from core.models import User
+from motido.core.models import User
 
 # Define a default username for the single-user scenario for now
 DEFAULT_USERNAME = "default_user"

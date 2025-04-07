@@ -8,18 +8,12 @@ import argparse
 import sys
 import os
 
-# Adjust sys.path to allow importing from parent directory (core, data)
-# This is a common pattern for simple project structures.
-# More robust solutions involve proper packaging (setup.py/pyproject.toml).
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.append(parent_dir)
-
-from core.models import Task, User
-from data.abstraction import DEFAULT_USERNAME
-from data.config import save_config, load_config
-from data.backend_factory import get_data_manager
-from data.abstraction import DataManager # For type hinting
+# Updated imports
+from motido.core.models import Task, User
+from motido.data.abstraction import DEFAULT_USERNAME
+from motido.data.config import load_config, save_config
+from motido.data.backend_factory import get_data_manager
+from motido.data.abstraction import DataManager # For type hinting
 
 def handle_init(args):
     """Handles the 'init' command."""
@@ -72,7 +66,7 @@ def handle_list(args, manager: DataManager):
         print("No tasks found.")
     else:
         print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
-        print("Hint: Run 'init' first if you haven't already.")
+        print("Hint: Run 'motido init' first if you haven't already.")
 
 
 def handle_view(args, manager: DataManager):
@@ -196,15 +190,28 @@ def main():
     if args.command == "init":
         args.func(args)
     else:
-        # For other commands, ensure config exists or prompt init
-        config_path = os.path.join(parent_dir, "config.json")
-        if not os.path.exists(config_path) and args.command != "init":
-             print("Error: Application not initialized. Please run 'python cli/main.py init' first.")
-             sys.exit(1)
+        # For other commands, check if initialization has happened
+        # (e.g., config file exists in the *package* data location)
+        # The get_data_manager will handle config loading and potential errors
+        # If the config *doesn't* exist, load_config returns a default,
+        # which might be okay or might indicate 'init' is needed.
+        # Let's refine the check slightly - get_data_manager handles the backend logic
+        # but the CLI should still guide the user if they haven't run init.
+        # We can check if the manager *could* load a user, or rely on manager initialization checks.
+        # For now, let's rely on get_data_manager() failing gracefully if needed,
+        # or subsequent commands failing if data isn't there.
+        # Removing the explicit config path check here as config location changed.
+        # The error messages within handlers should guide the user now.
+        # config_path = os.path.join(parent_dir, "config.json") # Old path
+        # if not os.path.exists(config_path) and args.command != "init":
+        #      print("Error: Application not initialized. Please run 'python cli/main.py init' first.") # Old message
+        #      sys.exit(1)
         try:
            args.func(args) # Call the appropriate handler function
         except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+            # Provide a more general error message here
+            print(f"An error occurred: {e}")
+            print("If you haven't initialized the application, try running 'motido init'.")
             sys.exit(1)
 
 

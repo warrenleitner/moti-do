@@ -11,10 +11,10 @@ CONFIG_FILENAME = "config.json"
 DEFAULT_BACKEND = "json" # Default to JSON if no config exists
 
 def get_config_path() -> str:
-    """Gets the absolute path to the configuration file."""
-    # Place config in the project root for simplicity in this example
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(project_root, CONFIG_FILENAME)
+    """Gets the absolute path to the configuration file within the package data dir."""
+    # Place config within the package's data directory
+    package_data_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(package_data_dir, CONFIG_FILENAME)
 
 def load_config() -> dict:
     """

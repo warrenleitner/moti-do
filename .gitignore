@@ -30,3 +30,4 @@ __pycache__
 *.pyd
 *.pyw
 *.pyz
+*.egg-info

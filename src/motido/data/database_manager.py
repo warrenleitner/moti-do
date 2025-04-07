@@ -7,10 +7,10 @@ import sqlite3
 import os
 from typing import List, Tuple
 from .abstraction import DataManager, DEFAULT_USERNAME
-from core.models import User, Task
+from motido.core.models import User, Task
+from .config import get_config_path # Needed to place DB file near config
 
-DATA_DIR = "data"
-DB_FILENAME = "data.db"
+DB_NAME = "motido.db"
 
 class DatabaseDataManager(DataManager):
     """Manages data persistence using an SQLite database."""
@@ -22,8 +22,8 @@ class DatabaseDataManager(DataManager):
     def _get_db_path(self) -> str:
         """Constructs the full path to the SQLite database file."""
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        data_dir_path = os.path.join(project_root, DATA_DIR)
-        return os.path.join(data_dir_path, DB_FILENAME)
+        data_dir_path = os.path.join(project_root, "data")
+        return os.path.join(data_dir_path, DB_NAME)
 
     def _ensure_data_dir_exists(self):
         """Creates the data directory if it doesn't exist."""
@@ -82,7 +82,7 @@ class DatabaseDataManager(DataManager):
     def load_user(self, username: str = DEFAULT_USERNAME) -> User | None:
         """Loads user data and their tasks from the database."""
         # Placeholder for future sync: Check for remote changes before loading
-        print(f"Loading user '{username}' from database...")
+        print(f"Loading user '{username}' from motido.database...")
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
@@ -108,7 +108,7 @@ class DatabaseDataManager(DataManager):
                 return user
 
         except sqlite3.Error as e:
-            print(f"Error loading user '{username}' from database: {e}")
+            print(f"Error loading user '{username}' from motido.database: {e}")
             return None
 
     def _ensure_user_exists(self, conn: sqlite3.Connection, username: str):
@@ -164,3 +164,19 @@ class DatabaseDataManager(DataManager):
     def backend_type(self) -> str:
         """Returns the backend type."""
         return "db"
+
+    def _connect(self):
+        """Connects to the SQLite database."""
+        # Place DB in the same directory as the config file (within the package data dir)
+        db_path = os.path.join(os.path.dirname(get_config_path()), DB_NAME)
+        print(f"Database path: {db_path}") # Debugging
+        self.conn = sqlite3.connect(db_path)
+        self.cursor = self.conn.cursor()
+
+    def _close(self):
+        """Closes the database connection."""
+        if self.conn:
+            self.conn.commit() # Ensure changes are saved before closing
+            self.conn.close()
+            self.conn = None
+            self.cursor = None
