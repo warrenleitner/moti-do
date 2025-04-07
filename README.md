@@ -30,12 +30,18 @@ This project uses Poetry for dependency management and packaging.
 
 **Development Tools:**
 
-*   Formatting: `black`, `isort` (Run: `poetry run black .` and `poetry run isort .`)
-*   Linting: `pylint` (Run: `poetry run lint`)
-*   Type Checking: `mypy` (Run: `poetry run typecheck`)
-*   Testing: `pytest` (Run: `poetry run test`)
-*   Coverage: `pytest-cov` (Run: `poetry run coverage`)
-*   Security: `safety` (Run: `poetry run security`)
+This project uses [Poe the Poet](https://github.com/nat-n/poethepoet) for task running, configured in `pyproject.toml`.
+
+Run tasks using `poetry run poe <task_name>`:
+
+*   **Format Code:** `poetry run poe format` (Applies Black and isort)
+*   **Check Formatting:** `poetry run poe format_check`
+*   **Lint Code:** `poetry run poe lint`
+*   **Type Check:** `poetry run poe typecheck`
+*   **Run Tests:** `poetry run poe test`
+*   **Check Test Coverage:** `poetry run poe coverage` (Fails if below 80%)
+*   **Check Security:** `poetry run poe security`
+*   **Run All Checks:** `poetry run poe check` (Runs `format_check`, `lint`, `typecheck`, `test`, `security`)
 
 ## License
 

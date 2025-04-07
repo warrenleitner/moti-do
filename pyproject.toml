@@ -29,6 +29,7 @@ isort = ">=6.0.1"    # Import sorter
 pylint = ">=3.2.5"    # Linter
 mypy = ">=1.10.1"     # Static type checker
 safety = ">=3.2.3"    # Security checker
+poethepoet = "^0.33.1"
 
 [tool.poetry.scripts]
 motido = "motido.cli.main:main"
@@ -95,4 +96,29 @@ show_missing = true
 skip_covered = true # Don't report on 100% covered files
 
 [tool.coverage.xml]
-output = "coverage.xml" # Output for CI/CD systems 
+output = "coverage.xml" # Output for CI/CD systems
+
+
+# -- Poe the Poet Task Runner Configuration --
+
+[tool.poe.tasks]
+# Define tasks directly with their commands
+format = [
+    { cmd = "black ." },
+    { cmd = "isort ." }
+]
+lint = "pylint src tests"
+typecheck = "mypy src tests"
+test = "pytest"
+coverage = "pytest --cov=motido --cov-report=term-missing --cov-fail-under=80"
+security = "safety scan"
+
+# Main check task still references the directly defined tasks
+check = [
+    "format",
+    "security",
+    "test",
+    "coverage",
+    "lint",
+    "typecheck",
+] 
