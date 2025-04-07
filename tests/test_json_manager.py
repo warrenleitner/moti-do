@@ -1,3 +1,7 @@
+"""Tests for the JsonDataManager class."""
+
+# pylint: disable=redefined-outer-name, protected-access
+
 import json
 import os
 from typing import Any, Dict, Tuple
@@ -30,6 +34,7 @@ def mock_config_path(mocker: Any) -> Tuple[str, str, str]:
 @pytest.fixture
 def manager(mock_config_path: Tuple[str, str, str]) -> JsonDataManager:
     """Provides a JsonDataManager instance with mocked config path."""
+    # pylint: disable=unused-argument
     # Initialization uses the mocked get_config_path via mock_config_path fixture
     return JsonDataManager()
 
@@ -126,7 +131,7 @@ def test_read_data_file_not_exists(
     manager: JsonDataManager, mocker: Any, mock_config_path: Tuple[str, str, str]
 ) -> None:
     """Test _read_data returns {} if the file doesn't exist."""
-    _, _, expected_data_file = mock_config_path
+    # pylint: disable=unused-argument
     mocker.patch("os.path.exists", return_value=False)
     mock_ensure_dir = mocker.patch.object(manager, "_ensure_data_dir_exists")
 
@@ -181,7 +186,7 @@ def test_read_data_json_decode_error(
     capsys: Any,
 ) -> None:
     """Test _read_data handles JSONDecodeError gracefully."""
-    _, _, expected_data_file = mock_config_path
+    # pylint: disable=unused-argument
     mocker.patch("os.path.exists", return_value=True)
     mock_ensure_dir = mocker.patch.object(manager, "_ensure_data_dir_exists")
     mocker.patch("builtins.open", mock_open(read_data="{invalid json"))
@@ -207,7 +212,7 @@ def test_read_data_io_error(
     capsys: Any,
 ) -> None:
     """Test _read_data handles IOError gracefully."""
-    _, _, expected_data_file = mock_config_path
+    # pylint: disable=unused-argument
     mocker.patch("os.path.exists", return_value=True)
     mock_ensure_dir = mocker.patch.object(manager, "_ensure_data_dir_exists")
     m_open = mock_open()
@@ -338,6 +343,7 @@ def test_load_user_deserialization_error(
 def test_load_user_default_username(
     manager: JsonDataManager,
     mocker: Any,
+    # pylint: disable=unused-argument
     sample_user: User,
     sample_user_data: Dict[str, Dict[str, Any]],
 ) -> None:
@@ -375,7 +381,10 @@ def test_save_user_new_user(
         "tasks": expected_tasks_data,
     }
     expected_final_data = initial_data.copy()
-    expected_final_data[sample_user.username] = expected_user_data  # type: ignore[assignment]
+    # Split assignment over multiple lines to avoid line too long
+    expected_final_data[sample_user.username] = (
+        expected_user_data  # type: ignore[assignment]
+    )
 
     mock_write.assert_called_once_with(expected_final_data)
 

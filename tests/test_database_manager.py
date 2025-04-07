@@ -1,4 +1,4 @@
-# tests/test_database_manager.py
+"""Tests for the DatabaseDataManager class."""
 
 import os
 import sqlite3
@@ -9,6 +9,8 @@ import pytest
 
 from motido.core.models import Task, User
 from motido.data.database_manager import DB_NAME, DEFAULT_USERNAME, DatabaseDataManager
+
+# pylint: disable=protected-access,redefined-outer-name,unused-argument
 
 # --- Fixtures ---
 
@@ -69,7 +71,8 @@ def sample_user_db() -> User:
 
 
 def test_init_sets_db_path(
-    manager: DatabaseDataManager, mock_db_path: Tuple[str, str]
+    manager: DatabaseDataManager,
+    mock_db_path: Tuple[str, str],
 ) -> None:
     """Test that __init__ sets the _db_path correctly using the mocked method."""
     expected_path, _ = mock_db_path
@@ -80,7 +83,9 @@ def test_init_sets_db_path(
 
 
 def test_ensure_data_dir_exists(
-    manager: DatabaseDataManager, mocker: Any, mock_db_path: Tuple[str, str]
+    manager: DatabaseDataManager,
+    mocker: Any,
+    mock_db_path: Tuple[str, str],
 ) -> None:
     """Test _ensure_data_dir_exists calls os.makedirs correctly."""
     mock_makedirs = mocker.patch("os.makedirs")
@@ -93,10 +98,12 @@ def test_ensure_data_dir_exists(
 
 
 def test_get_connection_success(
-    manager: DatabaseDataManager, mocker: Any, mock_db_path: Tuple[str, str]
+    manager: DatabaseDataManager,
+    mocker: Any,
+    mock_db_path: Tuple[str, str],
 ) -> None:
     """Test _get_connection establishes connection and sets row factory."""
-    expected_path, _ = mock_db_path  # Get path from other fixture
+    db_path, _ = mock_db_path  # Get path from other fixture
     # Mock dependencies needed ONLY for the real _get_connection
     mock_ensure_dir = mocker.patch.object(
         manager, "_ensure_data_dir_exists", autospec=True
@@ -109,17 +116,18 @@ def test_get_connection_success(
     conn = manager._get_connection()
 
     mock_ensure_dir.assert_called_once()
-    mock_connect.assert_called_once_with(expected_path, isolation_level=None)
+    mock_connect.assert_called_once_with(db_path, isolation_level=None)
     assert conn == mock_conn_instance
     # Check that row_factory was set on the mocked instance
     assert mock_conn_instance.row_factory == sqlite3.Row
 
 
 def test_get_connection_error(
-    manager: DatabaseDataManager, mocker: Any, mock_db_path: Tuple[str, str]
+    manager: DatabaseDataManager,
+    mocker: Any,
+    mock_db_path: Tuple[str, str],
 ) -> None:
     """Test _get_connection raises error on connection failure."""
-    expected_path, _ = mock_db_path
     # Mock dependencies needed ONLY for the real _get_connection
     mocker.patch.object(manager, "_ensure_data_dir_exists", autospec=True)
     mocker.patch("sqlite3.connect", side_effect=sqlite3.Error("Connection failed"))
@@ -133,12 +141,14 @@ def test_get_connection_error(
 
 
 def test_create_tables(
-    manager: DatabaseDataManager, mock_conn_fixture: Tuple[Any, Any, Any]
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
 ) -> None:
     """Test _create_tables executes correct SQL using mocked connection."""
     _, connection, cursor = mock_conn_fixture  # Get mocked connection/cursor
 
-    manager._create_tables(connection)  # Call the method directly with mock connection
+    # Call the method directly with mock connection
+    manager._create_tables(connection)
 
     expected_calls = [
         call(
@@ -165,7 +175,9 @@ def test_create_tables(
 
 
 def test_create_tables_error(
-    manager: DatabaseDataManager, mock_conn_fixture: Tuple[Any, Any, Any], capsys: Any
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
+    capsys: Any,
 ) -> None:
     """Test _create_tables handles sqlite3.Error using mocked connection."""
     _, connection, cursor = mock_conn_fixture
@@ -179,7 +191,9 @@ def test_create_tables_error(
 
 
 def test_initialize_success(
-    manager: DatabaseDataManager, mocker: Any, mock_conn_fixture: Tuple[Any, Any, Any]
+    manager: DatabaseDataManager,
+    mocker: Any,
+    mock_conn_fixture: Tuple[Any, Any, Any],
 ) -> None:
     """Test initialize calls _get_connection (mocked) and _create_tables."""
     # mock_conn_fixture patches _get_connection globally for this test
@@ -191,12 +205,15 @@ def test_initialize_success(
 
     manager.initialize()
 
-    mock_get_connection.assert_called_once()  # Check the mocked _get_connection was called
+    # Check the mocked _get_connection was called
+    mock_get_connection.assert_called_once()
     mock_create_tables.assert_called_once_with(mock_conn_instance)
 
 
 def test_initialize_connection_error(
-    manager: DatabaseDataManager, mocker: Any, capsys: Any
+    manager: DatabaseDataManager,
+    mocker: Any,
+    capsys: Any,
 ) -> None:
     """Test initialize handles errors when _get_connection (mocked) fails."""
     # Explicitly mock _get_connection *within this test* to raise error
@@ -211,9 +228,11 @@ def test_initialize_connection_error(
     manager.initialize()
 
     manager._get_connection.assert_called_once()  # type: ignore [attr-defined]
-    mock_create_tables.assert_not_called()  # create_tables shouldn't be called if conn fails
+    # create_tables shouldn't be called if conn fails
+    mock_create_tables.assert_not_called()
     captured = capsys.readouterr()
-    assert "Database initialization failed: Initial connection failed" in captured.out
+    error_msg = "Database initialization failed: Initial connection failed"
+    assert error_msg in captured.out
 
 
 def test_load_user_found(
@@ -222,7 +241,8 @@ def test_load_user_found(
     sample_user_db: User,
 ) -> None:
     """Test loading a user who exists with tasks using mocked connection."""
-    _, connection, cursor = mock_conn_fixture
+    # Use only the cursor from the fixture, connection not needed
+    _, _, cursor = mock_conn_fixture
     username = sample_user_db.username
 
     cursor.fetchone.return_value = {"username": username}
@@ -248,7 +268,8 @@ def test_load_user_found(
 
 
 def test_load_user_not_found(
-    manager: DatabaseDataManager, mock_conn_fixture: Tuple[Any, Any, Any]
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
 ) -> None:
     """Test loading a user who does not exist using mocked connection."""
     _, _, cursor = mock_conn_fixture
@@ -266,7 +287,8 @@ def test_load_user_not_found(
 
 
 def test_load_user_no_tasks(
-    manager: DatabaseDataManager, mock_conn_fixture: Tuple[Any, Any, Any]
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
 ) -> None:
     """Test loading a user who exists but has no tasks using mocked connection."""
     _, _, cursor = mock_conn_fixture
@@ -289,7 +311,9 @@ def test_load_user_no_tasks(
 
 
 def test_load_user_db_error(
-    manager: DatabaseDataManager, mock_conn_fixture: Tuple[Any, Any, Any], capsys: Any
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
+    capsys: Any,
 ) -> None:
     """Test load_user handles database errors during query using mocked connection."""
     _, _, cursor = mock_conn_fixture
@@ -300,14 +324,15 @@ def test_load_user_db_error(
 
     assert loaded_user is None
     captured = capsys.readouterr()
-    assert (
-        f"Error loading user '{username}' from motido.database: Query failed"
-        in captured.out
+    error_msg = (
+        f"Error loading user '{username}' from motido.database: " f"Query failed"
     )
+    assert error_msg in captured.out
 
 
 def test_ensure_user_exists(
-    manager: DatabaseDataManager, mock_conn_fixture: Tuple[Any, Any, Any]
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
 ) -> None:
     """Test _ensure_user_exists executes correct SQL using mocked connection."""
     _, connection, cursor = mock_conn_fixture
@@ -322,7 +347,9 @@ def test_ensure_user_exists(
 
 
 def test_ensure_user_exists_db_error(
-    manager: DatabaseDataManager, mock_conn_fixture: Tuple[Any, Any, Any], capsys: Any
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
+    capsys: Any,
 ) -> None:
     """Test _ensure_user_exists handles database errors using mocked connection."""
     _, connection, cursor = mock_conn_fixture
@@ -368,7 +395,9 @@ def test_save_user_new(
 
 
 def test_save_user_no_tasks(
-    manager: DatabaseDataManager, mocker: Any, mock_conn_fixture: Tuple[Any, Any, Any]
+    manager: DatabaseDataManager,
+    mocker: Any,
+    mock_conn_fixture: Tuple[Any, Any, Any],
 ) -> None:
     """Test saving a user with no tasks using mocked connection."""
     _, connection, cursor = mock_conn_fixture
@@ -409,10 +438,10 @@ def test_save_user_db_error_on_delete(
     cursor.execute.assert_called_once()
     cursor.executemany.assert_not_called()
     captured = capsys.readouterr()
-    assert (
-        f"Error saving user '{sample_user_db.username}' to database: Delete failed"
-        in captured.out
-    )
+    db_error = "Delete failed"
+    user = sample_user_db.username
+    error_msg = f"Error saving user '{user}' to database: {db_error}"
+    assert error_msg in captured.out
 
 
 def test_save_user_db_error_on_insert(
@@ -438,10 +467,10 @@ def test_save_user_db_error_on_insert(
     assert cursor.execute.call_count == 1  # Just the DELETE call
     assert cursor.executemany.call_count == 1  # INSERT is attempted once
     captured = capsys.readouterr()
-    assert (
-        f"Error saving user '{sample_user_db.username}' to database: Insert failed"
-        in captured.out
-    )
+    db_error = "Insert failed"
+    user = sample_user_db.username
+    error_msg = f"Error saving user '{user}' to database: {db_error}"
+    assert error_msg in captured.out
 
 
 def test_backend_type(manager: DatabaseDataManager) -> None:
@@ -449,6 +478,7 @@ def test_backend_type(manager: DatabaseDataManager) -> None:
     assert manager.backend_type() == "db"
 
 
-# Note: _connect and _close methods seem unused by the main logic (_get_connection is used).
-# If they are indeed unused, they could be removed from the source code.
-# We are not testing them here as they aren't part of the current public interface usage.
+# Note: _connect and _close methods seem unused by the main logic
+# (_get_connection is used). If they are indeed unused, they could be removed from the
+# source code. We are not testing them here as they aren't part of the current public
+# interface usage.

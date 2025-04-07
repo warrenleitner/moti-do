@@ -87,6 +87,8 @@ def test_save_user_update_existing(
         "username": updated_user.username,
         "tasks": expected_tasks_data,
     }
-    expected_final_data = {updated_user.username: expected_user_data}  # type: ignore[assignment]
+    expected_final_data = {   # type: ignore[assignment]
+        updated_user.username: expected_user_data
+    }
 
     mock_write.assert_called_once_with(expected_final_data)

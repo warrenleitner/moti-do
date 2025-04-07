@@ -1,3 +1,14 @@
+"""Tests for the backend factory module.
+
+This module contains tests for the get_data_manager factory function,
+which creates the appropriate DataManager instance based on configuration.
+The tests verify that:
+- The correct manager type is returned for each backend configuration
+- The configuration is properly loaded
+- Appropriate messages are printed
+- Invalid configurations raise appropriate errors
+"""
+
 from typing import Any
 from unittest.mock import MagicMock, patch
 

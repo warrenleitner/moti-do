@@ -28,7 +28,9 @@ def mock_config_path(mocker: Any) -> Tuple[str, str, str]:
 
 @pytest.fixture
 def manager(
-    mock_config_path: Tuple[str, str, str],  # pylint: disable=redefined-outer-name, unused-argument
+    mock_config_path: Tuple[  # pylint: disable=redefined-outer-name, unused-argument
+        str, str, str
+    ],
 ) -> JsonDataManager:
     """Provides a JsonDataManager instance with mocked config path."""
     # Initialization uses the mocked get_config_path via mock_config_path fixture

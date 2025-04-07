@@ -17,6 +17,7 @@ from motido.data.abstraction import DEFAULT_USERNAME, DataManager
 
 # Helper to create mock argparse Namespace
 def create_mock_args(**kwargs: Any) -> argparse.Namespace:
+    """Create a mock argparse Namespace with given keyword arguments."""
     return argparse.Namespace(**kwargs)
 
 
@@ -390,7 +391,8 @@ def test_handle_view_success(mocker: Any) -> None:
     #     call(f"Description: {mock_task.description}"),
     #     call("-" * 30),
     # ]
-    # We need to check calls specifically because the order matters and other prints might occur
+    # We need to check calls specifically because the order matters and other prints
+    # might occur.
     # Check the specific calls related to displaying the task
     calls_to_check = [
         call("-" * 30),
