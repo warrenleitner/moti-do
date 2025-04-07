@@ -131,6 +131,44 @@ def handle_edit(args, manager: DataManager):
         sys.exit(1)
 
 
+def handle_delete(args, manager: DataManager):
+    """Handles the 'delete' command."""
+    if not args.id:
+        # This check might be redundant if argparse requires it, but good practice.
+        print("Error: Please provide a task ID prefix using --id.")
+        sys.exit(1)
+
+    print(f"Deleting task with ID prefix: '{args.id}'...")
+    user = manager.load_user(DEFAULT_USERNAME)
+    if not user:
+        # Consistent user not found message
+        print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
+        sys.exit(1)
+
+    try:
+        # Assuming user.remove_task returns True if deleted, False if not found
+        # and raises ValueError for ambiguity (delegated from find_task_by_id)
+        task_deleted = user.remove_task(args.id)
+        if task_deleted:
+            try:
+                manager.save_user(user)
+                print(f"Task '{args.id}' deleted successfully.")
+            except Exception as e:
+                print(f"Error saving after deleting task: {e}")
+                sys.exit(1)
+        else:
+            print(f"Error: Task with ID prefix '{args.id}' not found.")
+            # Exiting here because the task wasn't found to be deleted
+            sys.exit(1)
+
+    except ValueError as e: # Handles ambiguous ID prefix from underlying find
+        print(f"Error: {e}")
+        sys.exit(1)
+    except Exception as e: # Catch other unexpected errors during removal logic
+        print(f"An unexpected error occurred during deletion: {e}")
+        sys.exit(1)
+
+
 def main():
     """Main function to parse arguments and dispatch commands."""
     parser = argparse.ArgumentParser(description="Moti-Do: Task Management CLI")
@@ -181,6 +219,15 @@ def main():
         help="The new description for the task.",
     )
     parser_edit.set_defaults(func=lambda args: handle_edit(args, get_data_manager()))
+
+    # --- Delete Command ---
+    parser_delete = subparsers.add_parser("delete", help="Delete a task by ID.")
+    parser_delete.add_argument(
+        "--id",
+        required=True,
+        help="The full or unique partial ID of the task to delete.",
+    )
+    parser_delete.set_defaults(func=lambda args: handle_delete(args, get_data_manager()))
 
     # --- Parse Arguments ---
     args = parser.parse_args()
