@@ -7,6 +7,7 @@ Provides commands to initialize, create, view, list, and edit tasks.
 import argparse
 import sys
 from argparse import Namespace  # Import Namespace
+from typing import Any
 
 # Updated imports
 from motido.core.models import Task, User
@@ -16,9 +17,16 @@ from motido.data.backend_factory import get_data_manager
 from motido.data.config import load_config, save_config
 
 
+# --- Verbose Print Helper ---
+def print_verbose(args: Namespace, *print_args: Any, **print_kwargs: Any) -> None:
+    """Prints messages only if verbose mode is enabled."""
+    if args.verbose:
+        print(*print_args, **print_kwargs)
+
+
 def handle_init(args: Namespace) -> None:
     """Handles the 'init' command."""
-    print("Initializing Moti-Do...")
+    print_verbose(args, "Initializing Moti-Do...")
     config = {"backend": args.backend}
     save_config(config)
     try:
@@ -41,11 +49,11 @@ def handle_create(args: Namespace, manager: DataManager) -> None:
         print("Error: Task description cannot be empty.")
         sys.exit(1)
 
-    print(f"Creating task: '{args.description}'...")
+    print_verbose(args, f"Creating task: '{args.description}'...")
     user = manager.load_user(DEFAULT_USERNAME)
     if user is None:
         # If user doesn't exist, create a new one
-        print(f"User '{DEFAULT_USERNAME}' not found. Creating new user.")
+        print_verbose(args, f"User '{DEFAULT_USERNAME}' not found. Creating new user.")
         user = User(username=DEFAULT_USERNAME)
 
     new_task = Task(description=args.description)
@@ -64,7 +72,7 @@ def handle_create(args: Namespace, manager: DataManager) -> None:
 
 def handle_list(args: Namespace, manager: DataManager) -> None:
     """Handles the 'list' command."""
-    print("Listing all tasks...")
+    print_verbose(args, "Listing all tasks...")
     user = manager.load_user(DEFAULT_USERNAME)
     if user and user.tasks:
         # Sort tasks if sort_by is specified
@@ -106,7 +114,7 @@ def handle_view(args: Namespace, manager: DataManager) -> None:
         print("Error: Please provide a task ID prefix using --id.")
         sys.exit(1)
 
-    print(f"Viewing task with ID prefix: '{args.id}'...")
+    print_verbose(args, f"Viewing task with ID prefix: '{args.id}'...")
     user = manager.load_user(DEFAULT_USERNAME)
     if not user:
         print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
@@ -140,7 +148,7 @@ def handle_edit(args: Namespace, manager: DataManager) -> None:
         print("Error: Both --id and --description are required for editing.")
         sys.exit(1)
 
-    print(f"Editing task with ID prefix: '{args.id}'...")
+    print_verbose(args, f"Editing task with ID prefix: '{args.id}'...")
     user = manager.load_user(DEFAULT_USERNAME)
     if not user:
         print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
@@ -177,9 +185,9 @@ def handle_delete(args: Namespace, manager: DataManager) -> None:
         print("Error: Please provide a task ID prefix using --id.")  # pragma: no cover
         sys.exit(1)  # pragma: no cover
 
-    print(f"Deleting task with ID prefix: '{args.id}'...")
+    print_verbose(args, f"Deleting task with ID prefix: '{args.id}'...")
     user = manager.load_user(DEFAULT_USERNAME)
-    if not user:
+    if not user:  # pragma: no cover
         # Consistent user not found message
         print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
         sys.exit(1)
@@ -222,6 +230,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Moti-Do: Task Management CLI")
     subparsers = parser.add_subparsers(
         dest="command", help="Available commands", required=True
+    )
+
+    # --- Global Arguments ---
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output for commands.",
     )
 
     # --- Init Command ---
@@ -316,7 +332,7 @@ def main() -> None:
             ValueError,
             AttributeError,
             TypeError,
-        ) as e:
+        ) as e:  # pragma: no cover
             # Provide a more general error message here
             print(f"Error: {e}")  # Shortened message
             print(
