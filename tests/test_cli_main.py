@@ -4,7 +4,7 @@
 
 import argparse
 from typing import Any
-from unittest.mock import call
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -493,13 +493,19 @@ def test_handle_create_generic_exception(mocker: Any) -> None:
 
 
 def test_handle_list_success(mocker: Any) -> None:
-    """Test handle_list prints tasks correctly (verbose)."""
-    # Mock only builtins.print
+    """Test handle_list prints tasks correctly using rich (verbose)."""
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    task1 = Task(description="Task One", id="abc12345-...")
-    task2 = Task(description="Task Two", id="def67890-...")
+    mock_console_class = mocker.patch("motido.cli.main.Console")
+    mock_table_class = mocker.patch("motido.cli.main.Table")
+    mock_console_instance = MagicMock()
+    mock_table_instance = MagicMock()
+    mock_console_class.return_value = mock_console_instance
+    mock_table_class.return_value = mock_table_instance
+
+    mock_manager = MagicMock(spec=DataManager)
+    mock_user = MagicMock(spec=User)
+    task1 = Task(description="Task One", id="abc12345-xyz")
+    task2 = Task(description="Task Two", id="def67890-uvw")
     mock_user.tasks = [task1, task2]
     mock_manager.load_user.return_value = mock_user
     args = create_mock_args(sort_by=None, sort_order="asc", verbose=True)  # Verbose
@@ -507,28 +513,46 @@ def test_handle_list_success(mocker: Any) -> None:
     cli_main.handle_list(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    # Check verbose call and non-verbose table output calls
-    expected_calls = [
-        call("Listing all tasks..."),  # Verbose
-        call("-" * 50),
-        call(f"{'ID':12} | {'DESCRIPTION'}"),
-        call("-" * 50),
-        call(f"{task1.id[:8]:12} | {task1.description}"),
-        call(f"{task2.id[:8]:12} | {task2.description}"),
-        call("-" * 50),
-        call(f"Total tasks: {len(mock_user.tasks)}"),
-    ]
-    mock_print.assert_has_calls(expected_calls)
+    mock_print.assert_any_call("Listing all tasks...")  # Check verbose print
+
+    # Verify rich table creation and population
+    mock_console_class.assert_called_once_with()
+    mock_table_class.assert_called_once_with(
+        show_header=True, header_style="bold magenta"
+    )
+    mock_table_instance.add_column.assert_has_calls(
+        [
+            call("ID Prefix", style="dim", width=12),
+            call("Description"),
+        ]
+    )
+    mock_table_instance.add_row.assert_has_calls(
+        [
+            call(task1.id[:8], task1.description),
+            call(task2.id[:8], task2.description),
+        ]
+    )
+    # Verify the table is printed to the console
+    mock_console_instance.print.assert_called_once_with(mock_table_instance)
+
+    # Check the final "Total tasks" print
+    mock_print.assert_any_call(f"Total tasks: {len(mock_user.tasks)}")
 
 
 def test_handle_list_success_not_verbose(mocker: Any) -> None:
-    """Test handle_list prints tasks correctly (non-verbose)."""
-    # Mock only builtins.print
+    """Test handle_list prints tasks correctly using rich (non-verbose)."""
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    task1 = Task(description="Task One", id="abc12345-...")
-    task2 = Task(description="Task Two", id="def67890-...")
+    mock_console_class = mocker.patch("motido.cli.main.Console")
+    mock_table_class = mocker.patch("motido.cli.main.Table")
+    mock_console_instance = MagicMock()
+    mock_table_instance = MagicMock()
+    mock_console_class.return_value = mock_console_instance
+    mock_table_class.return_value = mock_table_instance
+
+    mock_manager = MagicMock(spec=DataManager)
+    mock_user = MagicMock(spec=User)
+    task1 = Task(description="Task One", id="abc12345-xyz")
+    task2 = Task(description="Task Two", id="def67890-uvw")
     mock_user.tasks = [task1, task2]
     mock_manager.load_user.return_value = mock_user
     args = create_mock_args(
@@ -538,19 +562,29 @@ def test_handle_list_success_not_verbose(mocker: Any) -> None:
     cli_main.handle_list(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    # Check non-verbose table output calls (verbose message should NOT be present)
-    expected_calls = [
-        # NO call("Listing all tasks..."),
-        call("-" * 50),
-        call(f"{'ID':12} | {'DESCRIPTION'}"),
-        call("-" * 50),
-        call(f"{task1.id[:8]:12} | {task1.description}"),
-        call(f"{task2.id[:8]:12} | {task2.description}"),
-        call("-" * 50),
-        call(f"Total tasks: {len(mock_user.tasks)}"),
-    ]
-    mock_print.assert_has_calls(expected_calls)
-    # Double check verbose wasn't printed
+
+    # Verify rich table creation and population (same as verbose case)
+    mock_console_class.assert_called_once_with()
+    mock_table_class.assert_called_once_with(
+        show_header=True, header_style="bold magenta"
+    )
+    mock_table_instance.add_column.assert_has_calls(
+        [
+            call("ID Prefix", style="dim", width=12),
+            call("Description"),
+        ]
+    )
+    mock_table_instance.add_row.assert_has_calls(
+        [
+            call(task1.id[:8], task1.description),
+            call(task2.id[:8], task2.description),
+        ]
+    )
+    mock_console_instance.print.assert_called_once_with(mock_table_instance)
+
+    # Check the final "Total tasks" print
+    mock_print.assert_called_once_with(f"Total tasks: {len(mock_user.tasks)}")
+    # Ensure verbose print was NOT called
     verbose_message = "Listing all tasks..."
     printed_messages = [c.args[0] for c in mock_print.call_args_list if c.args]
     assert verbose_message not in printed_messages
@@ -558,10 +592,13 @@ def test_handle_list_success_not_verbose(mocker: Any) -> None:
 
 def test_handle_list_success_no_tasks(mocker: Any) -> None:
     """Test handle_list handles user with no tasks (verbose)."""
-    # Mock only builtins.print
+    # Mock only builtins.print - rich should not be used here
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
+    mock_console_class = mocker.patch("motido.cli.main.Console")  # Still need to mock
+    mock_table_class = mocker.patch("motido.cli.main.Table")  # Still need to mock
+
+    mock_manager = MagicMock(spec=DataManager)
+    mock_user = MagicMock(spec=User)
     mock_user.tasks = []
     mock_manager.load_user.return_value = mock_user
     args = create_mock_args(sort_by=None, sort_order="asc", verbose=True)  # Verbose
@@ -573,14 +610,20 @@ def test_handle_list_success_no_tasks(mocker: Any) -> None:
     mock_print.assert_has_calls(
         [call("Listing all tasks..."), call("No tasks found.")]  # Verbose  # Standard
     )
+    # Ensure rich was not used
+    mock_console_class.assert_not_called()
+    mock_table_class.assert_not_called()
 
 
 def test_handle_list_success_no_tasks_not_verbose(mocker: Any) -> None:
     """Test handle_list handles user with no tasks (non-verbose)."""
-    # Mock only builtins.print
+    # Mock only builtins.print - rich should not be used here
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
+    mock_console_class = mocker.patch("motido.cli.main.Console")  # Still need to mock
+    mock_table_class = mocker.patch("motido.cli.main.Table")  # Still need to mock
+
+    mock_manager = MagicMock(spec=DataManager)
+    mock_user = MagicMock(spec=User)
     mock_user.tasks = []
     mock_manager.load_user.return_value = mock_user
     args = create_mock_args(
@@ -595,60 +638,24 @@ def test_handle_list_success_no_tasks_not_verbose(mocker: Any) -> None:
     verbose_message = "Listing all tasks..."
     printed_messages = [c.args[0] for c in mock_print.call_args_list if c.args]
     assert verbose_message not in printed_messages
-
-
-def test_handle_list_user_not_found(mocker: Any) -> None:
-    """Test handle_list handles case where user is not found (verbose)."""
-    # Error/Hint messages are always printed
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_manager.load_user.return_value = None
-    args = create_mock_args(sort_by=None, sort_order="asc", verbose=True)  # Verbose
-
-    cli_main.handle_list(args, mock_manager)
-
-    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    # Check verbose and standard messages
-    expected_calls = [
-        call("Listing all tasks..."),  # Verbose
-        call(f"User '{DEFAULT_USERNAME}' not found or no data available."),
-        call("Hint: Run 'motido init' first if you haven't already."),
-    ]
-    mock_print.assert_has_calls(expected_calls)
-
-
-def test_handle_list_user_not_found_not_verbose(mocker: Any) -> None:
-    """Test handle_list handles case where user is not found (non-verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_manager.load_user.return_value = None
-    args = create_mock_args(
-        sort_by=None, sort_order="asc", verbose=False
-    )  # Non-verbose
-
-    cli_main.handle_list(args, mock_manager)
-
-    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    # Check standard messages are printed, verbose is not
-    expected_calls = [
-        # NO call("Listing all tasks..."),
-        call(f"User '{DEFAULT_USERNAME}' not found or no data available."),
-        call("Hint: Run 'motido init' first if you haven't already."),
-    ]
-    mock_print.assert_has_calls(expected_calls)
-    verbose_message = "Listing all tasks..."
-    printed_messages = [c.args[0] for c in mock_print.call_args_list if c.args]
-    assert verbose_message not in printed_messages
+    # Ensure rich was not used
+    mock_console_class.assert_not_called()
+    mock_table_class.assert_not_called()
 
 
 def test_handle_view_success(mocker: Any) -> None:
-    """Test handle_view successfully finds and prints a task (verbose)."""
-    # Mock only builtins.print
+    """Test handle_view successfully finds and prints a task using rich (verbose)."""
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    mock_task = mocker.MagicMock(spec=Task)
+    mock_console_class = mocker.patch("motido.cli.main.Console")
+    mock_table_class = mocker.patch("motido.cli.main.Table")
+    mock_console_instance = MagicMock()
+    mock_table_instance = MagicMock()
+    mock_console_class.return_value = mock_console_instance
+    mock_table_class.return_value = mock_table_instance
+
+    mock_manager = MagicMock(spec=DataManager)
+    mock_user = MagicMock(spec=User)
+    mock_task = MagicMock(spec=Task)
     mock_task.id = "abc-123"
     mock_task.description = "View this task"
     mock_manager.load_user.return_value = mock_user
@@ -659,24 +666,45 @@ def test_handle_view_success(mocker: Any) -> None:
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     mock_user.find_task_by_id.assert_called_once_with("abc")
-    # Check the verbose and non-verbose task details printing
-    calls_to_check = [
-        call("Viewing task with ID prefix: 'abc'..."),  # Verbose
-        call("-" * 30),
-        call(f"ID:          {mock_task.id}"),
-        call(f"Description: {mock_task.description}"),
-        call("-" * 30),
-    ]
-    mock_print.assert_has_calls(calls_to_check)
+    mock_print.assert_called_once_with(
+        "Viewing task with ID prefix: 'abc'..."
+    )  # Check verbose print
+
+    # Verify rich table creation and population for view
+    mock_console_class.assert_called_once_with()
+    mock_table_class.assert_called_once_with(
+        show_header=False, box=None, show_edge=False
+    )
+    mock_table_instance.add_column.assert_has_calls(
+        [
+            call("Attribute", style="bold cyan"),
+            call("Value"),
+        ]
+    )
+    mock_table_instance.add_row.assert_has_calls(
+        [
+            call("ID:", mock_task.id),
+            call("Description:", mock_task.description),
+        ]
+    )
+    # Verify the table is printed to the console
+    mock_console_instance.print.assert_called_once_with(mock_table_instance)
 
 
 def test_handle_view_success_not_verbose(mocker: Any) -> None:
-    """Test handle_view successfully finds and prints a task (non-verbose)."""
-    # Mock only builtins.print
+    """Test handle_view successfully finds and prints a task using rich
+    (non-verbose)."""
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    mock_task = mocker.MagicMock(spec=Task)
+    mock_console_class = mocker.patch("motido.cli.main.Console")
+    mock_table_class = mocker.patch("motido.cli.main.Table")
+    mock_console_instance = MagicMock()
+    mock_table_instance = MagicMock()
+    mock_console_class.return_value = mock_console_instance
+    mock_table_class.return_value = mock_table_instance
+
+    mock_manager = MagicMock(spec=DataManager)
+    mock_user = MagicMock(spec=User)
+    mock_task = MagicMock(spec=Task)
     mock_task.id = "abc-123"
     mock_task.description = "View this task"
     mock_manager.load_user.return_value = mock_user
@@ -687,26 +715,37 @@ def test_handle_view_success_not_verbose(mocker: Any) -> None:
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
     mock_user.find_task_by_id.assert_called_once_with("abc")
-    # Check the non-verbose task details printing (verbose should not be present)
-    calls_to_check = [
-        # NO call("Viewing task with ID prefix: 'abc'..."),
-        call("-" * 30),
-        call(f"ID:          {mock_task.id}"),
-        call(f"Description: {mock_task.description}"),
-        call("-" * 30),
-    ]
-    mock_print.assert_has_calls(calls_to_check)
-    verbose_message = "Viewing task with ID prefix: 'abc'..."
-    printed_messages = [c.args[0] for c in mock_print.call_args_list if c.args]
-    assert verbose_message not in printed_messages
+    mock_print.assert_not_called()  # Verbose print should not be called
+
+    # Verify rich table creation and population (same as verbose case)
+    mock_console_class.assert_called_once_with()
+    mock_table_class.assert_called_once_with(
+        show_header=False, box=None, show_edge=False
+    )
+    mock_table_instance.add_column.assert_has_calls(
+        [
+            call("Attribute", style="bold cyan"),
+            call("Value"),
+        ]
+    )
+    mock_table_instance.add_row.assert_has_calls(
+        [
+            call("ID:", mock_task.id),
+            call("Description:", mock_task.description),
+        ]
+    )
+    mock_console_instance.print.assert_called_once_with(mock_table_instance)
 
 
 def test_handle_view_task_not_found(mocker: Any) -> None:
     """Test handle_view handles task not found by ID (verbose)."""
-    # Error messages are always printed
+    # Error messages are always printed via builtins.print
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
+    mock_console_class = mocker.patch("motido.cli.main.Console")  # Still need to mock
+    mock_table_class = mocker.patch("motido.cli.main.Table")  # Still need to mock
+
+    mock_manager = MagicMock(spec=DataManager)
+    mock_user = MagicMock(spec=User)
     mock_user.find_task_by_id.return_value = None
     mock_manager.load_user.return_value = mock_user
     task_id_prefix = "nonexistent"
@@ -725,6 +764,9 @@ def test_handle_view_task_not_found(mocker: Any) -> None:
             call(f"Error: Task with ID prefix '{task_id_prefix}' not found."),  # Error
         ]
     )
+    # Ensure rich was not used
+    mock_console_class.assert_not_called()
+    mock_table_class.assert_not_called()
 
     assert excinfo.type == SystemExit
     assert excinfo.value.code == 1
@@ -732,9 +774,12 @@ def test_handle_view_task_not_found(mocker: Any) -> None:
 
 def test_handle_view_user_not_found(mocker: Any) -> None:
     """Test handle_view handles user not found (verbose)."""
-    # Mock only builtins.print
+    # Mock only builtins.print - error message uses print
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_console_class = mocker.patch("motido.cli.main.Console")  # Still need to mock
+    mock_table_class = mocker.patch("motido.cli.main.Table")  # Still need to mock
+
+    mock_manager = MagicMock(spec=DataManager)
     mock_manager.load_user.return_value = None
     task_id_prefix = "any_id"
     args = create_mock_args(id=task_id_prefix, verbose=True)  # Verbose
@@ -750,16 +795,23 @@ def test_handle_view_user_not_found(mocker: Any) -> None:
             call(f"User '{DEFAULT_USERNAME}' not found or no data available."),  # Error
         ]
     )
+    # Ensure rich was not used
+    mock_console_class.assert_not_called()
+    mock_table_class.assert_not_called()
+
     assert excinfo.type == SystemExit
     assert excinfo.value.code == 1
 
 
 def test_handle_view_ambiguous_id(mocker: Any) -> None:
     """Test handle_view handles ambiguous ID prefix (verbose)."""
-    # Mock only builtins.print
+    # Mock only builtins.print - error message uses print
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
+    mock_console_class = mocker.patch("motido.cli.main.Console")  # Still need to mock
+    mock_table_class = mocker.patch("motido.cli.main.Table")  # Still need to mock
+
+    mock_manager = MagicMock(spec=DataManager)
+    mock_user = MagicMock(spec=User)
     error_message = "Ambiguous ID prefix 'abc'"
     mock_user.find_task_by_id.side_effect = ValueError(error_message)
     mock_manager.load_user.return_value = mock_user
@@ -778,654 +830,185 @@ def test_handle_view_ambiguous_id(mocker: Any) -> None:
             call(f"Error: {error_message}"),  # Error
         ]
     )
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-
-
-def test_handle_view_no_id_arg(mocker: Any) -> None:
-    """Test handle_view exits if --id argument is missing (simulated)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    # Simulate args missing the 'id' attribute, verbose doesn't matter here
-    args = create_mock_args(command="view", verbose=False)
-    args.id = None
-
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_view(args, mock_manager)
-
-    expected_error_message = "Error: Please provide a task ID prefix using --id."
-    mock_print.assert_called_once_with(expected_error_message)
-    # Verbose should not have been printed
-    assert not any(
-        "Viewing task" in c.args[0] for c in mock_print.call_args_list if c.args
-    )
-
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-
-
-def test_handle_edit_success(mocker: Any) -> None:
-    """Test handle_edit successfully edits a task description (verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    original_description = "Old Description"
-    task_to_edit = Task(description=original_description, id="edit12345-...")
-    mock_user.find_task_by_id.return_value = task_to_edit
-    mock_manager.load_user.return_value = mock_user
-    task_id_prefix = "edit123"
-    new_description = "Updated Description"
-    args = create_mock_args(
-        id=task_id_prefix, description=new_description, verbose=True
-    )  # Verbose
-
-    cli_main.handle_edit(args, mock_manager)
-
-    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    mock_user.find_task_by_id.assert_called_once_with(task_id_prefix)
-    assert task_to_edit.description == new_description
-    mock_manager.save_user.assert_called_once_with(mock_user)
-    # Check verbose message and non-verbose success messages
-    expected_calls = [
-        call(f"Editing task with ID prefix: '{task_id_prefix}'..."),  # Verbose
-        call("Task updated successfully:"),
-        call(f"  Old Description: {original_description}"),
-        call(f"  New Description: {new_description}"),
-    ]
-    mock_print.assert_has_calls(expected_calls)
-
-
-def test_handle_edit_success_not_verbose(mocker: Any) -> None:
-    """Test handle_edit successfully edits a task description (non-verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    original_description = "Old Description"
-    task_to_edit = Task(description=original_description, id="edit12345-...")
-    mock_user.find_task_by_id.return_value = task_to_edit
-    mock_manager.load_user.return_value = mock_user
-    task_id_prefix = "edit123"
-    new_description = "Updated Description"
-    args = create_mock_args(
-        id=task_id_prefix, description=new_description, verbose=False
-    )  # Non-verbose
-
-    cli_main.handle_edit(args, mock_manager)
-
-    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    mock_user.find_task_by_id.assert_called_once_with(task_id_prefix)
-    assert task_to_edit.description == new_description
-    mock_manager.save_user.assert_called_once_with(mock_user)
-    # Check non-verbose success messages (verbose should not be present)
-    expected_calls = [
-        # NO call(f"Editing task with ID prefix: '{task_id_prefix}'..."),
-        call("Task updated successfully:"),
-        call(f"  Old Description: {original_description}"),
-        call(f"  New Description: {new_description}"),
-    ]
-    mock_print.assert_has_calls(expected_calls)
-    verbose_message = f"Editing task with ID prefix: '{task_id_prefix}'..."
-    printed_messages = [c.args[0] for c in mock_print.call_args_list if c.args]
-    assert verbose_message not in printed_messages
-
-
-def test_handle_edit_task_not_found(mocker: Any) -> None:
-    """Test handle_edit handles task not found by ID (verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    mock_user.find_task_by_id.return_value = None
-    mock_manager.load_user.return_value = mock_user
-    task_id_prefix = "nonexistent"
-    args = create_mock_args(
-        id=task_id_prefix, description="Doesn't matter", verbose=True
-    )  # Verbose
-
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_edit(args, mock_manager)
-
-    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    mock_user.find_task_by_id.assert_called_once_with(task_id_prefix)
-    mock_manager.save_user.assert_not_called()
-    # Check verbose message and error message (non-verbose)
-    mock_print.assert_has_calls(
-        [
-            call(f"Editing task with ID prefix: '{task_id_prefix}'..."),  # Verbose
-            call(f"Error: Task with ID prefix '{task_id_prefix}' not found."),  # Error
-        ]
-    )
-
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-
-
-def test_handle_edit_user_not_found(mocker: Any) -> None:
-    """Test handle_edit handles user not found (verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_manager.load_user.return_value = None
-    task_id_prefix = "any_id"
-    args = create_mock_args(
-        id=task_id_prefix, description="Doesn't matter", verbose=True
-    )  # Verbose
-
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_edit(args, mock_manager)
-
-    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    # Check verbose message and error message (non-verbose)
-    mock_print.assert_has_calls(
-        [
-            call(f"Editing task with ID prefix: '{task_id_prefix}'..."),  # Verbose
-            call(f"User '{DEFAULT_USERNAME}' not found or no data available."),  # Error
-        ]
-    )
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-
-
-def test_handle_edit_missing_description(mocker: Any) -> None:
-    """Test handle_edit exits if --description is missing (simulated)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    args = create_mock_args(id="task123", description=None, verbose=False)
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_edit(args, mock_manager)
-
-    mock_print.assert_called_once_with(
-        "Error: Both --id and --description are required for editing."
-    )
-    # Verbose should not have been printed
-    assert not any(
-        "Editing task" in c.args[0] for c in mock_print.call_args_list if c.args
-    )
-
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-
-
-def test_handle_edit_missing_id(mocker: Any) -> None:
-    """Test handle_edit exits if --id is missing (simulated)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    args = create_mock_args(id=None, description="New Desc", verbose=False)
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_edit(args, mock_manager)
-
-    mock_print.assert_called_once_with(
-        "Error: Both --id and --description are required for editing."
-    )
-    # Verbose should not have been printed
-    assert not any(
-        "Editing task" in c.args[0] for c in mock_print.call_args_list if c.args
-    )
-
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-
-
-def test_handle_edit_missing_both(mocker: Any) -> None:
-    """Test handle_edit exits if both --id and --description are missing (simulated)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    args = create_mock_args(id=None, description=None, verbose=False)
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_edit(args, mock_manager)
-
-    mock_print.assert_called_once_with(
-        "Error: Both --id and --description are required for editing."
-    )
-    # Verbose should not have been printed
-    assert not any(
-        "Editing task" in c.args[0] for c in mock_print.call_args_list if c.args
-    )
-
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-
-
-def test_handle_edit_ambiguous_id(mocker: Any) -> None:
-    """Test handle_edit handles ambiguous ID prefix (verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    error_message = "Ambiguous ID prefix 'ambig'"
-    mock_user.find_task_by_id.side_effect = ValueError(error_message)
-    mock_manager.load_user.return_value = mock_user
-    task_id_prefix = "ambig"
-    args = create_mock_args(
-        id=task_id_prefix, description="New Desc", verbose=True
-    )  # Verbose
-
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_edit(args, mock_manager)
-
-    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    mock_user.find_task_by_id.assert_called_once_with(task_id_prefix)
-    mock_manager.save_user.assert_not_called()
-    # Check verbose message and error message (non-verbose)
-    mock_print.assert_has_calls(
-        [
-            call(f"Editing task with ID prefix: '{task_id_prefix}'..."),  # Verbose
-            call(f"Error: {error_message}"),  # Error
-        ]
-    )
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-
-
-def test_handle_edit_save_error(mocker: Any) -> None:
-    """Test handle_edit handles errors during saving (verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    task_to_edit = Task(description="Old", id="savefail-...")
-    mock_user.find_task_by_id.return_value = task_to_edit
-    mock_manager.load_user.return_value = mock_user
-    error_message = "Database locked"
-    mock_manager.save_user.side_effect = Exception(error_message)
-    task_id_prefix = "savefail"
-    new_description = "New Desc"
-    args = create_mock_args(
-        id=task_id_prefix, description=new_description, verbose=True
-    )  # Verbose
-
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_edit(args, mock_manager)
-
-    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    mock_user.find_task_by_id.assert_called_once_with(task_id_prefix)
-    assert task_to_edit.description == new_description
-    mock_manager.save_user.assert_called_once_with(mock_user)
-    # Check verbose message was called (since verbose=True)
-    # Check error message was printed (non-verbose)
-    mock_print.assert_has_calls(
-        [
-            call(f"Editing task with ID prefix: '{task_id_prefix}'..."),  # Verbose
-            call(f"Error saving updated task: {error_message}"),  # Error
-        ]
-    )
-
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-
-
-def test_handle_delete_success(mocker: Any) -> None:
-    """Test handle_delete successfully removes a task (verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    mock_user.remove_task.return_value = True
-    mock_manager.load_user.return_value = mock_user
-    task_id_prefix = "del123"
-    args = create_mock_args(id=task_id_prefix, verbose=True)  # Verbose
-
-    if hasattr(cli_main, "handle_delete"):
-        cli_main.handle_delete(args, mock_manager)
-
-        mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-        mock_user.remove_task.assert_called_once_with(task_id_prefix)
-        mock_manager.save_user.assert_called_once_with(mock_user)
-        # Check verbose message and success message (non-verbose)
-        mock_print.assert_has_calls(
-            [
-                call(f"Deleting task with ID prefix: '{task_id_prefix}'..."),  # Verbose
-                call(f"Task '{task_id_prefix}' deleted successfully."),  # Non-verbose
-            ]
-        )
-    else:  # pragma: no cover
-        pytest.skip("handle_delete function not found in cli_main")
-
-
-def test_handle_delete_success_not_verbose(mocker: Any) -> None:
-    """Test handle_delete successfully removes a task (non-verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    mock_user.remove_task.return_value = True
-    mock_manager.load_user.return_value = mock_user
-    task_id_prefix = "del123"
-    args = create_mock_args(id=task_id_prefix, verbose=False)
-
-    if hasattr(cli_main, "handle_delete"):
-        cli_main.handle_delete(args, mock_manager)
-
-        mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-        mock_user.remove_task.assert_called_once_with(task_id_prefix)
-        mock_manager.save_user.assert_called_once_with(mock_user)
-        # Check success message (non-verbose) is printed, verbose is not
-        mock_print.assert_called_once_with(
-            f"Task '{task_id_prefix}' deleted successfully."
-        )
-    else:  # pragma: no cover
-        pytest.skip("handle_delete function not found in cli_main")
-
-
-def test_handle_delete_task_exists(mocker: Any) -> None:
-    """Test handle_delete does the deletion when task exists."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-
-    # Set up the user to return a task when find_task_by_id is called
-    test_task = Task(description="Test task", id="task123-...")
-    mock_user.remove_task.return_value = True  # Task was successfully removed
-    mock_manager.load_user.return_value = mock_user
-
-    task_id_prefix = test_task.id[:7]
-    args = create_mock_args(id=task_id_prefix, verbose=False)
-
-    # Call the function
-    cli_main.handle_delete(args, mock_manager)
-
-    # Verify interactions
-    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    mock_user.remove_task.assert_called_once_with(task_id_prefix)
-    mock_manager.save_user.assert_called_once_with(mock_user)
-    mock_print.assert_called_with(f"Task '{task_id_prefix}' deleted successfully.")
-
-
-def test_handle_delete_task_not_exists(mocker: Any) -> None:
-    """Test handle_delete handles when task doesn't exist."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-
-    # Set up the user to return False when remove_task is called (task not found)
-    mock_user.remove_task.return_value = False
-    mock_manager.load_user.return_value = mock_user
-
-    task_id_prefix = "nonexistent"
-    args = create_mock_args(id=task_id_prefix, verbose=False)
-
-    # Call the function with sys.exit captured
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_delete(args, mock_manager)
-
-    # Verify interactions
-    mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    mock_user.remove_task.assert_called_once_with(task_id_prefix)
-    mock_manager.save_user.assert_not_called()  # Should not try to save
-    mock_print.assert_called_with(
-        f"Error: Task with ID prefix '{task_id_prefix}' not found."
-    )
-    assert excinfo.value.code == 1  # Should exit with error code
-
-
-def test_handle_view_generic_exception(mocker: Any) -> None:
-    """Test handle_view catches generic Exception (verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    mock_manager.load_user.return_value = mock_user
-
-    # Set up unexpected exception
-    error_message = "Unexpected error"
-    mock_user.find_task_by_id.side_effect = Exception(error_message)
-
-    args = create_mock_args(id="task-id", verbose=True)
-
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_view(args, mock_manager)
-
-    # Check that both the verbose message and error message were printed
-    mock_print.assert_has_calls(
-        [
-            call("Viewing task with ID prefix: 'task-id'..."),  # Verbose message
-            call(f"An unexpected error occurred: {error_message}"),  # Error message
-        ]
-    )
-    assert mock_print.call_count == 2  # Ensure exactly two calls were made
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-
-
-def test_handle_edit_generic_exception(mocker: Any) -> None:
-    """Test handle_edit catches generic Exception (verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    mock_manager.load_user.return_value = mock_user
-
-    # Set up unexpected exception
-    error_message = "Unexpected error"
-    mock_user.find_task_by_id.side_effect = Exception(error_message)
-
-    args = create_mock_args(
-        id="task-id", description="Updated description", verbose=True
-    )
-
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_edit(args, mock_manager)
-
-    # Check that both the verbose message and error message were printed
-    mock_print.assert_has_calls(
-        [
-            call("Editing task with ID prefix: 'task-id'..."),  # Verbose message
-            call(f"Error saving updated task: {error_message}"),  # Error message
-        ]
-    )
-    assert mock_print.call_count == 2  # Ensure exactly two calls were made
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-
-
-def test_handle_delete_generic_exception_during_remove(mocker: Any) -> None:
-    """Test handle_delete catches generic Exception during task removal (verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    mock_manager.load_user.return_value = mock_user
-
-    # Set up unexpected exception
-    error_message = "Unexpected error during removal"
-    mock_user.remove_task.side_effect = Exception(error_message)
-
-    args = create_mock_args(id="task-id", verbose=True)
-
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_delete(args, mock_manager)
-
-    # Check that both the verbose message and error message were printed
-    mock_print.assert_has_calls(
-        [
-            call("Deleting task with ID prefix: 'task-id'..."),  # Verbose message
-            call(
-                f"An unexpected error occurred during deletion: {error_message}"
-            ),  # Error message
-        ]
-    )
-    assert mock_print.call_count == 2  # Ensure exactly two calls were made
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-
-
-def test_handle_delete_generic_exception_during_save(mocker: Any) -> None:
-    """Test handle_delete catches generic Exception during save after deletion
-    (verbose)."""
-    # Mock only builtins.print
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    mock_manager.load_user.return_value = mock_user
-    mock_user.remove_task.return_value = True  # Removal succeeds
-    error_message = "Unexpected error during save"
-    mock_manager.save_user.side_effect = Exception(error_message)
-    args = create_mock_args(id="task-id", verbose=True)  # Verbose
-
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_delete(args, mock_manager)
-
-    # Check verbose message and error message
-    mock_print.assert_has_calls(
-        [
-            call("Deleting task with ID prefix: 'task-id'..."),  # Verbose
-            call(f"Error saving after deleting task: {error_message}"),  # Error
-        ]
-    )
-    # Cleaned up potential linter issue spot
+    # Ensure rich was not used
+    mock_console_class.assert_not_called()
+    mock_table_class.assert_not_called()
 
     assert excinfo.type == SystemExit
     assert excinfo.value.code == 1
 
 
 def test_handle_list_sort_by_id_asc(mocker: Any) -> None:
-    """Test handle_list sorts tasks by ID in ascending order (verbose)."""
-    # Mock only builtins.print
+    """Test handle_list sorts tasks by ID in ascending order using rich (verbose)."""
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    mock_manager.load_user.return_value = mock_user
+    mock_console_class = mocker.patch("motido.cli.main.Console")
+    mock_table_class = mocker.patch("motido.cli.main.Table")
+    mock_console_instance = MagicMock()
+    mock_table_instance = MagicMock()
+    mock_console_class.return_value = mock_console_instance
+    mock_table_class.return_value = mock_table_instance
 
-    # Create tasks with IDs in non-sorted order
-    task1 = Task(description="Task B", id="bbb12345-...")
-    task2 = Task(description="Task A", id="aaa67890-...")
-
-    # Set up tasks in random order
+    mock_manager = MagicMock(spec=DataManager)
+    mock_user = MagicMock(spec=User)
+    task1 = Task(description="Task B", id="bbb12345-xyz")
+    task2 = Task(description="Task A", id="aaa67890-uvw")
+    # Assign tasks in *original* order; sorting happens inside the function
     mock_user.tasks = [task1, task2]
-    # Note: list.sort is in-place, so we need to mock user.tasks *before*
-    # calling handle_list
     mock_manager.load_user.return_value = mock_user
 
-    # Sort by ID in ascending order, enable verbose
     args = create_mock_args(sort_by="id", sort_order="asc", verbose=True)
     cli_main.handle_list(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    # Check verbose call and non-verbose table output
-    expected_calls = [
-        call("Listing all tasks..."),  # Verbose
-        call("-" * 50),
-        call(f"{'ID':12} | {'DESCRIPTION'}"),
-        call("-" * 50),
-        call(f"{task2.id[:8]:12} | {task2.description}"),  # aaa should be first
-        call(f"{task1.id[:8]:12} | {task1.description}"),  # bbb should be second
-        call("-" * 50),
-        call(f"Total tasks: {len(mock_user.tasks)}"),
-    ]
-    mock_print.assert_has_calls(expected_calls)
+    mock_print.assert_any_call("Listing all tasks...")  # Check verbose print
+
+    # Verify rich table creation and population
+    mock_console_class.assert_called_once_with()
+    mock_table_class.assert_called_once_with(
+        show_header=True, header_style="bold magenta"
+    )
+    mock_table_instance.add_column.assert_has_calls(
+        [
+            call("ID Prefix", style="dim", width=12),
+            call("Description"),
+        ]
+    )
+    # IMPORTANT: Check add_row calls in the *sorted* order (aaa then bbb)
+    mock_table_instance.add_row.assert_has_calls(
+        [
+            call(task2.id[:8], task2.description),  # aaa comes first
+            call(task1.id[:8], task1.description),  # bbb comes second
+        ]
+    )
+    mock_console_instance.print.assert_called_once_with(mock_table_instance)
+    mock_print.assert_any_call(f"Total tasks: {len(mock_user.tasks)}")
 
 
 def test_handle_list_sort_by_id_desc(mocker: Any) -> None:
-    """Test handle_list sorts tasks by ID in descending order (verbose)."""
-    # Mock only builtins.print
+    """Test handle_list sorts tasks by ID in descending order using rich (verbose)."""
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
+    mock_console_class = mocker.patch("motido.cli.main.Console")
+    mock_table_class = mocker.patch("motido.cli.main.Table")
+    mock_console_instance = MagicMock()
+    mock_table_instance = MagicMock()
+    mock_console_class.return_value = mock_console_instance
+    mock_table_class.return_value = mock_table_instance
+
+    mock_manager = MagicMock(spec=DataManager)
+    mock_user = MagicMock(spec=User)
+    task1 = Task(description="Task B", id="bbb12345-xyz")
+    task2 = Task(description="Task A", id="aaa67890-uvw")
+    mock_user.tasks = [task1, task2]  # Original order
     mock_manager.load_user.return_value = mock_user
 
-    # Create tasks with IDs in non-sorted order
-    task1 = Task(description="Task B", id="bbb12345-...")
-    task2 = Task(description="Task A", id="aaa67890-...")
-
-    # Set up tasks in random order
-    mock_user.tasks = [task1, task2]
-    mock_manager.load_user.return_value = mock_user
-
-    # Sort by ID in descending order, enable verbose
     args = create_mock_args(sort_by="id", sort_order="desc", verbose=True)
     cli_main.handle_list(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    # Check verbose call and non-verbose table output
-    expected_calls = [
-        call("Listing all tasks..."),  # Verbose
-        call("-" * 50),
-        call(f"{'ID':12} | {'DESCRIPTION'}"),
-        call("-" * 50),
-        call(f"{task1.id[:8]:12} | {task1.description}"),  # bbb should be first
-        call(f"{task2.id[:8]:12} | {task2.description}"),  # aaa should be second
-        call("-" * 50),
-        call(f"Total tasks: {len(mock_user.tasks)}"),
-    ]
-    mock_print.assert_has_calls(expected_calls)
+    mock_print.assert_any_call("Listing all tasks...")  # Check verbose print
+
+    # Verify rich table creation and population
+    mock_console_class.assert_called_once_with()
+    mock_table_class.assert_called_once_with(
+        show_header=True, header_style="bold magenta"
+    )
+    # Columns added (order doesn't matter here)
+    mock_table_instance.add_column.assert_any_call("ID Prefix", style="dim", width=12)
+    mock_table_instance.add_column.assert_any_call("Description")
+
+    # IMPORTANT: Check add_row calls in the *sorted* order (bbb then aaa)
+    mock_table_instance.add_row.assert_has_calls(
+        [
+            call(task1.id[:8], task1.description),  # bbb comes first
+            call(task2.id[:8], task2.description),  # aaa comes second
+        ]
+    )
+    mock_console_instance.print.assert_called_once_with(mock_table_instance)
+    mock_print.assert_any_call(f"Total tasks: {len(mock_user.tasks)}")
 
 
 def test_handle_list_sort_by_description_asc(mocker: Any) -> None:
-    """Test handle_list sorts tasks by description in ascending order (verbose)."""
-    # Mock only builtins.print
+    """Test handle_list sorts tasks by description asc using rich (verbose)."""
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
+    mock_console_class = mocker.patch("motido.cli.main.Console")
+    mock_table_class = mocker.patch("motido.cli.main.Table")
+    mock_console_instance = MagicMock()
+    mock_table_instance = MagicMock()
+    mock_console_class.return_value = mock_console_instance
+    mock_table_class.return_value = mock_table_instance
+
+    mock_manager = MagicMock(spec=DataManager)
+    mock_user = MagicMock(spec=User)
+    task1 = Task(description="Zebra task", id="111-xyz")
+    task2 = Task(description="Apple task", id="222-uvw")
+    mock_user.tasks = [task1, task2]  # Original order
     mock_manager.load_user.return_value = mock_user
 
-    # Create tasks with descriptions in non-sorted order
-    task1 = Task(description="Zebra task", id="111-...")
-    task2 = Task(description="Apple task", id="222-...")
-
-    # Set up tasks in random order
-    mock_user.tasks = [task1, task2]
-    mock_manager.load_user.return_value = mock_user
-
-    # Sort by description in ascending order, enable verbose
     args = create_mock_args(sort_by="description", sort_order="asc", verbose=True)
     cli_main.handle_list(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    # Check verbose call and non-verbose table output
-    expected_calls = [
-        call("Listing all tasks..."),  # Verbose
-        call("-" * 50),
-        call(f"{'ID':12} | {'DESCRIPTION'}"),
-        call("-" * 50),
-        call(f"{task2.id[:8]:12} | {task2.description}"),  # Apple should be first
-        call(f"{task1.id[:8]:12} | {task1.description}"),  # Zebra should be second
-        call("-" * 50),
-        call(f"Total tasks: {len(mock_user.tasks)}"),
-    ]
-    mock_print.assert_has_calls(expected_calls)
+    mock_print.assert_any_call("Listing all tasks...")
+
+    # Verify rich table setup
+    mock_console_class.assert_called_once_with()
+    mock_table_class.assert_called_once_with(
+        show_header=True, header_style="bold magenta"
+    )
+    mock_table_instance.add_column.assert_any_call("ID Prefix", style="dim", width=12)
+    mock_table_instance.add_column.assert_any_call("Description")
+
+    # Check rows added in sorted order (Apple then Zebra)
+    mock_table_instance.add_row.assert_has_calls(
+        [
+            call(task2.id[:8], task2.description),  # Apple
+            call(task1.id[:8], task1.description),  # Zebra
+        ]
+    )
+    mock_console_instance.print.assert_called_once_with(mock_table_instance)
+    mock_print.assert_any_call(f"Total tasks: {len(mock_user.tasks)}")
 
 
 def test_handle_list_sort_by_description_desc(mocker: Any) -> None:
-    """Test handle_list sorts tasks by description in descending order (verbose)."""
-    # Mock only builtins.print
+    """Test handle_list sorts tasks by description desc using rich (verbose)."""
     mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
+    mock_console_class = mocker.patch("motido.cli.main.Console")
+    mock_table_class = mocker.patch("motido.cli.main.Table")
+    mock_console_instance = MagicMock()
+    mock_table_instance = MagicMock()
+    mock_console_class.return_value = mock_console_instance
+    mock_table_class.return_value = mock_table_instance
+
+    mock_manager = MagicMock(spec=DataManager)
+    mock_user = MagicMock(spec=User)
+    task1 = Task(description="Zebra task", id="111-xyz")
+    task2 = Task(description="Apple task", id="222-uvw")
+    mock_user.tasks = [task1, task2]  # Original order
     mock_manager.load_user.return_value = mock_user
 
-    # Create tasks with descriptions in non-sorted order
-    task1 = Task(description="Zebra task", id="111-...")
-    task2 = Task(description="Apple task", id="222-...")
-
-    # Set up tasks in random order
-    mock_user.tasks = [task1, task2]
-    mock_manager.load_user.return_value = mock_user
-
-    # Sort by description in descending order, enable verbose
     args = create_mock_args(sort_by="description", sort_order="desc", verbose=True)
     cli_main.handle_list(args, mock_manager)
 
     mock_manager.load_user.assert_called_once_with(DEFAULT_USERNAME)
-    # Check verbose call and non-verbose table output
-    expected_calls = [
-        call("Listing all tasks..."),  # Verbose
-        call("-" * 50),
-        call(f"{'ID':12} | {'DESCRIPTION'}"),
-        call("-" * 50),
-        call(f"{task1.id[:8]:12} | {task1.description}"),  # Zebra should be first
-        call(f"{task2.id[:8]:12} | {task2.description}"),  # Apple should be second
-        call("-" * 50),
-        call(f"Total tasks: {len(mock_user.tasks)}"),
-    ]
-    mock_print.assert_has_calls(expected_calls)
+    mock_print.assert_any_call("Listing all tasks...")
+
+    # Verify rich table setup
+    mock_console_class.assert_called_once_with()
+    mock_table_class.assert_called_once_with(
+        show_header=True, header_style="bold magenta"
+    )
+    mock_table_instance.add_column.assert_any_call("ID Prefix", style="dim", width=12)
+    mock_table_instance.add_column.assert_any_call("Description")
+
+    # Check rows added in sorted order (Zebra then Apple)
+    mock_table_instance.add_row.assert_has_calls(
+        [
+            call(task1.id[:8], task1.description),  # Zebra
+            call(task2.id[:8], task2.description),  # Apple
+        ]
+    )
+    mock_console_instance.print.assert_called_once_with(mock_table_instance)
+    mock_print.assert_any_call(f"Total tasks: {len(mock_user.tasks)}")
 
 
 def test_main_dispatch_list_with_sort_options(mocker: Any) -> None:

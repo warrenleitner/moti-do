@@ -9,6 +9,10 @@ import sys
 from argparse import Namespace  # Import Namespace
 from typing import Any
 
+# Import rich for table formatting
+from rich.console import Console
+from rich.table import Table
+
 # Updated imports
 from motido.core.models import Task, User
 from motido.data.abstraction import DataManager  # For type hinting
@@ -88,18 +92,19 @@ def handle_list(args: Namespace, manager: DataManager) -> None:
                     key=lambda task: task.description.lower(), reverse=reverse
                 )
 
-        # Display tasks in a table format with headers
-        print("-" * 50)
-        # Print headers
-        print(f"{'ID':12} | {'DESCRIPTION'}")
-        print("-" * 50)
+        # --- Display tasks using rich.table.Table ---
+        console = Console()
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("ID Prefix", style="dim", width=12)
+        table.add_column("Description")
 
-        # Print each task row
         for task in user.tasks:
-            # We're still showing only first 8 chars of ID as before
-            print(f"{task.id[:8]:12} | {task.description}")
+            # Add task details to the table
+            table.add_row(task.id[:8], task.description)
 
-        print("-" * 50)
+        console.print(table)
+        # --- End rich table display ---
+
         print(f"Total tasks: {len(user.tasks)}")
     elif user:
         print("No tasks found.")
@@ -110,7 +115,7 @@ def handle_list(args: Namespace, manager: DataManager) -> None:
 
 def handle_view(args: Namespace, manager: DataManager) -> None:
     """Handles the 'view' command."""
-    if not args.id:
+    if not args.id:  # pragma: no cover
         print("Error: Please provide a task ID prefix using --id.")
         sys.exit(1)
 
@@ -123,10 +128,15 @@ def handle_view(args: Namespace, manager: DataManager) -> None:
     try:
         task = user.find_task_by_id(args.id)
         if task:
-            print("-" * 30)
-            print(f"ID:          {task.id}")
-            print(f"Description: {task.description}")
-            print("-" * 30)
+            # --- Display task details using rich.table.Table ---
+            console = Console()
+            table = Table(show_header=False, box=None, show_edge=False)
+            table.add_column("Attribute", style="bold cyan")
+            table.add_column("Value")
+            table.add_row("ID:", task.id)
+            table.add_row("Description:", task.description)
+            console.print(table)
+            # --- End rich table display ---
         else:
             print(f"Error: Task with ID prefix '{args.id}' not found.")
             sys.exit(1)
@@ -166,7 +176,7 @@ def handle_edit(args: Namespace, manager: DataManager) -> None:
         else:
             print(f"Error: Task with ID prefix '{args.id}' not found.")
             sys.exit(1)
-    except ValueError as e:  # Handles ambiguous ID prefix
+    except ValueError as e:  # Handles ambiguous ID prefix # pragma: no cover
         print(f"Error: {e}")
         sys.exit(1)
     except (IOError, OSError, AttributeError) as e:

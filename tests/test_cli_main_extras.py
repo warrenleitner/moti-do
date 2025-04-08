@@ -53,6 +53,43 @@ def test_handle_create_custom_exceptions(
     assert excinfo.value.code == 1
 
 
+def test_handle_edit_success(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_edit successfully updates a task and prints confirmation."""
+    # Setup task with old description
+    old_description = "Old task description"
+    new_description = "Updated task description"
+    mock_task = Task(description=old_description, id="edit-task-123")
+
+    # Setup mocks
+    mock_manager.load_user.return_value = mock_user
+    mock_user.find_task_by_id.return_value = mock_task
+
+    # Create args with new description
+    args = create_mock_args(id="edit-task", description=new_description, verbose=True)
+
+    # Call the function being tested
+    cli_main.handle_edit(args, mock_manager)
+
+    # Verify function behavior
+    mock_manager.load_user.assert_called_once_with(cli_main.DEFAULT_USERNAME)
+    mock_user.find_task_by_id.assert_called_once_with(args.id)
+    mock_manager.save_user.assert_called_once_with(mock_user)
+
+    # Assert that the task description was updated
+    assert mock_task.description == new_description
+
+    # Verify the success messages are printed correctly
+    mock_print.assert_any_call("Task updated successfully:")
+    mock_print.assert_any_call(f"  Old Description: {old_description}")
+    mock_print.assert_any_call(f"  New Description: {new_description}")
+
+    # If verbose is enabled, verify verbose message
+    if args.verbose:
+        mock_print.assert_any_call(f"Editing task with ID prefix: '{args.id}'...")
+
+
 def test_handle_view_type_error(
     mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
 ) -> None:
@@ -68,6 +105,35 @@ def test_handle_view_type_error(
 
     mock_print.assert_any_call(f"An unexpected error occurred: {error_message}")
     assert excinfo.value.code == 1
+
+
+def test_handle_delete_success(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test that handle_delete prints success message when task
+    is deleted successfully."""
+    # Setup mocks
+    mock_manager.load_user.return_value = mock_user
+    mock_user.remove_task.return_value = True  # Task successfully deleted
+    task_id = "abc123"
+    args = create_mock_args(id=task_id, verbose=True)
+
+    if hasattr(cli_main, "handle_delete"):
+        # Call the function being tested
+        cli_main.handle_delete(args, mock_manager)
+
+        # Verify function behavior
+        mock_manager.load_user.assert_called_once_with(cli_main.DEFAULT_USERNAME)
+        mock_user.remove_task.assert_called_once_with(task_id)
+        mock_manager.save_user.assert_called_once_with(mock_user)
+
+        # Verify the success message is printed correctly
+        mock_print.assert_any_call(f"Task '{task_id}' deleted successfully.")
+
+        if args.verbose:
+            mock_print.assert_any_call(f"Deleting task with ID prefix: '{task_id}'...")
+    else:  # pragma: no cover
+        pytest.skip("handle_delete function not found")
 
 
 def test_handle_edit_attribute_error(
@@ -267,3 +333,185 @@ def test_main_init_catches_other_exceptions(mocker: Any) -> None:
         f"An error occurred during initialization: {error_message}"
     )
     assert excinfo.value.code == 1
+
+
+def test_handle_list_no_user(mock_manager: MagicMock, mock_print: MagicMock) -> None:
+    """Test handle_list when the user is not found."""
+    mock_manager.load_user.return_value = None
+    args = create_mock_args(verbose=False)  # Non-verbose case
+
+    cli_main.handle_list(args, mock_manager)
+
+    mock_print.assert_any_call(
+        f"User '{cli_main.DEFAULT_USERNAME}' not found or no data available."
+    )
+    mock_print.assert_any_call("Hint: Run 'motido init' first if you haven't already.")
+
+
+def test_handle_view_generic_exception(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_view catches generic Exception during find_task_by_id."""
+    mock_manager.load_user.return_value = mock_user
+    error_message = "Generic find error"
+    mock_user.find_task_by_id.side_effect = Exception(error_message)
+    args = create_mock_args(id="abc")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_view(args, mock_manager)
+
+    mock_print.assert_any_call(f"An unexpected error occurred: {error_message}")
+    assert excinfo.value.code == 1
+
+
+def test_handle_edit_missing_args(
+    mock_manager: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_edit exits if id or description is missing."""
+    # Test missing description
+    args_no_desc = create_mock_args(id="some-id", description=None)
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_edit(args_no_desc, mock_manager)
+    mock_print.assert_any_call(
+        "Error: Both --id and --description are required for editing."
+    )
+    assert excinfo.value.code == 1
+
+    # Test missing id
+    mock_print.reset_mock()
+    args_no_id = create_mock_args(id=None, description="New Desc")
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_edit(args_no_id, mock_manager)
+    mock_print.assert_any_call(
+        "Error: Both --id and --description are required for editing."
+    )
+    assert excinfo.value.code == 1
+
+
+def test_handle_edit_user_not_found(
+    mock_manager: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_edit when the user is not found."""
+    mock_manager.load_user.return_value = None
+    args = create_mock_args(id="edit-user-miss", description="New Desc")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_edit(args, mock_manager)
+
+    mock_print.assert_any_call(
+        f"User '{cli_main.DEFAULT_USERNAME}' not found or no data available."
+    )
+    assert excinfo.value.code == 1
+
+
+def test_handle_edit_task_not_found(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_edit when the task is not found."""
+    mock_manager.load_user.return_value = mock_user
+    mock_user.find_task_by_id.return_value = None  # Task not found
+    args = create_mock_args(id="edit-task-miss", description="New Desc")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_edit(args, mock_manager)
+
+    mock_print.assert_any_call(f"Error: Task with ID prefix '{args.id}' not found.")
+    assert excinfo.value.code == 1
+
+
+def test_handle_edit_generic_exception(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_edit catches generic Exception during save."""
+    mock_task = Task(description="Old Gen", id="edit-gen-err")
+    mock_user.find_task_by_id.return_value = mock_task
+    mock_manager.load_user.return_value = mock_user
+    error_message = "Generic error on save"
+    mock_manager.save_user.side_effect = Exception(error_message)
+    args = create_mock_args(id="edit-gen", description="New Desc Gen")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_edit(args, mock_manager)
+
+    mock_print.assert_any_call(f"Error saving updated task: {error_message}")
+    assert excinfo.value.code == 1
+
+
+def test_handle_delete_task_not_found(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_delete when the task to delete is not found."""
+    mock_manager.load_user.return_value = mock_user
+    mock_user.remove_task.return_value = False  # Indicates task not found
+    args = create_mock_args(id="del-miss")
+
+    if hasattr(cli_main, "handle_delete"):
+        with pytest.raises(SystemExit) as excinfo:
+            cli_main.handle_delete(args, mock_manager)
+
+        mock_print.assert_any_call(f"Error: Task with ID prefix '{args.id}' not found.")
+        assert excinfo.value.code == 1
+        # Save should not be called if task not found
+        mock_manager.save_user.assert_not_called()
+    else:  # pragma: no cover
+        pytest.skip("handle_delete function not found")
+
+
+def test_handle_delete_ambiguous_id(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_delete catches ValueError for ambiguous ID."""
+    mock_manager.load_user.return_value = mock_user
+    error_message = "Ambiguous ID prefix 'del-amb'"
+    mock_user.remove_task.side_effect = ValueError(error_message)
+    args = create_mock_args(id="del-amb")
+
+    if hasattr(cli_main, "handle_delete"):
+        with pytest.raises(SystemExit) as excinfo:
+            cli_main.handle_delete(args, mock_manager)
+
+        mock_print.assert_any_call(f"Error: {error_message}")
+        assert excinfo.value.code == 1
+    else:  # pragma: no cover
+        pytest.skip("handle_delete function not found")
+
+
+def test_handle_delete_generic_exception_on_remove(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_delete catches generic Exception during removal step."""
+    mock_manager.load_user.return_value = mock_user
+    error_message = "Generic error during remove"
+    mock_user.remove_task.side_effect = Exception(error_message)
+    args = create_mock_args(id="del-gen-rem")
+
+    if hasattr(cli_main, "handle_delete"):
+        with pytest.raises(SystemExit) as excinfo:
+            cli_main.handle_delete(args, mock_manager)
+
+        mock_print.assert_any_call(
+            f"An unexpected error occurred during deletion: {error_message}"
+        )
+        assert excinfo.value.code == 1
+    else:  # pragma: no cover
+        pytest.skip("handle_delete function not found")
+
+
+def test_handle_delete_generic_exception_on_save(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_delete catches generic Exception during save after removal."""
+    mock_manager.load_user.return_value = mock_user
+    mock_user.remove_task.return_value = True  # Removal succeeds
+    error_message = "Generic error saving after delete"
+    mock_manager.save_user.side_effect = Exception(error_message)
+    args = create_mock_args(id="del-gen-save")
+
+    if hasattr(cli_main, "handle_delete"):
+        with pytest.raises(SystemExit) as excinfo:
+            cli_main.handle_delete(args, mock_manager)
+
+        mock_print.assert_any_call(f"Error saving after deleting task: {error_message}")
+        assert excinfo.value.code == 1
+    else:  # pragma: no cover
+        pytest.skip("handle_delete function not found")

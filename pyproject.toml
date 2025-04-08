@@ -17,6 +17,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.9"
+rich = ">=13.9.4"
 # Add runtime dependencies here if needed, e.g.,
 # requests = "^2.20"
 
