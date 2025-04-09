@@ -7,7 +7,7 @@ Provides commands to initialize, create, view, list, and edit tasks.
 import argparse
 import sys
 from argparse import Namespace  # Import Namespace
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 # Import rich for table formatting
 from rich.console import Console
@@ -19,6 +19,8 @@ from motido.data.abstraction import DataManager  # For type hinting
 from motido.data.abstraction import DEFAULT_USERNAME
 from motido.data.backend_factory import get_data_manager
 from motido.data.config import load_config, save_config
+
+T = TypeVar("T")
 
 
 # --- Verbose Print Helper ---
@@ -47,18 +49,19 @@ def handle_init(args: Namespace) -> None:
         sys.exit(1)
 
 
-def handle_create(args: Namespace, manager: DataManager) -> None:
+def handle_create(args: Namespace, manager: DataManager, user: User | None) -> None:
     """Handles the 'create' command."""
     if (not args.description) or args.description == "":
         print("Error: Task description cannot be empty.")
         sys.exit(1)
 
     print_verbose(args, f"Creating task: '{args.description}'...")
-    user = manager.load_user(DEFAULT_USERNAME)
+
     if user is None:
         # If user doesn't exist, create a new one
         print_verbose(args, f"User '{DEFAULT_USERNAME}' not found. Creating new user.")
         user = User(username=DEFAULT_USERNAME)
+    # No need for isinstance check since we're using type hints and mypy
 
     new_task = Task(description=args.description)
     user.add_task(new_task)
@@ -74,10 +77,10 @@ def handle_create(args: Namespace, manager: DataManager) -> None:
         sys.exit(1)
 
 
-def handle_list(args: Namespace, manager: DataManager) -> None:
+def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> None:
     """Handles the 'list' command."""
     print_verbose(args, "Listing all tasks...")
-    user = manager.load_user(DEFAULT_USERNAME)
+
     if user and user.tasks:
         # Sort tasks if sort_by is specified
         if hasattr(args, "sort_by") and args.sort_by:
@@ -113,14 +116,14 @@ def handle_list(args: Namespace, manager: DataManager) -> None:
         print("Hint: Run 'motido init' first if you haven't already.")
 
 
-def handle_view(args: Namespace, manager: DataManager) -> None:
+def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> None:
     """Handles the 'view' command."""
     if not args.id:  # pragma: no cover
         print("Error: Please provide a task ID prefix using --id.")
         sys.exit(1)
 
     print_verbose(args, f"Viewing task with ID prefix: '{args.id}'...")
-    user = manager.load_user(DEFAULT_USERNAME)
+
     if not user:
         print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
         sys.exit(1)
@@ -152,14 +155,14 @@ def handle_view(args: Namespace, manager: DataManager) -> None:
         sys.exit(1)
 
 
-def handle_edit(args: Namespace, manager: DataManager) -> None:
+def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> None:
     """Handles the 'edit' command."""
     if not args.id or not args.description:
         print("Error: Both --id and --description are required for editing.")
         sys.exit(1)
 
     print_verbose(args, f"Editing task with ID prefix: '{args.id}'...")
-    user = manager.load_user(DEFAULT_USERNAME)
+
     if not user:
         print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
         sys.exit(1)
@@ -170,13 +173,14 @@ def handle_edit(args: Namespace, manager: DataManager) -> None:
             old_description = task_to_edit.description
             task_to_edit.description = args.description
             manager.save_user(user)
+            # Print success messages in the correct order
             print("Task updated successfully:")
             print(f"  Old Description: {old_description}")
             print(f"  New Description: {task_to_edit.description}")
         else:
             print(f"Error: Task with ID prefix '{args.id}' not found.")
             sys.exit(1)
-    except ValueError as e:  # Handles ambiguous ID prefix # pragma: no cover
+    except ValueError as e:  # Handles ambiguous ID prefix
         print(f"Error: {e}")
         sys.exit(1)
     except (IOError, OSError, AttributeError) as e:
@@ -188,17 +192,15 @@ def handle_edit(args: Namespace, manager: DataManager) -> None:
         sys.exit(1)
 
 
-def handle_delete(args: Namespace, manager: DataManager) -> None:
+def handle_delete(args: Namespace, manager: DataManager, user: User | None) -> None:
     """Handles the 'delete' command."""
-    if not args.id:  # pragma: no cover
-        # This check might be redundant if argparse requires it, but good practice.
-        print("Error: Please provide a task ID prefix using --id.")  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
+    if not args.id:
+        print("Error: Please provide a task ID prefix using --id.")
+        sys.exit(1)
 
     print_verbose(args, f"Deleting task with ID prefix: '{args.id}'...")
-    user = manager.load_user(DEFAULT_USERNAME)
-    if not user:  # pragma: no cover
-        # Consistent user not found message
+
+    if not user:
         print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
         sys.exit(1)
 
@@ -208,25 +210,22 @@ def handle_delete(args: Namespace, manager: DataManager) -> None:
         task_deleted = user.remove_task(args.id)
         if task_deleted:
             try:
-                manager.save_user(user)
-                print(f"Task '{args.id}' deleted successfully.")
-            except (IOError, OSError) as e:
+                manager.save_user(user)  # Save first
+                print(f"Task '{args.id}' deleted successfully.")  # Then print success
+            except IOError as e:
                 print(f"Error saving after deleting task: {e}")
                 sys.exit(1)
             except Exception as e:  # pylint: disable=broad-exception-caught
-                # Required for test compatibility
                 print(f"Error saving after deleting task: {e}")
                 sys.exit(1)
         else:
             print(f"Error: Task with ID prefix '{args.id}' not found.")
-            # Exiting here because the task wasn't found to be deleted
             sys.exit(1)
 
     except ValueError as e:  # Handles ambiguous ID prefix from underlying find
-        print(f"Error: {e}")  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
+        print(f"Error: {e}")
+        sys.exit(1)
     except (AttributeError, TypeError) as e:
-        # Catch other unexpected errors during removal logic
         print(f"An unexpected error occurred during deletion: {e}")
         sys.exit(1)
     except Exception as e:  # pylint: disable=broad-exception-caught
@@ -235,8 +234,24 @@ def handle_delete(args: Namespace, manager: DataManager) -> None:
         sys.exit(1)
 
 
-def main() -> None:
-    """Main function to parse arguments and dispatch commands."""
+def _wrap_handler(
+    handler_func: Callable[[argparse.Namespace, DataManager, User | None], T],
+) -> Callable[[argparse.Namespace, DataManager, User | None], T]:
+    """Wrapper function to ensure handler functions receive all required arguments."""
+
+    def wrapped(args: argparse.Namespace, manager: DataManager, user: User | None) -> T:
+        return handler_func(args, manager, user)
+
+    return wrapped
+
+
+def setup_parser() -> argparse.ArgumentParser:
+    """Set up and configure the argument parser for the CLI.
+
+    Returns:
+        argparse.ArgumentParser: Configured argument parser with
+        all commands and options.
+    """
     parser = argparse.ArgumentParser(description="Moti-Do: Task Management CLI")
     subparsers = parser.add_subparsers(
         dest="command", help="Available commands", required=True
@@ -270,9 +285,7 @@ def main() -> None:
         required=True,
         help="The description of the task.",
     )
-    parser_create.set_defaults(
-        func=lambda args: handle_create(args, get_data_manager())
-    )
+    parser_create.set_defaults(func=_wrap_handler(handle_create))
 
     # --- List Command ---
     parser_list = subparsers.add_parser("list", help="List all tasks.")
@@ -287,7 +300,7 @@ def main() -> None:
         default="asc",
         help="Sort order: ascending (asc) or descending (desc).",
     )
-    parser_list.set_defaults(func=lambda args: handle_list(args, get_data_manager()))
+    parser_list.set_defaults(func=_wrap_handler(handle_list))
 
     # --- View Command ---
     parser_view = subparsers.add_parser("view", help="View details of a specific task.")
@@ -296,7 +309,7 @@ def main() -> None:
         required=True,
         help="The full or unique partial ID of the task to view.",
     )
-    parser_view.set_defaults(func=lambda args: handle_view(args, get_data_manager()))
+    parser_view.set_defaults(func=_wrap_handler(handle_view))
 
     # --- Edit Command ---
     parser_edit = subparsers.add_parser(
@@ -313,7 +326,7 @@ def main() -> None:
         required=True,
         help="The new description for the task.",
     )
-    parser_edit.set_defaults(func=lambda args: handle_edit(args, get_data_manager()))
+    parser_edit.set_defaults(func=_wrap_handler(handle_edit))
 
     # --- Delete Command ---
     parser_delete = subparsers.add_parser("delete", help="Delete a task by ID.")
@@ -322,40 +335,53 @@ def main() -> None:
         required=True,
         help="The full or unique partial ID of the task to delete.",
     )
-    parser_delete.set_defaults(
-        func=lambda args: handle_delete(args, get_data_manager())
-    )
+    parser_delete.set_defaults(func=_wrap_handler(handle_delete))
 
-    # --- Parse Arguments ---
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> None:
+    """Main function to parse arguments and dispatch commands."""
+    # Parse arguments
+    args = setup_parser().parse_args()
 
     # --- Execute Command ---
-    # The 'init' command doesn't need a pre-fetched manager
+    # The 'init' command doesn't need a pre-fetched manager or user
     if args.command == "init":
         args.func(args)
-    else:
+        return
+
+    # Get the manager *once* for other commands
+    manager = get_data_manager()
+    user = None  # Initialize user to None
+
+    # Load user for commands that require it
+    if args.command in ["create", "list", "view", "edit", "delete"]:
         try:
-            args.func(args)  # Call the appropriate handler function
-        except (
-            IOError,
-            OSError,
-            ValueError,
-            AttributeError,
-            TypeError,
-        ) as e:  # pragma: no cover
-            # Provide a more general error message here
-            print(f"Error: {e}")  # Shortened message
-            print(
-                "If you haven't initialized the application, try running 'motido init'."
-            )
+            user = manager.load_user(DEFAULT_USERNAME)
+            if user is None and args.command != "create":
+                print_verbose(
+                    args, f"User '{DEFAULT_USERNAME}' not found."
+                )  # pragma: no cover
+        except (IOError, OSError, ValueError) as e:
+            print(f"Error loading user data: {e}")
+            print("Hint: If you haven't initialized, run 'motido init'.")
             sys.exit(1)
         except Exception as e:  # pylint: disable=broad-exception-caught
-            # Required for test compatibility
-            print(f"Error: {e}")
-            print(
-                "If you haven't initialized the application, try running 'motido init'."
-            )
+            print(f"An unexpected error occurred loading user data: {e}")
             sys.exit(1)
+
+    # Execute the command, passing manager and user
+    try:
+        args.func(args, manager=manager, user=user)
+    except (IOError, OSError, ValueError, AttributeError, TypeError) as e:
+        print(f"Error: {e}")
+        print("If you haven't initialized the application, try running 'motido init'.")
+        sys.exit(1)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        print(f"Error: {e}")
+        print("If you haven't initialized the application, try running 'motido init'.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
