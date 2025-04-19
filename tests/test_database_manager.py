@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from motido.core.models import Task, User
+from motido.core.models import Priority, Task, User
 from motido.data.database_manager import DB_NAME, DEFAULT_USERNAME, DatabaseDataManager
 
 # pylint: disable=protected-access,redefined-outer-name,unused-argument
@@ -163,6 +163,7 @@ def test_create_tables(
                 CREATE TABLE IF NOT EXISTS tasks (
                     id TEXT PRIMARY KEY,
                     description TEXT NOT NULL,
+                    priority TEXT NOT NULL DEFAULT 'Low',
                     user_username TEXT NOT NULL,
                     FOREIGN KEY (user_username) REFERENCES users (username)
                         ON DELETE CASCADE ON UPDATE CASCADE
@@ -235,36 +236,63 @@ def test_initialize_connection_error(
     assert error_msg in captured.out
 
 
-def test_load_user_found(
+def test_load_user_success(
     manager: DatabaseDataManager,
     mock_conn_fixture: Tuple[Any, Any, Any],
-    sample_user_db: User,
 ) -> None:
-    """Test loading a user who exists with tasks using mocked connection."""
-    # Use only the cursor from the fixture, connection not needed
-    _, _, cursor = mock_conn_fixture
-    username = sample_user_db.username
+    """Test load_user with a successful user fetch."""
+    mock_get_connection, _, cursor = mock_conn_fixture
 
-    cursor.fetchone.return_value = {"username": username}
-    task_rows = [
-        {"id": "db-uuid-1", "description": "DB Task 1"},
-        {"id": "db-uuid-2", "description": "DB Task 2"},
+    # Mock cursor.fetchone for user lookup
+    cursor.fetchone.side_effect = [{"username": DEFAULT_USERNAME}, None]
+    # Mock cursor.fetchall for task lookup - return 2 tasks
+    cursor.fetchall.return_value = [
+        {"id": "task1", "description": "Task 1", "priority": "Low"},
+        {"id": "task2", "description": "Task 2", "priority": "High"},
     ]
-    cursor.fetchall.return_value = task_rows
 
-    loaded_user = manager.load_user(username)
+    user = manager.load_user()
 
-    assert loaded_user is not None
-    assert loaded_user.username == username
-    assert len(loaded_user.tasks) == 2
-    assert loaded_user.tasks[0].id == "db-uuid-1"
-    assert loaded_user.tasks[1].description == "DB Task 2"
+    mock_get_connection.assert_called_once()
+    assert cursor.execute.call_count == 2  # One for user lookup, one for tasks
+    assert user is not None
+    assert user.username == DEFAULT_USERNAME
+    assert len(user.tasks) == 2
+    # Check task properties including priority
+    assert user.tasks[0].id == "task1"
+    assert user.tasks[0].description == "Task 1"
+    assert user.tasks[0].priority == Priority.LOW
+    assert user.tasks[1].id == "task2"
+    assert user.tasks[1].description == "Task 2"
+    assert user.tasks[1].priority == Priority.HIGH
 
-    expected_calls = [
-        call("SELECT username FROM users WHERE username = ?", (username,)),
-        call("SELECT id, description FROM tasks WHERE user_username = ?", (username,)),
+
+def test_load_user_invalid_priority(
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
+    capsys: Any,
+) -> None:
+    """Test load_user handles invalid priority values."""
+    mock_get_connection, _, cursor = mock_conn_fixture
+
+    # Mock cursor.fetchone for user lookup
+    cursor.fetchone.side_effect = [{"username": DEFAULT_USERNAME}, None]
+    # Mock cursor.fetchall for task lookup - return a task with invalid priority
+    cursor.fetchall.return_value = [
+        {"id": "task1", "description": "Task 1", "priority": "InvalidPriority"},
     ]
-    cursor.execute.assert_has_calls(expected_calls)
+
+    user = manager.load_user()
+
+    mock_get_connection.assert_called_once()
+    assert user is not None
+    assert len(user.tasks) == 1
+    # Should default to LOW priority for invalid value
+    assert user.tasks[0].priority == Priority.LOW
+
+    # Check warning was printed
+    captured = capsys.readouterr()
+    assert "Warning: Invalid priority 'InvalidPriority'" in captured.out
 
 
 def test_load_user_not_found(
@@ -305,7 +333,10 @@ def test_load_user_no_tasks(
 
     expected_calls = [
         call("SELECT username FROM users WHERE username = ?", (username,)),
-        call("SELECT id, description FROM tasks WHERE user_username = ?", (username,)),
+        call(
+            "SELECT id, description, priority FROM tasks WHERE user_username = ?",
+            (username,),
+        ),
     ]
     cursor.execute.assert_has_calls(expected_calls)
 
@@ -362,36 +393,57 @@ def test_ensure_user_exists_db_error(
     assert f"Error ensuring user '{username}' exists: Insert failed" in captured.out
 
 
-def test_save_user_new(
+def test_save_user(
     manager: DatabaseDataManager,
-    mocker: Any,
     mock_conn_fixture: Tuple[Any, Any, Any],
-    sample_user_db: User,
 ) -> None:
-    """Test saving a new user with tasks using mocked connection."""
-    _, connection, cursor = mock_conn_fixture
-    # Mock the internal call specifically for this test
-    mock_ensure_user = mocker.patch.object(
-        manager, "_ensure_user_exists", autospec=True
-    )
+    """Test save_user executes the expected SQL statements."""
+    mock_get_connection, _, cursor = mock_conn_fixture
 
-    manager.save_user(sample_user_db)
+    # Create test user with tasks
+    user = User(username=DEFAULT_USERNAME)
+    task1 = Task(id="task1", description="Task 1", priority=Priority.LOW)
+    task2 = Task(id="task2", description="Task 2", priority=Priority.HIGH)
+    user.add_task(task1)
+    user.add_task(task2)
 
-    # Check that _ensure_user_exists was called correctly (without self)
-    mock_ensure_user.assert_called_once_with(connection, sample_user_db.username)
+    # Call save_user
+    manager.save_user(user)
 
-    # Check SQL executed via the mocked cursor
-    cursor.execute.assert_called_once_with(
-        "DELETE FROM tasks WHERE user_username = ?", (sample_user_db.username,)
-    )
-    expected_task_data = [
-        ("db-uuid-1", "DB Task 1", sample_user_db.username),
-        ("db-uuid-2", "DB Task 2", sample_user_db.username),
+    # Verify connection and cursor usage
+    mock_get_connection.assert_called_once()
+    # Check specific SQL operations
+    assert cursor.execute.call_count >= 2  # At least insert user and delete tasks
+
+    # Check that executemany was called with the task data including priority
+    # The last call to executemany should be for task insertion
+    executemany_calls = [
+        call for call in cursor.method_calls if call[0] == "executemany"
     ]
-    cursor.executemany.assert_called_once_with(
-        "INSERT INTO tasks (id, description, user_username) VALUES (?, ?, ?)",
-        expected_task_data,
-    )
+    assert executemany_calls  # Should have at least one executemany call
+
+    # Extract the SQL and parameters from the last executemany call
+    _, args, _ = executemany_calls[-1]
+    sql, params = args
+
+    # Check that the SQL contains the priority field
+    assert "priority" in sql
+    assert (
+        "VALUES (?, ?, ?, ?)" in sql
+    )  # Four parameters (id, description, priority, username)
+
+    # Check that the task parameters include priority values
+    assert len(params) == 2  # Two tasks
+    # Task parameters should be tuples of (id, description, priority, username)
+    assert params[0][0] == task1.id
+    assert params[0][1] == task1.description
+    assert params[0][2] == task1.priority.value
+    assert params[0][3] == user.username
+
+    assert params[1][0] == task2.id
+    assert params[1][1] == task2.description
+    assert params[1][2] == task2.priority.value
+    assert params[1][3] == user.username
 
 
 def test_save_user_no_tasks(

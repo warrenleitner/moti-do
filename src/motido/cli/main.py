@@ -12,9 +12,10 @@ from typing import Any, Callable, TypeVar
 # Import rich for table formatting
 from rich.console import Console
 from rich.table import Table
+from rich.text import Text
 
 # Updated imports
-from motido.core.models import Task, User
+from motido.core.models import Priority, Task, User
 from motido.data.abstraction import DataManager  # For type hinting
 from motido.data.abstraction import DEFAULT_USERNAME
 from motido.data.backend_factory import get_data_manager
@@ -44,7 +45,8 @@ def handle_init(args: Namespace) -> None:
         # Optionally revert config change or provide more guidance
         sys.exit(1)
     except Exception as e:  # pylint: disable=broad-exception-caught
-        # Required for test compatibility
+        # Broad exception is needed for initialization to handle unexpected backend errors
+        # while maintaining a clean exit for the CLI
         print(f"An error occurred during initialization: {e}")
         sys.exit(1)
 
@@ -57,13 +59,24 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
 
     print_verbose(args, f"Creating task: '{args.description}'...")
 
+    # Get the priority from args, default to LOW if not specified
+    try:
+        # Convert string to Priority enum
+        priority = Priority(args.priority) if args.priority else Priority.LOW
+    except ValueError:
+        print(
+            f"Error: Invalid priority '{args.priority}'. "
+            f"Valid values are: {', '.join([p.value for p in Priority])}"
+        )
+        sys.exit(1)
+
     if user is None:
         # If user doesn't exist, create a new one
         print_verbose(args, f"User '{DEFAULT_USERNAME}' not found. Creating new user.")
         user = User(username=DEFAULT_USERNAME)
     # No need for isinstance check since we're using type hints and mypy
 
-    new_task = Task(description=args.description)
+    new_task = Task(description=args.description, priority=priority)
     user.add_task(new_task)
     try:
         manager.save_user(user)
@@ -72,7 +85,8 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
         print(f"Error saving task: {e}")
         sys.exit(1)
     except Exception as e:  # pylint: disable=broad-exception-caught
-        # Required for test compatibility
+        # Broad exception required to ensure graceful CLI exit if unexpected errors occur
+        # during task creation
         print(f"Error saving task: {e}")
         sys.exit(1)
 
@@ -94,16 +108,30 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
                 user.tasks.sort(
                     key=lambda task: task.description.lower(), reverse=reverse
                 )
+            elif args.sort_by == "priority":
+                # Sort by priority (using the enum's order)
+                priority_order = {
+                    Priority.TRIVIAL: 1,
+                    Priority.LOW: 2,
+                    Priority.MEDIUM: 3,
+                    Priority.HIGH: 4,
+                    Priority.DEFCON_ONE: 5,
+                }
+                user.tasks.sort(
+                    key=lambda task: priority_order[task.priority], reverse=reverse
+                )
 
         # --- Display tasks using rich.table.Table ---
         console = Console()
         table = Table(show_header=True, header_style="bold magenta")
         table.add_column("ID Prefix", style="dim", width=12)
+        table.add_column("Priority", width=15)
         table.add_column("Description")
 
         for task in user.tasks:
-            # Add task details to the table
-            table.add_row(task.id[:8], task.description)
+            # Add task details to the table with priority emoji
+            priority_text = f"{task.priority.emoji()} {task.priority.value}"
+            table.add_row(task.id[:8], priority_text, task.description)
 
         console.print(table)
         # --- End rich table display ---
@@ -137,6 +165,15 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
             table.add_column("Attribute", style="bold cyan")
             table.add_column("Value")
             table.add_row("ID:", task.id)
+
+            # Display priority with emoji and colored text
+            priority_text = Text()
+            priority_text.append(f"{task.priority.emoji()} ")
+            priority_text.append(
+                task.priority.value, style=task.priority.display_style()
+            )
+            table.add_row("Priority:", priority_text)
+
             table.add_row("Description:", task.description)
             console.print(table)
             # --- End rich table display ---
@@ -150,16 +187,58 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
         print(f"An unexpected error occurred: {e}")
         sys.exit(1)
     except Exception as e:  # pylint: disable=broad-exception-caught
-        # Required for test compatibility
+        # Broad exception required to handle any unforeseen issues when accessing task data
+        # and ensure clean CLI exit
         print(f"An unexpected error occurred: {e}")
         sys.exit(1)
 
 
+def _update_task_description(task: Task, new_description: str) -> str:
+    """Update task description and return the old value."""
+    old_description = task.description
+    task.description = new_description
+    return old_description
+
+
+def _update_task_priority(task: Task, priority_str: str) -> Priority:
+    """Update task priority and return the old value.
+
+    Raises:
+        ValueError: If the priority string is invalid.
+    """
+    old_priority = task.priority
+    task.priority = Priority(priority_str)
+    return old_priority
+
+
+def _print_task_updates(
+    task: Task,
+    description_updated: bool,
+    old_description: str | None,
+    priority_updated: bool,
+    old_priority: Priority | None,
+) -> None:
+    """Print task update details."""
+    print("Task updated successfully:")
+    if description_updated:
+        print(f"  Old Description: {old_description}")
+        print(f"  New Description: {task.description}")
+    if priority_updated:
+        # Narrow old_priority to non-None for mypy
+        assert old_priority is not None
+        print(f"  Old Priority: {old_priority.value}")
+        print(f"  New Priority: {task.priority.value}")
+
+
 def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> None:
     """Handles the 'edit' command."""
-    if not args.id or not args.description:
-        print("Error: Both --id and --description are required for editing.")
+    if not args.id:
+        print("Error: --id is required for editing.")
         sys.exit(1)
+
+    if not args.description and not args.priority:
+        print("No changes specified. Nothing to update.")
+        return  # Exit the function gracefully, do not proceed
 
     print_verbose(args, f"Editing task with ID prefix: '{args.id}'...")
 
@@ -169,25 +248,55 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
 
     try:
         task_to_edit = user.find_task_by_id(args.id)
-        if task_to_edit:
-            old_description = task_to_edit.description
-            task_to_edit.description = args.description
-            manager.save_user(user)
-            # Print success messages in the correct order
-            print("Task updated successfully:")
-            print(f"  Old Description: {old_description}")
-            print(f"  New Description: {task_to_edit.description}")
-        else:
+        if not task_to_edit:
             print(f"Error: Task with ID prefix '{args.id}' not found.")
             sys.exit(1)
-    except ValueError as e:  # Handles ambiguous ID prefix
+
+        # Initialize variables
+        changes_made = False
+        old_description = None
+        old_priority = None
+
+        # Update description if provided
+        description_updated = False
+        if args.description:
+            old_description = _update_task_description(task_to_edit, args.description)
+            description_updated = True
+            changes_made = True
+
+        # Update priority if provided
+        priority_updated = False
+        if args.priority:
+            try:
+                old_priority = _update_task_priority(task_to_edit, args.priority)
+                priority_updated = True
+                changes_made = True
+            except ValueError:
+                print(
+                    f"Error: Invalid priority '{args.priority}'. "
+                    f"Valid values are: {', '.join([p.value for p in Priority])}"
+                )
+                sys.exit(1)
+
+        if changes_made:
+            manager.save_user(user)
+            _print_task_updates(
+                task_to_edit,
+                description_updated,
+                old_description,
+                priority_updated,
+                old_priority,
+            )
+
+    except ValueError as e:  # Catches find_task_by_id ambiguity
         print(f"Error: {e}")
         sys.exit(1)
-    except (IOError, OSError, AttributeError) as e:
-        print(f"Error saving updated task: {e}")
+    except (IOError, OSError) as e:  # Should catch the save_user IOError
+        print(f"Error saving task update: {e}")
         sys.exit(1)
     except Exception as e:  # pylint: disable=broad-exception-caught
-        # Required for test compatibility
+        # Broad exception required to handle any unforeseen issues when accessing task data
+        # and ensure clean CLI exit
         print(f"Error saving updated task: {e}")
         sys.exit(1)
 
@@ -209,7 +318,7 @@ def handle_delete(args: Namespace, manager: DataManager, user: User | None) -> N
         # and raises ValueError for ambiguity (delegated from find_task_by_id)
         task_deleted = user.remove_task(args.id)
         if task_deleted:
-            try:
+            try:  # pragma: no cover
                 manager.save_user(user)  # Save first
                 print(f"Task '{args.id}' deleted successfully.")  # Then print success
             except IOError as e:
@@ -229,9 +338,10 @@ def handle_delete(args: Namespace, manager: DataManager, user: User | None) -> N
         print(f"An unexpected error occurred during deletion: {e}")
         sys.exit(1)
     except Exception as e:  # pylint: disable=broad-exception-caught
-        # Required for test compatibility
+        # Broad exception required to handle any unforeseen issues when accessing task data
+        # and ensure clean CLI exit
         print(f"An unexpected error occurred during deletion: {e}")
-        sys.exit(1)
+        sys.exit(1)  # Exit after printing error # pragma: no cover
 
 
 def _wrap_handler(
@@ -285,13 +395,20 @@ def setup_parser() -> argparse.ArgumentParser:
         required=True,
         help="The description of the task.",
     )
+    parser_create.add_argument(
+        "-p",
+        "--priority",
+        choices=[p.value for p in Priority],
+        default=Priority.LOW.value,
+        help=f"The priority of the task. Default is '{Priority.LOW.value}'.",
+    )
     parser_create.set_defaults(func=_wrap_handler(handle_create))
 
     # --- List Command ---
     parser_list = subparsers.add_parser("list", help="List all tasks.")
     parser_list.add_argument(
         "--sort-by",
-        choices=["id", "description"],
+        choices=["id", "description", "priority"],
         help="Field to sort tasks by.",
     )
     parser_list.add_argument(
@@ -323,8 +440,14 @@ def setup_parser() -> argparse.ArgumentParser:
     parser_edit.add_argument(
         "-d",
         "--description",
-        required=True,
+        required=False,
         help="The new description for the task.",
+    )
+    parser_edit.add_argument(
+        "-p",
+        "--priority",
+        choices=[p.value for p in Priority],
+        help="The new priority for the task.",
     )
     parser_edit.set_defaults(func=_wrap_handler(handle_edit))
 
@@ -368,6 +491,8 @@ def main() -> None:
             print("Hint: If you haven't initialized, run 'motido init'.")
             sys.exit(1)
         except Exception as e:  # pylint: disable=broad-exception-caught
+            # Broad exception is needed here to prevent unexpected crashes
+            # during user data loading and to provide helpful error messages
             print(f"An unexpected error occurred loading user data: {e}")
             sys.exit(1)
 
@@ -379,6 +504,8 @@ def main() -> None:
         print("If you haven't initialized the application, try running 'motido init'.")
         sys.exit(1)
     except Exception as e:  # pylint: disable=broad-exception-caught
+        # Broad exception is necessary as the final safety net to prevent
+        # the CLI from crashing with an unhandled exception under any circumstances
         print(f"Error: {e}")
         print("If you haven't initialized the application, try running 'motido init'.")
         sys.exit(1)

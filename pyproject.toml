@@ -66,11 +66,11 @@ exclude = ["venv", ".*/build"] # Exclude virtual environment and build directori
 # Add plugins or specific configurations here if needed
 # Example: load-plugins = pylint_django
 # Disable specific messages if necessary, e.g.,
-# disable=missing-docstring,invalid-name
+disable = "no-else-return" #,missing-docstring,invalid-name
 fail-under = 8.0 # Set a minimum score threshold
 
 [tool.pylint.format]
-max-line-length = 88
+max-line-length = 120
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -105,8 +105,8 @@ output = "coverage.xml" # Output for CI/CD systems
 [tool.poe.tasks]
 # Define tasks directly with their commands
 format = [
+    { cmd = "isort ." },
     { cmd = "black ." },
-    { cmd = "isort ." }
 ]
 lint = "pylint src tests --fail-under=10"
 typecheck = "mypy src tests"
@@ -117,10 +117,10 @@ security = "safety scan"
 # Main check task still references the directly defined tasks
 check = [
     "format",
-    "test",
-    "coverage",
-    "lint",
     "typecheck",
+    "lint",
+#    "test",
+    "coverage",
 ] 
 
 check-all = [

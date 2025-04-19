@@ -5,9 +5,10 @@ Implementation of the DataManager interface using JSON file storage.
 
 import json
 import os
-from typing import Any, Dict, cast
+from typing import Any, Dict
 
-from motido.core.models import Task, User
+from motido.core.models import Priority, Task, User
+from motido.core.utils import parse_priority_safely
 
 from .abstraction import DEFAULT_USERNAME, DataManager
 from .config import get_config_path
@@ -48,34 +49,43 @@ class JsonDataManager(DataManager):
             print(f"Data file already exists at: {self._data_path}")
 
     def _read_data(self) -> Dict[str, Any]:
-        """Reads the entire data structure from the JSON file."""
-        self._ensure_data_dir_exists()
-        if not os.path.exists(self._data_path):
-            return {}  # Return empty dict if file doesn't exist
+        """
+        Reads user data from the JSON file.
 
+        Returns:
+            A dictionary containing all user data from the file.
+        """
         try:
-            with open(self._data_path, "r", encoding="utf-8") as f:
-                # Handle empty file case
-                content = f.read()
-                if not content:
-                    return {}
-                # Cast the result of json.loads
-                return cast(Dict[str, Any], json.loads(content))
-        except (json.JSONDecodeError, IOError) as e:
-            # C0301: Split long print statement
-            print(f"Error reading data file '{self._data_path}': {e}.")
-            print("Returning empty data.")
-            # Consider backup/recovery mechanism here in a real app
+            if not os.path.exists(self._data_path):
+                # Return empty dict if file doesn't exist yet
+                return {}
+            with open(self._data_path, "r", encoding="utf-8") as file:
+                data = json.load(file)
+                # Return loaded data, defaulting to empty dict if file was empty
+                return data if data else {}
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON data: {e}")
+            # In case of corrupted file, return empty dict (could be handled better)
             return {}
+        except IOError as e:
+            print(f"Error reading data file: {e}")  # pragma: no cover
+            # In case of file access error, return empty dict (could be handled better)
+            return {}  # pragma: no cover
 
     def _write_data(self, data: Dict[str, Any]) -> None:
-        """Writes the entire data structure to the JSON file."""
-        self._ensure_data_dir_exists()
+        """
+        Writes user data to the JSON file.
+
+        Args:
+            data: The dictionary containing user data to write.
+        """
         try:
-            with open(self._data_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4)
+            self._ensure_data_dir_exists()  # Ensure dir exists before writing
+            with open(self._data_path, "w", encoding="utf-8") as file:
+                json.dump(data, file, indent=2)  # Pretty-print with 2-space indent
         except IOError as e:
-            print(f"Error writing data file '{self._data_path}': {e}")
+            print(f"Error writing to data file: {e}")
+            raise  # Re-raise to signal failure to the caller
 
     def load_user(self, username: str = DEFAULT_USERNAME) -> User | None:
         """Loads a specific user's data from the JSON file."""
@@ -87,12 +97,25 @@ class JsonDataManager(DataManager):
         if user_data:
             try:
                 # Deserialize tasks
-                tasks = [Task(**task_dict) for task_dict in user_data.get("tasks", [])]
+                tasks = []
+                for task_dict in user_data.get("tasks", []):
+                    # Get priority from task_dict or use default if not present
+                    priority_str = task_dict.get("priority", Priority.LOW.value)
+                    priority = parse_priority_safely(priority_str, task_dict.get("id"))
+
+                    # Create Task with ID, description, and priority
+                    task = Task(
+                        id=task_dict["id"],
+                        description=task_dict["description"],
+                        priority=priority,
+                    )
+                    tasks.append(task)
+
                 # Create User object
                 user = User(username=user_data.get("username", username), tasks=tasks)
                 print(f"User '{username}' loaded successfully.")
                 return user
-            except TypeError as e:
+            except TypeError as e:  # pragma: no cover
                 print(f"Error deserializing user data for '{username}': {e}")
                 return None  # Or handle corrupted data more gracefully
         else:
@@ -108,7 +131,12 @@ class JsonDataManager(DataManager):
 
         # Serialize tasks
         tasks_data = [
-            {"id": task.id, "description": task.description} for task in user.tasks
+            {
+                "id": task.id,
+                "description": task.description,
+                "priority": task.priority.value,  # Save the priority value as string
+            }
+            for task in user.tasks
         ]
         # Prepare user data for JSON
         user_data = {"username": user.username, "tasks": tasks_data}

@@ -10,7 +10,7 @@ import pytest
 from test_cli_main import create_mock_args
 
 from motido.cli import main as cli_main
-from motido.core.models import Task, User
+from motido.core.models import Priority, Task, User
 from motido.data.abstraction import DataManager
 
 
@@ -72,7 +72,7 @@ def test_handle_edit_attribute_error(
     mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
 ) -> None:
     """Test handle_edit catches AttributeError during save."""
-    mock_task = Task(description="Old", id="edit-attr-err")
+    mock_task = Task(description="Old", id="edit-attr-err", priority=Priority.LOW)
     mock_user.find_task_by_id.return_value = mock_task
     error_message = "Attribute error on save"
     mock_manager.save_user.side_effect = AttributeError(error_message)
@@ -111,7 +111,7 @@ def test_handle_edit_io_error(
     mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
 ) -> None:
     """Test handle_edit catches IOError during save."""
-    mock_task = Task(description="Old IO", id="edit-io-err")
+    mock_task = Task(description="Old IO", id="edit-io-err", priority=Priority.LOW)
     mock_user.find_task_by_id.return_value = mock_task
     error_message = "IO error on save"
     mock_manager.save_user.side_effect = IOError(error_message)
@@ -121,7 +121,7 @@ def test_handle_edit_io_error(
     with pytest.raises(SystemExit) as excinfo:
         cli_main.handle_edit(args, mock_manager, mock_user)
 
-    mock_print.assert_any_call(f"Error saving updated task: {error_message}")
+    mock_print.assert_any_call(f"Error saving task update: {error_message}")
     assert excinfo.value.code == 1
 
 
@@ -170,14 +170,16 @@ def test_handle_delete_generic_exception_on_save(mocker: Any) -> None:
     mock_print = mocker.patch("builtins.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
     mock_user = mocker.MagicMock(spec=User)
-    mock_user.remove_task.return_value = True
+    mock_user.remove_task.return_value = True  # Simulate successful removal
     error_message = "Generic error saving after delete"
-    mock_manager.save_user.side_effect = Exception(error_message)
+    mock_manager.save_user.side_effect = Exception(error_message)  # Simulate save error
+    # Use the helper to create args
     args = create_mock_args(id="task123", verbose=False)
 
     with pytest.raises(SystemExit) as excinfo:
         cli_main.handle_delete(args, mock_manager, mock_user)
 
+    # Check that the correct error message for this specific case is printed
     mock_print.assert_called_once_with(
         f"Error saving after deleting task: {error_message}"
     )
@@ -213,26 +215,45 @@ def test_handle_view_generic_exception(
 
 
 def test_handle_edit_missing_args(
-    mock_manager: MagicMock, mock_print: MagicMock
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
 ) -> None:
-    """Test handle_edit exits if id or description is missing."""
-    # Test missing description
-    args_no_desc = create_mock_args(id="some-id", description=None)
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_edit(args_no_desc, mock_manager, None)
-    mock_print.assert_any_call(
-        "Error: Both --id and --description are required for editing."
-    )
-    assert excinfo.value.code == 1
+    """Test handle_edit handles missing arguments gracefully.
 
-    # Test missing id
-    mock_print.reset_mock()
-    args_no_id = create_mock_args(id=None, description="New Desc")
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_edit(args_no_id, mock_manager, None)
-    mock_print.assert_any_call(
-        "Error: Both --id and --description are required for editing."
+    - If both description and priority are missing, it should print a message
+      and return.
+    - If ID is missing, it should exit with an error.
+    """
+    # Test missing both description and priority (should print and return, not exit)
+    args_no_desc_no_priority = create_mock_args(
+        id="some-id", description=None, priority=None, verbose=False
     )
+
+    # Call the function - it should NOT raise SystemExit
+    cli_main.handle_edit(
+        args_no_desc_no_priority, mock_manager, mock_user
+    )  # Pass mock_user
+
+    # Assert the correct informational message was printed
+    mock_print.assert_any_call("No changes specified. Nothing to update.")
+    # Assert that save was NOT called
+    mock_manager.save_user.assert_not_called()
+    # Assert that find_task_by_id was NOT called
+    mock_user.find_task_by_id.assert_not_called()
+
+    # Clear mocks for the next part of the test
+    mock_print.reset_mock()
+    mock_manager.reset_mock()
+
+    # Test missing ID (should exit)
+    args_no_id = create_mock_args(
+        id=None, description="Some description", priority=None, verbose=False
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        # Pass mock_user, although it exits before using it for missing ID
+        cli_main.handle_edit(args_no_id, mock_manager, mock_user)
+
+    # Assert the correct error message for missing ID
+    mock_print.assert_any_call("Error: --id is required for editing.")
     assert excinfo.value.code == 1
 
 
@@ -269,7 +290,7 @@ def test_handle_edit_generic_exception(
     mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
 ) -> None:
     """Test handle_edit catches generic Exception during save."""
-    mock_task = Task(description="Old Gen", id="edit-gen-err")
+    mock_task = Task(description="Old Gen", id="edit-gen-err", priority=Priority.LOW)
     mock_user.find_task_by_id.return_value = mock_task
     error_message = "Generic error on save"
     mock_manager.save_user.side_effect = Exception(error_message)

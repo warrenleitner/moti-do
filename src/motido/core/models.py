@@ -5,7 +5,48 @@ Defines the core data models for the Moti-Do application.
 
 import uuid
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import List
+
+
+class Priority(str, Enum):
+    """Priority levels for tasks from least to most important."""
+
+    TRIVIAL = "Trivial"
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+    DEFCON_ONE = "Defcon One"
+
+    def emoji(self) -> str:
+        """Returns emoji representation of the priority level."""
+        if self == Priority.TRIVIAL:
+            return "🔹"  # Blue diamond
+        elif self == Priority.LOW:
+            return "🟢"  # Green circle
+        elif self == Priority.MEDIUM:
+            return "🟡"  # Yellow circle
+        elif self == Priority.HIGH:
+            return "🟠"  # Orange circle
+        elif self == Priority.DEFCON_ONE:
+            return "🔴"  # Red circle
+        else:
+            return ""  # Fallback # pragma: no cover
+
+    def display_style(self) -> str:
+        """Returns rich console style string for the priority."""
+        if self == Priority.TRIVIAL:
+            return ""  # No color
+        elif self == Priority.LOW:
+            return "green"
+        elif self == Priority.MEDIUM:
+            return "yellow"
+        elif self == Priority.HIGH:
+            return "orange1"
+        elif self == Priority.DEFCON_ONE:
+            return "red"
+        else:
+            return ""  # Fallback # pragma: no cover
 
 
 @dataclass
@@ -16,10 +57,14 @@ class Task:
     # Use a factory to generate a unique ID upon creation.
     # The ID is represented as a string for easier serialization (JSON, DB).
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    priority: Priority = field(default=Priority.LOW)
 
     def __str__(self) -> str:
         """String representation for simple display."""
-        return f"ID: {self.id[:8]} | Description: {self.description}"  # Show partial ID
+        return (
+            f"ID: {self.id[:8]} | Priority: {self.priority.emoji()} {self.priority.value} "
+            f"| Description: {self.description}"  # Show partial ID
+        )
 
 
 @dataclass

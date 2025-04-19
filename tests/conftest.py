@@ -6,7 +6,7 @@ from typing import Any, Dict, Tuple
 import pytest
 
 # Import models from core.models
-from motido.core.models import Task, User
+from motido.core.models import Priority, Task, User
 
 # Import DEFAULT_USERNAME from abstraction layer
 from motido.data.abstraction import DEFAULT_USERNAME
@@ -41,8 +41,8 @@ def manager(
 def sample_user() -> User:
     """Provides a sample User object."""
     user = User(username=DEFAULT_USERNAME)
-    user.add_task(Task(description="Task A", id="uuid-a"))
-    user.add_task(Task(description="Task B", id="uuid-b"))
+    user.add_task(Task(description="Task A", id="uuid-a", priority=Priority.LOW))
+    user.add_task(Task(description="Task B", id="uuid-b", priority=Priority.MEDIUM))
     return user
 
 
@@ -55,8 +55,16 @@ def sample_user_data(
         sample_user.username: {
             "username": sample_user.username,
             "tasks": [
-                {"id": "uuid-a", "description": "Task A"},
-                {"id": "uuid-b", "description": "Task B"},
+                {
+                    "id": "uuid-a",
+                    "description": "Task A",
+                    "priority": Priority.LOW.value,
+                },
+                {
+                    "id": "uuid-b",
+                    "description": "Task B",
+                    "priority": Priority.MEDIUM.value,
+                },
             ],
         }
     }

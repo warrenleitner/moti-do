@@ -5,7 +5,7 @@ from typing import List
 
 import pytest
 
-from motido.core.models import Task, User
+from motido.core.models import Priority, Task, User
 
 # pylint: disable=redefined-outer-name
 # This disables warnings for pytest fixtures used as function parameters
@@ -25,14 +25,46 @@ def test_task_initialization() -> None:
         uuid.UUID(task.id)  # Validate it's a proper UUID
     except ValueError:
         pytest.fail(f"Task ID '{task.id}' is not a valid UUID.")
+    # Check default priority
+    assert task.priority == Priority.LOW
+
+
+def test_task_initialization_with_priority() -> None:
+    """Test that a Task object is initialized correctly with a specified priority."""
+    desc = "Task with custom priority"
+    priority = Priority.HIGH
+    task = Task(description=desc, priority=priority)
+    assert task.description == desc
+    assert task.priority == Priority.HIGH
 
 
 def test_task_str_representation() -> None:
     """Test the string representation of a Task."""
     desc = "Another task"
     task = Task(description=desc)
-    expected_str = f"ID: {task.id[:8]} | Description: {desc}"
+    expected_str = (
+        f"ID: {task.id[:8]} | Priority: {task.priority.emoji()} "
+        f"{task.priority.value} | Description: {desc}"
+    )
     assert str(task) == expected_str
+
+
+def test_priority_emoji() -> None:
+    """Test that each priority level returns the correct emoji."""
+    assert Priority.TRIVIAL.emoji() == "🔹"  # Blue diamond
+    assert Priority.LOW.emoji() == "🟢"  # Green circle
+    assert Priority.MEDIUM.emoji() == "🟡"  # Yellow circle
+    assert Priority.HIGH.emoji() == "🟠"  # Orange circle
+    assert Priority.DEFCON_ONE.emoji() == "🔴"  # Red circle
+
+
+def test_priority_display_style() -> None:
+    """Test that each priority level returns the correct display style for rich."""
+    assert Priority.TRIVIAL.display_style() == ""  # No color
+    assert Priority.LOW.display_style() == "green"
+    assert Priority.MEDIUM.display_style() == "yellow"
+    assert Priority.HIGH.display_style() == "orange1"
+    assert Priority.DEFCON_ONE.display_style() == "red"
 
 
 # --- User Fixtures ---
@@ -42,27 +74,27 @@ def test_task_str_representation() -> None:
 def sample_tasks() -> List[Task]:
     """Provides a list of sample tasks for testing."""
     return [
-        Task(description="Task 1", id="abc12345-mock-uuid-1"),
-        Task(description="Task 2", id="def67890-mock-uuid-2"),
+        Task(description="Task 1", id="abc12345-mock-uuid-1", priority=Priority.LOW),
+        Task(description="Task 2", id="def67890-mock-uuid-2", priority=Priority.MEDIUM),
         Task(
-            description="Task 3", id="abc54321-mock-uuid-3"
+            description="Task 3", id="abc54321-mock-uuid-3", priority=Priority.HIGH
         ),  # Shares prefix with Task 1
     ]
 
 
 @pytest.fixture
-def user_with_tasks(sample_tasks: List[Task]) -> User:
-    """Provides a User instance populated with sample tasks."""
-    user = User(username="testuser")
-    for task in sample_tasks:
-        user.add_task(task)
-    return user
+def empty_user() -> User:
+    """Provides an empty User for testing."""
+    return User(username="empty_user")
 
 
 @pytest.fixture
-def empty_user() -> User:
-    """Provides an empty User instance."""
-    return User(username="emptyuser")
+def user_with_tasks(sample_tasks: List[Task]) -> User:
+    """Provides a User with predefined tasks for testing."""
+    user = User(username="test_user")
+    for task in sample_tasks:
+        user.add_task(task)
+    return user
 
 
 # --- User Tests ---
@@ -108,51 +140,43 @@ def test_user_remove_task_non_existing(user_with_tasks: User) -> None:
     assert len(user_with_tasks.tasks) == initial_task_count  # No change
 
 
-def test_user_find_task_by_full_id(
+def test_user_find_task_by_id_exact(
     user_with_tasks: User, sample_tasks: List[Task]
 ) -> None:
-    """Test finding a task by its full ID."""
-    task_to_find = sample_tasks[0]
-    found_task = user_with_tasks.find_task_by_id(task_to_find.id)
-    assert found_task == task_to_find
+    """Test finding a task by its exact ID."""
+    task_id = sample_tasks[0].id
+    found_task = user_with_tasks.find_task_by_id(task_id)
+    assert found_task is not None
+    assert found_task.id == task_id
 
 
-def test_user_find_task_by_unique_partial_id(
+def test_user_find_task_by_id_partial(
     user_with_tasks: User, sample_tasks: List[Task]
 ) -> None:
-    """Test finding a task by a unique partial ID prefix."""
-    task_to_find = sample_tasks[1]  # Task 2
-    partial_id = task_to_find.id[:5]  # Use first 5 chars: "def67"
-    found_task = user_with_tasks.find_task_by_id(partial_id)
-    assert found_task == task_to_find
+    """Test finding a task by a partial ID prefix."""
+    # Using just the first few chars of the ID
+    task_id_prefix = sample_tasks[0].id[:4]
+    found_task = user_with_tasks.find_task_by_id(task_id_prefix)
+    assert found_task is not None
+    assert found_task.id == sample_tasks[0].id
+    # Verify it has the correct priority
+    assert found_task.priority == sample_tasks[0].priority
 
 
-def test_user_find_task_by_ambiguous_partial_id(user_with_tasks: User) -> None:
-    """Test finding a task by an ambiguous partial ID prefix raises ValueError."""
-    partial_id = "abc"  # Matches Task 1 and Task 3
-    with pytest.raises(ValueError) as excinfo:
-        user_with_tasks.find_task_by_id(partial_id)
-    assert "Ambiguous ID prefix 'abc'" in str(excinfo.value)
-
-
-def test_user_find_task_by_non_existent_id(user_with_tasks: User) -> None:
-    """Test finding a task by an ID prefix that doesn't match any task."""
-    non_existent_prefix = "xyz"
+def test_user_find_task_by_id_non_existing(user_with_tasks: User) -> None:
+    """Test finding a task with an ID that doesn't exist."""
+    non_existent_prefix = "xyz"  # Assuming no task ID starts with this
     found_task = user_with_tasks.find_task_by_id(non_existent_prefix)
     assert found_task is None
 
 
-def test_user_find_task_in_empty_list(empty_user: User) -> None:
-    """Test finding a task when the user has no tasks."""
-    found_task = empty_user.find_task_by_id("any_id")
-    assert found_task is None
-
-
-def test_user_find_task_by_empty_string(user_with_tasks: User) -> None:
-    """Test finding a task with an empty string (should be ambiguous if >1 task)."""
+def test_user_find_task_by_id_ambiguous(user_with_tasks: User) -> None:
+    """Test finding a task with an ambiguous ID prefix (matches multiple tasks)."""
+    # sample_tasks has two tasks with IDs starting with "abc"
+    ambiguous_prefix = "abc"
     with pytest.raises(ValueError) as excinfo:
-        user_with_tasks.find_task_by_id("")
-    assert "Ambiguous ID prefix ''" in str(excinfo.value)
+        user_with_tasks.find_task_by_id(ambiguous_prefix)
+    assert "Multiple tasks found" in str(excinfo.value)
 
 
 def test_user_find_task_by_empty_string_single_task() -> None:

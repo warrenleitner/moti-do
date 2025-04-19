@@ -7,7 +7,8 @@ import os
 import sqlite3
 from typing import List, Optional, Tuple
 
-from motido.core.models import Task, User
+from motido.core.models import Priority, Task, User
+from motido.core.utils import parse_priority_safely
 
 from .abstraction import DEFAULT_USERNAME, DataManager
 from .config import get_config_path  # Needed to place DB file near config
@@ -66,6 +67,7 @@ class DatabaseDataManager(DataManager):
                 CREATE TABLE IF NOT EXISTS tasks (
                     id TEXT PRIMARY KEY,
                     description TEXT NOT NULL,
+                    priority TEXT NOT NULL DEFAULT 'Low',
                     user_username TEXT NOT NULL,
                     FOREIGN KEY (user_username) REFERENCES users (username)
                         ON DELETE CASCADE ON UPDATE CASCADE
@@ -109,14 +111,24 @@ class DatabaseDataManager(DataManager):
 
                 # Load tasks for the user
                 cursor.execute(
-                    "SELECT id, description FROM tasks WHERE user_username = ?",
+                    "SELECT id, description, priority FROM tasks "
+                    "WHERE user_username = ?",
                     (username,),
                 )
                 task_rows = cursor.fetchall()
-                tasks = [
-                    Task(id=row["id"], description=row["description"])
-                    for row in task_rows
-                ]
+                tasks = []
+                for row in task_rows:
+                    # Convert priority string to enum
+                    priority_str = (
+                        row["priority"] if "priority" in row else Priority.LOW.value
+                    )
+                    priority = parse_priority_safely(priority_str, row["id"])
+
+                    # Create task with ID, description, and priority
+                    task = Task(
+                        id=row["id"], description=row["description"], priority=priority
+                    )
+                    tasks.append(task)
 
                 user = User(username=username, tasks=tasks)
                 print(f"User '{username}' loaded successfully with {len(tasks)} tasks.")
@@ -159,15 +171,16 @@ class DatabaseDataManager(DataManager):
                 print(f"Deleted existing tasks for '{user.username}'.")
 
                 # Prepare task data for batch insertion
-                tasks_to_insert: List[Tuple[str, str, str]] = [
-                    (task.id, task.description, user.username) for task in user.tasks
+                tasks_to_insert: List[Tuple[str, str, str, str]] = [
+                    (task.id, task.description, task.priority.value, user.username)
+                    for task in user.tasks
                 ]
 
                 # Insert new tasks if any exist
                 if tasks_to_insert:
                     cursor.executemany(
-                        "INSERT INTO tasks (id, description, user_username) "
-                        "VALUES (?, ?, ?)",
+                        "INSERT INTO tasks (id, description, priority, user_username) "
+                        "VALUES (?, ?, ?, ?)",
                         tasks_to_insert,
                     )
                     print(
