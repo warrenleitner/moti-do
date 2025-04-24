@@ -16,7 +16,7 @@ from rich.table import Table
 from rich.text import Text
 
 # Updated imports
-from motido.core.models import Priority, Task, User
+from motido.core.models import Difficulty, Priority, Task, User  # Added Difficulty
 from motido.data.abstraction import DataManager  # For type hinting
 from motido.data.abstraction import DEFAULT_USERNAME
 from motido.data.backend_factory import get_data_manager
@@ -71,6 +71,18 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
         )
         sys.exit(1)
 
+    # Get the difficulty from args, default to TRIVIAL if not specified
+    difficulty = Difficulty.TRIVIAL  # Default
+    if args.difficulty:
+        try:
+            difficulty = Difficulty(args.difficulty)
+        except ValueError:
+            print(
+                f"Error: Invalid difficulty '{args.difficulty}'. "
+                f"Valid values are: {', '.join([d.value for d in Difficulty])}"
+            )
+            sys.exit(1)
+
     if user is None:
         # If user doesn't exist, create a new one
         print_verbose(args, f"User '{DEFAULT_USERNAME}' not found. Creating new user.")
@@ -79,7 +91,10 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
 
     # Create a new task with the current timestamp as creation_date
     new_task = Task(
-        description=args.description, priority=priority, creation_date=datetime.now()
+        description=args.description,
+        priority=priority,
+        difficulty=difficulty,  # Add difficulty
+        creation_date=datetime.now(),
     )
     user.add_task(new_task)
     try:
@@ -130,12 +145,14 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
         table = Table(show_header=True, header_style="bold magenta")
         table.add_column("ID Prefix", style="dim", width=12)
         table.add_column("Priority", width=15)
+        table.add_column("Difficulty", width=15)
         table.add_column("Description")
 
         for task in user.tasks:
-            # Add task details to the table with priority emoji
+            # Add task details to the table with priority and difficulty emoji
             priority_text = f"{task.priority.emoji()} {task.priority.value}"
-            table.add_row(task.id[:8], priority_text, task.description)
+            difficulty_text = f"{task.difficulty.emoji()} {task.difficulty.value}"
+            table.add_row(task.id[:8], priority_text, difficulty_text, task.description)
 
         console.print(table)
         # --- End rich table display ---
@@ -181,6 +198,15 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
             # Format creation_date as YYYY-MM-DD HH:MM:SS
             formatted_date = task.creation_date.strftime("%Y-%m-%d %H:%M:%S")
             table.add_row("Created:", formatted_date)
+
+            # Display difficulty with emoji and style
+            difficulty_text = Text()
+            difficulty_text.append(f"{task.difficulty.emoji()} ")
+            difficulty_text.append(
+                task.difficulty.value, style=task.difficulty.display_style()
+            )
+            table.add_row("Difficulty:", difficulty_text)
+
             table.add_row("Description:", task.description)
             console.print(table)
             # --- End rich table display ---
@@ -218,12 +244,26 @@ def _update_task_priority(task: Task, priority_str: str) -> Priority:
     return old_priority
 
 
+def _update_task_difficulty(task: Task, difficulty_str: str) -> Difficulty:
+    """Update task difficulty and return the old value.
+
+    Raises:
+        ValueError: If the difficulty string is invalid.
+    """
+    old_difficulty = task.difficulty
+    task.difficulty = Difficulty(difficulty_str)  # Raises ValueError if invalid
+    return old_difficulty
+
+
+# pylint: disable=too-many-arguments,too-many-positional-arguments
 def _print_task_updates(
     task: Task,
     description_updated: bool,
     old_description: str | None,
     priority_updated: bool,
     old_priority: Priority | None,
+    difficulty_updated: bool,  # Add this
+    old_difficulty: Difficulty | None,  # Add this
 ) -> None:
     """Print task update details."""
     print("Task updated successfully:")
@@ -235,15 +275,22 @@ def _print_task_updates(
         assert old_priority is not None
         print(f"  Old Priority: {old_priority.value}")
         print(f"  New Priority: {task.priority.value}")
+    if difficulty_updated:
+        assert old_difficulty is not None  # For mypy
+        print(f"  Old Difficulty: {old_difficulty.value}")
+        print(f"  New Difficulty: {task.difficulty.value}")
 
 
+# pylint: disable=too-many-branches,too-many-statements
 def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> None:
     """Handles the 'edit' command."""
     if not args.id:
         print("Error: --id is required for editing.")
         sys.exit(1)
 
-    if not args.description and not args.priority:
+    if (
+        not args.description and not args.priority and not args.difficulty
+    ):  # Add difficulty check
         print("No changes specified. Nothing to update.")
         return  # Exit the function gracefully, do not proceed
 
@@ -263,6 +310,7 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
         changes_made = False
         old_description = None
         old_priority = None
+        old_difficulty = None  # Add this
 
         # Update description if provided
         description_updated = False
@@ -285,6 +333,20 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
                 )
                 sys.exit(1)
 
+        # Update difficulty if provided
+        difficulty_updated = False
+        if args.difficulty:
+            try:
+                old_difficulty = _update_task_difficulty(task_to_edit, args.difficulty)
+                difficulty_updated = True
+                changes_made = True
+            except ValueError:
+                print(
+                    f"Error: Invalid difficulty '{args.difficulty}'. "
+                    f"Valid values are: {', '.join([d.value for d in Difficulty])}"
+                )
+                sys.exit(1)
+
         if changes_made:
             manager.save_user(user)
             _print_task_updates(
@@ -293,9 +355,11 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
                 old_description,
                 priority_updated,
                 old_priority,
+                difficulty_updated,  # Add this
+                old_difficulty,  # Add this
             )
 
-    except ValueError as e:  # Catches find_task_by_id ambiguity
+    except ValueError as e:  # Catches find_task_by_id ambiguity or invalid enum value
         print(f"Error: {e}")
         sys.exit(1)
     except (IOError, OSError) as e:  # Should catch the save_user IOError
@@ -409,6 +473,13 @@ def setup_parser() -> argparse.ArgumentParser:
         default=Priority.LOW.value,
         help=f"The priority of the task. Default is '{Priority.LOW.value}'.",
     )
+    parser_create.add_argument(
+        "-f",  # Short flag for difficulty
+        "--difficulty",
+        choices=[d.value for d in Difficulty],
+        # Default is handled in the model, no CLI default needed
+        help=f"The difficulty of the task. Valid values: {', '.join([d.value for d in Difficulty])}.",
+    )
     parser_create.set_defaults(func=_wrap_handler(handle_create))
 
     # --- List Command ---
@@ -437,7 +508,8 @@ def setup_parser() -> argparse.ArgumentParser:
 
     # --- Edit Command ---
     parser_edit = subparsers.add_parser(
-        "edit", help="Edit the description of an existing task."
+        "edit",
+        help="Edit the description, priority, or difficulty of an existing task.",  # Updated help
     )
     parser_edit.add_argument(
         "--id",
@@ -455,6 +527,12 @@ def setup_parser() -> argparse.ArgumentParser:
         "--priority",
         choices=[p.value for p in Priority],
         help="The new priority for the task.",
+    )
+    parser_edit.add_argument(
+        "-f",
+        "--difficulty",
+        choices=[d.value for d in Difficulty],
+        help="The new difficulty for the task.",
     )
     parser_edit.set_defaults(func=_wrap_handler(handle_edit))
 

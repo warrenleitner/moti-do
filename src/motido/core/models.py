@@ -37,7 +37,7 @@ class Priority(str, Enum):
     def display_style(self) -> str:
         """Returns rich console style string for the priority."""
         if self == Priority.TRIVIAL:
-            return ""  # No color
+            return "teal"  # Changed from no color to teal
         elif self == Priority.LOW:
             return "green"
         elif self == Priority.MEDIUM:
@@ -45,6 +45,46 @@ class Priority(str, Enum):
         elif self == Priority.HIGH:
             return "orange1"
         elif self == Priority.DEFCON_ONE:
+            return "red"
+        else:
+            return ""  # Fallback # pragma: no cover
+
+
+class Difficulty(str, Enum):
+    """Difficulty levels for tasks."""
+
+    TRIVIAL = "Trivial"
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+    HERCULEAN = "Herculean"
+
+    def emoji(self) -> str:
+        """Returns emoji representation of the difficulty level."""
+        if self == Difficulty.TRIVIAL:
+            return "🍭"  # Lollipop
+        elif self == Difficulty.LOW:
+            return "🪶"  # Feather
+        elif self == Difficulty.MEDIUM:
+            return "🧱"  # Brick
+        elif self == Difficulty.HIGH:
+            return "🧗"  # Person climbing
+        elif self == Difficulty.HERCULEAN:
+            return "🦾"  # Mechanical arm
+        else:
+            return ""  # Fallback # pragma: no cover
+
+    def display_style(self) -> str:
+        """Returns rich console style string for the difficulty."""
+        if self == Difficulty.TRIVIAL:
+            return "teal"
+        elif self == Difficulty.LOW:
+            return "green"
+        elif self == Difficulty.MEDIUM:
+            return "yellow"
+        elif self == Difficulty.HIGH:
+            return "orange1"
+        elif self == Difficulty.HERCULEAN:
             return "red"
         else:
             return ""  # Fallback # pragma: no cover
@@ -60,6 +100,7 @@ class Task:
     # The ID is represented as a string for easier serialization (JSON, DB).
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     priority: Priority = field(default=Priority.LOW)
+    difficulty: Difficulty = field(default=Difficulty.TRIVIAL)
 
     def __str__(self) -> str:
         """String representation for simple display."""

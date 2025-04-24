@@ -6,7 +6,7 @@ from typing import List
 
 import pytest
 
-from motido.core.models import Priority, Task, User
+from motido.core.models import Difficulty, Priority, Task, User  # Added Difficulty
 
 # pylint: disable=redefined-outer-name
 # This disables warnings for pytest fixtures used as function parameters
@@ -28,6 +28,8 @@ def test_task_initialization() -> None:
         pytest.fail(f"Task ID '{task.id}' is not a valid UUID.")
     # Check default priority
     assert task.priority == Priority.LOW
+    # Check default difficulty
+    assert task.difficulty == Difficulty.TRIVIAL
 
 
 def test_task_initialization_with_priority() -> None:
@@ -37,6 +39,35 @@ def test_task_initialization_with_priority() -> None:
     task = Task(description=desc, priority=priority, creation_date=datetime.now())
     assert task.description == desc
     assert task.priority == Priority.HIGH
+    # Ensure default difficulty is still set
+    assert task.difficulty == Difficulty.TRIVIAL
+
+
+def test_task_initialization_with_difficulty() -> None:
+    """Test that a Task object is initialized correctly with a specified difficulty."""
+    desc = "Task with custom difficulty"
+    difficulty = Difficulty.HIGH
+    task = Task(description=desc, difficulty=difficulty, creation_date=datetime.now())
+    assert task.description == desc
+    assert task.difficulty == Difficulty.HIGH
+    # Ensure default priority is still set
+    assert task.priority == Priority.LOW
+
+
+def test_task_initialization_with_priority_and_difficulty() -> None:
+    """Test Task initialization with both priority and difficulty specified."""
+    desc = "Task with custom priority and difficulty"
+    priority = Priority.MEDIUM
+    difficulty = Difficulty.LOW
+    task = Task(
+        description=desc,
+        priority=priority,
+        difficulty=difficulty,
+        creation_date=datetime.now(),
+    )
+    assert task.description == desc
+    assert task.priority == priority
+    assert task.difficulty == difficulty
 
 
 def test_task_str_representation() -> None:
@@ -63,11 +94,43 @@ def test_priority_emoji() -> None:
 
 def test_priority_display_style() -> None:
     """Test that each priority level returns the correct display style for rich."""
-    assert Priority.TRIVIAL.display_style() == ""  # No color
+    assert Priority.TRIVIAL.display_style() == "teal"  # Changed from no color to teal
     assert Priority.LOW.display_style() == "green"
     assert Priority.MEDIUM.display_style() == "yellow"
     assert Priority.HIGH.display_style() == "orange1"
     assert Priority.DEFCON_ONE.display_style() == "red"
+
+
+def test_difficulty_enum_values() -> None:
+    """Test the string values of the Difficulty enum."""
+    assert Difficulty.TRIVIAL.value == "Trivial"
+    assert Difficulty.LOW.value == "Low"
+    assert Difficulty.MEDIUM.value == "Medium"
+    assert Difficulty.HIGH.value == "High"
+    assert Difficulty.HERCULEAN.value == "Herculean"
+
+
+def test_difficulty_emoji() -> None:
+    """Test that each difficulty level returns the correct emoji."""
+    assert Difficulty.TRIVIAL.emoji() == "🍭"  # Lollipop
+    assert Difficulty.LOW.emoji() == "🪶"  # Feather
+    assert Difficulty.MEDIUM.emoji() == "🧱"  # Brick
+    assert Difficulty.HIGH.emoji() == "🧗"  # Person climbing
+    assert Difficulty.HERCULEAN.emoji() == "🦾"  # Mechanical arm
+
+
+def test_difficulty_display_style() -> None:
+    """Test that each difficulty level returns the correct display style for rich."""
+    assert Difficulty.TRIVIAL.display_style() == "teal"
+    assert Difficulty.LOW.display_style() == "green"
+    assert Difficulty.MEDIUM.display_style() == "yellow"
+    assert Difficulty.HIGH.display_style() == "orange1"
+    assert Difficulty.HERCULEAN.display_style() == "red"
+
+
+def test_priority_display_style_updated() -> None:
+    """Test that Priority.TRIVIAL now returns 'teal' for display style."""
+    assert Priority.TRIVIAL.display_style() == "teal"
 
 
 # --- User Fixtures ---
@@ -82,18 +145,21 @@ def sample_tasks() -> List[Task]:
             creation_date=datetime.now(),
             id="abc12345-mock-uuid-1",
             priority=Priority.LOW,
+            difficulty=Difficulty.TRIVIAL,  # Added difficulty
         ),
         Task(
             description="Task 2",
             creation_date=datetime.now(),
             id="def67890-mock-uuid-2",
             priority=Priority.MEDIUM,
+            difficulty=Difficulty.MEDIUM,  # Added difficulty
         ),
         Task(
             description="Task 3",
             creation_date=datetime.now(),
             id="abc54321-mock-uuid-3",
             priority=Priority.HIGH,
+            difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
         ),  # Shares prefix with Task 1
     ]
 
