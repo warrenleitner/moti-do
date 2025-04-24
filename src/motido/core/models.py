@@ -5,6 +5,7 @@ Defines the core data models for the Moti-Do application.
 
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import List
 
@@ -54,6 +55,7 @@ class Task:
     """Represents a single task."""
 
     description: str
+    creation_date: datetime
     # Use a factory to generate a unique ID upon creation.
     # The ID is represented as a string for easier serialization (JSON, DB).
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -61,9 +63,11 @@ class Task:
 
     def __str__(self) -> str:
         """String representation for simple display."""
+        # Format creation_date as YYYY-MM-DD HH:MM:SS
+        formatted_date = self.creation_date.strftime("%Y-%m-%d %H:%M:%S")
         return (
             f"ID: {self.id[:8]} | Priority: {self.priority.emoji()} {self.priority.value} "
-            f"| Description: {self.description}"  # Show partial ID
+            f"| Created: {formatted_date} | Description: {self.description}"  # Show partial ID
         )
 
 

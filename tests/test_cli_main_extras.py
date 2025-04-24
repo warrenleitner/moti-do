@@ -3,15 +3,17 @@
 # pylint: disable=redefined-outer-name
 # ^ This disables the "redefined-outer-name" warning which is normal for pytest fixtures
 
+from datetime import datetime
 from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
-from test_cli_main import create_mock_args
 
 from motido.cli import main as cli_main
 from motido.core.models import Priority, Task, User
 from motido.data.abstraction import DataManager
+
+from .test_cli_main import create_mock_args
 
 
 # Fixture to create a mock manager
@@ -72,7 +74,12 @@ def test_handle_edit_attribute_error(
     mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
 ) -> None:
     """Test handle_edit catches AttributeError during save."""
-    mock_task = Task(description="Old", id="edit-attr-err", priority=Priority.LOW)
+    mock_task = Task(
+        description="Old",
+        creation_date=datetime.now(),
+        id="edit-attr-err",
+        priority=Priority.LOW,
+    )
     mock_user.find_task_by_id.return_value = mock_task
     error_message = "Attribute error on save"
     mock_manager.save_user.side_effect = AttributeError(error_message)
@@ -111,7 +118,12 @@ def test_handle_edit_io_error(
     mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
 ) -> None:
     """Test handle_edit catches IOError during save."""
-    mock_task = Task(description="Old IO", id="edit-io-err", priority=Priority.LOW)
+    mock_task = Task(
+        description="Old IO",
+        creation_date=datetime.now(),
+        id="edit-io-err",
+        priority=Priority.LOW,
+    )
     mock_user.find_task_by_id.return_value = mock_task
     error_message = "IO error on save"
     mock_manager.save_user.side_effect = IOError(error_message)
@@ -290,7 +302,12 @@ def test_handle_edit_generic_exception(
     mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
 ) -> None:
     """Test handle_edit catches generic Exception during save."""
-    mock_task = Task(description="Old Gen", id="edit-gen-err", priority=Priority.LOW)
+    mock_task = Task(
+        description="Old Gen",
+        creation_date=datetime.now(),
+        id="edit-gen-err",
+        priority=Priority.LOW,
+    )
     mock_user.find_task_by_id.return_value = mock_task
     error_message = "Generic error on save"
     mock_manager.save_user.side_effect = Exception(error_message)
@@ -347,9 +364,9 @@ def test_handle_list_sort_descending(
 ) -> None:
     """Test handle_list sorts tasks in descending order."""
     # Setup tasks with different IDs and descriptions
-    task1 = Task(description="Task A", id="abc123")
-    task2 = Task(description="Task B", id="def456")
-    task3 = Task(description="Task C", id="ghi789")
+    task1 = Task(description="Task A", creation_date=datetime.now(), id="abc123")
+    task2 = Task(description="Task B", creation_date=datetime.now(), id="def456")
+    task3 = Task(description="Task C", creation_date=datetime.now(), id="ghi789")
     mock_user.tasks = [task1, task2, task3]
 
     # Test sorting by ID in descending order

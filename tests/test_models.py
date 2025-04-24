@@ -1,6 +1,7 @@
 """Tests for the core application models (Task and User)."""
 
 import uuid
+from datetime import datetime
 from typing import List
 
 import pytest
@@ -16,7 +17,7 @@ from motido.core.models import Priority, Task, User
 def test_task_initialization() -> None:
     """Test that a Task object is initialized correctly."""
     desc = "Test task description"
-    task = Task(description=desc)
+    task = Task(description=desc, creation_date=datetime.now())
     assert task.description == desc
     assert isinstance(task.id, str)
     # Check if the ID looks like a UUID (basic check)
@@ -33,7 +34,7 @@ def test_task_initialization_with_priority() -> None:
     """Test that a Task object is initialized correctly with a specified priority."""
     desc = "Task with custom priority"
     priority = Priority.HIGH
-    task = Task(description=desc, priority=priority)
+    task = Task(description=desc, priority=priority, creation_date=datetime.now())
     assert task.description == desc
     assert task.priority == Priority.HIGH
 
@@ -41,10 +42,12 @@ def test_task_initialization_with_priority() -> None:
 def test_task_str_representation() -> None:
     """Test the string representation of a Task."""
     desc = "Another task"
-    task = Task(description=desc)
+    task = Task(description=desc, creation_date=datetime.now())
+    # Format creation_date as YYYY-MM-DD HH:MM:SS
+    formatted_date = task.creation_date.strftime("%Y-%m-%d %H:%M:%S")
     expected_str = (
         f"ID: {task.id[:8]} | Priority: {task.priority.emoji()} "
-        f"{task.priority.value} | Description: {desc}"
+        f"{task.priority.value} | Created: {formatted_date} | Description: {desc}"
     )
     assert str(task) == expected_str
 
@@ -74,10 +77,23 @@ def test_priority_display_style() -> None:
 def sample_tasks() -> List[Task]:
     """Provides a list of sample tasks for testing."""
     return [
-        Task(description="Task 1", id="abc12345-mock-uuid-1", priority=Priority.LOW),
-        Task(description="Task 2", id="def67890-mock-uuid-2", priority=Priority.MEDIUM),
         Task(
-            description="Task 3", id="abc54321-mock-uuid-3", priority=Priority.HIGH
+            description="Task 1",
+            creation_date=datetime.now(),
+            id="abc12345-mock-uuid-1",
+            priority=Priority.LOW,
+        ),
+        Task(
+            description="Task 2",
+            creation_date=datetime.now(),
+            id="def67890-mock-uuid-2",
+            priority=Priority.MEDIUM,
+        ),
+        Task(
+            description="Task 3",
+            creation_date=datetime.now(),
+            id="abc54321-mock-uuid-3",
+            priority=Priority.HIGH,
         ),  # Shares prefix with Task 1
     ]
 
@@ -110,7 +126,7 @@ def test_user_initialization() -> None:
 
 def test_user_add_task(empty_user: User) -> None:
     """Test adding a task to a user."""
-    task = Task(description="New task")
+    task = Task(description="New task", creation_date=datetime.now())
     empty_user.add_task(task)
     assert len(empty_user.tasks) == 1
     assert empty_user.tasks[0] == task
@@ -182,7 +198,7 @@ def test_user_find_task_by_id_ambiguous(user_with_tasks: User) -> None:
 def test_user_find_task_by_empty_string_single_task() -> None:
     """Test finding a task with an empty string when only one task exists."""
     user = User(username="single_task_user")
-    task = Task(description="Only task", id="single123")
+    task = Task(description="Only task", creation_date=datetime.now(), id="single123")
     user.add_task(task)
     found_task = user.find_task_by_id("")
     assert found_task == task

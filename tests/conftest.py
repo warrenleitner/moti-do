@@ -1,6 +1,7 @@
 """Common fixtures for testing."""
 
 import os
+from datetime import datetime
 from typing import Any, Dict, Tuple
 
 import pytest
@@ -41,8 +42,24 @@ def manager(
 def sample_user() -> User:
     """Provides a sample User object."""
     user = User(username=DEFAULT_USERNAME)
-    user.add_task(Task(description="Task A", id="uuid-a", priority=Priority.LOW))
-    user.add_task(Task(description="Task B", id="uuid-b", priority=Priority.MEDIUM))
+    # Use a fixed datetime for testing
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
+    user.add_task(
+        Task(
+            description="Task A",
+            creation_date=test_date,
+            id="uuid-a",
+            priority=Priority.LOW,
+        )
+    )
+    user.add_task(
+        Task(
+            description="Task B",
+            creation_date=test_date,
+            id="uuid-b",
+            priority=Priority.MEDIUM,
+        )
+    )
     return user
 
 
@@ -58,11 +75,13 @@ def sample_user_data(
                 {
                     "id": "uuid-a",
                     "description": "Task A",
+                    "creation_date": "2023-01-01 12:00:00",
                     "priority": Priority.LOW.value,
                 },
                 {
                     "id": "uuid-b",
                     "description": "Task B",
+                    "creation_date": "2023-01-01 12:00:00",
                     "priority": Priority.MEDIUM.value,
                 },
             ],

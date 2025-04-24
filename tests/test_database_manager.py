@@ -2,6 +2,7 @@
 
 import os
 import sqlite3
+from datetime import datetime
 from typing import Any, Tuple
 from unittest.mock import MagicMock, call
 
@@ -62,8 +63,14 @@ def mock_conn_fixture(mocker: Any) -> Tuple[Any, Any, Any]:
 def sample_user_db() -> User:
     """Provides a sample User object for database tests."""
     user = User(username=DEFAULT_USERNAME)
-    user.add_task(Task(description="DB Task 1", id="db-uuid-1"))
-    user.add_task(Task(description="DB Task 2", id="db-uuid-2"))
+    # Use a fixed datetime for testing
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
+    user.add_task(
+        Task(description="DB Task 1", creation_date=test_date, id="db-uuid-1")
+    )
+    user.add_task(
+        Task(description="DB Task 2", creation_date=test_date, id="db-uuid-2")
+    )
     return user
 
 
@@ -334,7 +341,7 @@ def test_load_user_no_tasks(
     expected_calls = [
         call("SELECT username FROM users WHERE username = ?", (username,)),
         call(
-            "SELECT id, description, priority FROM tasks WHERE user_username = ?",
+            "SELECT id, description, priority, creation_date FROM tasks WHERE user_username = ?",
             (username,),
         ),
     ]
@@ -402,8 +409,16 @@ def test_save_user(
 
     # Create test user with tasks
     user = User(username=DEFAULT_USERNAME)
-    task1 = Task(id="task1", description="Task 1", priority=Priority.LOW)
-    task2 = Task(id="task2", description="Task 2", priority=Priority.HIGH)
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
+    task1 = Task(
+        id="task1", description="Task 1", creation_date=test_date, priority=Priority.LOW
+    )
+    task2 = Task(
+        id="task2",
+        description="Task 2",
+        creation_date=test_date,
+        priority=Priority.HIGH,
+    )
     user.add_task(task1)
     user.add_task(task2)
 

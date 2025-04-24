@@ -5,6 +5,7 @@ Implementation of the DataManager interface using SQLite database storage.
 
 import os
 import sqlite3
+from datetime import datetime
 from typing import List, Optional, Tuple
 
 from motido.core.models import Priority, Task, User
@@ -111,7 +112,7 @@ class DatabaseDataManager(DataManager):
 
                 # Load tasks for the user
                 cursor.execute(
-                    "SELECT id, description, priority FROM tasks "
+                    "SELECT id, description, priority, creation_date FROM tasks "
                     "WHERE user_username = ?",
                     (username,),
                 )
@@ -125,8 +126,23 @@ class DatabaseDataManager(DataManager):
                     priority = parse_priority_safely(priority_str, row["id"])
 
                     # Create task with ID, description, and priority
+                    # Get creation_date from row or use current time if not present
+                    creation_date = datetime.now()
+                    if "creation_date" in row:
+                        try:
+                            creation_date = datetime.strptime(
+                                row["creation_date"], "%Y-%m-%d %H:%M:%S"
+                            )
+                        except ValueError:
+                            print(
+                                f"Warning: Invalid creation_date format for task {row['id']}, using current time."
+                            )
+
                     task = Task(
-                        id=row["id"], description=row["description"], priority=priority
+                        id=row["id"],
+                        description=row["description"],
+                        creation_date=creation_date,
+                        priority=priority,
                     )
                     tasks.append(task)
 

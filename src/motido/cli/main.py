@@ -7,6 +7,7 @@ Provides commands to initialize, create, view, list, and edit tasks.
 import argparse
 import sys
 from argparse import Namespace  # Import Namespace
+from datetime import datetime
 from typing import Any, Callable, TypeVar
 
 # Import rich for table formatting
@@ -76,7 +77,10 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
         user = User(username=DEFAULT_USERNAME)
     # No need for isinstance check since we're using type hints and mypy
 
-    new_task = Task(description=args.description, priority=priority)
+    # Create a new task with the current timestamp as creation_date
+    new_task = Task(
+        description=args.description, priority=priority, creation_date=datetime.now()
+    )
     user.add_task(new_task)
     try:
         manager.save_user(user)
@@ -174,6 +178,9 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
             )
             table.add_row("Priority:", priority_text)
 
+            # Format creation_date as YYYY-MM-DD HH:MM:SS
+            formatted_date = task.creation_date.strftime("%Y-%m-%d %H:%M:%S")
+            table.add_row("Created:", formatted_date)
             table.add_row("Description:", task.description)
             console.print(table)
             # --- End rich table display ---

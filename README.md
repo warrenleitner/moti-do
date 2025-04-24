@@ -21,6 +21,7 @@ This project uses Poetry for dependency management and packaging.
     ```
 2.  **Install dependencies:**
     ```bash
+    pip install poetry
     poetry install
     ```
 3.  **Activate virtual environment:**

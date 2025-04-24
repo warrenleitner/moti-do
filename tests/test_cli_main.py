@@ -3,8 +3,9 @@
 # pylint: disable=too-many-lines
 
 import argparse
+from datetime import datetime, timedelta
 from typing import Any
-from unittest.mock import MagicMock, call
+from unittest.mock import ANY, MagicMock, call
 
 import pytest
 
@@ -318,8 +319,13 @@ def test_handle_create_success_existing_user(mocker: Any) -> None:
     cli_main.handle_create(args, mock_manager, mock_user)
 
     mock_task_class.assert_called_once_with(
-        description="My new task", priority=Priority.LOW
+        description="My new task", priority=Priority.LOW, creation_date=ANY
     )
+    # Verify that creation_date is a datetime object
+    creation_date_arg = mock_task_class.call_args.kwargs["creation_date"]
+    assert isinstance(creation_date_arg, datetime)
+    # Verify that creation_date is close to current time
+    assert datetime.now() - creation_date_arg < timedelta(seconds=1)
     mock_user.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user)
     mock_print.assert_any_call("Creating task: 'My new task'...")
@@ -346,8 +352,13 @@ def test_handle_create_success_existing_user_not_verbose(mocker: Any) -> None:
     cli_main.handle_create(args, mock_manager, mock_user)
 
     mock_task_class.assert_called_once_with(
-        description="My new task", priority=Priority.LOW
+        description="My new task", priority=Priority.LOW, creation_date=ANY
     )
+    # Verify that creation_date is a datetime object
+    creation_date_arg = mock_task_class.call_args.kwargs["creation_date"]
+    assert isinstance(creation_date_arg, datetime)
+    # Verify that creation_date is close to current time
+    assert datetime.now() - creation_date_arg < timedelta(seconds=1)
     mock_user.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user)
     # Check that the *verbose* print was not called
@@ -377,8 +388,13 @@ def test_handle_create_success_new_user(mocker: Any) -> None:
 
     mock_user_class.assert_called_once_with(username=DEFAULT_USERNAME)
     mock_task_class.assert_called_once_with(
-        description="First task", priority=Priority.LOW
+        description="First task", priority=Priority.LOW, creation_date=ANY
     )
+    # Verify that creation_date is a datetime object
+    creation_date_arg = mock_task_class.call_args.kwargs["creation_date"]
+    assert isinstance(creation_date_arg, datetime)
+    # Verify that creation_date is close to current time
+    assert datetime.now() - creation_date_arg < timedelta(seconds=1)
     mock_user_instance.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user_instance)
     mock_print.assert_any_call("Creating task: 'First task'...")
@@ -408,8 +424,13 @@ def test_handle_create_success_new_user_not_verbose(mocker: Any) -> None:
 
     mock_user_class.assert_called_once_with(username=DEFAULT_USERNAME)
     mock_task_class.assert_called_once_with(
-        description="First task", priority=Priority.LOW
+        description="First task", priority=Priority.LOW, creation_date=ANY
     )
+    # Verify that creation_date is a datetime object
+    creation_date_arg = mock_task_class.call_args.kwargs["creation_date"]
+    assert isinstance(creation_date_arg, datetime)
+    # Verify that creation_date is close to current time
+    assert datetime.now() - creation_date_arg < timedelta(seconds=1)
     mock_user_instance.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user_instance)
     # These messages should not be printed (verbose=False)
@@ -464,7 +485,7 @@ def test_handle_create_save_error(mocker: Any) -> None:
         cli_main.handle_create(args, mock_manager, mock_user)
 
     mock_task_class.assert_called_once_with(
-        description="Task to fail save", priority=Priority.LOW
+        description="Task to fail save", priority=Priority.LOW, creation_date=ANY
     )
     mock_print.assert_any_call(f"Error saving task: {error_message}")
     assert excinfo.value.code == 1
@@ -512,8 +533,19 @@ def test_handle_list_success(mocker: Any) -> None:
 
     mock_manager = MagicMock(spec=DataManager)
     mock_user = MagicMock(spec=User)
-    task1 = Task(description="Task One", id="abc12345-xyz", priority=Priority.LOW)
-    task2 = Task(description="Task Two", id="def67890-uvw", priority=Priority.MEDIUM)
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
+    task1 = Task(
+        description="Task One",
+        creation_date=test_date,
+        id="abc12345-xyz",
+        priority=Priority.LOW,
+    )
+    task2 = Task(
+        description="Task Two",
+        creation_date=test_date,
+        id="def67890-uvw",
+        priority=Priority.MEDIUM,
+    )
     mock_user.tasks = [task1, task2]
     args = create_mock_args(sort_by=None, sort_order="asc", verbose=True)  # Verbose
 
@@ -581,6 +613,8 @@ def test_handle_view_success(mocker: Any) -> None:
     mock_task.description = "View this task"
     # Use a real Priority instance
     mock_task.priority = Priority.MEDIUM  # Example priority
+    # Add creation_date attribute
+    mock_task.creation_date = datetime(2023, 1, 1, 12, 0, 0)
 
     # Setup user.find_task_by_id to return the mock task
     mock_user.find_task_by_id.return_value = mock_task
@@ -605,7 +639,7 @@ def test_handle_view_success(mocker: Any) -> None:
 
     # Check add_row calls, especially for priority formatting
     add_row_calls = mock_table_instance.add_row.call_args_list
-    assert len(add_row_calls) == 3
+    assert len(add_row_calls) == 4  # Now 4 rows with creation_date
     assert add_row_calls[0] == call("ID:", "abc-123")
 
     # Verify the Text object creation and append calls
@@ -622,8 +656,12 @@ def test_handle_view_success(mocker: Any) -> None:
     # Check priority row call - the second argument should be the mock_text_instance
     assert add_row_calls[1] == call("Priority:", mock_text_instance)
 
+    # Check creation_date row - we can't check the exact formatted date
+    # since we're using a mock, but we can check the row label
+    assert add_row_calls[2].args[0] == "Created:"
+
     # Check description row
-    assert add_row_calls[2] == call("Description:", "View this task")
+    assert add_row_calls[3] == call("Description:", "View this task")
 
     mock_console_instance.print.assert_called_once_with(mock_table_instance)
 
@@ -633,7 +671,10 @@ def test_handle_edit_success(mocker: Any) -> None:
     # Setup task with old description
     old_description = "Old task description"
     new_description = "Updated task description"
-    mock_task = Task(description=old_description, id="edit-task-123")
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
+    mock_task = Task(
+        description=old_description, creation_date=test_date, id="edit-task-123"
+    )
 
     # Setup mocks
     mock_print = mocker.patch("builtins.print")
@@ -672,8 +713,12 @@ def test_handle_edit_success_priority_only(mocker: Any) -> None:
     # Setup task with old priority
     old_priority = Priority.LOW
     new_priority = Priority.HIGH
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
     mock_task = Task(
-        description="Task with priority", id="edit-prio-123", priority=old_priority
+        description="Task with priority",
+        creation_date=test_date,
+        id="edit-prio-123",
+        priority=old_priority,
     )
 
     # Setup mocks
@@ -709,6 +754,38 @@ def test_handle_edit_success_priority_only(mocker: Any) -> None:
     assert not any("Description:" in msg for msg in print_calls)
 
 
+def test_handle_edit_preserves_creation_date(mocker: Any) -> None:
+    """Test handle_edit does not modify the creation_date field."""
+    # Setup task with creation_date
+    original_date = datetime(2023, 1, 1, 12, 0, 0)  # Fixed date for testing
+    old_description = "Old task description"
+    new_description = "Updated task description"
+    mock_task = Task(
+        description=old_description, id="edit-task-123", creation_date=original_date
+    )
+
+    # Setup mocks
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_user = mocker.MagicMock(spec=User)
+    mock_user.find_task_by_id.return_value = mock_task
+
+    # Create args with new description
+    args = create_mock_args(id="edit-task", description=new_description, verbose=False)
+
+    # Call the function being tested
+    cli_main.handle_edit(args, mock_manager, mock_user)
+
+    # Verify function behavior
+    mock_user.find_task_by_id.assert_called_once_with(args.id)
+    mock_manager.save_user.assert_called_once_with(mock_user)
+
+    # Assert that the task description was updated
+    assert mock_task.description == new_description
+
+    # Assert that the creation_date was NOT modified
+    assert mock_task.creation_date == original_date
+
+
 def test_handle_edit_success_both(mocker: Any) -> None:
     """Test handle_edit successfully updates both description and priority."""
     # Setup task with old values
@@ -716,8 +793,12 @@ def test_handle_edit_success_both(mocker: Any) -> None:
     old_priority = Priority.MEDIUM
     new_description = "New Desc"
     new_priority = Priority.DEFCON_ONE
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
     mock_task = Task(
-        description=old_description, id="edit-both-456", priority=old_priority
+        description=old_description,
+        creation_date=test_date,
+        id="edit-both-456",
+        priority=old_priority,
     )
 
     # Setup mocks
@@ -767,8 +848,12 @@ def test_handle_edit_success_both_not_verbose(mocker: Any) -> None:
     old_priority = Priority.TRIVIAL
     new_description = "New Desc NV"
     new_priority = Priority.HIGH
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
     mock_task = Task(
-        description=old_description, id="edit-both-nv-789", priority=old_priority
+        description=old_description,
+        creation_date=test_date,
+        id="edit-both-nv-789",
+        priority=old_priority,
     )
 
     mock_print = mocker.patch("builtins.print")
@@ -816,7 +901,10 @@ def test_handle_edit_invalid_priority(mocker: Any) -> None:
     mock_manager = mocker.MagicMock(spec=DataManager)
     mock_user = mocker.MagicMock(spec=User)
     # Task doesn't strictly need to be mocked deeply, find just needs to return it
-    mock_task = Task(description="Existing task", id="edit-fail-789")
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
+    mock_task = Task(
+        description="Existing task", creation_date=test_date, id="edit-fail-789"
+    )
     mock_user.find_task_by_id.return_value = mock_task
 
     args = create_mock_args(
@@ -903,7 +991,10 @@ def test_handle_edit_no_changes(mocker: Any) -> None:
     mock_manager = mocker.MagicMock(spec=DataManager)
     mock_user = mocker.MagicMock(spec=User)
     # Task needs to be found for this path
-    mock_task = Task(description="Existing task", id="edit-nochange-123")
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
+    mock_task = Task(
+        description="Existing task", creation_date=test_date, id="edit-nochange-123"
+    )
     mock_user.find_task_by_id.return_value = mock_task
 
     # Args with ID but no description or priority
@@ -928,7 +1019,10 @@ def test_handle_edit_save_error(mocker: Any) -> None:
     mock_exit = mocker.patch("sys.exit", side_effect=SystemExit(1))
     mock_manager = mocker.MagicMock(spec=DataManager)
     mock_user = mocker.MagicMock(spec=User)
-    mock_task = Task(description="Task to edit", id="edit-savefail-456")
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
+    mock_task = Task(
+        description="Task to edit", creation_date=test_date, id="edit-savefail-456"
+    )
     mock_user.find_task_by_id.return_value = mock_task
     error_message = "Disk full"
     mock_manager.save_user.side_effect = IOError(error_message)
@@ -1011,14 +1105,24 @@ def test_handle_list_sort_by_priority(mocker: Any) -> None:
     user = User(username="test_user")
 
     # Add tasks with different priorities (not in priority order)
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
     task_high = Task(
-        description="High priority task", id="uuid-high", priority=Priority.HIGH
+        description="High priority task",
+        creation_date=test_date,
+        id="uuid-high",
+        priority=Priority.HIGH,
     )
     task_low = Task(
-        description="Low priority task", id="uuid-low", priority=Priority.LOW
+        description="Low priority task",
+        creation_date=test_date,
+        id="uuid-low",
+        priority=Priority.LOW,
     )
     task_medium = Task(
-        description="Medium priority task", id="uuid-medium", priority=Priority.MEDIUM
+        description="Medium priority task",
+        creation_date=test_date,
+        id="uuid-medium",
+        priority=Priority.MEDIUM,
     )
 
     user.add_task(task_high)  # Add high first
@@ -1234,7 +1338,10 @@ def test_handle_edit_success_description_not_verbose(mocker: Any) -> None:
     """Test handle_edit updates description successfully (non-verbose)."""
     old_description = "Old desc non-verbose"
     new_description = "New desc non-verbose"
-    mock_task = Task(description=old_description, id="edit-desc-nv-456")
+    test_date = datetime(2023, 1, 1, 12, 0, 0)
+    mock_task = Task(
+        description=old_description, creation_date=test_date, id="edit-desc-nv-456"
+    )
 
     mock_print = mocker.patch("builtins.print")
     mock_manager = mocker.MagicMock(spec=DataManager)

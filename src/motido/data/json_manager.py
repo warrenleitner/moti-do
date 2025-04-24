@@ -5,6 +5,7 @@ Implementation of the DataManager interface using JSON file storage.
 
 import json
 import os
+from datetime import datetime
 from typing import Any, Dict
 
 from motido.core.models import Priority, Task, User
@@ -104,9 +105,24 @@ class JsonDataManager(DataManager):
                     priority = parse_priority_safely(priority_str, task_dict.get("id"))
 
                     # Create Task with ID, description, and priority
+                    # Get creation_date from task_dict or use current time if not present
+                    creation_date_str = task_dict.get("creation_date")
+                    creation_date = datetime.now()
+                    if creation_date_str:
+                        try:
+                            creation_date = datetime.strptime(
+                                creation_date_str, "%Y-%m-%d %H:%M:%S"
+                            )
+                        except ValueError:
+                            task_id = task_dict.get("id")
+                            print(
+                                f"Warning: Invalid creation_date format for task {task_id}, using current time."
+                            )
+
                     task = Task(
                         id=task_dict["id"],
                         description=task_dict["description"],
+                        creation_date=creation_date,
                         priority=priority,
                     )
                     tasks.append(task)

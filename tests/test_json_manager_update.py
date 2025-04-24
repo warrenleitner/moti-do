@@ -1,5 +1,6 @@
 """Tests for the update functionality of JsonDataManager."""
 
+from datetime import datetime
 from typing import Any, Dict
 
 from motido.core.models import Priority, Task, User
@@ -27,7 +28,12 @@ def test_save_user_update_existing(
     # Modify the user before saving (e.g., add a task)
     updated_user = User(username=sample_user.username)
     updated_user.tasks = sample_user.tasks + [
-        Task(description="Task C", id="uuid-c", priority=Priority.LOW)
+        Task(
+            description="Task C",
+            creation_date=datetime.now(),
+            id="uuid-c",
+            priority=Priority.LOW,
+        )
     ]
 
     mock_read = mocker.patch.object(manager, "_read_data", return_value=initial_data)
