@@ -6,7 +6,13 @@ from typing import List
 
 import pytest
 
-from motido.core.models import Difficulty, Priority, Task, User  # Added Difficulty
+from motido.core.models import (  # Added Duration
+    Difficulty,
+    Duration,
+    Priority,
+    Task,
+    User,
+)
 
 # pylint: disable=redefined-outer-name
 # This disables warnings for pytest fixtures used as function parameters
@@ -30,6 +36,8 @@ def test_task_initialization() -> None:
     assert task.priority == Priority.LOW
     # Check default difficulty
     assert task.difficulty == Difficulty.TRIVIAL
+    # Check default duration
+    assert task.duration == Duration.MINISCULE
 
 
 def test_task_initialization_with_priority() -> None:
@@ -41,6 +49,8 @@ def test_task_initialization_with_priority() -> None:
     assert task.priority == Priority.HIGH
     # Ensure default difficulty is still set
     assert task.difficulty == Difficulty.TRIVIAL
+    # Ensure default duration is still set
+    assert task.duration == Duration.MINISCULE
 
 
 def test_task_initialization_with_difficulty() -> None:
@@ -52,6 +62,8 @@ def test_task_initialization_with_difficulty() -> None:
     assert task.difficulty == Difficulty.HIGH
     # Ensure default priority is still set
     assert task.priority == Priority.LOW
+    # Ensure default duration is still set
+    assert task.duration == Duration.MINISCULE
 
 
 def test_task_initialization_with_priority_and_difficulty() -> None:
@@ -68,6 +80,40 @@ def test_task_initialization_with_priority_and_difficulty() -> None:
     assert task.description == desc
     assert task.priority == priority
     assert task.difficulty == difficulty
+    # Ensure default duration is still set
+    assert task.duration == Duration.MINISCULE
+
+
+def test_task_initialization_with_duration() -> None:
+    """Test that a Task object is initialized correctly with a specified duration."""
+    desc = "Task with custom duration"
+    duration = Duration.LONG
+    task = Task(description=desc, duration=duration, creation_date=datetime.now())
+    assert task.description == desc
+    assert task.duration == Duration.LONG
+    # Ensure default priority is still set
+    assert task.priority == Priority.LOW
+    # Ensure default difficulty is still set
+    assert task.difficulty == Difficulty.TRIVIAL
+
+
+def test_task_initialization_with_all_fields() -> None:
+    """Test Task initialization with priority, difficulty, and duration specified."""
+    desc = "Task with all fields custom"
+    priority = Priority.HIGH
+    difficulty = Difficulty.MEDIUM
+    duration = Duration.SHORT
+    task = Task(
+        description=desc,
+        priority=priority,
+        difficulty=difficulty,
+        duration=duration,
+        creation_date=datetime.now(),
+    )
+    assert task.description == desc
+    assert task.priority == priority
+    assert task.difficulty == difficulty
+    assert task.duration == duration
 
 
 def test_task_str_representation() -> None:
@@ -78,7 +124,8 @@ def test_task_str_representation() -> None:
     formatted_date = task.creation_date.strftime("%Y-%m-%d %H:%M:%S")
     expected_str = (
         f"ID: {task.id[:8]} | Priority: {task.priority.emoji()} "
-        f"{task.priority.value} | Created: {formatted_date} | Description: {desc}"
+        f"{task.priority.value} | Duration: {task.duration.emoji()} "
+        f"{task.duration.value} | Created: {formatted_date} | Description: {desc}"
     )
     assert str(task) == expected_str
 
@@ -128,6 +175,33 @@ def test_difficulty_display_style() -> None:
     assert Difficulty.HERCULEAN.display_style() == "red"
 
 
+def test_duration_enum_values() -> None:
+    """Test the string values of the Duration enum."""
+    assert Duration.MINISCULE.value == "Miniscule"
+    assert Duration.SHORT.value == "Short"
+    assert Duration.MEDIUM.value == "Medium"
+    assert Duration.LONG.value == "Long"
+    assert Duration.ODYSSEYAN.value == "Odysseyan"
+
+
+def test_duration_emoji() -> None:
+    """Test that each duration level returns the correct emoji."""
+    assert Duration.MINISCULE.emoji() == "💨"  # Wind blowing
+    assert Duration.SHORT.emoji() == "⏳"  # Hourglass not done
+    assert Duration.MEDIUM.emoji() == "🕰️"  # Mantelpiece clock
+    assert Duration.LONG.emoji() == "⏱️"  # Stopwatch
+    assert Duration.ODYSSEYAN.emoji() == "♾️"  # Infinity
+
+
+def test_duration_display_style() -> None:
+    """Test that each duration level returns the correct display style for rich."""
+    assert Duration.MINISCULE.display_style() == "teal"
+    assert Duration.SHORT.display_style() == "green"
+    assert Duration.MEDIUM.display_style() == "yellow"
+    assert Duration.LONG.display_style() == "orange1"
+    assert Duration.ODYSSEYAN.display_style() == "red"
+
+
 def test_priority_display_style_updated() -> None:
     """Test that Priority.TRIVIAL now returns 'teal' for display style."""
     assert Priority.TRIVIAL.display_style() == "teal"
@@ -145,21 +219,24 @@ def sample_tasks() -> List[Task]:
             creation_date=datetime.now(),
             id="abc12345-mock-uuid-1",
             priority=Priority.LOW,
-            difficulty=Difficulty.TRIVIAL,  # Added difficulty
+            difficulty=Difficulty.TRIVIAL,
+            duration=Duration.MINISCULE,
         ),
         Task(
             description="Task 2",
             creation_date=datetime.now(),
             id="def67890-mock-uuid-2",
             priority=Priority.MEDIUM,
-            difficulty=Difficulty.MEDIUM,  # Added difficulty
+            difficulty=Difficulty.MEDIUM,
+            duration=Duration.SHORT,
         ),
         Task(
             description="Task 3",
             creation_date=datetime.now(),
             id="abc54321-mock-uuid-3",
             priority=Priority.HIGH,
-            difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
+            difficulty=Difficulty.TRIVIAL,
+            duration=Duration.MEDIUM,
         ),  # Shares prefix with Task 1
     ]
 

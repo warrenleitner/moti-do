@@ -16,7 +16,13 @@ from rich.table import Table
 from rich.text import Text
 
 # Updated imports
-from motido.core.models import Difficulty, Priority, Task, User  # Added Difficulty
+from motido.core.models import (  # Added Duration
+    Difficulty,
+    Duration,
+    Priority,
+    Task,
+    User,
+)
 from motido.data.abstraction import DataManager  # For type hinting
 from motido.data.abstraction import DEFAULT_USERNAME
 from motido.data.backend_factory import get_data_manager
@@ -83,6 +89,18 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
             )
             sys.exit(1)
 
+    # Get the duration from args, default to MINISCULE if not specified
+    duration = Duration.MINISCULE  # Default
+    if args.duration:
+        try:
+            duration = Duration(args.duration)
+        except ValueError:
+            print(
+                f"Error: Invalid duration '{args.duration}'. "
+                f"Valid values are: {', '.join([d.value for d in Duration])}"
+            )
+            sys.exit(1)
+
     if user is None:
         # If user doesn't exist, create a new one
         print_verbose(args, f"User '{DEFAULT_USERNAME}' not found. Creating new user.")
@@ -93,7 +111,8 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
     new_task = Task(
         description=args.description,
         priority=priority,
-        difficulty=difficulty,  # Add difficulty
+        difficulty=difficulty,
+        duration=duration,
         creation_date=datetime.now(),
     )
     user.add_task(new_task)
@@ -146,13 +165,21 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
         table.add_column("ID Prefix", style="dim", width=12)
         table.add_column("Priority", width=15)
         table.add_column("Difficulty", width=15)
+        table.add_column("Duration", width=15)
         table.add_column("Description")
 
         for task in user.tasks:
-            # Add task details to the table with priority and difficulty emoji
+            # Add task details to the table with priority, difficulty, and duration emoji
             priority_text = f"{task.priority.emoji()} {task.priority.value}"
             difficulty_text = f"{task.difficulty.emoji()} {task.difficulty.value}"
-            table.add_row(task.id[:8], priority_text, difficulty_text, task.description)
+            duration_text = f"{task.duration.emoji()} {task.duration.value}"
+            table.add_row(
+                task.id[:8],
+                priority_text,
+                difficulty_text,
+                duration_text,
+                task.description,
+            )
 
         console.print(table)
         # --- End rich table display ---
@@ -207,6 +234,14 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
             )
             table.add_row("Difficulty:", difficulty_text)
 
+            # Display duration with emoji and style
+            duration_text = Text()
+            duration_text.append(f"{task.duration.emoji()} ")
+            duration_text.append(
+                task.duration.value, style=task.duration.display_style()
+            )
+            table.add_row("Duration:", duration_text)
+
             table.add_row("Description:", task.description)
             console.print(table)
             # --- End rich table display ---
@@ -255,6 +290,17 @@ def _update_task_difficulty(task: Task, difficulty_str: str) -> Difficulty:
     return old_difficulty
 
 
+def _update_task_duration(task: Task, duration_str: str) -> Duration:
+    """Update task duration and return the old value.
+
+    Raises:
+        ValueError: If the duration string is invalid.
+    """
+    old_duration = task.duration
+    task.duration = Duration(duration_str)  # Raises ValueError if invalid
+    return old_duration
+
+
 # pylint: disable=too-many-arguments,too-many-positional-arguments
 def _print_task_updates(
     task: Task,
@@ -262,8 +308,10 @@ def _print_task_updates(
     old_description: str | None,
     priority_updated: bool,
     old_priority: Priority | None,
-    difficulty_updated: bool,  # Add this
-    old_difficulty: Difficulty | None,  # Add this
+    difficulty_updated: bool,
+    old_difficulty: Difficulty | None,
+    duration_updated: bool,
+    old_duration: Duration | None,
 ) -> None:
     """Print task update details."""
     print("Task updated successfully:")
@@ -279,6 +327,10 @@ def _print_task_updates(
         assert old_difficulty is not None  # For mypy
         print(f"  Old Difficulty: {old_difficulty.value}")
         print(f"  New Difficulty: {task.difficulty.value}")
+    if duration_updated:
+        assert old_duration is not None  # For mypy
+        print(f"  Old Duration: {old_duration.value}")
+        print(f"  New Duration: {task.duration.value}")
 
 
 # pylint: disable=too-many-branches,too-many-statements
@@ -289,8 +341,11 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
         sys.exit(1)
 
     if (
-        not args.description and not args.priority and not args.difficulty
-    ):  # Add difficulty check
+        not args.description
+        and not args.priority
+        and not args.difficulty
+        and not args.duration
+    ):
         print("No changes specified. Nothing to update.")
         return  # Exit the function gracefully, do not proceed
 
@@ -310,7 +365,8 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
         changes_made = False
         old_description = None
         old_priority = None
-        old_difficulty = None  # Add this
+        old_difficulty = None
+        old_duration = None
 
         # Update description if provided
         description_updated = False
@@ -330,6 +386,20 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
                 print(
                     f"Error: Invalid priority '{args.priority}'. "
                     f"Valid values are: {', '.join([p.value for p in Priority])}"
+                )
+                sys.exit(1)
+
+        # Update duration if provided
+        duration_updated = False
+        if args.duration:
+            try:
+                old_duration = _update_task_duration(task_to_edit, args.duration)
+                duration_updated = True
+                changes_made = True
+            except ValueError:
+                print(
+                    f"Error: Invalid duration '{args.duration}'. "
+                    f"Valid values are: {', '.join([d.value for d in Duration])}"
                 )
                 sys.exit(1)
 
@@ -355,8 +425,10 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
                 old_description,
                 priority_updated,
                 old_priority,
-                difficulty_updated,  # Add this
-                old_difficulty,  # Add this
+                difficulty_updated,
+                old_difficulty,
+                duration_updated,
+                old_duration,
             )
 
     except ValueError as e:  # Catches find_task_by_id ambiguity or invalid enum value
@@ -480,6 +552,13 @@ def setup_parser() -> argparse.ArgumentParser:
         # Default is handled in the model, no CLI default needed
         help=f"The difficulty of the task. Valid values: {', '.join([d.value for d in Difficulty])}.",
     )
+    parser_create.add_argument(
+        "-t",  # Short flag for duration
+        "--duration",
+        choices=[d.value for d in Duration],
+        # Default is handled in the model, no CLI default needed
+        help=f"The duration of the task. Valid values: {', '.join([d.value for d in Duration])}.",
+    )
     parser_create.set_defaults(func=_wrap_handler(handle_create))
 
     # --- List Command ---
@@ -509,7 +588,7 @@ def setup_parser() -> argparse.ArgumentParser:
     # --- Edit Command ---
     parser_edit = subparsers.add_parser(
         "edit",
-        help="Edit the description, priority, or difficulty of an existing task.",  # Updated help
+        help="Edit the description, priority, difficulty, or duration of an existing task.",
     )
     parser_edit.add_argument(
         "--id",
@@ -533,6 +612,12 @@ def setup_parser() -> argparse.ArgumentParser:
         "--difficulty",
         choices=[d.value for d in Difficulty],
         help="The new difficulty for the task.",
+    )
+    parser_edit.add_argument(
+        "-t",
+        "--duration",
+        choices=[d.value for d in Duration],
+        help="The new duration for the task.",
     )
     parser_edit.set_defaults(func=_wrap_handler(handle_edit))
 

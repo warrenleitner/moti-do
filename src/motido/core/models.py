@@ -90,6 +90,46 @@ class Difficulty(str, Enum):
             return ""  # Fallback # pragma: no cover
 
 
+class Duration(str, Enum):
+    """Duration levels for tasks from shortest to longest."""
+
+    MINISCULE = "Miniscule"
+    SHORT = "Short"
+    MEDIUM = "Medium"
+    LONG = "Long"
+    ODYSSEYAN = "Odysseyan"
+
+    def emoji(self) -> str:
+        """Returns emoji representation of the duration level."""
+        if self == Duration.MINISCULE:
+            return "💨"  # Wind blowing
+        elif self == Duration.SHORT:
+            return "⏳"  # Hourglass not done
+        elif self == Duration.MEDIUM:
+            return "🕰️"  # Mantelpiece clock
+        elif self == Duration.LONG:
+            return "⏱️"  # Stopwatch
+        elif self == Duration.ODYSSEYAN:
+            return "♾️"  # Infinity
+        else:
+            return ""  # Fallback # pragma: no cover
+
+    def display_style(self) -> str:
+        """Returns rich console style string for the duration."""
+        if self == Duration.MINISCULE:
+            return "teal"
+        elif self == Duration.SHORT:
+            return "green"
+        elif self == Duration.MEDIUM:
+            return "yellow"
+        elif self == Duration.LONG:
+            return "orange1"
+        elif self == Duration.ODYSSEYAN:
+            return "red"
+        else:
+            return ""  # Fallback # pragma: no cover
+
+
 @dataclass
 class Task:
     """Represents a single task."""
@@ -101,6 +141,7 @@ class Task:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     priority: Priority = field(default=Priority.LOW)
     difficulty: Difficulty = field(default=Difficulty.TRIVIAL)
+    duration: Duration = field(default=Duration.MINISCULE)
 
     def __str__(self) -> str:
         """String representation for simple display."""
@@ -108,6 +149,7 @@ class Task:
         formatted_date = self.creation_date.strftime("%Y-%m-%d %H:%M:%S")
         return (
             f"ID: {self.id[:8]} | Priority: {self.priority.emoji()} {self.priority.value} "
+            f"| Duration: {self.duration.emoji()} {self.duration.value} "
             f"| Created: {formatted_date} | Description: {self.description}"  # Show partial ID
         )
 

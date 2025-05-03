@@ -4,14 +4,21 @@
 
 import argparse
 from datetime import datetime, timedelta
-from typing import Any
+from enum import Enum
+from typing import Any, Callable, Type
 from unittest.mock import ANY, MagicMock, call
 
 import pytest
 
 # Modules and classes to test or mock
 from motido.cli import main as cli_main
-from motido.core.models import Difficulty, Priority, Task, User  # Added Difficulty
+from motido.core.models import (  # Added Duration
+    Difficulty,
+    Duration,
+    Priority,
+    Task,
+    User,
+)
 from motido.data.abstraction import DEFAULT_USERNAME, DataManager
 
 # W0611: Removed unused import
@@ -33,7 +40,47 @@ def create_mock_args(**kwargs: Any) -> argparse.Namespace:
     # Ensure 'difficulty' is present for create/edit commands
     if "difficulty" not in kwargs:
         kwargs["difficulty"] = None
+    # Ensure 'duration' is present for create/edit commands
+    if "duration" not in kwargs:
+        kwargs["duration"] = None
     return argparse.Namespace(**kwargs)
+
+
+# pylint: disable=too-many-arguments, too-many-positional-arguments
+def _test_invalid_enum_value(
+    mocker: Any,
+    handler_func: Callable,
+    command_args: argparse.Namespace,
+    enum_class: Type[Enum],
+    field_name: str,
+    invalid_value: str,
+) -> None:
+    """Helper to test invalid enum value handling for create/edit commands."""
+    mock_print = mocker.patch("builtins.print")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    # For edit, we need a mock user and task
+    mock_user = mocker.MagicMock(spec=User)
+    mock_task = mocker.MagicMock(spec=Task)
+    mock_user.find_task_by_id.return_value = mock_task
+
+    with pytest.raises(SystemExit) as excinfo:
+        if handler_func.__name__ == "handle_create":
+            handler_func(command_args, mock_manager, mock_user)
+        elif handler_func.__name__ == "handle_edit":
+            handler_func(command_args, mock_manager, mock_user)
+        else:
+            pytest.fail(
+                f"Unsupported handler function: {handler_func.__name__}"
+            )  # pragma: no cover
+
+    valid_values = ", ".join([e.value for e in enum_class])
+    expected_error = f"Error: Invalid {field_name} '{invalid_value}'. Valid values are: {valid_values}"
+    mock_print.assert_any_call(expected_error)
+    assert excinfo.type == SystemExit
+    assert excinfo.value.code == 1
+    if handler_func.__name__ == "handle_edit":
+        mock_manager.save_user.assert_not_called()  # Ensure save wasn't attempted on edit error
+    # Ensure 'difficulty' is present for create/edit commands
 
 
 def test_main_dispatch_init(mocker: Any) -> None:
@@ -325,6 +372,7 @@ def test_handle_create_success_existing_user(mocker: Any) -> None:
         description="My new task",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
+        duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
     )
     # Verify that creation_date is a datetime object
@@ -361,6 +409,7 @@ def test_handle_create_success_existing_user_not_verbose(mocker: Any) -> None:
         description="My new task",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
+        duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
     )
     # Verify that creation_date is a datetime object
@@ -400,6 +449,7 @@ def test_handle_create_success_new_user(mocker: Any) -> None:
         description="First task",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
+        duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
     )
     # Verify that creation_date is a datetime object
@@ -439,6 +489,7 @@ def test_handle_create_success_new_user_not_verbose(mocker: Any) -> None:
         description="First task",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
+        duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
     )
     # Verify that creation_date is a datetime object
@@ -503,6 +554,7 @@ def test_handle_create_save_error(mocker: Any) -> None:
         description="Task to fail save",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
+        duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
     )
     mock_print.assert_any_call(f"Error saving task: {error_message}")
@@ -558,6 +610,36 @@ def test_handle_create_with_difficulty(mocker: Any) -> None:
         description="Difficult task",
         priority=Priority.LOW,  # Default priority
         difficulty=Difficulty.HIGH,  # Specified difficulty
+        duration=Duration.MINISCULE,  # Default duration
+        creation_date=ANY,
+    )
+    mock_user.add_task.assert_called_once_with(mock_task)
+    mock_manager.save_user.assert_called_once_with(mock_user)
+    mock_print.assert_any_call(
+        f"Task created successfully with ID prefix: {mock_task.id[:8]}"
+    )
+
+
+def test_handle_create_with_duration(mocker: Any) -> None:
+    """Test handle_create successfully creates a task with a specified duration."""
+    mock_print = mocker.patch("builtins.print")
+    mock_task_class = mocker.patch("motido.cli.main.Task")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_user = mocker.MagicMock(spec=User)
+    mock_task = mocker.MagicMock(spec=Task)
+    mock_task.id = "taskdur123"
+    mock_task_class.return_value = mock_task
+    args = create_mock_args(
+        description="Task with duration", duration=Duration.LONG.value, verbose=False
+    )
+
+    cli_main.handle_create(args, mock_manager, mock_user)
+
+    mock_task_class.assert_called_once_with(
+        description="Task with duration",
+        priority=Priority.LOW,  # Default priority
+        difficulty=Difficulty.TRIVIAL,  # Default difficulty
+        duration=Duration.LONG,  # Specified duration
         creation_date=ANY,
     )
     mock_user.add_task.assert_called_once_with(mock_task)
@@ -589,6 +671,7 @@ def test_handle_create_with_priority_and_difficulty(mocker: Any) -> None:
         description="High prio, medium diff task",
         priority=Priority.HIGH,
         difficulty=Difficulty.MEDIUM,
+        duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
     )
     mock_user.add_task.assert_called_once_with(mock_task)
@@ -600,25 +683,34 @@ def test_handle_create_with_priority_and_difficulty(mocker: Any) -> None:
 
 def test_handle_create_invalid_difficulty(mocker: Any) -> None:
     """Test handle_create exits if difficulty is invalid."""
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    invalid_difficulty = "Super Easy"
+    invalid_value = "Super Easy"
     args = create_mock_args(
-        description="Task with bad difficulty",
-        difficulty=invalid_difficulty,
-        verbose=False,
+        description="Task with bad difficulty", difficulty=invalid_value
+    )
+    _test_invalid_enum_value(
+        mocker,
+        cli_main.handle_create,
+        args,
+        Difficulty,
+        "difficulty",
+        invalid_value,
     )
 
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_create(args, mock_manager, mock_user)
 
-    valid_values = ", ".join([d.value for d in Difficulty])
-    mock_print.assert_any_call(
-        f"Error: Invalid difficulty '{invalid_difficulty}'. Valid values are: {valid_values}"
+def test_handle_create_invalid_duration(mocker: Any) -> None:
+    """Test handle_create exits if duration is invalid."""
+    invalid_value = "Forever"
+    args = create_mock_args(
+        description="Task with bad duration", duration=invalid_value
     )
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
+    _test_invalid_enum_value(
+        mocker,
+        cli_main.handle_create,
+        args,
+        Duration,
+        "duration",
+        invalid_value,
+    )
 
 
 def test_handle_list_success(mocker: Any) -> None:
@@ -663,6 +755,7 @@ def test_handle_list_success(mocker: Any) -> None:
             call("ID Prefix", style="dim", width=12),
             call("Priority", width=15),
             call("Difficulty", width=15),
+            call("Duration", width=15),
             call("Description"),
         ]
     )
@@ -676,12 +769,14 @@ def test_handle_list_success(mocker: Any) -> None:
             task1.id[:8],
             f"{task1.priority.emoji()} {task1.priority.value}",
             f"{task1.difficulty.emoji()} {task1.difficulty.value}",
+            f"{task1.duration.emoji()} {task1.duration.value}",
             task1.description,
         ),
         call(
             task2.id[:8],
             f"{task2.priority.emoji()} {task2.priority.value}",
             f"{task2.difficulty.emoji()} {task2.difficulty.value}",
+            f"{task2.duration.emoji()} {task2.duration.value}",
             task2.description,
         ),
     ]
@@ -716,8 +811,9 @@ def test_handle_view_success_with_difficulty(mocker: Any) -> None:
     mock_task.description = "View this task"
     # Use a real Priority instance
     mock_task.priority = Priority.MEDIUM  # Example priority
-    # Add difficulty and creation_date attributes
+    # Add difficulty, duration, and creation_date attributes
     mock_task.difficulty = Difficulty.HIGH  # Example difficulty
+    mock_task.duration = Duration.MEDIUM  # Example duration
     mock_task.creation_date = datetime(2023, 1, 1, 12, 0, 0)
 
     # Setup user.find_task_by_id to return the mock task
@@ -743,11 +839,13 @@ def test_handle_view_success_with_difficulty(mocker: Any) -> None:
 
     # Check add_row calls, especially for priority formatting
     add_row_calls = mock_table_instance.add_row.call_args_list
-    assert len(add_row_calls) == 5  # Now 5 rows with difficulty and creation_date
+    assert (
+        len(add_row_calls) == 6
+    )  # Now 6 rows with difficulty, duration, and creation_date
     assert add_row_calls[0] == call("ID:", "abc-123")
 
-    # Verify the Text object creation - now called twice (for priority and difficulty)
-    assert mock_text_class.call_count == 2
+    # Verify the Text object creation - now called three times (for priority, difficulty, and duration)
+    assert mock_text_class.call_count == 3
 
     # We can't check the exact append calls since Text() is called twice
     # and returns the same mock instance both times
@@ -762,8 +860,11 @@ def test_handle_view_success_with_difficulty(mocker: Any) -> None:
     # Check difficulty row - now also using the Text instance
     assert add_row_calls[3] == call("Difficulty:", mock_text_instance)
 
+    # Check duration row - now also using the Text instance
+    assert add_row_calls[4] == call("Duration:", mock_text_instance)
+
     # Check description row
-    assert add_row_calls[4] == call("Description:", "View this task")
+    assert add_row_calls[5] == call("Description:", "View this task")
 
     mock_console_instance.print.assert_called_once_with(mock_table_instance)
 
@@ -1065,39 +1166,17 @@ def test_handle_edit_success_both_not_verbose(mocker: Any) -> None:
 
 
 def test_handle_edit_invalid_priority(mocker: Any) -> None:
-    """Test handle_edit exits if an invalid priority is provided."""
-    mock_print = mocker.patch("builtins.print")
-    mock_exit = mocker.patch("sys.exit", side_effect=SystemExit(1))
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    # Task doesn't strictly need to be mocked deeply, find just needs to return it
-    test_date = datetime(2023, 1, 1, 12, 0, 0)
-    mock_task = Task(
-        description="Existing task", creation_date=test_date, id="edit-fail-789"
+    """Test handle_edit exits if priority is invalid."""
+    invalid_value = "DefinitelyNotAPriority"
+    args = create_mock_args(id="edit-fail", priority=invalid_value)
+    _test_invalid_enum_value(
+        mocker,
+        cli_main.handle_edit,
+        args,
+        Priority,
+        "priority",
+        invalid_value,
     )
-    mock_user.find_task_by_id.return_value = mock_task
-
-    args = create_mock_args(
-        id="edit-fail", priority="DefinitelyNotAPriority", verbose=False
-    )
-
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_edit(args, mock_manager, mock_user)
-
-    assert excinfo.value.code == 1
-    mock_exit.assert_called_once_with(1)
-
-    # Assert the correct error message was printed
-    expected_error_msg_start = "Error: Invalid priority 'DefinitelyNotAPriority'."
-    valid_values_str = ", ".join([p.value for p in Priority])
-    expected_error_msg = (
-        f"{expected_error_msg_start} Valid values are: {valid_values_str}"
-    )
-    print_calls = [c.args[0] for c in mock_print.call_args_list if c.args]
-    assert any(expected_error_msg in call_args for call_args in print_calls)
-
-    # Ensure save was not called
-    mock_manager.save_user.assert_not_called()
 
 
 def test_handle_edit_task_not_found(mocker: Any) -> None:
@@ -1184,6 +1263,7 @@ def test_handle_edit_success_difficulty_only(mocker: Any) -> None:
         description="Original task",
         priority=Priority.MEDIUM,
         difficulty=Difficulty.LOW,  # Initial difficulty
+        duration=Duration.MINISCULE,  # Default duration
         creation_date=datetime.now(),
         id="taskeditdiff1",
     )
@@ -1205,6 +1285,46 @@ def test_handle_edit_success_difficulty_only(mocker: Any) -> None:
         None,  # old_priority
         True,  # difficulty_updated
         Difficulty.LOW,  # old_difficulty
+        False,  # duration_updated
+        None,  # old_duration
+    )
+
+
+def test_handle_edit_success_duration_only(mocker: Any) -> None:
+    """Test handle_edit successfully updates only the duration of a task."""
+    mocker.patch("builtins.print")
+    mock_print_updates = mocker.patch("motido.cli.main._print_task_updates")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    mock_user = mocker.MagicMock(spec=User)
+    mock_task = Task(
+        description="Original task",
+        priority=Priority.MEDIUM,
+        difficulty=Difficulty.LOW,
+        duration=Duration.MINISCULE,  # Initial duration
+        creation_date=datetime.now(),
+        id="taskeditdur1",
+    )
+    mock_user.find_task_by_id.return_value = mock_task
+    new_duration = Duration.LONG.value
+    args = create_mock_args(id="taskeditdur1", duration=new_duration, verbose=True)
+
+    cli_main.handle_edit(args, mock_manager, mock_user)
+
+    assert mock_task.duration == Duration.LONG
+    assert mock_task.description == "Original task"  # Unchanged
+    assert mock_task.priority == Priority.MEDIUM  # Unchanged
+    assert mock_task.difficulty == Difficulty.LOW  # Unchanged
+    # Use positional arguments instead of keyword arguments
+    mock_print_updates.assert_called_once_with(
+        mock_task,
+        False,  # description_updated
+        None,  # old_description
+        False,  # priority_updated
+        None,  # old_priority
+        False,  # difficulty_updated
+        None,  # old_difficulty
+        True,  # duration_updated
+        Duration.MINISCULE,  # old_duration
     )
 
 
@@ -1232,11 +1352,47 @@ def test_print_task_updates_difficulty(mocker: Any) -> None:
         None,  # old_priority
         True,  # difficulty_updated
         old_difficulty,  # old_difficulty
+        False,  # duration_updated
+        None,  # old_duration
     )
 
     # Verify print calls for difficulty update
     mock_print.assert_any_call(f"  Old Difficulty: {old_difficulty.value}")
     mock_print.assert_any_call(f"  New Difficulty: {task.difficulty.value}")
+
+
+def test_print_task_updates_duration(mocker: Any) -> None:
+    """Test _print_task_updates prints duration updates correctly."""
+    mock_print = mocker.patch("builtins.print")
+
+    task = Task(
+        description="Test task",
+        priority=Priority.MEDIUM,
+        difficulty=Difficulty.TRIVIAL,
+        duration=Duration.LONG,  # New duration
+        creation_date=datetime.now(),
+        id="print-updates-test",
+    )
+
+    old_duration = Duration.MINISCULE  # Old duration
+
+    # Call the function directly with duration_updated=True
+    # pylint: disable=protected-access
+    cli_main._print_task_updates(
+        task,
+        False,  # description_updated
+        None,  # old_description
+        False,  # priority_updated
+        None,  # old_priority
+        False,  # difficulty_updated
+        None,  # old_difficulty
+        True,  # duration_updated
+        old_duration,  # old_duration
+    )
+
+    # Verify print calls for duration update
+    mock_print.assert_any_call(f"  Old Duration: {old_duration.value}")
+    mock_print.assert_any_call(f"  New Duration: {task.duration.value}")
 
 
 def test_handle_edit_success_all_fields(mocker: Any) -> None:
@@ -1248,10 +1404,12 @@ def test_handle_edit_success_all_fields(mocker: Any) -> None:
     original_desc = "Original task"
     original_prio = Priority.LOW
     original_diff = Difficulty.TRIVIAL
+    original_dur = Duration.MINISCULE
     mock_task = Task(
         description=original_desc,
         priority=original_prio,
         difficulty=original_diff,
+        duration=original_dur,
         creation_date=datetime.now(),
         id="taskeditall1",
     )
@@ -1260,11 +1418,13 @@ def test_handle_edit_success_all_fields(mocker: Any) -> None:
     new_desc = "Completely new task"
     new_prio = Priority.HIGH.value
     new_diff = Difficulty.MEDIUM.value
+    new_dur = Duration.LONG.value
     args = create_mock_args(
         id="taskeditall1",
         description=new_desc,
         priority=new_prio,
         difficulty=new_diff,
+        duration=new_dur,
         verbose=True,
     )
 
@@ -1273,6 +1433,7 @@ def test_handle_edit_success_all_fields(mocker: Any) -> None:
     assert mock_task.description == new_desc
     assert mock_task.priority == Priority.HIGH
     assert mock_task.difficulty == Difficulty.MEDIUM
+    assert mock_task.duration == Duration.LONG
     # Use positional arguments instead of keyword arguments
     mock_print_updates.assert_called_once_with(
         mock_task,
@@ -1282,33 +1443,38 @@ def test_handle_edit_success_all_fields(mocker: Any) -> None:
         original_prio,  # old_priority
         True,  # difficulty_updated
         original_diff,  # old_difficulty
+        True,  # duration_updated
+        original_dur,  # old_duration
     )
     mock_manager.save_user.assert_called_once_with(mock_user)
 
 
 def test_handle_edit_invalid_difficulty(mocker: Any) -> None:
     """Test handle_edit exits if difficulty is invalid."""
-    mock_print = mocker.patch("builtins.print")
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)
-    # Need creation_date for Task constructor
-    mock_task = Task(
-        description="Task", id="taskeditinvalid", creation_date=datetime.now()
+    invalid_value = "Way Too Hard"
+    args = create_mock_args(id="taskeditinvalid", difficulty=invalid_value)
+    _test_invalid_enum_value(
+        mocker,
+        cli_main.handle_edit,
+        args,
+        Difficulty,
+        "difficulty",
+        invalid_value,
     )
-    mock_user.find_task_by_id.return_value = mock_task
-    invalid_difficulty = "Way Too Hard"
-    args = create_mock_args(id="taskeditinvalid", difficulty=invalid_difficulty)
 
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_edit(args, mock_manager, mock_user)
 
-    valid_values = ", ".join([d.value for d in Difficulty])
-    mock_print.assert_any_call(
-        f"Error: Invalid difficulty '{invalid_difficulty}'. Valid values are: {valid_values}"
+def test_handle_edit_invalid_duration(mocker: Any) -> None:
+    """Test handle_edit exits if duration is invalid."""
+    invalid_value = "Way Too Long"
+    args = create_mock_args(id="taskeditinvalid", duration=invalid_value)
+    _test_invalid_enum_value(
+        mocker,
+        cli_main.handle_edit,
+        args,
+        Duration,
+        "duration",
+        invalid_value,
     )
-    assert excinfo.type == SystemExit
-    assert excinfo.value.code == 1
-    mock_manager.save_user.assert_not_called()  # Ensure save wasn't attempted
 
 
 def test_handle_edit_save_error(mocker: Any) -> None:
@@ -1343,51 +1509,19 @@ def test_handle_edit_save_error(mocker: Any) -> None:
 
 
 def test_handle_create_invalid_priority(mocker: Any) -> None:
-    """Test handle_create with an invalid priority value."""
-    mock_print = mocker.patch("builtins.print")
-    # Mock sys.exit to also raise SystemExit to halt execution
-    mock_exit = mocker.patch("sys.exit", side_effect=SystemExit(1))
-
-    # Do NOT mock the Priority enum itself, let the real one raise ValueError
-    # mock_priority = mocker.patch("motido.cli.main.Priority")
-    # mock_priority.side_effect = ValueError("Invalid enum value")
-    # Keep access to real values if needed (e.g., for the error message)
-    # mock_priority.LOW = Priority.LOW
-
-    # Create arguments with invalid priority
+    """Test handle_create exits if priority is invalid."""
+    invalid_value = "InvalidPriority"
     args = create_mock_args(
-        description="New task", priority="InvalidPriority", verbose=True
+        description="Task with bad priority", priority=invalid_value
     )
-
-    # Create mock manager and user
-    mock_manager = mocker.MagicMock(spec=DataManager)
-    mock_user = mocker.MagicMock(spec=User)  # Could be None as well, check impl
-
-    # Call the handler and expect SystemExit
-    with pytest.raises(SystemExit) as excinfo:
-        cli_main.handle_create(args, mock_manager, mock_user)
-
-    # Assert exit code is 1
-    assert excinfo.value.code == 1
-
-    # Assert sys.exit was called (redundant with raises check, but explicit)
-    mock_exit.assert_called_once_with(1)
-
-    # Assert the correct error message was printed
-    expected_error_msg_start = "Error: Invalid priority 'InvalidPriority'."
-    # Get the list of priority values for the full message check
-    valid_values_str = ", ".join([p.value for p in Priority])
-    expected_error_msg = (
-        f"{expected_error_msg_start} Valid values are: {valid_values_str}"
+    _test_invalid_enum_value(
+        mocker,
+        cli_main.handle_create,
+        args,
+        Priority,
+        "priority",
+        invalid_value,
     )
-
-    # Check if the expected error message was printed
-    print_calls = [c.args[0] for c in mock_print.call_args_list if c.args]
-    # The verbose print "Creating task..." might also be called before the error
-    assert any(expected_error_msg in call_args for call_args in print_calls)
-
-    # Ensure save was not called
-    mock_manager.save_user.assert_not_called()
 
 
 def test_handle_list_sort_by_priority(mocker: Any) -> None:
