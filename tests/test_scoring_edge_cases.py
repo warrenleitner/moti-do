@@ -1,0 +1,351 @@
+"""Additional tests for the scoring module to improve coverage."""
+
+import json
+from datetime import date, datetime, timedelta
+from unittest.mock import mock_open, patch
+
+import pytest
+
+from motido.core.models import Difficulty, Duration, Task
+from motido.core.scoring import (
+    add_xp,
+    apply_penalties,
+    calculate_score,
+    get_last_penalty_check_date,
+    load_scoring_config,
+    set_last_penalty_check_date,
+)
+
+from .test_fixtures import get_default_scoring_config, get_simple_scoring_config
+
+# --- Test Configuration Validation ---
+
+
+def test_load_scoring_config_invalid_difficulty_multiplier() -> None:
+    """Test load_scoring_config with invalid difficulty_multiplier type."""
+    invalid_config = get_default_scoring_config()
+    invalid_config["difficulty_multiplier"] = "not a dictionary"  # Invalid type
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'difficulty_multiplier' must be a dictionary" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_multiplier_values() -> None:
+    """Test load_scoring_config with invalid multiplier values."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["difficulty_multiplier"] = {
+        "NOT_SET": 1.0,
+        "TRIVIAL": 0.5,  # Invalid: < 1.0
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert (
+        "All multipliers in 'difficulty_multiplier' must be numeric and >= 1.0"
+        in str(excinfo.value)
+    )
+
+
+def test_load_scoring_config_invalid_age_factor_type() -> None:
+    """Test load_scoring_config with invalid age_factor type."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["age_factor"] = "not a dictionary"  # Invalid type
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'age_factor' must be a dictionary" in str(excinfo.value)
+
+
+def test_load_scoring_config_missing_age_factor_keys() -> None:
+    """Test load_scoring_config with missing age_factor keys."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["age_factor"] = {"unit": "days"}  # Missing multiplier_per_unit
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'age_factor' must contain 'unit' and 'multiplier_per_unit' keys" in str(
+        excinfo.value
+    )
+
+
+def test_load_scoring_config_invalid_age_factor_unit() -> None:
+    """Test load_scoring_config with invalid age_factor unit."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["age_factor"] = {
+        "unit": "months",
+        "multiplier_per_unit": 0.01,
+    }  # Invalid unit
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'age_factor.unit' must be either 'days' or 'weeks'" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_age_factor_multiplier() -> None:
+    """Test load_scoring_config with invalid age_factor multiplier value."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["age_factor"] = {
+        "unit": "days",
+        "multiplier_per_unit": -0.01,
+    }  # Negative value
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'age_factor.multiplier_per_unit' must be a non-negative number" in str(
+        excinfo.value
+    )
+
+
+def test_load_scoring_config_invalid_daily_penalty_type() -> None:
+    """Test load_scoring_config with invalid daily_penalty type."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["daily_penalty"] = "not a dictionary"  # Invalid type
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'daily_penalty' must be a dictionary" in str(excinfo.value)
+
+
+def test_load_scoring_config_missing_daily_penalty_apply_key() -> None:
+    """Test load_scoring_config with missing daily_penalty apply_penalty key."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["daily_penalty"] = {"penalty_points": 5}  # Missing apply_penalty
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'daily_penalty' must contain 'apply_penalty' key" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_daily_penalty_apply_type() -> None:
+    """Test load_scoring_config with invalid daily_penalty apply_penalty type."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["daily_penalty"] = {
+        "apply_penalty": "yes",  # String, not bool
+        "penalty_points": 5,
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'daily_penalty.apply_penalty' must be a boolean" in str(excinfo.value)
+
+
+def test_load_scoring_config_missing_daily_penalty_points_key() -> None:
+    """Test load_scoring_config with missing daily_penalty penalty_points key."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["daily_penalty"] = {"apply_penalty": True}  # Missing penalty_points
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'daily_penalty' must contain 'penalty_points' key" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_daily_penalty_points_value() -> None:
+    """Test load_scoring_config with invalid daily_penalty penalty_points value."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["daily_penalty"] = {
+        "apply_penalty": True,
+        "penalty_points": -5,  # Negative value
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'daily_penalty.penalty_points' must be a non-negative number" in str(
+        excinfo.value
+    )
+
+
+def test_load_scoring_config_ioerror() -> None:
+    """Test load_scoring_config handling of IOError."""
+    with patch("builtins.open", side_effect=IOError("File not found")):
+        with pytest.raises(ValueError) as excinfo:
+            load_scoring_config()
+
+    assert "Error reading scoring config file" in str(excinfo.value)
+
+
+def test_load_scoring_config_json_decode_error() -> None:
+    """Test load_scoring_config handling of JSONDecodeError."""
+    with patch("json.load", side_effect=json.JSONDecodeError("Invalid JSON", "", 0)):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "Invalid JSON in scoring config file" in str(excinfo.value)
+
+
+# --- Test Score Calculation Edge Cases ---
+
+
+def test_calculate_score_with_green_style_range() -> None:
+    """Test calculate_score with score in the 20-29 range (green style)."""
+    config = get_simple_scoring_config()
+    # Modify for green style test
+    config["base_score"] = 20  # Set base score to 20 to test green style range
+    config["field_presence_bonus"] = {"description": 0}
+    config["difficulty_multiplier"] = {
+        "NOT_SET": 1.0,
+        "TRIVIAL": 1.0,  # Set to 1.0 to maintain base score of 20
+    }
+    config["duration_multiplier"] = {
+        "NOT_SET": 1.0,
+        "MINISCULE": 1.0,  # Set to 1.0 to maintain base score of 20
+    }
+    config["age_factor"] = {"unit": "days", "multiplier_per_unit": 0.0}  # No age factor
+
+    task = Task(
+        description="Task in green score range",
+        creation_date=datetime.now(),
+        id="green-score-task",
+        difficulty=Difficulty.TRIVIAL,
+        duration=Duration.MINISCULE,
+    )
+
+    score = calculate_score(task, config, date.today())
+    assert score == 20  # Should be in the green range (20-29)
+
+
+def test_add_xp_with_negative_points() -> None:
+    """Test add_xp with negative points (penalty)."""
+    with patch("builtins.print") as mock_print:
+        add_xp(-10)
+        mock_print.assert_called_once_with("Deducted 10 XP points as penalty.")
+
+
+# --- Test Last Penalty Check ---
+
+
+def test_get_last_penalty_check_date_file_not_exists() -> None:
+    """Test get_last_penalty_check_date when file doesn't exist."""
+    with patch("os.path.exists", return_value=False):
+        result = get_last_penalty_check_date()
+        assert result is None
+
+
+def test_get_last_penalty_check_date_ioerror() -> None:
+    """Test get_last_penalty_check_date handling IOError."""
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", side_effect=IOError("Cannot read file")):
+            result = get_last_penalty_check_date()
+            assert result is None
+
+
+def test_get_last_penalty_check_date_valueerror() -> None:
+    """Test get_last_penalty_check_date handling ValueError (invalid date)."""
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data="invalid-date")):
+            result = get_last_penalty_check_date()
+            assert result is None
+
+
+def test_set_last_penalty_check_date_success() -> None:
+    """Test set_last_penalty_check_date successful execution."""
+    test_date = date(2023, 5, 15)
+    mock_file = mock_open()
+
+    with patch("os.makedirs"), patch("builtins.open", mock_file):
+        set_last_penalty_check_date(test_date)
+
+        # Verify the file was opened for writing
+        mock_file.assert_called_once()
+        # Verify the date was written in ISO format
+        mock_file().write.assert_called_once_with(test_date.isoformat())
+
+
+def test_set_last_penalty_check_date_ioerror() -> None:
+    """Test set_last_penalty_check_date handling IOError."""
+    with patch("os.makedirs"):
+        with patch("builtins.open", side_effect=IOError("Cannot write file")):
+            with pytest.raises(IOError) as excinfo:
+                set_last_penalty_check_date(date.today())
+            assert "Error saving last penalty check date" in str(excinfo.value)
+
+
+# --- Test Apply Penalties Function ---
+
+
+def test_apply_penalties_disabled() -> None:
+    """Test apply_penalties when penalties are disabled."""
+    config = get_simple_scoring_config()
+    config["daily_penalty"] = {"apply_penalty": False, "penalty_points": 5}  # Disabled
+
+    tasks = [
+        Task(description="Task 1", creation_date=datetime.now(), id="task1"),
+        Task(description="Task 2", creation_date=datetime.now(), id="task2"),
+    ]
+
+    # No exception should be raised, and function should return early
+    apply_penalties(date.today(), config, tasks)
+    # No assertions needed as we're just testing that no exception occurs
+
+
+def test_apply_penalties_last_check_is_today() -> None:
+    """Test apply_penalties when last check is today (should do nothing)."""
+    config = get_simple_scoring_config()
+
+    tasks = [
+        Task(description="Task 1", creation_date=datetime.now(), id="task1"),
+        Task(description="Task 2", creation_date=datetime.now(), id="task2"),
+    ]
+
+    today = date.today()
+
+    with patch("motido.core.scoring.get_last_penalty_check_date", return_value=today):
+        with patch("motido.core.scoring.add_xp") as mock_add_xp:
+            # Function should return early without calling add_xp
+            apply_penalties(today, config, tasks)
+            mock_add_xp.assert_not_called()
+
+
+def test_apply_penalties_last_check_is_future() -> None:
+    """Test apply_penalties when last check is in the future (should do nothing)."""
+    config = get_simple_scoring_config()
+
+    tasks = [
+        Task(description="Task 1", creation_date=datetime.now(), id="task1"),
+        Task(description="Task 2", creation_date=datetime.now(), id="task2"),
+    ]
+
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+
+    with patch(
+        "motido.core.scoring.get_last_penalty_check_date", return_value=tomorrow
+    ):
+        with patch("motido.core.scoring.add_xp") as mock_add_xp:
+            # Function should return early without calling add_xp
+            apply_penalties(today, config, tasks)
+            mock_add_xp.assert_not_called()

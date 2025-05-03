@@ -1,7 +1,5 @@
 """Tests for the JsonDataManager class with creation_date handling."""
 
-# pylint: disable=duplicate-code
-
 from datetime import datetime
 from typing import Any
 

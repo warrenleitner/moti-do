@@ -29,8 +29,8 @@ black = ">=25.1.0"    # Code formatter
 isort = ">=6.0.1"    # Import sorter
 pylint = ">=3.2.5"    # Linter
 mypy = ">=1.10.1"     # Static type checker
-safety = ">=3.2.3"    # Security checker
-poethepoet = "^0.33.1"
+safety = ">=3.4.0"    # Security checker
+poethepoet = "^0.34.0"
 
 [tool.poetry.scripts]
 motido = "motido.cli.main:main"

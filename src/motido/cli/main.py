@@ -7,7 +7,7 @@ Provides commands to initialize, create, view, list, and edit tasks.
 import argparse
 import sys
 from argparse import Namespace  # Import Namespace
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Callable, TypeVar
 
 # Import rich for table formatting
@@ -22,6 +22,12 @@ from motido.core.models import (  # Added Duration
     Priority,
     Task,
     User,
+)
+from motido.core.scoring import (
+    add_xp,
+    apply_penalties,
+    calculate_score,
+    load_scoring_config,
 )
 from motido.data.abstraction import DataManager  # For type hinting
 from motido.data.abstraction import DEFAULT_USERNAME
@@ -129,22 +135,50 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
         sys.exit(1)
 
 
+# pylint: disable=too-many-locals,too-many-branches,too-many-statements
 def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> None:
     """Handles the 'list' command."""
     print_verbose(args, "Listing all tasks...")
 
     if user and user.tasks:
-        # Sort tasks if sort_by is specified
+        # Load scoring config
+        try:
+            scoring_config = load_scoring_config()
+        except ValueError as e:
+            print(f"Warning: Could not load scoring config: {e}")
+            scoring_config = None
+
+        # Calculate scores for all tasks if config is available
+        tasks_with_scores = []
+        if scoring_config:
+            today = date.today()
+            for task in user.tasks:
+                try:
+                    score = calculate_score(task, scoring_config, today)
+                    tasks_with_scores.append((task, score))
+                except Exception as e:  # pylint: disable=broad-exception-caught
+                    print(
+                        f"Warning: Could not calculate score for task {task.id[:8]}: {e}"
+                    )
+                    tasks_with_scores.append((task, 0))  # Default score of 0
+        else:
+            # Just create a list of tasks with score=0 if no config
+            tasks_with_scores = [(task, 0) for task in user.tasks]
+
+        # PERF: Calculating score for all tasks on every list call can be slow for large datasets
+        # in a DB. Consider caching or DB indexing.
+
+        # Sort tasks
         if hasattr(args, "sort_by") and args.sort_by:
             reverse = False
             if hasattr(args, "sort_order") and args.sort_order == "desc":
                 reverse = True
 
             if args.sort_by == "id":
-                user.tasks.sort(key=lambda task: task.id, reverse=reverse)
+                tasks_with_scores.sort(key=lambda item: item[0].id, reverse=reverse)
             elif args.sort_by == "description":
-                user.tasks.sort(
-                    key=lambda task: task.description.lower(), reverse=reverse
+                tasks_with_scores.sort(
+                    key=lambda item: item[0].description.lower(), reverse=reverse
                 )
             elif args.sort_by == "priority":
                 # Sort by priority (using the enum's order)
@@ -155,12 +189,20 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
                     Priority.HIGH: 4,
                     Priority.DEFCON_ONE: 5,
                 }
-                user.tasks.sort(
-                    key=lambda task: priority_order[task.priority], reverse=reverse
+                tasks_with_scores.sort(
+                    key=lambda item: priority_order[item[0].priority], reverse=reverse
                 )
             elif args.sort_by == "status":
                 # Sort by completion status
-                user.tasks.sort(key=lambda task: task.is_complete, reverse=reverse)
+                tasks_with_scores.sort(
+                    key=lambda item: item[0].is_complete, reverse=reverse
+                )
+            elif args.sort_by == "score":
+                # Sort by score
+                tasks_with_scores.sort(key=lambda item: item[1], reverse=reverse)
+        else:
+            # Default sorting: by score in descending order
+            tasks_with_scores.sort(key=lambda item: item[1], reverse=True)
 
         # --- Display tasks using rich.table.Table ---
         console = Console()
@@ -170,9 +212,10 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
         table.add_column("Priority", width=15)
         table.add_column("Difficulty", width=15)
         table.add_column("Duration", width=15)
+        table.add_column("Score", width=8)
         table.add_column("Description")
 
-        for task in user.tasks:
+        for task, score in tasks_with_scores:
             # Add task details to the table with priority, difficulty, and duration emoji
             status_text = "[✓]" if task.is_complete else "[ ]"
             # Apply style to make completed tasks visually distinct
@@ -182,12 +225,30 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
             difficulty_text = f"{task.difficulty.emoji()} {task.difficulty.value}"
             duration_text = f"{task.duration.emoji()} {task.duration.value}"
 
+            # Determine score color based on its value
+            score_style = None
+            if score >= 50:
+                score_style = "red bold"
+            elif score >= 30:
+                score_style = "yellow"
+            elif score >= 20:
+                score_style = "green"
+            elif score >= 10:
+                score_style = "blue"
+
+            # If the task is completed, use dimmed style
+            if task.is_complete:
+                score_style = "dim"
+
+            score_text = Text(str(score), style=score_style or "")
+
             table.add_row(
                 status_text,
                 task.id[:8],
                 priority_text,
                 difficulty_text,
                 duration_text,
+                score_text,
                 task.description,
                 style=description_style,
             )
@@ -203,6 +264,7 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
         print("Hint: Run 'motido init' first if you haven't already.")
 
 
+# pylint: disable=too-many-locals,too-many-branches,too-many-statements
 def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> None:
     """Handles the 'view' command."""
     if not args.id:  # pragma: no cover
@@ -218,6 +280,14 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
     try:
         task = user.find_task_by_id(args.id)
         if task:
+            # Load scoring config and calculate score
+            try:
+                scoring_config = load_scoring_config()
+                current_score = calculate_score(task, scoring_config, date.today())
+            except ValueError as e:
+                print(f"Warning: Could not calculate score: {e}")
+                current_score = None
+
             # --- Display task details using rich.table.Table ---
             console = Console()
             table = Table(show_header=False, box=None, show_edge=False)
@@ -260,6 +330,23 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
             table.add_row("Duration:", duration_text)
 
             table.add_row("Description:", task.description)
+
+            # Display score if available
+            if current_score is not None:
+                # Determine score color based on its value
+                score_style = "default"
+                if current_score >= 50:
+                    score_style = "red bold"
+                elif current_score >= 30:
+                    score_style = "yellow"
+                elif current_score >= 20:
+                    score_style = "green"
+                elif current_score >= 10:
+                    score_style = "blue"
+
+                score_text = Text(str(current_score), style=score_style or "")
+                table.add_row("Score:", score_text)
+
             console.print(table)
             # --- End rich table display ---
         else:
@@ -318,6 +405,7 @@ def _update_task_duration(task: Task, duration_str: str) -> Duration:
     return old_duration
 
 
+# pylint: disable=too-many-branches
 def handle_complete(args: Namespace, manager: DataManager, user: User | None) -> None:
     """Handles the 'complete' command to mark a task as complete."""
     if not args.id:
@@ -339,15 +427,33 @@ def handle_complete(args: Namespace, manager: DataManager, user: User | None) ->
                 )
                 return
 
+            # Load scoring config and calculate score
+            score_to_add = 0
+            try:
+                scoring_config = load_scoring_config()
+                score_to_add = calculate_score(task, scoring_config, date.today())
+            except ValueError as e:
+                print(f"Warning: Could not calculate score: {e}")
+
             # Mark the task as complete
             task.is_complete = True
 
             # Save the updated user data
             try:
                 manager.save_user(user)
-                print(
-                    f"Marked task '{task.description}' (ID: {task.id[:8]}) as complete."
-                )
+
+                # Add XP based on score
+                if score_to_add > 0:
+                    add_xp(score_to_add)
+                    print(
+                        f"Marked task '{task.description}' (ID: {task.id[:8]}) as complete. "
+                        f"Added {score_to_add} XP points!"
+                    )
+                else:
+                    print(
+                        f"Marked task '{task.description}' (ID: {task.id[:8]}) as complete."
+                    )
+
             except (IOError, OSError) as e:
                 print(f"Error saving task update: {e}")
                 sys.exit(1)
@@ -556,6 +662,48 @@ def handle_delete(args: Namespace, manager: DataManager, user: User | None) -> N
         sys.exit(1)  # Exit after printing error # pragma: no cover
 
 
+def handle_run_penalties(
+    args: Namespace, _manager: DataManager, user: User | None
+) -> None:
+    """Handles the 'run-penalties' command to apply daily penalties for incomplete tasks."""
+    print_verbose(args, "Running penalty calculation...")
+
+    if not user:
+        print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
+        sys.exit(1)
+
+    try:
+        # Load scoring config
+        try:
+            scoring_config = load_scoring_config()
+        except ValueError as e:
+            print(f"Error: Could not load scoring config: {e}")
+            sys.exit(1)
+
+        # Set the effective date
+        effective_date = date.today()
+        if args.date:
+            try:
+                # Parse the date format YYYY-MM-DD
+                effective_date = date.fromisoformat(args.date)
+            except ValueError:
+                print(
+                    f"Error: Invalid date format. Please use YYYY-MM-DD, got: {args.date}"
+                )
+                sys.exit(1)
+
+        # Apply penalties
+        apply_penalties(effective_date, scoring_config, user.tasks)
+        print(f"Penalties calculated successfully for date: {effective_date}")
+
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        print(f"An unexpected error occurred: {e}")
+        sys.exit(1)
+
+
 def _wrap_handler(
     handler_func: Callable[[argparse.Namespace, DataManager, User | None], T],
 ) -> Callable[[argparse.Namespace, DataManager, User | None], T]:
@@ -634,14 +782,15 @@ def setup_parser() -> argparse.ArgumentParser:
     parser_list = subparsers.add_parser("list", help="List all tasks.")
     parser_list.add_argument(
         "--sort-by",
-        choices=["id", "description", "priority"],
-        help="Field to sort tasks by.",
+        choices=["id", "description", "priority", "status", "score"],
+        help="Field to sort tasks by. Default is score (descending).",
     )
     parser_list.add_argument(
         "--sort-order",
         choices=["asc", "desc"],
         default="asc",
-        help="Sort order: ascending (asc) or descending (desc).",
+        help="Sort order: ascending (asc) or descending (desc). "
+        "Default is asc, except for score which defaults to desc.",
     )
     parser_list.set_defaults(func=_wrap_handler(handle_list))
 
@@ -708,6 +857,17 @@ def setup_parser() -> argparse.ArgumentParser:
     )
     parser_complete.set_defaults(func=_wrap_handler(handle_complete))
 
+    # --- Run Penalties Command ---
+    parser_penalties = subparsers.add_parser(
+        "run-penalties", help="Apply daily penalties for incomplete tasks."
+    )
+    parser_penalties.add_argument(
+        "--date",
+        required=False,
+        help="The date to calculate penalties for, in YYYY-MM-DD format. Defaults to today.",
+    )
+    parser_penalties.set_defaults(func=_wrap_handler(handle_run_penalties))
+
     return parser
 
 
@@ -727,10 +887,18 @@ def main() -> None:
     user = None  # Initialize user to None
 
     # Load user for commands that require it
-    if args.command in ["create", "list", "view", "edit", "delete", "complete"]:
+    if args.command in [
+        "create",
+        "list",
+        "view",
+        "edit",
+        "delete",
+        "complete",
+        "run-penalties",
+    ]:
         try:
             user = manager.load_user(DEFAULT_USERNAME)
-            if user is None and args.command != "create":
+            if user is None and args.command not in ["create"]:
                 print_verbose(
                     args, f"User '{DEFAULT_USERNAME}' not found."
                 )  # pragma: no cover
