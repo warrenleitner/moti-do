@@ -38,6 +38,8 @@ def test_task_initialization() -> None:
     assert task.difficulty == Difficulty.TRIVIAL
     # Check default duration
     assert task.duration == Duration.MINISCULE
+    # Check default is_complete status
+    assert task.is_complete is False
 
 
 def test_task_initialization_with_priority() -> None:
@@ -123,11 +125,37 @@ def test_task_str_representation() -> None:
     # Format creation_date as YYYY-MM-DD HH:MM:SS
     formatted_date = task.creation_date.strftime("%Y-%m-%d %H:%M:%S")
     expected_str = (
-        f"ID: {task.id[:8]} | Priority: {task.priority.emoji()} "
+        f"[ ] ID: {task.id[:8]} | Priority: {task.priority.emoji()} "
         f"{task.priority.value} | Duration: {task.duration.emoji()} "
         f"{task.duration.value} | Created: {formatted_date} | Description: {desc}"
     )
     assert str(task) == expected_str
+
+
+def test_task_str_representation_completed() -> None:
+    """Test the string representation of a completed Task."""
+    desc = "Completed task"
+    task = Task(description=desc, creation_date=datetime.now(), is_complete=True)
+    # Format creation_date as YYYY-MM-DD HH:MM:SS
+    formatted_date = task.creation_date.strftime("%Y-%m-%d %H:%M:%S")
+    expected_str = (
+        f"[✓] ID: {task.id[:8]} | Priority: {task.priority.emoji()} "
+        f"{task.priority.value} | Duration: {task.duration.emoji()} "
+        f"{task.duration.value} | Created: {formatted_date} | Description: {desc}"
+    )
+    assert str(task) == expected_str
+
+
+def test_task_initialization_with_is_complete() -> None:
+    """Test that a Task object is initialized correctly with is_complete set."""
+    desc = "Task with is_complete=True"
+    task = Task(description=desc, creation_date=datetime.now(), is_complete=True)
+    assert task.description == desc
+    assert task.is_complete is True
+    # Ensure other defaults are still set
+    assert task.priority == Priority.LOW
+    assert task.difficulty == Difficulty.TRIVIAL
+    assert task.duration == Duration.MINISCULE
 
 
 def test_priority_emoji() -> None:
@@ -221,6 +249,7 @@ def sample_tasks() -> List[Task]:
             priority=Priority.LOW,
             difficulty=Difficulty.TRIVIAL,
             duration=Duration.MINISCULE,
+            is_complete=False,
         ),
         Task(
             description="Task 2",
@@ -229,6 +258,7 @@ def sample_tasks() -> List[Task]:
             priority=Priority.MEDIUM,
             difficulty=Difficulty.MEDIUM,
             duration=Duration.SHORT,
+            is_complete=True,  # One completed task for testing
         ),
         Task(
             description="Task 3",
@@ -237,6 +267,7 @@ def sample_tasks() -> List[Task]:
             priority=Priority.HIGH,
             difficulty=Difficulty.TRIVIAL,
             duration=Duration.MEDIUM,
+            is_complete=False,
         ),  # Shares prefix with Task 1
     ]
 

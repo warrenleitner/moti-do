@@ -752,6 +752,7 @@ def test_handle_list_success(mocker: Any) -> None:
     )
     mock_table_instance.add_column.assert_has_calls(
         [
+            call("Status", width=6),
             call("ID Prefix", style="dim", width=12),
             call("Priority", width=15),
             call("Difficulty", width=15),
@@ -766,18 +767,22 @@ def test_handle_list_success(mocker: Any) -> None:
     # Check the arguments passed to add_row for each task more explicitly
     expected_row_calls = [
         call(
+            "[ ]",  # Completion status (default false)
             task1.id[:8],
             f"{task1.priority.emoji()} {task1.priority.value}",
             f"{task1.difficulty.emoji()} {task1.difficulty.value}",
             f"{task1.duration.emoji()} {task1.duration.value}",
             task1.description,
+            style=None,  # Style parameter (None for incomplete)
         ),
         call(
+            "[ ]",  # Completion status (default false)
             task2.id[:8],
             f"{task2.priority.emoji()} {task2.priority.value}",
             f"{task2.difficulty.emoji()} {task2.difficulty.value}",
             f"{task2.duration.emoji()} {task2.duration.value}",
             task2.description,
+            style=None,  # Style parameter (None for incomplete)
         ),
     ]
     mock_table_instance.add_row.assert_has_calls(expected_row_calls, any_order=False)
@@ -811,9 +816,10 @@ def test_handle_view_success_with_difficulty(mocker: Any) -> None:
     mock_task.description = "View this task"
     # Use a real Priority instance
     mock_task.priority = Priority.MEDIUM  # Example priority
-    # Add difficulty, duration, and creation_date attributes
+    # Add difficulty, duration, is_complete, and creation_date attributes
     mock_task.difficulty = Difficulty.HIGH  # Example difficulty
     mock_task.duration = Duration.MEDIUM  # Example duration
+    mock_task.is_complete = False  # Default is incomplete
     mock_task.creation_date = datetime(2023, 1, 1, 12, 0, 0)
 
     # Setup user.find_task_by_id to return the mock task
@@ -840,31 +846,34 @@ def test_handle_view_success_with_difficulty(mocker: Any) -> None:
     # Check add_row calls, especially for priority formatting
     add_row_calls = mock_table_instance.add_row.call_args_list
     assert (
-        len(add_row_calls) == 6
-    )  # Now 6 rows with difficulty, duration, and creation_date
+        len(add_row_calls) == 7
+    )  # Now 7 rows with status, difficulty, duration, and creation_date
     assert add_row_calls[0] == call("ID:", "abc-123")
 
-    # Verify the Text object creation - now called three times (for priority, difficulty, and duration)
-    assert mock_text_class.call_count == 3
+    # Verify the Text object creation - now called four times (for status, priority, difficulty, and duration)
+    assert mock_text_class.call_count == 4
 
     # We can't check the exact append calls since Text() is called twice
     # and returns the same mock instance both times
 
-    # Check priority row call - the second argument should be the mock_text_instance
-    assert add_row_calls[1] == call("Priority:", mock_text_instance)
+    # Check status row call - the second row should be Status
+    assert add_row_calls[1] == call("Status:", mock_text_instance)
+
+    # Check priority row call - the third row should be Priority
+    assert add_row_calls[2] == call("Priority:", mock_text_instance)
 
     # Check creation_date row - we can't check the exact formatted date
     # since we're using a mock, but we can check the row label
-    assert add_row_calls[2].args[0] == "Created:"
+    assert add_row_calls[3].args[0] == "Created:"
 
     # Check difficulty row - now also using the Text instance
-    assert add_row_calls[3] == call("Difficulty:", mock_text_instance)
+    assert add_row_calls[4] == call("Difficulty:", mock_text_instance)
 
     # Check duration row - now also using the Text instance
-    assert add_row_calls[4] == call("Duration:", mock_text_instance)
+    assert add_row_calls[5] == call("Duration:", mock_text_instance)
 
     # Check description row
-    assert add_row_calls[5] == call("Description:", "View this task")
+    assert add_row_calls[6] == call("Description:", "View this task")
 
     mock_console_instance.print.assert_called_once_with(mock_table_instance)
 
@@ -919,6 +928,12 @@ def test_handle_view_displays_difficulty(mocker: Any) -> None:
     # Verify the calls to add_row on the mocked Table instance
     add_row_calls = mock_table_instance.add_row.call_args_list
     formatted_date = test_date.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Check that Status row was added
+    status_calls = [
+        call for call in add_row_calls if call.args and call.args[0] == "Status:"
+    ]
+    assert status_calls, "Status row should be added for all tasks"
 
     # Check that Difficulty row was added (since all tasks now have a difficulty)
     difficulty_calls = [

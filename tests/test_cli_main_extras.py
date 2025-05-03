@@ -298,6 +298,196 @@ def test_handle_edit_task_not_found(
     assert excinfo.value.code == 1
 
 
+def test_handle_complete_missing_id(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_complete when the task ID is missing."""
+    args = create_mock_args(id=None)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_complete(args, mock_manager, mock_user)
+
+    mock_print.assert_any_call("Error: Please provide a task ID prefix using --id.")
+    assert excinfo.value.code == 1
+
+
+def test_handle_complete_user_not_found(
+    mock_manager: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_complete when the user is not found."""
+    args = create_mock_args(id="task123")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_complete(args, mock_manager, None)
+
+    mock_print.assert_any_call(
+        f"User '{cli_main.DEFAULT_USERNAME}' not found or no data available."
+    )
+    assert excinfo.value.code == 1
+
+
+def test_handle_complete_task_not_found(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_complete when the task is not found."""
+    mock_user.find_task_by_id.return_value = None  # Task not found
+    args = create_mock_args(id="complete-miss")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_complete(args, mock_manager, mock_user)
+
+    mock_print.assert_any_call(f"Error: Task with ID prefix '{args.id}' not found.")
+    assert excinfo.value.code == 1
+
+
+def test_handle_complete_success(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_complete successfully marks a task as complete."""
+    # Create a real Task object instead of a mock for proper attribute behavior
+    mock_task = Task(
+        description="Task to complete",
+        creation_date=datetime.now(),
+        id="complete-123",
+        is_complete=False,
+    )
+    mock_user.find_task_by_id.return_value = mock_task
+    args = create_mock_args(id="complete-123", verbose=True)
+
+    cli_main.handle_complete(args, mock_manager, mock_user)
+
+    # Check that the task was marked as complete
+    assert mock_task.is_complete is True
+
+    # Check that the user was saved
+    mock_manager.save_user.assert_called_once_with(mock_user)
+
+    # Check that the correct success message was printed
+    mock_print.assert_any_call(
+        "Marking task with ID prefix: 'complete-123' as complete..."
+    )
+    mock_print.assert_any_call(
+        f"Marked task '{mock_task.description}' (ID: {mock_task.id[:8]}) as complete."
+    )
+
+
+def test_handle_complete_already_completed(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_complete when the task is already marked as complete."""
+    # Create a task that's already complete
+    mock_task = Task(
+        description="Already completed task",
+        creation_date=datetime.now(),
+        id="already-done",
+        is_complete=True,
+    )
+    mock_user.find_task_by_id.return_value = mock_task
+    args = create_mock_args(id="already-done")
+
+    cli_main.handle_complete(args, mock_manager, mock_user)
+
+    # Check that save_user was NOT called
+    mock_manager.save_user.assert_not_called()
+
+    # Check that the correct message was printed
+    mock_print.assert_any_call(
+        f"Task '{mock_task.description}' (ID: {mock_task.id[:8]}) is already marked as complete."
+    )
+
+
+def test_handle_complete_ambiguous_id(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_complete with an ambiguous task ID."""
+    error_message = "Ambiguous ID prefix 'amb'. Multiple tasks found."
+    mock_user.find_task_by_id.side_effect = ValueError(error_message)
+    args = create_mock_args(id="amb")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_complete(args, mock_manager, mock_user)
+
+    mock_print.assert_any_call(f"Error: {error_message}")
+    assert excinfo.value.code == 1
+
+
+def test_handle_complete_io_error(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_complete catches IOError during save."""
+    mock_task = Task(
+        description="Task with IO error",
+        creation_date=datetime.now(),
+        id="complete-io-err",
+        is_complete=False,
+    )
+    mock_user.find_task_by_id.return_value = mock_task
+    error_message = "IO error on save"
+    mock_manager.save_user.side_effect = IOError(error_message)
+    args = create_mock_args(id="complete-io")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_complete(args, mock_manager, mock_user)
+
+    mock_print.assert_any_call(f"Error saving task update: {error_message}")
+    assert excinfo.value.code == 1
+
+
+def test_handle_complete_unexpected_error(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_complete catches unexpected errors."""
+    error_message = "Unexpected error"
+    mock_user.find_task_by_id.side_effect = AttributeError(error_message)
+    args = create_mock_args(id="complete-err")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_complete(args, mock_manager, mock_user)
+
+    mock_print.assert_any_call(f"An unexpected error occurred: {error_message}")
+    assert excinfo.value.code == 1
+
+
+def test_handle_complete_generic_exception_on_save(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_complete catches generic exceptions during save."""
+    # Create a real Task object for proper attribute behavior
+    mock_task = Task(
+        description="Task with generic error",
+        creation_date=datetime.now(),
+        id="complete-gen-err",
+        is_complete=False,
+    )
+    mock_user.find_task_by_id.return_value = mock_task
+    error_message = "Generic error on save"
+    mock_manager.save_user.side_effect = Exception(error_message)
+    args = create_mock_args(id="complete-gen")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_complete(args, mock_manager, mock_user)
+
+    # Verify the task was marked as complete before save failed
+    assert mock_task.is_complete is True
+    mock_print.assert_any_call(f"Error saving updated task: {error_message}")
+    assert excinfo.value.code == 1
+
+
+def test_handle_complete_generic_exception_during_find(
+    mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
+) -> None:
+    """Test handle_complete catches generic exceptions during task find."""
+    error_message = "Generic error during find"
+    mock_user.find_task_by_id.side_effect = Exception(error_message)
+    args = create_mock_args(id="complete-gen-find")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_complete(args, mock_manager, mock_user)
+
+    mock_print.assert_any_call(f"An unexpected error occurred: {error_message}")
+    assert excinfo.value.code == 1
+
+
 def test_handle_edit_generic_exception(
     mock_manager: MagicMock, mock_user: MagicMock, mock_print: MagicMock
 ) -> None:
@@ -382,6 +572,52 @@ def test_handle_list_sort_descending(
 
     # Verify tasks are sorted by description in descending order
     assert mock_user.tasks == [task3, task2, task1]
+
+
+def test_handle_list_sort_by_status(
+    mock_manager: MagicMock, mock_user: MagicMock
+) -> None:
+    """Test handle_list sorts tasks by completion status."""
+    # Setup tasks with different completion statuses
+    task1 = Task(
+        description="Task A",
+        creation_date=datetime.now(),
+        id="abc123",
+        is_complete=True,
+    )
+    task2 = Task(
+        description="Task B",
+        creation_date=datetime.now(),
+        id="def456",
+        is_complete=False,
+    )
+    task3 = Task(
+        description="Task C",
+        creation_date=datetime.now(),
+        id="ghi789",
+        is_complete=True,
+    )
+
+    # Deliberately mix the order
+    mock_user.tasks = [task2, task1, task3]
+
+    # Test sorting by status in ascending order (incomplete first)
+    args = create_mock_args(sort_by="status", sort_order="asc", verbose=True)
+    cli_main.handle_list(args, mock_manager, mock_user)
+
+    # Verify tasks are sorted by completion status (False before True)
+    assert mock_user.tasks[0] == task2  # The incomplete task should be first
+    assert task1 in mock_user.tasks[1:]  # The complete tasks should follow
+    assert task3 in mock_user.tasks[1:]
+
+    # Test sorting by status in descending order (complete first)
+    args = create_mock_args(sort_by="status", sort_order="desc", verbose=True)
+    cli_main.handle_list(args, mock_manager, mock_user)
+
+    # Verify tasks are sorted by completion status in reverse (True before False)
+    assert task2 == mock_user.tasks[-1]  # The incomplete task should be last
+    assert task1 in mock_user.tasks[0:2]  # The complete tasks should be first
+    assert task3 in mock_user.tasks[0:2]
 
 
 def test_main_handles_specific_exceptions(mocker: Any) -> None:

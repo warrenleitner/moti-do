@@ -119,11 +119,15 @@ class JsonDataManager(DataManager):
                                 f"Warning: Invalid creation_date format for task {task_id}, using current time."
                             )
 
+                    # Get is_complete from task_dict or use default if not present
+                    is_complete = task_dict.get("is_complete", False)
+
                     task = Task(
                         id=task_dict["id"],
                         description=task_dict["description"],
                         creation_date=creation_date,
                         priority=priority,
+                        is_complete=is_complete,
                     )
                     tasks.append(task)
 
@@ -151,6 +155,12 @@ class JsonDataManager(DataManager):
                 "id": task.id,
                 "description": task.description,
                 "priority": task.priority.value,  # Save the priority value as string
+                "is_complete": task.is_complete,  # Save the completion status
+                "creation_date": (
+                    task.creation_date.strftime("%Y-%m-%d %H:%M:%S")
+                    if task.creation_date
+                    else None
+                ),
             }
             for task in user.tasks
         ]

@@ -158,10 +158,14 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
                 user.tasks.sort(
                     key=lambda task: priority_order[task.priority], reverse=reverse
                 )
+            elif args.sort_by == "status":
+                # Sort by completion status
+                user.tasks.sort(key=lambda task: task.is_complete, reverse=reverse)
 
         # --- Display tasks using rich.table.Table ---
         console = Console()
         table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Status", width=6)
         table.add_column("ID Prefix", style="dim", width=12)
         table.add_column("Priority", width=15)
         table.add_column("Difficulty", width=15)
@@ -170,15 +174,22 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
 
         for task in user.tasks:
             # Add task details to the table with priority, difficulty, and duration emoji
+            status_text = "[✓]" if task.is_complete else "[ ]"
+            # Apply style to make completed tasks visually distinct
+            description_style = "dim" if task.is_complete else None
+
             priority_text = f"{task.priority.emoji()} {task.priority.value}"
             difficulty_text = f"{task.difficulty.emoji()} {task.difficulty.value}"
             duration_text = f"{task.duration.emoji()} {task.duration.value}"
+
             table.add_row(
+                status_text,
                 task.id[:8],
                 priority_text,
                 difficulty_text,
                 duration_text,
                 task.description,
+                style=description_style,
             )
 
         console.print(table)
@@ -213,6 +224,12 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
             table.add_column("Attribute", style="bold cyan")
             table.add_column("Value")
             table.add_row("ID:", task.id)
+
+            # Display completion status
+            completion_status = "Complete" if task.is_complete else "Incomplete"
+            status_style = "green" if task.is_complete else "yellow"
+            status_text = Text(completion_status, style=status_style)
+            table.add_row("Status:", status_text)
 
             # Display priority with emoji and colored text
             priority_text = Text()
@@ -299,6 +316,58 @@ def _update_task_duration(task: Task, duration_str: str) -> Duration:
     old_duration = task.duration
     task.duration = Duration(duration_str)  # Raises ValueError if invalid
     return old_duration
+
+
+def handle_complete(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'complete' command to mark a task as complete."""
+    if not args.id:
+        print("Error: Please provide a task ID prefix using --id.")
+        sys.exit(1)
+
+    print_verbose(args, f"Marking task with ID prefix: '{args.id}' as complete...")
+
+    if not user:
+        print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
+        sys.exit(1)
+
+    try:
+        task = user.find_task_by_id(args.id)
+        if task:
+            if task.is_complete:
+                print(
+                    f"Task '{task.description}' (ID: {task.id[:8]}) is already marked as complete."
+                )
+                return
+
+            # Mark the task as complete
+            task.is_complete = True
+
+            # Save the updated user data
+            try:
+                manager.save_user(user)
+                print(
+                    f"Marked task '{task.description}' (ID: {task.id[:8]}) as complete."
+                )
+            except (IOError, OSError) as e:
+                print(f"Error saving task update: {e}")
+                sys.exit(1)
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                print(f"Error saving updated task: {e}")
+                sys.exit(1)
+        else:
+            print(f"Error: Task with ID prefix '{args.id}' not found.")
+            sys.exit(1)
+    except ValueError as e:  # Handles ambiguous ID prefix
+        print(f"Error: {e}")
+        sys.exit(1)
+    except (AttributeError, TypeError) as e:
+        print(f"An unexpected error occurred: {e}")
+        sys.exit(1)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        # Broad exception required to handle any unforeseen issues when accessing task data
+        # and ensure clean CLI exit
+        print(f"An unexpected error occurred: {e}")
+        sys.exit(1)
 
 
 # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -630,6 +699,15 @@ def setup_parser() -> argparse.ArgumentParser:
     )
     parser_delete.set_defaults(func=_wrap_handler(handle_delete))
 
+    # --- Complete Command ---
+    parser_complete = subparsers.add_parser("complete", help="Mark a task as complete.")
+    parser_complete.add_argument(
+        "--id",
+        required=True,
+        help="The full or unique partial ID of the task to mark as complete.",
+    )
+    parser_complete.set_defaults(func=_wrap_handler(handle_complete))
+
     return parser
 
 
@@ -649,7 +727,7 @@ def main() -> None:
     user = None  # Initialize user to None
 
     # Load user for commands that require it
-    if args.command in ["create", "list", "view", "edit", "delete"]:
+    if args.command in ["create", "list", "view", "edit", "delete", "complete"]:
         try:
             user = manager.load_user(DEFAULT_USERNAME)
             if user is None and args.command != "create":

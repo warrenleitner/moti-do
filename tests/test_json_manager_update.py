@@ -7,7 +7,7 @@ from motido.core.models import Priority, Task, User
 from motido.data.json_manager import JsonDataManager
 
 # mypy: disable-error-code="assignment"
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name,too-many-locals
 
 # All fixtures are now imported from conftest.py:
 # - mock_config_path
@@ -44,9 +44,44 @@ def test_save_user_update_existing(
     mock_read.assert_called_once()
 
     # Expected data after saving the updated user
-    task_a = {"id": "uuid-a", "description": "Task A", "priority": "Low"}
-    task_b = {"id": "uuid-b", "description": "Task B", "priority": "Medium"}
-    task_c = {"id": "uuid-c", "description": "Task C", "priority": "Low"}
+    # Mock the creation_date string format for comparison
+    creation_date_a = (
+        sample_user.tasks[0].creation_date.strftime("%Y-%m-%d %H:%M:%S")
+        if sample_user.tasks[0].creation_date
+        else None
+    )
+    creation_date_b = (
+        sample_user.tasks[1].creation_date.strftime("%Y-%m-%d %H:%M:%S")
+        if sample_user.tasks[1].creation_date
+        else None
+    )
+    creation_date_c = (
+        updated_user.tasks[2].creation_date.strftime("%Y-%m-%d %H:%M:%S")
+        if updated_user.tasks[2].creation_date
+        else None
+    )
+
+    task_a = {
+        "id": "uuid-a",
+        "description": "Task A",
+        "priority": "Low",
+        "is_complete": False,
+        "creation_date": creation_date_a,
+    }
+    task_b = {
+        "id": "uuid-b",
+        "description": "Task B",
+        "priority": "Medium",
+        "is_complete": False,
+        "creation_date": creation_date_b,
+    }
+    task_c = {
+        "id": "uuid-c",
+        "description": "Task C",
+        "priority": "Low",
+        "is_complete": False,
+        "creation_date": creation_date_c,
+    }
     expected_tasks_data = [task_a, task_b, task_c]
 
     expected_user_data = {

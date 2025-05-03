@@ -142,13 +142,15 @@ class Task:
     priority: Priority = field(default=Priority.LOW)
     difficulty: Difficulty = field(default=Difficulty.TRIVIAL)
     duration: Duration = field(default=Duration.MINISCULE)
+    is_complete: bool = field(default=False)
 
     def __str__(self) -> str:
         """String representation for simple display."""
         # Format creation_date as YYYY-MM-DD HH:MM:SS
         formatted_date = self.creation_date.strftime("%Y-%m-%d %H:%M:%S")
+        status_indicator = "[✓]" if self.is_complete else "[ ]"
         return (
-            f"ID: {self.id[:8]} | Priority: {self.priority.emoji()} {self.priority.value} "
+            f"{status_indicator} ID: {self.id[:8]} | Priority: {self.priority.emoji()} {self.priority.value} "
             f"| Duration: {self.duration.emoji()} {self.duration.value} "
             f"| Created: {formatted_date} | Description: {self.description}"  # Show partial ID
         )
