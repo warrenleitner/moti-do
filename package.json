@@ -40,7 +40,7 @@
     "next": "15.2.4",
     "react-color": "2.19.3",
     "react-colorful": "5.6.1",
-    "react-dom": "19.0.0",
+    "react-dom": "19.1.1",
     "react-transition-group": "4.4.5",
     "react": "19.0.0",
     "reactflow": "11.11.4",
@@ -50,7 +50,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "4.0.17",
     "@types/node": "22.13.14",
-    "@types/react-dom": "19.0.4",
+    "@types/react-dom": "19.1.7",
     "@types/react": "19.0.12",
     "@types/uuid": "10.0.0",
     "autoprefixer": "10.4.21",
