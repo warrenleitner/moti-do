@@ -3,13 +3,18 @@
 Implementation of the DataManager interface using SQLite database storage.
 """
 
+import json
 import os
 import sqlite3
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import Optional
 
-from motido.core.models import Priority, Task, User
-from motido.core.utils import parse_priority_safely
+from motido.core.models import Difficulty, Duration, Priority, Task, User
+from motido.core.utils import (
+    parse_difficulty_safely,
+    parse_duration_safely,
+    parse_priority_safely,
+)
 
 from .abstraction import DEFAULT_USERNAME, DataManager
 from .config import get_config_path  # Needed to place DB file near config
@@ -54,11 +59,12 @@ class DatabaseDataManager(DataManager):
         """Creates the necessary database tables if they don't exist."""
         try:
             cursor = conn.cursor()
-            # User table (simple for now)
+            # User table
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS users (
-                    username TEXT PRIMARY KEY
+                    username TEXT PRIMARY KEY,
+                    total_xp INTEGER NOT NULL DEFAULT 0
                 )
             """
             )
@@ -68,7 +74,19 @@ class DatabaseDataManager(DataManager):
                 CREATE TABLE IF NOT EXISTS tasks (
                     id TEXT PRIMARY KEY,
                     description TEXT NOT NULL,
+                    title TEXT,
                     priority TEXT NOT NULL DEFAULT 'Low',
+                    difficulty TEXT NOT NULL DEFAULT 'Trivial',
+                    duration TEXT NOT NULL DEFAULT 'Miniscule',
+                    is_complete INTEGER NOT NULL DEFAULT 0,
+                    creation_date TEXT,
+                    due_date TEXT,
+                    start_date TEXT,
+                    icon TEXT,
+                    tags TEXT,
+                    project TEXT,
+                    subtasks TEXT,
+                    dependencies TEXT,
                     user_username TEXT NOT NULL,
                     FOREIGN KEY (user_username) REFERENCES users (username)
                         ON DELETE CASCADE ON UPDATE CASCADE
@@ -89,7 +107,11 @@ class DatabaseDataManager(DataManager):
         except sqlite3.Error as e:
             print(f"Database initialization failed: {e}")
 
-    def load_user(self, username: str = DEFAULT_USERNAME) -> User | None:
+    def load_user(
+        self, username: str = DEFAULT_USERNAME
+    ) -> (
+        User | None
+    ):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         """Loads user data and their tasks from the database."""
         # Placeholder for future sync: Check for remote changes before loading
         print(f"Loading user '{username}' from motido.database...")
@@ -110,9 +132,14 @@ class DatabaseDataManager(DataManager):
                     # return User(username=username)
                     return None
 
+                # Get total_xp from user row
+                total_xp = user_row["total_xp"] if "total_xp" in user_row.keys() else 0
+
                 # Load tasks for the user
                 cursor.execute(
-                    "SELECT id, description, priority, creation_date FROM tasks "
+                    "SELECT id, description, title, priority, difficulty, duration, "
+                    "is_complete, creation_date, due_date, start_date, icon, tags, "
+                    "project, subtasks, dependencies FROM tasks "
                     "WHERE user_username = ?",
                     (username,),
                 )
@@ -121,14 +148,38 @@ class DatabaseDataManager(DataManager):
                 for row in task_rows:
                     # Convert priority string to enum
                     priority_str = (
-                        row["priority"] if "priority" in row else Priority.LOW.value
+                        row["priority"]
+                        if "priority" in row.keys()
+                        else Priority.LOW.value
                     )
                     priority = parse_priority_safely(priority_str, row["id"])
 
-                    # Create task with ID, description, and priority
+                    # Convert difficulty string to enum
+                    difficulty_str = (
+                        row["difficulty"]
+                        if "difficulty" in row.keys()
+                        else Difficulty.TRIVIAL.value
+                    )
+                    difficulty = parse_difficulty_safely(difficulty_str, row["id"])
+
+                    # Convert duration string to enum
+                    duration_str = (
+                        row["duration"]
+                        if "duration" in row.keys()
+                        else Duration.MINISCULE.value
+                    )
+                    duration = parse_duration_safely(duration_str, row["id"])
+
+                    # Get is_complete (stored as INTEGER: 0 or 1)
+                    is_complete = (
+                        bool(row["is_complete"])
+                        if "is_complete" in row.keys()
+                        else False
+                    )
+
                     # Get creation_date from row or use current time if not present
                     creation_date = datetime.now()
-                    if "creation_date" in row:
+                    if "creation_date" in row.keys() and row["creation_date"]:
                         try:
                             creation_date = datetime.strptime(
                                 row["creation_date"], "%Y-%m-%d %H:%M:%S"
@@ -138,15 +189,77 @@ class DatabaseDataManager(DataManager):
                                 f"Warning: Invalid creation_date format for task {row['id']}, using current time."
                             )
 
+                    # Get due_date and start_date
+                    due_date = None
+                    if "due_date" in row.keys() and row["due_date"]:
+                        try:
+                            due_date = datetime.strptime(
+                                row["due_date"], "%Y-%m-%d %H:%M:%S"
+                            )
+                        except ValueError:
+                            print(
+                                f"Warning: Invalid due_date format for task {row['id']}, ignoring."
+                            )
+
+                    start_date = None
+                    if "start_date" in row.keys() and row["start_date"]:
+                        try:
+                            start_date = datetime.strptime(
+                                row["start_date"], "%Y-%m-%d %H:%M:%S"
+                            )
+                        except ValueError:
+                            print(
+                                f"Warning: Invalid start_date format for task {row['id']}, ignoring."
+                            )
+
+                    # Deserialize JSON fields (tags, subtasks, dependencies)
+                    tags = []
+                    if "tags" in row.keys() and row["tags"]:
+                        try:
+                            tags = json.loads(row["tags"])
+                        except json.JSONDecodeError:
+                            print(
+                                f"Warning: Invalid JSON in tags for task {row['id']}, using empty list."
+                            )
+
+                    subtasks = []
+                    if "subtasks" in row.keys() and row["subtasks"]:
+                        try:
+                            subtasks = json.loads(row["subtasks"])
+                        except json.JSONDecodeError:
+                            print(
+                                f"Warning: Invalid JSON in subtasks for task {row['id']}, using empty list."
+                            )
+
+                    dependencies = []
+                    if "dependencies" in row.keys() and row["dependencies"]:
+                        try:
+                            dependencies = json.loads(row["dependencies"])
+                        except json.JSONDecodeError:
+                            print(
+                                f"Warning: Invalid JSON in dependencies for task {row['id']}, using empty list."
+                            )
+
                     task = Task(
                         id=row["id"],
                         description=row["description"],
+                        title=row["title"] if "title" in row.keys() else None,
                         creation_date=creation_date,
                         priority=priority,
+                        difficulty=difficulty,
+                        duration=duration,
+                        is_complete=is_complete,
+                        due_date=due_date,
+                        start_date=start_date,
+                        icon=row["icon"] if "icon" in row.keys() else None,
+                        tags=tags,
+                        project=row["project"] if "project" in row.keys() else None,
+                        subtasks=subtasks,
+                        dependencies=dependencies,
                     )
                     tasks.append(task)
 
-                user = User(username=username, tasks=tasks)
+                user = User(username=username, total_xp=total_xp, tasks=tasks)
                 print(f"User '{username}' loaded successfully with {len(tasks)} tasks.")
                 return user
 
@@ -160,7 +273,8 @@ class DatabaseDataManager(DataManager):
             cursor = conn.cursor()
             # Use INSERT OR IGNORE to avoid errors if user already exists
             cursor.execute(
-                "INSERT OR IGNORE INTO users (username) VALUES (?)", (username,)
+                "INSERT OR IGNORE INTO users (username, total_xp) VALUES (?, ?)",
+                (username, 0),
             )
             # No commit needed due to autocommit (isolation_level=None)
         except sqlite3.Error as e:
@@ -177,6 +291,12 @@ class DatabaseDataManager(DataManager):
                 # Ensure the user exists in the users table
                 self._ensure_user_exists(conn, user.username)
 
+                # Update user's total_xp
+                cursor.execute(
+                    "UPDATE users SET total_xp = ? WHERE username = ?",
+                    (user.total_xp, user.username),
+                )
+
                 # Strategy: Delete existing tasks for the user and insert current ones.
                 # This is simpler than diffing but less efficient for large datasets.
                 # For a production app, consider updating existing/deleting
@@ -187,16 +307,47 @@ class DatabaseDataManager(DataManager):
                 print(f"Deleted existing tasks for '{user.username}'.")
 
                 # Prepare task data for batch insertion
-                tasks_to_insert: List[Tuple[str, str, str, str]] = [
-                    (task.id, task.description, task.priority.value, user.username)
+                tasks_to_insert = [
+                    (
+                        task.id,
+                        task.description,
+                        task.title,
+                        task.priority.value,
+                        task.difficulty.value,
+                        task.duration.value,
+                        1 if task.is_complete else 0,
+                        (
+                            task.creation_date.strftime("%Y-%m-%d %H:%M:%S")
+                            if task.creation_date
+                            else None
+                        ),
+                        (
+                            task.due_date.strftime("%Y-%m-%d %H:%M:%S")
+                            if task.due_date
+                            else None
+                        ),
+                        (
+                            task.start_date.strftime("%Y-%m-%d %H:%M:%S")
+                            if task.start_date
+                            else None
+                        ),
+                        task.icon,
+                        json.dumps(task.tags) if task.tags else None,
+                        task.project,
+                        json.dumps(task.subtasks) if task.subtasks else None,
+                        json.dumps(task.dependencies) if task.dependencies else None,
+                        user.username,
+                    )
                     for task in user.tasks
                 ]
 
                 # Insert new tasks if any exist
                 if tasks_to_insert:
                     cursor.executemany(
-                        "INSERT INTO tasks (id, description, priority, user_username) "
-                        "VALUES (?, ?, ?, ?)",
+                        "INSERT INTO tasks (id, description, title, priority, difficulty, "
+                        "duration, is_complete, creation_date, due_date, start_date, "
+                        "icon, tags, project, subtasks, dependencies, user_username) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         tasks_to_insert,
                     )
                     print(

@@ -31,3 +31,4 @@ __pycache__
 *.pyw
 *.pyz
 *.egg-info
+.coverage

@@ -61,31 +61,62 @@ def test_save_user_update_existing(
         else None
     )
 
-    task_a = {
+    task_a: Dict[str, Any] = {
         "id": "uuid-a",
         "description": "Task A",
+        "title": None,
         "priority": "Low",
+        "difficulty": "Trivial",
+        "duration": "Miniscule",
         "is_complete": False,
         "creation_date": creation_date_a,
+        "due_date": None,
+        "start_date": None,
+        "icon": None,
+        "tags": [],
+        "project": None,
+        "subtasks": [],
+        "dependencies": [],
     }
-    task_b = {
+    task_b: Dict[str, Any] = {
         "id": "uuid-b",
         "description": "Task B",
+        "title": None,
         "priority": "Medium",
+        "difficulty": "Trivial",
+        "duration": "Miniscule",
         "is_complete": False,
         "creation_date": creation_date_b,
+        "due_date": None,
+        "start_date": None,
+        "icon": None,
+        "tags": [],
+        "project": None,
+        "subtasks": [],
+        "dependencies": [],
     }
-    task_c = {
+    task_c: Dict[str, Any] = {
         "id": "uuid-c",
         "description": "Task C",
+        "title": None,
         "priority": "Low",
+        "difficulty": "Trivial",
+        "duration": "Miniscule",
         "is_complete": False,
         "creation_date": creation_date_c,
+        "due_date": None,
+        "start_date": None,
+        "icon": None,
+        "tags": [],
+        "project": None,
+        "subtasks": [],
+        "dependencies": [],
     }
     expected_tasks_data = [task_a, task_b, task_c]
 
     expected_user_data = {
         "username": updated_user.username,
+        "total_xp": 0,
         "tasks": expected_tasks_data,
     }
     expected_final_data = {  # type: ignore[assignment]

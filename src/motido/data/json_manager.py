@@ -8,8 +8,12 @@ import os
 from datetime import datetime
 from typing import Any, Dict
 
-from motido.core.models import Priority, Task, User
-from motido.core.utils import parse_priority_safely
+from motido.core.models import Difficulty, Duration, Priority, Task, User
+from motido.core.utils import (
+    parse_difficulty_safely,
+    parse_duration_safely,
+    parse_priority_safely,
+)
 
 from .abstraction import DEFAULT_USERNAME, DataManager
 from .config import get_config_path
@@ -90,6 +94,7 @@ class JsonDataManager(DataManager):
 
     def load_user(self, username: str = DEFAULT_USERNAME) -> User | None:
         """Loads a specific user's data from the JSON file."""
+        # pylint: disable=too-many-locals
         # Placeholder for future sync: Check for remote changes before loading
         print(f"Loading user '{username}' from JSON...")
         all_data = self._read_data()
@@ -122,17 +127,70 @@ class JsonDataManager(DataManager):
                     # Get is_complete from task_dict or use default if not present
                     is_complete = task_dict.get("is_complete", False)
 
+                    # Get difficulty and duration from task_dict or use defaults
+                    difficulty_str = task_dict.get(
+                        "difficulty", Difficulty.TRIVIAL.value
+                    )
+                    difficulty = parse_difficulty_safely(
+                        difficulty_str, task_dict.get("id")
+                    )
+
+                    duration_str = task_dict.get("duration", Duration.MINISCULE.value)
+                    duration = parse_duration_safely(duration_str, task_dict.get("id"))
+
+                    # Get due_date and start_date from task_dict
+                    due_date = None
+                    due_date_str = task_dict.get("due_date")
+                    if due_date_str:
+                        try:
+                            due_date = datetime.strptime(
+                                due_date_str, "%Y-%m-%d %H:%M:%S"
+                            )
+                        except ValueError:
+                            task_id = task_dict.get("id")
+                            print(
+                                f"Warning: Invalid due_date format for task {task_id}, ignoring."
+                            )
+
+                    start_date = None
+                    start_date_str = task_dict.get("start_date")
+                    if start_date_str:
+                        try:
+                            start_date = datetime.strptime(
+                                start_date_str, "%Y-%m-%d %H:%M:%S"
+                            )
+                        except ValueError:
+                            task_id = task_dict.get("id")
+                            print(
+                                f"Warning: Invalid start_date format for task {task_id}, ignoring."
+                            )
+
                     task = Task(
                         id=task_dict["id"],
                         description=task_dict["description"],
                         creation_date=creation_date,
                         priority=priority,
+                        difficulty=difficulty,
+                        duration=duration,
                         is_complete=is_complete,
+                        title=task_dict.get("title"),
+                        due_date=due_date,
+                        start_date=start_date,
+                        icon=task_dict.get("icon"),
+                        tags=task_dict.get("tags", []),
+                        project=task_dict.get("project"),
+                        subtasks=task_dict.get("subtasks", []),
+                        dependencies=task_dict.get("dependencies", []),
                     )
                     tasks.append(task)
 
                 # Create User object
-                user = User(username=user_data.get("username", username), tasks=tasks)
+                total_xp = user_data.get("total_xp", 0)
+                user = User(
+                    username=user_data.get("username", username),
+                    total_xp=total_xp,
+                    tasks=tasks,
+                )
                 print(f"User '{username}' loaded successfully.")
                 return user
             except TypeError as e:  # pragma: no cover
@@ -154,18 +212,40 @@ class JsonDataManager(DataManager):
             {
                 "id": task.id,
                 "description": task.description,
+                "title": task.title,
                 "priority": task.priority.value,  # Save the priority value as string
+                "difficulty": task.difficulty.value,  # Save the difficulty value
+                "duration": task.duration.value,  # Save the duration value
                 "is_complete": task.is_complete,  # Save the completion status
                 "creation_date": (
                     task.creation_date.strftime("%Y-%m-%d %H:%M:%S")
                     if task.creation_date
                     else None
                 ),
+                "due_date": (
+                    task.due_date.strftime("%Y-%m-%d %H:%M:%S")
+                    if task.due_date
+                    else None
+                ),
+                "start_date": (
+                    task.start_date.strftime("%Y-%m-%d %H:%M:%S")
+                    if task.start_date
+                    else None
+                ),
+                "icon": task.icon,
+                "tags": task.tags,
+                "project": task.project,
+                "subtasks": task.subtasks,
+                "dependencies": task.dependencies,
             }
             for task in user.tasks
         ]
         # Prepare user data for JSON
-        user_data = {"username": user.username, "tasks": tasks_data}
+        user_data = {
+            "username": user.username,
+            "total_xp": user.total_xp,
+            "tasks": tasks_data,
+        }
 
         # Update the specific user's data in the overall structure
         all_data[user.username] = user_data

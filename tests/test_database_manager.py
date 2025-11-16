@@ -161,7 +161,8 @@ def test_create_tables(
         call(
             """
                 CREATE TABLE IF NOT EXISTS users (
-                    username TEXT PRIMARY KEY
+                    username TEXT PRIMARY KEY,
+                    total_xp INTEGER NOT NULL DEFAULT 0
                 )
             """
         ),
@@ -170,7 +171,19 @@ def test_create_tables(
                 CREATE TABLE IF NOT EXISTS tasks (
                     id TEXT PRIMARY KEY,
                     description TEXT NOT NULL,
+                    title TEXT,
                     priority TEXT NOT NULL DEFAULT 'Low',
+                    difficulty TEXT NOT NULL DEFAULT 'Trivial',
+                    duration TEXT NOT NULL DEFAULT 'Miniscule',
+                    is_complete INTEGER NOT NULL DEFAULT 0,
+                    creation_date TEXT,
+                    due_date TEXT,
+                    start_date TEXT,
+                    icon TEXT,
+                    tags TEXT,
+                    project TEXT,
+                    subtasks TEXT,
+                    dependencies TEXT,
                     user_username TEXT NOT NULL,
                     FOREIGN KEY (user_username) REFERENCES users (username)
                         ON DELETE CASCADE ON UPDATE CASCADE
@@ -329,19 +342,23 @@ def test_load_user_no_tasks(
     _, _, cursor = mock_conn_fixture
     username = DEFAULT_USERNAME
 
-    cursor.fetchone.return_value = {"username": username}
+    cursor.fetchone.return_value = {"username": username, "total_xp": 0}
     # cursor.fetchall returns [] by default in fixture
 
     loaded_user = manager.load_user(username)
 
     assert loaded_user is not None
     assert loaded_user.username == username
+    assert loaded_user.total_xp == 0
     assert loaded_user.tasks == []
 
     expected_calls = [
         call("SELECT username FROM users WHERE username = ?", (username,)),
         call(
-            "SELECT id, description, priority, creation_date FROM tasks WHERE user_username = ?",
+            "SELECT id, description, title, priority, difficulty, duration, "
+            "is_complete, creation_date, due_date, start_date, icon, tags, "
+            "project, subtasks, dependencies FROM tasks "
+            "WHERE user_username = ?",
             (username,),
         ),
     ]
@@ -380,7 +397,8 @@ def test_ensure_user_exists(
     manager._ensure_user_exists(connection, username)
 
     cursor.execute.assert_called_once_with(
-        "INSERT OR IGNORE INTO users (username) VALUES (?)", (username,)
+        "INSERT OR IGNORE INTO users (username, total_xp) VALUES (?, ?)",
+        (username, 0),
     )
 
 
@@ -441,24 +459,47 @@ def test_save_user(
     _, args, _ = executemany_calls[-1]
     sql, params = args
 
-    # Check that the SQL contains the priority field
+    # Check that the SQL contains all field names
     assert "priority" in sql
+    assert "difficulty" in sql
+    assert "duration" in sql
+    assert "is_complete" in sql
+    assert "creation_date" in sql
+    assert "title" in sql
+    assert "due_date" in sql
+    assert "start_date" in sql
     assert (
-        "VALUES (?, ?, ?, ?)" in sql
-    )  # Four parameters (id, description, priority, username)
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" in sql
+    )  # 16 parameters for all task fields
 
-    # Check that the task parameters include priority values
+    # Check that the task parameters include all field values
     assert len(params) == 2  # Two tasks
-    # Task parameters should be tuples of (id, description, priority, username)
+    # Each task tuple has 16 elements:
+    # (id, desc, title, priority, difficulty, duration, is_complete, creation_date,
+    #  due_date, start_date, icon, tags, project, subtasks, dependencies, username)
     assert params[0][0] == task1.id
     assert params[0][1] == task1.description
-    assert params[0][2] == task1.priority.value
-    assert params[0][3] == user.username
+    assert params[0][2] == task1.title  # None by default
+    assert params[0][3] == task1.priority.value
+    assert params[0][4] == task1.difficulty.value
+    assert params[0][5] == task1.duration.value
+    assert params[0][6] == (1 if task1.is_complete else 0)
+    # params[0][7] is creation_date string - just verify it exists
+    assert isinstance(params[0][7], str)
+    # params[0][8-10] are due_date, start_date, icon (all None by default)
+    assert params[0][8] is None  # due_date
+    assert params[0][9] is None  # start_date
+    assert params[0][10] is None  # icon
+    # params[0][11-14] are JSON strings for tags, project, subtasks, dependencies
+    assert params[0][11] is None  # tags (empty list serialized as None)
+    assert params[0][12] is None  # project
+    assert params[0][13] is None  # subtasks
+    assert params[0][14] is None  # dependencies
+    assert params[0][15] == user.username
 
     assert params[1][0] == task2.id
     assert params[1][1] == task2.description
-    assert params[1][2] == task2.priority.value
-    assert params[1][3] == user.username
+    assert params[1][15] == user.username
 
 
 def test_save_user_no_tasks(
@@ -477,9 +518,8 @@ def test_save_user_no_tasks(
 
     # Check that _ensure_user_exists was called correctly (without self)
     mock_ensure_user.assert_called_once_with(connection, user_no_tasks.username)
-    cursor.execute.assert_called_once_with(
-        "DELETE FROM tasks WHERE user_username = ?", (user_no_tasks.username,)
-    )
+    # Should have 2 execute calls: UPDATE total_xp and DELETE tasks
+    assert cursor.execute.call_count == 2
     cursor.executemany.assert_not_called()
 
 
@@ -531,7 +571,7 @@ def test_save_user_db_error_on_insert(
 
     # Check that _ensure_user_exists was called correctly (without self)
     mock_ensure_user.assert_called_once_with(connection, sample_user_db.username)
-    assert cursor.execute.call_count == 1  # Just the DELETE call
+    assert cursor.execute.call_count == 2  # UPDATE and DELETE calls
     assert cursor.executemany.call_count == 1  # INSERT is attempted once
     captured = capsys.readouterr()
     db_error = "Insert failed"

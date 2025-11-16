@@ -131,7 +131,7 @@ class Duration(str, Enum):
 
 
 @dataclass
-class Task:
+class Task:  # pylint: disable=too-many-instance-attributes
     """Represents a single task."""
 
     description: str
@@ -139,10 +139,20 @@ class Task:
     # Use a factory to generate a unique ID upon creation.
     # The ID is represented as a string for easier serialization (JSON, DB).
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    title: str | None = None
     priority: Priority = field(default=Priority.LOW)
     difficulty: Difficulty = field(default=Difficulty.TRIVIAL)
     duration: Duration = field(default=Duration.MINISCULE)
     is_complete: bool = field(default=False)
+    due_date: datetime | None = None
+    start_date: datetime | None = None
+    icon: str | None = None
+    tags: List[str] = field(default_factory=list)
+    project: str | None = None
+    subtasks: List[dict] = field(
+        default_factory=list
+    )  # {"text": str, "complete": bool}
+    dependencies: List[str] = field(default_factory=list)  # List of task IDs
 
     def __str__(self) -> str:
         """String representation for simple display."""
@@ -161,6 +171,7 @@ class User:
     """Represents a user and their associated tasks."""
 
     username: str
+    total_xp: int = 0
     tasks: List[Task] = field(default_factory=list)
 
     def find_task_by_id(self, task_id_prefix: str) -> Task | None:

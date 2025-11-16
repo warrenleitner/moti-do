@@ -1,5 +1,6 @@
 """Additional tests for DatabaseDataManager to improve code coverage."""
 
+import json
 import sqlite3
 from typing import Generator
 from unittest.mock import MagicMock, patch
@@ -67,3 +68,315 @@ def test_get_db_path() -> None:
     assert (
         "motido" in db_path or "data" in db_path
     ), f"Path structure is unexpected: {db_path}"
+
+
+def test_load_user_invalid_due_date_format(tmp_path, capsys):  # type: ignore
+    """Test that load_user handles invalid due_date format gracefully."""
+    db_path = tmp_path / "test.db"
+
+    # Patch _get_db_path to use our temp database
+    with patch.object(DatabaseDataManager, "_get_db_path", return_value=str(db_path)):
+        manager = DatabaseDataManager()
+
+        # Initialize the database schema
+        manager.initialize()
+
+        # Now insert a task directly with invalid due_date
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+
+        # Insert user first
+        cursor.execute(
+            "INSERT INTO users (username, total_xp) VALUES (?, ?)",
+            ("test_user", 0),
+        )
+
+        cursor.execute(
+            """INSERT INTO tasks (
+                id, user_username, description, priority, difficulty, duration,
+                is_complete, creation_date, due_date, start_date, title, icon,
+                tags, project, subtasks, dependencies
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "test-id",
+                "test_user",
+                "Test Task",
+                "Low",
+                "Trivial",
+                "Miniscule",
+                0,
+                "2023-01-01 12:00:00",
+                "invalid-date-format",  # Invalid format
+                None,
+                None,
+                None,
+                json.dumps([]),
+                None,
+                json.dumps([]),
+                json.dumps([]),
+            ),
+        )
+
+        conn.commit()
+        conn.close()
+
+        user = manager.load_user("test_user")
+
+        # User should still load successfully
+        assert user is not None
+        assert len(user.tasks) == 1
+        assert user.tasks[0].due_date is None  # Should be None due to invalid format
+
+        # Check that warning was printed
+        captured = capsys.readouterr()
+        assert "Warning: Invalid due_date format" in captured.out
+
+
+def test_load_user_invalid_start_date_format(tmp_path, capsys):  # type: ignore
+    """Test that load_user handles invalid start_date format gracefully."""
+    db_path = tmp_path / "test.db"
+
+    # Patch _get_db_path to use our temp database
+    with patch.object(DatabaseDataManager, "_get_db_path", return_value=str(db_path)):
+        manager = DatabaseDataManager()
+
+        # Initialize the database schema
+        manager.initialize()
+
+        # Now insert a task directly with invalid start_date
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+
+        # Insert user first
+        cursor.execute(
+            "INSERT INTO users (username, total_xp) VALUES (?, ?)",
+            ("test_user", 0),
+        )
+
+        cursor.execute(
+            """INSERT INTO tasks (
+                id, user_username, description, priority, difficulty, duration,
+                is_complete, creation_date, due_date, start_date, title, icon,
+                tags, project, subtasks, dependencies
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "test-id",
+                "test_user",
+                "Test Task",
+                "Low",
+                "Trivial",
+                "Miniscule",
+                0,
+                "2023-01-01 12:00:00",
+                None,
+                "invalid-date-format",  # Invalid format
+                None,
+                None,
+                json.dumps([]),
+                None,
+                json.dumps([]),
+                json.dumps([]),
+            ),
+        )
+
+        conn.commit()
+        conn.close()
+
+        user = manager.load_user("test_user")
+
+        # User should still load successfully
+        assert user is not None
+        assert len(user.tasks) == 1
+        assert user.tasks[0].start_date is None  # Should be None due to invalid format
+
+        # Check that warning was printed
+        captured = capsys.readouterr()
+        assert "Warning: Invalid start_date format" in captured.out
+
+
+def test_load_user_invalid_tags_json(tmp_path, capsys):  # type: ignore
+    """Test that load_user handles invalid tags JSON gracefully."""
+    db_path = tmp_path / "test.db"
+
+    # Patch _get_db_path to use our temp database
+    with patch.object(DatabaseDataManager, "_get_db_path", return_value=str(db_path)):
+        manager = DatabaseDataManager()
+
+        # Initialize the database schema
+        manager.initialize()
+
+        # Now insert a task directly with invalid tags JSON
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+
+        # Insert user first
+        cursor.execute(
+            "INSERT INTO users (username, total_xp) VALUES (?, ?)",
+            ("test_user", 0),
+        )
+
+        cursor.execute(
+            """INSERT INTO tasks (
+                id, user_username, description, priority, difficulty, duration,
+                is_complete, creation_date, due_date, start_date, title, icon,
+                tags, project, subtasks, dependencies
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "test-id",
+                "test_user",
+                "Test Task",
+                "Low",
+                "Trivial",
+                "Miniscule",
+                0,
+                "2023-01-01 12:00:00",
+                None,
+                None,
+                None,
+                None,
+                "invalid-json",  # Invalid JSON
+                None,
+                json.dumps([]),
+                json.dumps([]),
+            ),
+        )
+
+        conn.commit()
+        conn.close()
+
+        user = manager.load_user("test_user")
+
+        # User should still load successfully
+        assert user is not None
+        assert len(user.tasks) == 1
+        assert user.tasks[0].tags == []  # Should be empty list due to invalid JSON
+
+        # Check that warning was printed
+        captured = capsys.readouterr()
+        assert "Warning: Invalid JSON in tags" in captured.out
+
+
+def test_load_user_invalid_subtasks_json(tmp_path, capsys):  # type: ignore
+    """Test that load_user handles invalid subtasks JSON gracefully."""
+    db_path = tmp_path / "test.db"
+
+    # Patch _get_db_path to use our temp database
+    with patch.object(DatabaseDataManager, "_get_db_path", return_value=str(db_path)):
+        manager = DatabaseDataManager()
+
+        # Initialize the database schema
+        manager.initialize()
+
+        # Now insert a task directly with invalid subtasks JSON
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+
+        # Insert user first
+        cursor.execute(
+            "INSERT INTO users (username, total_xp) VALUES (?, ?)",
+            ("test_user", 0),
+        )
+
+        cursor.execute(
+            """INSERT INTO tasks (
+                id, user_username, description, priority, difficulty, duration,
+                is_complete, creation_date, due_date, start_date, title, icon,
+                tags, project, subtasks, dependencies
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "test-id",
+                "test_user",
+                "Test Task",
+                "Low",
+                "Trivial",
+                "Miniscule",
+                0,
+                "2023-01-01 12:00:00",
+                None,
+                None,
+                None,
+                None,
+                json.dumps([]),
+                None,
+                "invalid-json",  # Invalid JSON
+                json.dumps([]),
+            ),
+        )
+
+        conn.commit()
+        conn.close()
+
+        user = manager.load_user("test_user")
+
+        # User should still load successfully
+        assert user is not None
+        assert len(user.tasks) == 1
+        assert user.tasks[0].subtasks == []  # Should be empty list due to invalid JSON
+
+        # Check that warning was printed
+        captured = capsys.readouterr()
+        assert "Warning: Invalid JSON in subtasks" in captured.out
+
+
+def test_load_user_invalid_dependencies_json(tmp_path, capsys):  # type: ignore
+    """Test that load_user handles invalid dependencies JSON gracefully."""
+    db_path = tmp_path / "test.db"
+
+    # Patch _get_db_path to use our temp database
+    with patch.object(DatabaseDataManager, "_get_db_path", return_value=str(db_path)):
+        manager = DatabaseDataManager()
+
+        # Initialize the database schema
+        manager.initialize()
+
+        # Now insert a task directly with invalid dependencies JSON
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+
+        # Insert user first
+        cursor.execute(
+            "INSERT INTO users (username, total_xp) VALUES (?, ?)",
+            ("test_user", 0),
+        )
+
+        cursor.execute(
+            """INSERT INTO tasks (
+                id, user_username, description, priority, difficulty, duration,
+                is_complete, creation_date, due_date, start_date, title, icon,
+                tags, project, subtasks, dependencies
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "test-id",
+                "test_user",
+                "Test Task",
+                "Low",
+                "Trivial",
+                "Miniscule",
+                0,
+                "2023-01-01 12:00:00",
+                None,
+                None,
+                None,
+                None,
+                json.dumps([]),
+                None,
+                json.dumps([]),
+                "invalid-json",  # Invalid JSON
+            ),
+        )
+
+        conn.commit()
+        conn.close()
+
+        user = manager.load_user("test_user")
+
+        # User should still load successfully
+        assert user is not None
+        assert len(user.tasks) == 1
+        assert (
+            user.tasks[0].dependencies == []
+        )  # Should be empty list due to invalid JSON
+
+        # Check that warning was printed
+        captured = capsys.readouterr()
+        assert "Warning: Invalid JSON in dependencies" in captured.out

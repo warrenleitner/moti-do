@@ -66,7 +66,7 @@ exclude = ["venv", ".*/build"] # Exclude virtual environment and build directori
 # Add plugins or specific configurations here if needed
 # Example: load-plugins = pylint_django
 # Disable specific messages if necessary, e.g.,
-disable = "no-else-return" #,missing-docstring,invalid-name
+disable = "no-else-return,duplicate-code" #,missing-docstring,invalid-name
 fail-under = 8.0 # Set a minimum score threshold
 
 [tool.pylint.format]
