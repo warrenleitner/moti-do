@@ -9,7 +9,7 @@ def get_default_scoring_config() -> Dict[str, Any]:
     """Return a default scoring configuration for tests."""
     return {
         "base_score": 10,
-        "field_presence_bonus": {"description": 5},
+        "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {
             "NOT_SET": 1.0,
             "TRIVIAL": 1.1,
@@ -35,7 +35,7 @@ def get_simple_scoring_config() -> Dict[str, Any]:
     """Return a simplified scoring configuration for tests."""
     return {
         "base_score": 10,
-        "field_presence_bonus": {"description": 5},
+        "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {"NOT_SET": 1.0},
         "duration_multiplier": {"NOT_SET": 1.0},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},

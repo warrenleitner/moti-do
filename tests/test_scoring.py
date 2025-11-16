@@ -27,7 +27,7 @@ def test_load_scoring_config_valid() -> None:
     """Test loading a valid scoring configuration."""
     mock_config = {
         "base_score": 10,
-        "field_presence_bonus": {"description": 5},
+        "field_presence_bonus": {"text_description": 5},
         "difficulty_multiplier": {
             "NOT_SET": 1.0,
             "TRIVIAL": 1.1,
@@ -55,7 +55,7 @@ def test_load_scoring_config_valid() -> None:
 
         assert config == mock_config
         assert config["base_score"] == 10
-        assert config["field_presence_bonus"]["description"] == 5
+        assert config["field_presence_bonus"]["text_description"] == 5
         assert config["difficulty_multiplier"]["MEDIUM"] == 2.0
         assert config["duration_multiplier"]["LONG"] == 2.0
         assert config["age_factor"]["unit"] == "days"
@@ -94,7 +94,7 @@ def test_load_scoring_config_missing_required_key() -> None:
     # Missing difficulty_multiplier
     mock_config = {
         "base_score": 10,
-        "field_presence_bonus": {"description": 5},
+        "field_presence_bonus": {"title": 5},
         "duration_multiplier": {"MINISCULE": 1.05},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
@@ -114,7 +114,7 @@ def test_load_scoring_config_invalid_multiplier() -> None:
     # Multiplier less than 1.0
     mock_config = {
         "base_score": 10,
-        "field_presence_bonus": {"description": 5},
+        "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {"MEDIUM": 0.5},  # Invalid: less than 1.0
         "duration_multiplier": {"MINISCULE": 1.05},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
@@ -136,7 +136,7 @@ def test_load_scoring_config_invalid_age_factor() -> None:
     # Invalid unit
     mock_config = {
         "base_score": 10,
-        "field_presence_bonus": {"description": 5},
+        "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {"MEDIUM": 2.0},
         "duration_multiplier": {"MINISCULE": 1.05},
         "age_factor": {"unit": "months", "multiplier_per_unit": 0.01},  # Invalid unit
@@ -157,7 +157,7 @@ def test_load_scoring_config_invalid_daily_penalty() -> None:
     # Missing apply_penalty key
     mock_config = {
         "base_score": 10,
-        "field_presence_bonus": {"description": 5},
+        "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {"MEDIUM": 2.0},
         "duration_multiplier": {"MINISCULE": 1.05},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
@@ -181,7 +181,7 @@ def sample_config() -> dict:
     """Sample scoring configuration for testing."""
     return {
         "base_score": 10,
-        "field_presence_bonus": {"description": 5},
+        "field_presence_bonus": {"text_description": 5},
         "difficulty_multiplier": {
             "NOT_SET": 1.0,
             "TRIVIAL": 1.1,
@@ -207,7 +207,7 @@ def test_calculate_score_base_case(sample_config: dict) -> None:
     """Test calculating score with default task attributes."""
     # Default task with trivial difficulty and miniscule duration
     task = Task(
-        description="Test task",
+        title="Test task",
         creation_date=datetime.now(),
         difficulty=Difficulty.TRIVIAL,
         duration=Duration.MINISCULE,
@@ -216,16 +216,16 @@ def test_calculate_score_base_case(sample_config: dict) -> None:
     # Calculate score with today's date
     score = calculate_score(task, sample_config, date.today())
 
-    # Expected: (base_score + description_bonus) * difficulty_mult * duration_mult * age_mult
-    # (10 + 5) * 1.1 * 1.05 * 1.0 = 17.325 -> rounded to 17
-    expected_score = int(round((10 + 5) * 1.1 * 1.05 * 1.0))
+    # Expected: base_score * difficulty_mult * duration_mult * age_mult
+    # 10 * 1.1 * 1.05 * 1.0 = 17.325 -> rounded to 17
+    expected_score = int(round(10 * 1.1 * 1.05 * 1.0))
     assert score == expected_score
 
 
 def test_calculate_score_high_difficulty_long_duration(sample_config: dict) -> None:
     """Test calculating score with high difficulty and long duration."""
     task = Task(
-        description="Complex task",
+        title="Complex task",
         creation_date=datetime.now(),
         difficulty=Difficulty.HIGH,
         duration=Duration.LONG,
@@ -233,8 +233,8 @@ def test_calculate_score_high_difficulty_long_duration(sample_config: dict) -> N
 
     score = calculate_score(task, sample_config, date.today())
 
-    # Expected: (10 + 5) * 3.0 * 2.0 * 1.0 = 90
-    expected_score = int(round((10 + 5) * 3.0 * 2.0 * 1.0))
+    # Expected: 10 * 3.0 * 2.0 * 1.0 = 90
+    expected_score = int(round(10 * 3.0 * 2.0 * 1.0))
     assert score == expected_score
 
 
@@ -243,7 +243,7 @@ def test_calculate_score_with_age(sample_config: dict) -> None:
     # Task created 10 days ago
     ten_days_ago = datetime.now() - timedelta(days=10)
     task = Task(
-        description="Old task",
+        title="Old task",
         creation_date=ten_days_ago,
         difficulty=Difficulty.MEDIUM,
         duration=Duration.MEDIUM,
@@ -251,9 +251,9 @@ def test_calculate_score_with_age(sample_config: dict) -> None:
 
     score = calculate_score(task, sample_config, date.today())
 
-    # Expected: (10 + 5) * 2.0 * 1.5 * (1.0 + 10 * 0.01) = 49.5 -> rounded to 50
+    # Expected: 10 * 2.0 * 1.5 * (1.0 + 10 * 0.01) = 49.5 -> rounded to 50
     age_mult = 1.0 + (10 * 0.01)  # 1.1
-    expected_score = int(round((10 + 5) * 2.0 * 1.5 * age_mult))
+    expected_score = int(round(10 * 2.0 * 1.5 * age_mult))
     assert score == expected_score
 
 
@@ -266,7 +266,7 @@ def test_calculate_score_weeks_age_unit(sample_config: dict) -> None:
     # Task created 21 days (3 weeks) ago
     three_weeks_ago = datetime.now() - timedelta(days=21)
     task = Task(
-        description="Old task",
+        title="Old task",
         creation_date=three_weeks_ago,
         difficulty=Difficulty.MEDIUM,
         duration=Duration.MEDIUM,
@@ -274,9 +274,9 @@ def test_calculate_score_weeks_age_unit(sample_config: dict) -> None:
 
     score = calculate_score(task, sample_config_with_weeks, date.today())
 
-    # Expected: (10 + 5) * 2.0 * 1.5 * (1.0 + 3 * 0.01) = 45.9 -> rounded to 46
+    # Expected: 10 * 2.0 * 1.5 * (1.0 + 3 * 0.01) = 45.9 -> rounded to 46
     age_mult = 1.0 + (3 * 0.01)  # 1.03
-    expected_score = int(round((10 + 5) * 2.0 * 1.5 * age_mult))
+    expected_score = int(round(10 * 2.0 * 1.5 * age_mult))
     assert score == expected_score
 
 
@@ -287,7 +287,7 @@ def test_calculate_score_missing_enum_keys(sample_config: dict) -> None:
     custom_config["difficulty_multiplier"] = {"MEDIUM": 2.0}  # Missing other keys
 
     task = Task(
-        description="Test task",
+        title="Test task",
         creation_date=datetime.now(),
         difficulty=Difficulty.HERCULEAN,  # Not in the config
         duration=Duration.MEDIUM,
@@ -295,9 +295,9 @@ def test_calculate_score_missing_enum_keys(sample_config: dict) -> None:
 
     score = calculate_score(task, custom_config, date.today())
 
-    # Expected: (10 + 5) * 1.0 * 1.5 * 1.0 = 22.5 -> rounded to 23
+    # Expected: 10 * 1.0 * 1.5 * 1.0 = 22.5 -> rounded to 23
     # Uses default multiplier 1.0 for missing difficulty key
-    expected_score = int(round((10 + 5) * 1.0 * 1.5 * 1.0))
+    expected_score = int(round(10 * 1.0 * 1.5 * 1.0))
     assert score == expected_score
 
 
@@ -348,14 +348,14 @@ def test_apply_penalties_first_run(
 
     # Task created yesterday
     task1 = Task(
-        description="Task 1",
+        title="Task 1",
         creation_date=datetime.combine(yesterday, datetime.min.time()),
         is_complete=False,
     )
 
     # Task created today
     task2 = Task(
-        description="Task 2",
+        title="Task 2",
         creation_date=datetime.combine(today, datetime.min.time()),
         is_complete=False,
     )
@@ -389,7 +389,7 @@ def test_apply_penalties_multiple_days(
 
     # Task created 4 days ago (should get 3 days of penalties)
     task = Task(
-        description="Old task",
+        title="Old task",
         creation_date=datetime.combine(today - timedelta(days=4), datetime.min.time()),
         is_complete=False,
     )
@@ -422,7 +422,7 @@ def test_apply_penalties_completed_task(
 
     # Task created 2 days ago but marked as complete
     task = Task(
-        description="Completed task",
+        title="Completed task",
         creation_date=datetime.combine(today - timedelta(days=2), datetime.min.time()),
         is_complete=True,
     )
@@ -458,7 +458,7 @@ def test_apply_penalties_disabled(
 
     # Create an incomplete task
     task = Task(
-        description="Task",
+        title="Task",
         creation_date=datetime.combine(yesterday, datetime.min.time()),
         is_complete=False,
     )

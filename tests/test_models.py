@@ -23,8 +23,8 @@ from motido.core.models import (  # Added Duration
 def test_task_initialization() -> None:
     """Test that a Task object is initialized correctly."""
     desc = "Test task description"
-    task = Task(description=desc, creation_date=datetime.now())
-    assert task.description == desc
+    task = Task(title=desc, creation_date=datetime.now())
+    assert task.title == desc
     assert isinstance(task.id, str)
     # Check if the ID looks like a UUID (basic check)
     assert len(task.id) == 36  # Standard UUID length
@@ -46,8 +46,8 @@ def test_task_initialization_with_priority() -> None:
     """Test that a Task object is initialized correctly with a specified priority."""
     desc = "Task with custom priority"
     priority = Priority.HIGH
-    task = Task(description=desc, priority=priority, creation_date=datetime.now())
-    assert task.description == desc
+    task = Task(title=desc, priority=priority, creation_date=datetime.now())
+    assert task.title == desc
     assert task.priority == Priority.HIGH
     # Ensure default difficulty is still set
     assert task.difficulty == Difficulty.TRIVIAL
@@ -59,8 +59,8 @@ def test_task_initialization_with_difficulty() -> None:
     """Test that a Task object is initialized correctly with a specified difficulty."""
     desc = "Task with custom difficulty"
     difficulty = Difficulty.HIGH
-    task = Task(description=desc, difficulty=difficulty, creation_date=datetime.now())
-    assert task.description == desc
+    task = Task(title=desc, difficulty=difficulty, creation_date=datetime.now())
+    assert task.title == desc
     assert task.difficulty == Difficulty.HIGH
     # Ensure default priority is still set
     assert task.priority == Priority.LOW
@@ -74,12 +74,12 @@ def test_task_initialization_with_priority_and_difficulty() -> None:
     priority = Priority.MEDIUM
     difficulty = Difficulty.LOW
     task = Task(
-        description=desc,
+        title=desc,
         priority=priority,
         difficulty=difficulty,
         creation_date=datetime.now(),
     )
-    assert task.description == desc
+    assert task.title == desc
     assert task.priority == priority
     assert task.difficulty == difficulty
     # Ensure default duration is still set
@@ -90,8 +90,8 @@ def test_task_initialization_with_duration() -> None:
     """Test that a Task object is initialized correctly with a specified duration."""
     desc = "Task with custom duration"
     duration = Duration.LONG
-    task = Task(description=desc, duration=duration, creation_date=datetime.now())
-    assert task.description == desc
+    task = Task(title=desc, duration=duration, creation_date=datetime.now())
+    assert task.title == desc
     assert task.duration == Duration.LONG
     # Ensure default priority is still set
     assert task.priority == Priority.LOW
@@ -106,13 +106,13 @@ def test_task_initialization_with_all_fields() -> None:
     difficulty = Difficulty.MEDIUM
     duration = Duration.SHORT
     task = Task(
-        description=desc,
+        title=desc,
         priority=priority,
         difficulty=difficulty,
         duration=duration,
         creation_date=datetime.now(),
     )
-    assert task.description == desc
+    assert task.title == desc
     assert task.priority == priority
     assert task.difficulty == difficulty
     assert task.duration == duration
@@ -121,13 +121,13 @@ def test_task_initialization_with_all_fields() -> None:
 def test_task_str_representation() -> None:
     """Test the string representation of a Task."""
     desc = "Another task"
-    task = Task(description=desc, creation_date=datetime.now())
+    task = Task(title=desc, creation_date=datetime.now())
     # Format creation_date as YYYY-MM-DD HH:MM:SS
     formatted_date = task.creation_date.strftime("%Y-%m-%d %H:%M:%S")
     expected_str = (
         f"[ ] ID: {task.id[:8]} | Priority: {task.priority.emoji()} "
         f"{task.priority.value} | Duration: {task.duration.emoji()} "
-        f"{task.duration.value} | Created: {formatted_date} | Description: {desc}"
+        f"{task.duration.value} | Created: {formatted_date} | Title: {desc}"
     )
     assert str(task) == expected_str
 
@@ -135,13 +135,13 @@ def test_task_str_representation() -> None:
 def test_task_str_representation_completed() -> None:
     """Test the string representation of a completed Task."""
     desc = "Completed task"
-    task = Task(description=desc, creation_date=datetime.now(), is_complete=True)
+    task = Task(title=desc, creation_date=datetime.now(), is_complete=True)
     # Format creation_date as YYYY-MM-DD HH:MM:SS
     formatted_date = task.creation_date.strftime("%Y-%m-%d %H:%M:%S")
     expected_str = (
         f"[✓] ID: {task.id[:8]} | Priority: {task.priority.emoji()} "
         f"{task.priority.value} | Duration: {task.duration.emoji()} "
-        f"{task.duration.value} | Created: {formatted_date} | Description: {desc}"
+        f"{task.duration.value} | Created: {formatted_date} | Title: {desc}"
     )
     assert str(task) == expected_str
 
@@ -149,8 +149,8 @@ def test_task_str_representation_completed() -> None:
 def test_task_initialization_with_is_complete() -> None:
     """Test that a Task object is initialized correctly with is_complete set."""
     desc = "Task with is_complete=True"
-    task = Task(description=desc, creation_date=datetime.now(), is_complete=True)
-    assert task.description == desc
+    task = Task(title=desc, creation_date=datetime.now(), is_complete=True)
+    assert task.title == desc
     assert task.is_complete is True
     # Ensure other defaults are still set
     assert task.priority == Priority.LOW
@@ -243,7 +243,7 @@ def sample_tasks() -> List[Task]:
     """Provides a list of sample tasks for testing."""
     return [
         Task(
-            description="Task 1",
+            title="Task 1",
             creation_date=datetime.now(),
             id="abc12345-mock-uuid-1",
             priority=Priority.LOW,
@@ -252,7 +252,7 @@ def sample_tasks() -> List[Task]:
             is_complete=False,
         ),
         Task(
-            description="Task 2",
+            title="Task 2",
             creation_date=datetime.now(),
             id="def67890-mock-uuid-2",
             priority=Priority.MEDIUM,
@@ -261,7 +261,7 @@ def sample_tasks() -> List[Task]:
             is_complete=True,  # One completed task for testing
         ),
         Task(
-            description="Task 3",
+            title="Task 3",
             creation_date=datetime.now(),
             id="abc54321-mock-uuid-3",
             priority=Priority.HIGH,
@@ -300,7 +300,7 @@ def test_user_initialization() -> None:
 
 def test_user_add_task(empty_user: User) -> None:
     """Test adding a task to a user."""
-    task = Task(description="New task", creation_date=datetime.now())
+    task = Task(title="New task", creation_date=datetime.now())
     empty_user.add_task(task)
     assert len(empty_user.tasks) == 1
     assert empty_user.tasks[0] == task
@@ -372,7 +372,7 @@ def test_user_find_task_by_id_ambiguous(user_with_tasks: User) -> None:
 def test_user_find_task_by_empty_string_single_task() -> None:
     """Test finding a task with an empty string when only one task exists."""
     user = User(username="single_task_user")
-    task = Task(description="Only task", creation_date=datetime.now(), id="single123")
+    task = Task(title="Only task", creation_date=datetime.now(), id="single123")
     user.add_task(task)
     found_task = user.find_task_by_id("")
     assert found_task == task

@@ -66,11 +66,11 @@ def handle_init(args: Namespace) -> None:
 
 def handle_create(args: Namespace, manager: DataManager, user: User | None) -> None:
     """Handles the 'create' command."""
-    if (not args.description) or args.description == "":
-        print("Error: Task description cannot be empty.")
+    if (not args.title) or args.title == "":
+        print("Error: Task title cannot be empty.")
         sys.exit(1)
 
-    print_verbose(args, f"Creating task: '{args.description}'...")
+    print_verbose(args, f"Creating task: '{args.title}'...")
 
     # Get the priority from args, default to LOW if not specified
     try:
@@ -115,7 +115,7 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
 
     # Create a new task with the current timestamp as creation_date
     new_task = Task(
-        description=args.description,
+        title=args.title,
         priority=priority,
         difficulty=difficulty,
         duration=duration,
@@ -176,9 +176,9 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
 
             if args.sort_by == "id":
                 tasks_with_scores.sort(key=lambda item: item[0].id, reverse=reverse)
-            elif args.sort_by == "description":
+            elif args.sort_by == "title":
                 tasks_with_scores.sort(
-                    key=lambda item: item[0].description.lower(), reverse=reverse
+                    key=lambda item: item[0].title.lower(), reverse=reverse
                 )
             elif args.sort_by == "priority":
                 # Sort by priority (using the enum's order)
@@ -213,7 +213,7 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
         table.add_column("Difficulty", width=15)
         table.add_column("Duration", width=15)
         table.add_column("Score", width=8)
-        table.add_column("Description")
+        table.add_column("Title")
 
         for task, score in tasks_with_scores:
             # Add task details to the table with priority, difficulty, and duration emoji
@@ -249,7 +249,7 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
                 difficulty_text,
                 duration_text,
                 score_text,
-                task.description,
+                task.title,
                 style=description_style,
             )
 
@@ -329,7 +329,9 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
             )
             table.add_row("Duration:", duration_text)
 
-            table.add_row("Description:", task.description)
+            table.add_row("Title:", task.title)
+            if task.text_description:
+                table.add_row("Description:", task.text_description)
 
             # Display score if available
             if current_score is not None:
@@ -366,9 +368,9 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
 
 
 def _update_task_description(task: Task, new_description: str) -> str:
-    """Update task description and return the old value."""
-    old_description = task.description
-    task.description = new_description
+    """Updates the task's title and returns the old title."""
+    old_description = task.title
+    task.title = new_description
     return old_description
 
 
@@ -423,7 +425,7 @@ def handle_complete(args: Namespace, manager: DataManager, user: User | None) ->
         if task:
             if task.is_complete:
                 print(
-                    f"Task '{task.description}' (ID: {task.id[:8]}) is already marked as complete."
+                    f"Task '{task.title}' (ID: {task.id[:8]}) is already marked as complete."
                 )
                 return
 
@@ -446,12 +448,12 @@ def handle_complete(args: Namespace, manager: DataManager, user: User | None) ->
                 if score_to_add > 0:
                     add_xp(score_to_add)
                     print(
-                        f"Marked task '{task.description}' (ID: {task.id[:8]}) as complete. "
+                        f"Marked task '{task.title}' (ID: {task.id[:8]}) as complete. "
                         f"Added {score_to_add} XP points!"
                     )
                 else:
                     print(
-                        f"Marked task '{task.description}' (ID: {task.id[:8]}) as complete."
+                        f"Marked task '{task.title}' (ID: {task.id[:8]}) as complete."
                     )
 
             except (IOError, OSError) as e:
@@ -491,8 +493,8 @@ def _print_task_updates(
     """Print task update details."""
     print("Task updated successfully:")
     if description_updated:
-        print(f"  Old Description: {old_description}")
-        print(f"  New Description: {task.description}")
+        print(f"  Old Title: {old_description}")
+        print(f"  New Title: {task.title}")
     if priority_updated:
         # Narrow old_priority to non-None for mypy
         assert old_priority is not None
@@ -516,7 +518,7 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
         sys.exit(1)
 
     if (
-        not args.description
+        not args.title
         and not args.priority
         and not args.difficulty
         and not args.duration
@@ -545,8 +547,8 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
 
         # Update description if provided
         description_updated = False
-        if args.description:
-            old_description = _update_task_description(task_to_edit, args.description)
+        if args.title:
+            old_description = _update_task_description(task_to_edit, args.title)
             description_updated = True
             changes_made = True
 
@@ -751,9 +753,9 @@ def setup_parser() -> argparse.ArgumentParser:
     parser_create = subparsers.add_parser("create", help="Create a new task.")
     parser_create.add_argument(
         "-d",
-        "--description",
+        "--title",
         required=True,
-        help="The description of the task.",
+        help="The title of the task.",
     )
     parser_create.add_argument(
         "-p",
@@ -782,7 +784,7 @@ def setup_parser() -> argparse.ArgumentParser:
     parser_list = subparsers.add_parser("list", help="List all tasks.")
     parser_list.add_argument(
         "--sort-by",
-        choices=["id", "description", "priority", "status", "score"],
+        choices=["id", "title", "priority", "status", "score"],
         help="Field to sort tasks by. Default is score (descending).",
     )
     parser_list.add_argument(
@@ -815,9 +817,9 @@ def setup_parser() -> argparse.ArgumentParser:
     )
     parser_edit.add_argument(
         "-d",
-        "--description",
+        "--title",
         required=False,
-        help="The new description for the task.",
+        help="The new title for the task.",
     )
     parser_edit.add_argument(
         "-p",

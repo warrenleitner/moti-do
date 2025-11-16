@@ -1,7 +1,7 @@
 {
   "base_score": 10,
   "field_presence_bonus": {
-    "description": 5
+    "text_description": 5
   },
   "difficulty_multiplier": {
     "NOT_SET": 1.0,

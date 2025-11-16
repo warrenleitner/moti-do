@@ -30,7 +30,7 @@ def load_scoring_config() -> Dict[str, Any]:
     config_path = get_scoring_config_path()
     default_config: Dict[str, Any] = {
         "base_score": 10,
-        "field_presence_bonus": {"description": 5},
+        "field_presence_bonus": {"text_description": 5},
         "difficulty_multiplier": {
             "NOT_SET": 1.0,
             "TRIVIAL": 1.1,
@@ -159,8 +159,9 @@ def calculate_score(task: Task, config: Dict[str, Any], effective_date: date) ->
     """
     # Calculate additive base
     additive_base = config["base_score"]
-    if task.description:
-        additive_base += config["field_presence_bonus"]["description"]
+    # Bonus for having a text description (rich text content)
+    if task.text_description:
+        additive_base += config["field_presence_bonus"].get("text_description", 5)
 
     # Get difficulty multiplier
     difficulty_level = task.difficulty

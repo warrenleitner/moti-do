@@ -34,9 +34,9 @@ def create_mock_args(**kwargs: Any) -> argparse.Namespace:
     # Ensure 'priority' is present for create/edit commands
     if "priority" not in kwargs:
         kwargs["priority"] = None
-    # Ensure 'description' is present for create/edit commands
-    if "description" not in kwargs:
-        kwargs["description"] = None
+    # Ensure 'title' is present for create/edit commands
+    if "title" not in kwargs:
+        kwargs["title"] = None
     # Ensure 'difficulty' is present for create/edit commands
     if "difficulty" not in kwargs:
         kwargs["difficulty"] = None
@@ -117,7 +117,7 @@ def test_main_dispatch_create(mocker: Any) -> None:
     mock_handle_create.assert_called_once()
     args_passed, manager_passed, user_passed = mock_handle_create.call_args[0]
     assert args_passed.command == "create"
-    assert args_passed.description == "New task"
+    assert args_passed.title == "New task"
     assert hasattr(args_passed, "verbose")  # Check verbose flag exists
     assert manager_passed == mock_manager_instance
     assert user_passed == mock_user
@@ -189,7 +189,7 @@ def test_main_dispatch_edit(mocker: Any) -> None:
     args_passed, manager_passed, user_passed = mock_handle_edit.call_args[0]
     assert args_passed.command == "edit"
     assert args_passed.id == "abc"
-    assert args_passed.description == "Updated"
+    assert args_passed.title == "Updated"
     assert hasattr(args_passed, "verbose")  # Check verbose flag exists
     assert manager_passed == mock_manager_instance
     assert user_passed == mock_user
@@ -364,12 +364,12 @@ def test_handle_create_success_existing_user(mocker: Any) -> None:
     mock_task = mocker.MagicMock(spec=Task)
     mock_task.id = "task123abc"
     mock_task_class.return_value = mock_task
-    args = create_mock_args(description="My new task", verbose=True)  # Verbose enabled
+    args = create_mock_args(title="My new task", verbose=True)  # Verbose enabled
 
     cli_main.handle_create(args, mock_manager, mock_user)
 
     mock_task_class.assert_called_once_with(
-        description="My new task",
+        title="My new task",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
         duration=Duration.MINISCULE,  # Default duration
@@ -399,14 +399,12 @@ def test_handle_create_success_existing_user_not_verbose(mocker: Any) -> None:
     mock_task = mocker.MagicMock(spec=Task)
     mock_task.id = "task123abc"
     mock_task_class.return_value = mock_task
-    args = create_mock_args(
-        description="My new task", verbose=False
-    )  # Verbose disabled
+    args = create_mock_args(title="My new task", verbose=False)  # Verbose disabled
 
     cli_main.handle_create(args, mock_manager, mock_user)
 
     mock_task_class.assert_called_once_with(
-        description="My new task",
+        title="My new task",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
         duration=Duration.MINISCULE,  # Default duration
@@ -440,13 +438,13 @@ def test_handle_create_success_new_user(mocker: Any) -> None:
     mock_task = mocker.MagicMock(spec=Task)
     mock_task.id = "newtask456"
     mock_task_class.return_value = mock_task
-    args = create_mock_args(description="First task", verbose=True)  # Verbose enabled
+    args = create_mock_args(title="First task", verbose=True)  # Verbose enabled
 
     cli_main.handle_create(args, mock_manager, None)
 
     mock_user_class.assert_called_once_with(username=DEFAULT_USERNAME)
     mock_task_class.assert_called_once_with(
-        description="First task",
+        title="First task",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
         duration=Duration.MINISCULE,  # Default duration
@@ -480,13 +478,13 @@ def test_handle_create_success_new_user_not_verbose(mocker: Any) -> None:
     mock_task = mocker.MagicMock(spec=Task)
     mock_task.id = "newtask456"
     mock_task_class.return_value = mock_task
-    args = create_mock_args(description="First task", verbose=False)  # Verbose disabled
+    args = create_mock_args(title="First task", verbose=False)  # Verbose disabled
 
     cli_main.handle_create(args, mock_manager, None)
 
     mock_user_class.assert_called_once_with(username=DEFAULT_USERNAME)
     mock_task_class.assert_called_once_with(
-        description="First task",
+        title="First task",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
         duration=Duration.MINISCULE,  # Default duration
@@ -516,12 +514,12 @@ def test_handle_create_empty_description(mocker: Any) -> None:
     # Error messages are always printed
     mock_print = mocker.patch("builtins.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
-    args = create_mock_args(description="", verbose=False)  # Empty description
+    args = create_mock_args(title="", verbose=False)  # Empty description
 
     with pytest.raises(SystemExit) as excinfo:
         cli_main.handle_create(args, mock_manager, None)
 
-    mock_print.assert_any_call("Error: Task description cannot be empty.")
+    mock_print.assert_any_call("Error: Task title cannot be empty.")
     # No verbose calls expected
     assert not any(
         "Creating task:" in c.args[0] for c in mock_print.call_args_list if c.args
@@ -543,15 +541,13 @@ def test_handle_create_save_error(mocker: Any) -> None:
     mock_task_class.return_value = mock_task
     error_message = "Failed to write file"
     mock_manager.save_user.side_effect = Exception(error_message)
-    args = create_mock_args(
-        description="Task to fail save", verbose=True
-    )  # Verbose enabled
+    args = create_mock_args(title="Task to fail save", verbose=True)  # Verbose enabled
 
     with pytest.raises(SystemExit) as excinfo:
         cli_main.handle_create(args, mock_manager, mock_user)
 
     mock_task_class.assert_called_once_with(
-        description="Task to fail save",
+        title="Task to fail save",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
         duration=Duration.MINISCULE,  # Default duration
@@ -575,7 +571,7 @@ def test_handle_create_generic_exception(mocker: Any) -> None:
     mock_task_class.return_value = mock_task
     error_message = "Unexpected database error"
     mock_manager.save_user.side_effect = Exception(error_message)
-    args = create_mock_args(description="Test task", verbose=False)  # Non-verbose
+    args = create_mock_args(title="Test task", verbose=False)  # Non-verbose
 
     with pytest.raises(SystemExit) as excinfo:
         cli_main.handle_create(args, mock_manager, mock_user)
@@ -601,13 +597,13 @@ def test_handle_create_with_difficulty(mocker: Any) -> None:
     mock_task.id = "taskdiff123"
     mock_task_class.return_value = mock_task
     args = create_mock_args(
-        description="Difficult task", difficulty=Difficulty.HIGH.value, verbose=False
+        title="Difficult task", difficulty=Difficulty.HIGH.value, verbose=False
     )
 
     cli_main.handle_create(args, mock_manager, mock_user)
 
     mock_task_class.assert_called_once_with(
-        description="Difficult task",
+        title="Difficult task",
         priority=Priority.LOW,  # Default priority
         difficulty=Difficulty.HIGH,  # Specified difficulty
         duration=Duration.MINISCULE,  # Default duration
@@ -630,13 +626,13 @@ def test_handle_create_with_duration(mocker: Any) -> None:
     mock_task.id = "taskdur123"
     mock_task_class.return_value = mock_task
     args = create_mock_args(
-        description="Task with duration", duration=Duration.LONG.value, verbose=False
+        title="Task with duration", duration=Duration.LONG.value, verbose=False
     )
 
     cli_main.handle_create(args, mock_manager, mock_user)
 
     mock_task_class.assert_called_once_with(
-        description="Task with duration",
+        title="Task with duration",
         priority=Priority.LOW,  # Default priority
         difficulty=Difficulty.TRIVIAL,  # Default difficulty
         duration=Duration.LONG,  # Specified duration
@@ -659,7 +655,7 @@ def test_handle_create_with_priority_and_difficulty(mocker: Any) -> None:
     mock_task.id = "taskboth456"
     mock_task_class.return_value = mock_task
     args = create_mock_args(
-        description="High prio, medium diff task",
+        title="High prio, medium diff task",
         priority=Priority.HIGH.value,
         difficulty=Difficulty.MEDIUM.value,
         verbose=False,
@@ -668,7 +664,7 @@ def test_handle_create_with_priority_and_difficulty(mocker: Any) -> None:
     cli_main.handle_create(args, mock_manager, mock_user)
 
     mock_task_class.assert_called_once_with(
-        description="High prio, medium diff task",
+        title="High prio, medium diff task",
         priority=Priority.HIGH,
         difficulty=Difficulty.MEDIUM,
         duration=Duration.MINISCULE,  # Default duration
@@ -684,9 +680,7 @@ def test_handle_create_with_priority_and_difficulty(mocker: Any) -> None:
 def test_handle_create_invalid_difficulty(mocker: Any) -> None:
     """Test handle_create exits if difficulty is invalid."""
     invalid_value = "Super Easy"
-    args = create_mock_args(
-        description="Task with bad difficulty", difficulty=invalid_value
-    )
+    args = create_mock_args(title="Task with bad difficulty", difficulty=invalid_value)
     _test_invalid_enum_value(
         mocker,
         cli_main.handle_create,
@@ -700,9 +694,7 @@ def test_handle_create_invalid_difficulty(mocker: Any) -> None:
 def test_handle_create_invalid_duration(mocker: Any) -> None:
     """Test handle_create exits if duration is invalid."""
     invalid_value = "Forever"
-    args = create_mock_args(
-        description="Task with bad duration", duration=invalid_value
-    )
+    args = create_mock_args(title="Task with bad duration", duration=invalid_value)
     _test_invalid_enum_value(
         mocker,
         cli_main.handle_create,
@@ -727,13 +719,13 @@ def test_handle_list_success(mocker: Any) -> None:
     mock_user = MagicMock(spec=User)
     test_date = datetime(2023, 1, 1, 12, 0, 0)
     task1 = Task(
-        description="Task One",
+        title="Task One",
         creation_date=test_date,
         id="abc12345-xyz",
         priority=Priority.LOW,
     )
     task2 = Task(
-        description="Task Two",
+        title="Task Two",
         creation_date=test_date,
         id="def67890-uvw",
         priority=Priority.MEDIUM,
@@ -758,7 +750,7 @@ def test_handle_list_success(mocker: Any) -> None:
             call("Difficulty", width=15),
             call("Duration", width=15),
             call("Score", width=8),
-            call("Description"),
+            call("Title"),
         ]
     )
 
@@ -797,7 +789,7 @@ def test_handle_view_success_with_difficulty(mocker: Any) -> None:
     mock_user = MagicMock(spec=User)
     mock_task = MagicMock(spec=Task)
     mock_task.id = "abc-123"
-    mock_task.description = "View this task"
+    mock_task.title = "View this task"
     # Use a real Priority instance
     mock_task.priority = Priority.MEDIUM  # Example priority
     # Add difficulty, duration, is_complete, and creation_date attributes
@@ -830,8 +822,9 @@ def test_handle_view_success_with_difficulty(mocker: Any) -> None:
     # Check add_row calls, especially for priority formatting
     add_row_calls = mock_table_instance.add_row.call_args_list
     assert (
-        len(add_row_calls) == 8
-    )  # Now 8 rows with status, difficulty, duration, creation_date, and score
+        len(add_row_calls) == 9
+    )  # Now 9 rows: ID, Status, Priority, Created, Difficulty, Duration, Title,
+    # and Score (+ Description only if present)
     assert add_row_calls[0] == call("ID:", "abc-123")
 
     # Verify the Text object creation - now called five times (for status, priority, difficulty, duration, and score)
@@ -857,7 +850,7 @@ def test_handle_view_success_with_difficulty(mocker: Any) -> None:
     assert add_row_calls[5] == call("Duration:", mock_text_instance)
 
     # Check description row
-    assert add_row_calls[6] == call("Description:", "View this task")
+    assert add_row_calls[6] == call("Title:", "View this task")
 
     mock_console_instance.print.assert_called_once_with(mock_table_instance)
 
@@ -885,7 +878,7 @@ def test_handle_view_displays_difficulty(mocker: Any) -> None:
     mock_user = mocker.MagicMock(spec=User)
     test_date = datetime(2023, 1, 1, 12, 0, 0)
     mock_task = Task(
-        description="Task with default difficulty",
+        title="Task with default difficulty",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Default difficulty is now TRIVIAL
         creation_date=test_date,
@@ -928,7 +921,7 @@ def test_handle_view_displays_difficulty(mocker: Any) -> None:
     # Check that the expected rows were added
     assert call("ID:", mock_task.id) in add_row_calls
     assert call("Created:", formatted_date) in add_row_calls
-    assert call("Description:", mock_task.description) in add_row_calls
+    assert call("Title:", mock_task.title) in add_row_calls
 
     # Verify the console.print was called with the table
     mock_console_instance.print.assert_called_once_with(mock_table_instance)
@@ -939,12 +932,10 @@ def test_handle_edit_success_description_only(
 ) -> None:  # Renamed for clarity
     """Test handle_edit successfully updates only the description of a task."""
     # Setup task with old description
-    old_description = "Old task description"
-    new_description = "Updated task description"
+    old_title = "Old task description"
+    new_title = "Updated task description"
     test_date = datetime(2023, 1, 1, 12, 0, 0)
-    mock_task = Task(
-        description=old_description, creation_date=test_date, id="edit-task-123"
-    )
+    mock_task = Task(title=old_title, creation_date=test_date, id="edit-task-123")
 
     # Setup mocks
     mock_print = mocker.patch("builtins.print")
@@ -953,7 +944,7 @@ def test_handle_edit_success_description_only(
     mock_user.find_task_by_id.return_value = mock_task
 
     # Create args with new description
-    args = create_mock_args(id="edit-task", description=new_description, verbose=True)
+    args = create_mock_args(id="edit-task", title=new_title, verbose=True)
 
     # Call the function being tested
     cli_main.handle_edit(args, mock_manager, mock_user)
@@ -963,14 +954,14 @@ def test_handle_edit_success_description_only(
     mock_manager.save_user.assert_called_once_with(mock_user)
 
     # Assert that the task description was updated
-    assert mock_task.description == new_description
+    assert mock_task.title == new_title
 
     # Verify the success messages are printed correctly
     mock_print.assert_has_calls(
         [
             call("Task updated successfully:"),
-            call(f"  Old Description: {old_description}"),
-            call(f"  New Description: {new_description}"),
+            call(f"  Old Title: {old_title}"),
+            call(f"  New Title: {new_title}"),
         ]
     )
 
@@ -985,7 +976,7 @@ def test_handle_edit_success_priority_only(mocker: Any) -> None:
     new_priority = Priority.HIGH
     test_date = datetime(2023, 1, 1, 12, 0, 0)
     mock_task = Task(
-        description="Task with priority",
+        title="Task with priority",
         creation_date=test_date,
         id="edit-prio-123",
         priority=old_priority,
@@ -1009,7 +1000,7 @@ def test_handle_edit_success_priority_only(mocker: Any) -> None:
 
     # Assert that the task priority was updated and description remains unchanged
     assert mock_task.priority == new_priority
-    assert mock_task.description == "Task with priority"  # Original description
+    assert mock_task.title == "Task with priority"  # Original description
 
     # Verify the success messages are printed correctly for priority
     mock_print.assert_has_calls(
@@ -1028,11 +1019,9 @@ def test_handle_edit_preserves_creation_date(mocker: Any) -> None:
     """Test handle_edit does not modify the creation_date field."""
     # Setup task with creation_date
     original_date = datetime(2023, 1, 1, 12, 0, 0)  # Fixed date for testing
-    old_description = "Old task description"
-    new_description = "Updated task description"
-    mock_task = Task(
-        description=old_description, id="edit-task-123", creation_date=original_date
-    )
+    old_title = "Old task description"
+    new_title = "Updated task description"
+    mock_task = Task(title=old_title, id="edit-task-123", creation_date=original_date)
 
     # Setup mocks
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -1040,7 +1029,7 @@ def test_handle_edit_preserves_creation_date(mocker: Any) -> None:
     mock_user.find_task_by_id.return_value = mock_task
 
     # Create args with new description
-    args = create_mock_args(id="edit-task", description=new_description, verbose=False)
+    args = create_mock_args(id="edit-task", title=new_title, verbose=False)
 
     # Call the function being tested
     cli_main.handle_edit(args, mock_manager, mock_user)
@@ -1050,7 +1039,7 @@ def test_handle_edit_preserves_creation_date(mocker: Any) -> None:
     mock_manager.save_user.assert_called_once_with(mock_user)
 
     # Assert that the task description was updated
-    assert mock_task.description == new_description
+    assert mock_task.title == new_title
 
     # Assert that the creation_date was NOT modified
     assert mock_task.creation_date == original_date
@@ -1059,13 +1048,13 @@ def test_handle_edit_preserves_creation_date(mocker: Any) -> None:
 def test_handle_edit_success_both(mocker: Any) -> None:
     """Test handle_edit successfully updates both description and priority."""
     # Setup task with old values
-    old_description = "Original Desc"
+    old_title = "Original Desc"
     old_priority = Priority.MEDIUM
-    new_description = "New Desc"
+    new_title = "New Desc"
     new_priority = Priority.DEFCON_ONE
     test_date = datetime(2023, 1, 1, 12, 0, 0)
     mock_task = Task(
-        description=old_description,
+        title=old_title,
         creation_date=test_date,
         id="edit-both-456",
         priority=old_priority,
@@ -1080,7 +1069,7 @@ def test_handle_edit_success_both(mocker: Any) -> None:
     # Create args with new description and priority
     args = create_mock_args(
         id="edit-both",
-        description=new_description,
+        title=new_title,
         priority=new_priority.value,
         verbose=True,
     )
@@ -1093,15 +1082,15 @@ def test_handle_edit_success_both(mocker: Any) -> None:
     mock_manager.save_user.assert_called_once_with(mock_user)
 
     # Assert that both task attributes were updated
-    assert mock_task.description == new_description
+    assert mock_task.title == new_title
     assert mock_task.priority == new_priority
 
     # Verify all success messages are printed
     mock_print.assert_has_calls(
         [
             call("Task updated successfully:"),
-            call(f"  Old Description: {old_description}"),
-            call(f"  New Description: {new_description}"),
+            call(f"  Old Title: {old_title}"),
+            call(f"  New Title: {new_title}"),
             call(f"  Old Priority: {old_priority.value}"),
             call(f"  New Priority: {new_priority.value}"),
         ],
@@ -1114,13 +1103,13 @@ def test_handle_edit_success_both(mocker: Any) -> None:
 
 def test_handle_edit_success_both_not_verbose(mocker: Any) -> None:
     """Test handle_edit updates both description and priority (non-verbose)."""
-    old_description = "Old Desc NV"
+    old_title = "Old Desc NV"
     old_priority = Priority.TRIVIAL
-    new_description = "New Desc NV"
+    new_title = "New Desc NV"
     new_priority = Priority.HIGH
     test_date = datetime(2023, 1, 1, 12, 0, 0)
     mock_task = Task(
-        description=old_description,
+        title=old_title,
         creation_date=test_date,
         id="edit-both-nv-789",
         priority=old_priority,
@@ -1134,7 +1123,7 @@ def test_handle_edit_success_both_not_verbose(mocker: Any) -> None:
     # Create args with verbose=False
     args = create_mock_args(
         id="edit-both-nv",
-        description=new_description,
+        title=new_title,
         priority=new_priority.value,
         verbose=False,
     )
@@ -1143,15 +1132,15 @@ def test_handle_edit_success_both_not_verbose(mocker: Any) -> None:
 
     mock_user.find_task_by_id.assert_called_once_with(args.id)
     mock_manager.save_user.assert_called_once_with(mock_user)
-    assert mock_task.description == new_description
+    assert mock_task.title == new_title
     assert mock_task.priority == new_priority
 
     # Verify standard success messages
     mock_print.assert_has_calls(
         [
             call("Task updated successfully:"),
-            call(f"  Old Description: {old_description}"),
-            call(f"  New Description: {new_description}"),
+            call(f"  Old Title: {old_title}"),
+            call(f"  New Title: {new_title}"),
             call(f"  Old Priority: {old_priority.value}"),
             call(f"  New Priority: {new_priority.value}"),
         ],
@@ -1187,7 +1176,7 @@ def test_handle_edit_task_not_found(mocker: Any) -> None:
     # Simulate find_task_by_id returning None
     mock_user.find_task_by_id.return_value = None
 
-    args = create_mock_args(id="not-found", description="New Desc", verbose=True)
+    args = create_mock_args(id="not-found", title="New Desc", verbose=True)
 
     with pytest.raises(SystemExit) as excinfo:
         cli_main.handle_edit(args, mock_manager, mock_user)
@@ -1215,7 +1204,7 @@ def test_handle_edit_ambiguous_id(mocker: Any) -> None:
     error_message = "Ambiguous ID prefix 'amb'. Matches: abc, abd"
     mock_user.find_task_by_id.side_effect = ValueError(error_message)
 
-    args = create_mock_args(id="amb", description="New Desc", verbose=False)
+    args = create_mock_args(id="amb", title="New Desc", verbose=False)
 
     with pytest.raises(SystemExit) as excinfo:
         cli_main.handle_edit(args, mock_manager, mock_user)
@@ -1259,7 +1248,7 @@ def test_handle_edit_success_difficulty_only(mocker: Any) -> None:
     mock_manager = mocker.MagicMock(spec=DataManager)
     mock_user = mocker.MagicMock(spec=User)
     mock_task = Task(
-        description="Original task",
+        title="Original task",
         priority=Priority.MEDIUM,
         difficulty=Difficulty.LOW,  # Initial difficulty
         duration=Duration.MINISCULE,  # Default duration
@@ -1273,13 +1262,13 @@ def test_handle_edit_success_difficulty_only(mocker: Any) -> None:
     cli_main.handle_edit(args, mock_manager, mock_user)
 
     assert mock_task.difficulty == Difficulty.HERCULEAN
-    assert mock_task.description == "Original task"  # Unchanged
+    assert mock_task.title == "Original task"  # Unchanged
     assert mock_task.priority == Priority.MEDIUM  # Unchanged
     # Use positional arguments instead of keyword arguments
     mock_print_updates.assert_called_once_with(
         mock_task,
         False,  # description_updated
-        None,  # old_description
+        None,  # old_title
         False,  # priority_updated
         None,  # old_priority
         True,  # difficulty_updated
@@ -1296,7 +1285,7 @@ def test_handle_edit_success_duration_only(mocker: Any) -> None:
     mock_manager = mocker.MagicMock(spec=DataManager)
     mock_user = mocker.MagicMock(spec=User)
     mock_task = Task(
-        description="Original task",
+        title="Original task",
         priority=Priority.MEDIUM,
         difficulty=Difficulty.LOW,
         duration=Duration.MINISCULE,  # Initial duration
@@ -1310,14 +1299,14 @@ def test_handle_edit_success_duration_only(mocker: Any) -> None:
     cli_main.handle_edit(args, mock_manager, mock_user)
 
     assert mock_task.duration == Duration.LONG
-    assert mock_task.description == "Original task"  # Unchanged
+    assert mock_task.title == "Original task"  # Unchanged
     assert mock_task.priority == Priority.MEDIUM  # Unchanged
     assert mock_task.difficulty == Difficulty.LOW  # Unchanged
     # Use positional arguments instead of keyword arguments
     mock_print_updates.assert_called_once_with(
         mock_task,
         False,  # description_updated
-        None,  # old_description
+        None,  # old_title
         False,  # priority_updated
         None,  # old_priority
         False,  # difficulty_updated
@@ -1332,7 +1321,7 @@ def test_print_task_updates_difficulty(mocker: Any) -> None:
     mock_print = mocker.patch("builtins.print")
 
     task = Task(
-        description="Test task",
+        title="Test task",
         priority=Priority.MEDIUM,
         difficulty=Difficulty.HIGH,  # New difficulty
         creation_date=datetime.now(),
@@ -1346,7 +1335,7 @@ def test_print_task_updates_difficulty(mocker: Any) -> None:
     cli_main._print_task_updates(
         task,
         False,  # description_updated
-        None,  # old_description
+        None,  # old_title
         False,  # priority_updated
         None,  # old_priority
         True,  # difficulty_updated
@@ -1365,7 +1354,7 @@ def test_print_task_updates_duration(mocker: Any) -> None:
     mock_print = mocker.patch("builtins.print")
 
     task = Task(
-        description="Test task",
+        title="Test task",
         priority=Priority.MEDIUM,
         difficulty=Difficulty.TRIVIAL,
         duration=Duration.LONG,  # New duration
@@ -1380,7 +1369,7 @@ def test_print_task_updates_duration(mocker: Any) -> None:
     cli_main._print_task_updates(
         task,
         False,  # description_updated
-        None,  # old_description
+        None,  # old_title
         False,  # priority_updated
         None,  # old_priority
         False,  # difficulty_updated
@@ -1405,7 +1394,7 @@ def test_handle_edit_success_all_fields(mocker: Any) -> None:
     original_diff = Difficulty.TRIVIAL
     original_dur = Duration.MINISCULE
     mock_task = Task(
-        description=original_desc,
+        title=original_desc,
         priority=original_prio,
         difficulty=original_diff,
         duration=original_dur,
@@ -1420,7 +1409,7 @@ def test_handle_edit_success_all_fields(mocker: Any) -> None:
     new_dur = Duration.LONG.value
     args = create_mock_args(
         id="taskeditall1",
-        description=new_desc,
+        title=new_desc,
         priority=new_prio,
         difficulty=new_diff,
         duration=new_dur,
@@ -1429,7 +1418,7 @@ def test_handle_edit_success_all_fields(mocker: Any) -> None:
 
     cli_main.handle_edit(args, mock_manager, mock_user)
 
-    assert mock_task.description == new_desc
+    assert mock_task.title == new_desc
     assert mock_task.priority == Priority.HIGH
     assert mock_task.difficulty == Difficulty.MEDIUM
     assert mock_task.duration == Duration.LONG
@@ -1437,7 +1426,7 @@ def test_handle_edit_success_all_fields(mocker: Any) -> None:
     mock_print_updates.assert_called_once_with(
         mock_task,
         True,  # description_updated
-        original_desc,  # old_description
+        original_desc,  # old_title
         True,  # priority_updated
         original_prio,  # old_priority
         True,  # difficulty_updated
@@ -1484,15 +1473,13 @@ def test_handle_edit_save_error(mocker: Any) -> None:
     mock_user = mocker.MagicMock(spec=User)
     test_date = datetime(2023, 1, 1, 12, 0, 0)
     mock_task = Task(
-        description="Task to edit", creation_date=test_date, id="edit-savefail-456"
+        title="Task to edit", creation_date=test_date, id="edit-savefail-456"
     )
     mock_user.find_task_by_id.return_value = mock_task
     error_message = "Disk full"
     mock_manager.save_user.side_effect = IOError(error_message)
 
-    args = create_mock_args(
-        id="edit-savefail", description="New Description", verbose=True
-    )
+    args = create_mock_args(id="edit-savefail", title="New Description", verbose=True)
 
     with pytest.raises(SystemExit) as excinfo:
         cli_main.handle_edit(args, mock_manager, mock_user)
@@ -1510,9 +1497,7 @@ def test_handle_edit_save_error(mocker: Any) -> None:
 def test_handle_create_invalid_priority(mocker: Any) -> None:
     """Test handle_create exits if priority is invalid."""
     invalid_value = "InvalidPriority"
-    args = create_mock_args(
-        description="Task with bad priority", priority=invalid_value
-    )
+    args = create_mock_args(title="Task with bad priority", priority=invalid_value)
     _test_invalid_enum_value(
         mocker,
         cli_main.handle_create,
@@ -1538,19 +1523,19 @@ def test_handle_list_sort_by_priority(mocker: Any) -> None:
     # Add tasks with different priorities (not in priority order)
     test_date = datetime(2023, 1, 1, 12, 0, 0)
     task_high = Task(
-        description="High priority task",
+        title="High priority task",
         creation_date=test_date,
         id="uuid-high",
         priority=Priority.HIGH,
     )
     task_low = Task(
-        description="Low priority task",
+        title="Low priority task",
         creation_date=test_date,
         id="uuid-low",
         priority=Priority.LOW,
     )
     task_medium = Task(
-        description="Medium priority task",
+        title="Medium priority task",
         creation_date=test_date,
         id="uuid-medium",
         priority=Priority.MEDIUM,
@@ -1746,7 +1731,7 @@ def test_main_dispatch_create_with_priority(mocker: Any) -> None:
     mock_handle_create.assert_called_once()
     args_passed, manager_passed, user_passed = mock_handle_create.call_args[0]
     assert args_passed.command == "create"
-    assert args_passed.description == "New task"
+    assert args_passed.title == "New task"
     assert args_passed.priority == "High"
     assert hasattr(args_passed, "verbose")
     assert manager_passed == mock_manager_instance
@@ -1782,12 +1767,10 @@ def test_main_dispatch_edit_with_priority(mocker: Any) -> None:
 
 def test_handle_edit_success_description_not_verbose(mocker: Any) -> None:
     """Test handle_edit updates description successfully (non-verbose)."""
-    old_description = "Old desc non-verbose"
-    new_description = "New desc non-verbose"
+    old_title = "Old desc non-verbose"
+    new_title = "New desc non-verbose"
     test_date = datetime(2023, 1, 1, 12, 0, 0)
-    mock_task = Task(
-        description=old_description, creation_date=test_date, id="edit-desc-nv-456"
-    )
+    mock_task = Task(title=old_title, creation_date=test_date, id="edit-desc-nv-456")
 
     mock_print = mocker.patch("builtins.print")
     mock_manager = mocker.MagicMock(spec=DataManager)
@@ -1795,22 +1778,20 @@ def test_handle_edit_success_description_not_verbose(mocker: Any) -> None:
     mock_user.find_task_by_id.return_value = mock_task
 
     # Create args with verbose=False
-    args = create_mock_args(
-        id="edit-desc-nv", description=new_description, verbose=False
-    )
+    args = create_mock_args(id="edit-desc-nv", title=new_title, verbose=False)
 
     cli_main.handle_edit(args, mock_manager, mock_user)
 
     mock_user.find_task_by_id.assert_called_once_with(args.id)
     mock_manager.save_user.assert_called_once_with(mock_user)
-    assert mock_task.description == new_description
+    assert mock_task.title == new_title
 
     # Verify standard success messages
     mock_print.assert_has_calls(
         [
             call("Task updated successfully:"),
-            call(f"  Old Description: {old_description}"),
-            call(f"  New Description: {new_description}"),
+            call(f"  Old Title: {old_title}"),
+            call(f"  New Title: {new_title}"),
         ]
     )
 
@@ -1818,3 +1799,26 @@ def test_handle_edit_success_description_not_verbose(mocker: Any) -> None:
     verbose_message = f"Editing task with ID prefix: '{args.id}'..."
     printed_messages = [c.args[0] for c in mock_print.call_args_list if c.args]
     assert verbose_message not in printed_messages
+
+
+def test_handle_list_sort_by_title(mocker: Any) -> None:
+    """Test handle_list with --sort-by title."""
+    mock_print = mocker.patch("builtins.print")
+    _mock_console = mocker.patch("motido.cli.main.Console")
+    _mock_table = mocker.patch("motido.cli.main.Table")
+
+    # Create test tasks
+    task_a = Task(title="Zebra task", id="a", creation_date=datetime.now())
+    task_b = Task(title="Apple task", id="b", creation_date=datetime.now())
+    task_c = Task(title="Banana task", id="c", creation_date=datetime.now())
+
+    mock_user = MagicMock(spec=User)
+    mock_user.tasks = [task_a, task_b, task_c]
+    mock_manager = MagicMock(spec=DataManager)
+
+    args = create_mock_args(sort_by="title", verbose=True)
+
+    cli_main.handle_list(args, mock_manager, mock_user)
+
+    # Just verify it runs without error - the actual sorting is tested elsewhere
+    assert mock_print.call_count > 0

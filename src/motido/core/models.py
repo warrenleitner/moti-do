@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List
+from typing import Any, Dict, List
 
 
 class Priority(str, Enum):
@@ -134,12 +134,12 @@ class Duration(str, Enum):
 class Task:  # pylint: disable=too-many-instance-attributes
     """Represents a single task."""
 
-    description: str
+    title: str
     creation_date: datetime
     # Use a factory to generate a unique ID upon creation.
     # The ID is represented as a string for easier serialization (JSON, DB).
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    title: str | None = None
+    text_description: str | None = None  # Rich text description (optional)
     priority: Priority = field(default=Priority.LOW)
     difficulty: Difficulty = field(default=Difficulty.TRIVIAL)
     duration: Duration = field(default=Duration.MINISCULE)
@@ -149,10 +149,13 @@ class Task:  # pylint: disable=too-many-instance-attributes
     icon: str | None = None
     tags: List[str] = field(default_factory=list)
     project: str | None = None
-    subtasks: List[dict] = field(
+    subtasks: List[Dict[str, Any]] = field(
         default_factory=list
     )  # {"text": str, "complete": bool}
     dependencies: List[str] = field(default_factory=list)  # List of task IDs
+    history: List[Dict[str, Any]] = field(
+        default_factory=list
+    )  # {"timestamp": datetime, "field": str, "old_value": Any, "new_value": Any}
 
     def __str__(self) -> str:
         """String representation for simple display."""
@@ -162,7 +165,7 @@ class Task:  # pylint: disable=too-many-instance-attributes
         return (
             f"{status_indicator} ID: {self.id[:8]} | Priority: {self.priority.emoji()} {self.priority.value} "
             f"| Duration: {self.duration.emoji()} {self.duration.value} "
-            f"| Created: {formatted_date} | Description: {self.description}"  # Show partial ID
+            f"| Created: {formatted_date} | Title: {self.title}"  # Show partial ID
         )
 
 

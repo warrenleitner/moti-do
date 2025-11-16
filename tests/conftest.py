@@ -46,7 +46,7 @@ def sample_user() -> User:
     test_date = datetime(2023, 1, 1, 12, 0, 0)
     user.add_task(
         Task(
-            description="Task A",
+            title="Task A",
             creation_date=test_date,
             id="uuid-a",
             priority=Priority.LOW,
@@ -54,7 +54,7 @@ def sample_user() -> User:
     )
     user.add_task(
         Task(
-            description="Task B",
+            title="Task B",
             creation_date=test_date,
             id="uuid-b",
             priority=Priority.MEDIUM,
@@ -74,13 +74,13 @@ def sample_user_data(
             "tasks": [
                 {
                     "id": "uuid-a",
-                    "description": "Task A",
+                    "title": "Task A",
                     "creation_date": "2023-01-01 12:00:00",
                     "priority": Priority.LOW.value,
                 },
                 {
                     "id": "uuid-b",
-                    "description": "Task B",
+                    "title": "Task B",
                     "creation_date": "2023-01-01 12:00:00",
                     "priority": Priority.MEDIUM.value,
                 },

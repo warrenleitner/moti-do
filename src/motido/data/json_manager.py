@@ -92,9 +92,72 @@ class JsonDataManager(DataManager):
             print(f"Error writing to data file: {e}")
             raise  # Re-raise to signal failure to the caller
 
+    def _parse_datetime_field(
+        self, date_str: str | None, field_name: str, task_id: str | None
+    ) -> datetime | None:
+        """Parse a datetime field from string, returning None if invalid."""
+        if not date_str:
+            return None
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            print(f"Warning: Invalid {field_name} format for task {task_id}, ignoring.")
+            return None
+
+    def _deserialize_task(self, task_dict: Dict[str, Any]) -> Task:
+        """Deserialize a task dictionary into a Task object."""
+        # pylint: disable=too-many-locals
+        task_id = task_dict.get("id")
+
+        # Parse enums
+        priority = parse_priority_safely(
+            task_dict.get("priority", Priority.LOW.value), task_id
+        )
+        difficulty = parse_difficulty_safely(
+            task_dict.get("difficulty", Difficulty.TRIVIAL.value), task_id
+        )
+        duration = parse_duration_safely(
+            task_dict.get("duration", Duration.MINISCULE.value), task_id
+        )
+
+        # Parse dates
+        creation_date = (
+            self._parse_datetime_field(
+                task_dict.get("creation_date"), "creation_date", task_id
+            )
+            or datetime.now()
+        )
+        due_date = self._parse_datetime_field(
+            task_dict.get("due_date"), "due_date", task_id
+        )
+        start_date = self._parse_datetime_field(
+            task_dict.get("start_date"), "start_date", task_id
+        )
+
+        # Handle migration from old 'description' field to new 'title' field
+        title = task_dict.get("title") or task_dict.get("description", "Untitled Task")
+
+        return Task(
+            id=task_dict["id"],
+            title=title,
+            text_description=task_dict.get("text_description"),
+            creation_date=creation_date,
+            priority=priority,
+            difficulty=difficulty,
+            duration=duration,
+            is_complete=task_dict.get("is_complete", False),
+            due_date=due_date,
+            start_date=start_date,
+            icon=task_dict.get("icon"),
+            tags=task_dict.get("tags", []),
+            project=task_dict.get("project"),
+            subtasks=task_dict.get("subtasks", []),
+            dependencies=task_dict.get("dependencies", []),
+            history=task_dict.get("history", []),
+        )
+
     def load_user(self, username: str = DEFAULT_USERNAME) -> User | None:
         """Loads a specific user's data from the JSON file."""
-        # pylint: disable=too-many-locals
         # Placeholder for future sync: Check for remote changes before loading
         print(f"Loading user '{username}' from JSON...")
         all_data = self._read_data()
@@ -103,86 +166,10 @@ class JsonDataManager(DataManager):
         if user_data:
             try:
                 # Deserialize tasks
-                tasks = []
-                for task_dict in user_data.get("tasks", []):
-                    # Get priority from task_dict or use default if not present
-                    priority_str = task_dict.get("priority", Priority.LOW.value)
-                    priority = parse_priority_safely(priority_str, task_dict.get("id"))
-
-                    # Create Task with ID, description, and priority
-                    # Get creation_date from task_dict or use current time if not present
-                    creation_date_str = task_dict.get("creation_date")
-                    creation_date = datetime.now()
-                    if creation_date_str:
-                        try:
-                            creation_date = datetime.strptime(
-                                creation_date_str, "%Y-%m-%d %H:%M:%S"
-                            )
-                        except ValueError:
-                            task_id = task_dict.get("id")
-                            print(
-                                f"Warning: Invalid creation_date format for task {task_id}, using current time."
-                            )
-
-                    # Get is_complete from task_dict or use default if not present
-                    is_complete = task_dict.get("is_complete", False)
-
-                    # Get difficulty and duration from task_dict or use defaults
-                    difficulty_str = task_dict.get(
-                        "difficulty", Difficulty.TRIVIAL.value
-                    )
-                    difficulty = parse_difficulty_safely(
-                        difficulty_str, task_dict.get("id")
-                    )
-
-                    duration_str = task_dict.get("duration", Duration.MINISCULE.value)
-                    duration = parse_duration_safely(duration_str, task_dict.get("id"))
-
-                    # Get due_date and start_date from task_dict
-                    due_date = None
-                    due_date_str = task_dict.get("due_date")
-                    if due_date_str:
-                        try:
-                            due_date = datetime.strptime(
-                                due_date_str, "%Y-%m-%d %H:%M:%S"
-                            )
-                        except ValueError:
-                            task_id = task_dict.get("id")
-                            print(
-                                f"Warning: Invalid due_date format for task {task_id}, ignoring."
-                            )
-
-                    start_date = None
-                    start_date_str = task_dict.get("start_date")
-                    if start_date_str:
-                        try:
-                            start_date = datetime.strptime(
-                                start_date_str, "%Y-%m-%d %H:%M:%S"
-                            )
-                        except ValueError:
-                            task_id = task_dict.get("id")
-                            print(
-                                f"Warning: Invalid start_date format for task {task_id}, ignoring."
-                            )
-
-                    task = Task(
-                        id=task_dict["id"],
-                        description=task_dict["description"],
-                        creation_date=creation_date,
-                        priority=priority,
-                        difficulty=difficulty,
-                        duration=duration,
-                        is_complete=is_complete,
-                        title=task_dict.get("title"),
-                        due_date=due_date,
-                        start_date=start_date,
-                        icon=task_dict.get("icon"),
-                        tags=task_dict.get("tags", []),
-                        project=task_dict.get("project"),
-                        subtasks=task_dict.get("subtasks", []),
-                        dependencies=task_dict.get("dependencies", []),
-                    )
-                    tasks.append(task)
+                tasks = [
+                    self._deserialize_task(task_dict)
+                    for task_dict in user_data.get("tasks", [])
+                ]
 
                 # Create User object
                 total_xp = user_data.get("total_xp", 0)
@@ -211,8 +198,8 @@ class JsonDataManager(DataManager):
         tasks_data = [
             {
                 "id": task.id,
-                "description": task.description,
                 "title": task.title,
+                "text_description": task.text_description,
                 "priority": task.priority.value,  # Save the priority value as string
                 "difficulty": task.difficulty.value,  # Save the difficulty value
                 "duration": task.duration.value,  # Save the duration value
@@ -237,6 +224,7 @@ class JsonDataManager(DataManager):
                 "project": task.project,
                 "subtasks": task.subtasks,
                 "dependencies": task.dependencies,
+                "history": task.history,
             }
             for task in user.tasks
         ]

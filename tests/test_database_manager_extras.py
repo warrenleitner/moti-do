@@ -93,27 +93,28 @@ def test_load_user_invalid_due_date_format(tmp_path, capsys):  # type: ignore
 
         cursor.execute(
             """INSERT INTO tasks (
-                id, user_username, description, priority, difficulty, duration,
-                is_complete, creation_date, due_date, start_date, title, icon,
-                tags, project, subtasks, dependencies
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                id, user_username, title, text_description, priority, difficulty, duration,
+                is_complete, creation_date, due_date, start_date, icon,
+                tags, project, subtasks, dependencies, history
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 "test-id",
                 "test_user",
                 "Test Task",
+                None,  # text_description
                 "Low",
                 "Trivial",
                 "Miniscule",
                 0,
                 "2023-01-01 12:00:00",
-                "invalid-date-format",  # Invalid format
-                None,
-                None,
-                None,
-                json.dumps([]),
-                None,
-                json.dumps([]),
-                json.dumps([]),
+                "invalid-date-format",  # Invalid due_date format
+                None,  # start_date
+                None,  # icon
+                json.dumps([]),  # tags
+                None,  # project
+                json.dumps([]),  # subtasks
+                json.dumps([]),  # dependencies
+                json.dumps([]),  # history
             ),
         )
 
@@ -155,27 +156,28 @@ def test_load_user_invalid_start_date_format(tmp_path, capsys):  # type: ignore
 
         cursor.execute(
             """INSERT INTO tasks (
-                id, user_username, description, priority, difficulty, duration,
-                is_complete, creation_date, due_date, start_date, title, icon,
-                tags, project, subtasks, dependencies
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    id, user_username, title, text_description, priority, difficulty, duration,
+                is_complete, creation_date, due_date, start_date, icon,
+                tags, project, subtasks, dependencies, history
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 "test-id",
                 "test_user",
                 "Test Task",
+                None,  # text_description
                 "Low",
                 "Trivial",
                 "Miniscule",
                 0,
                 "2023-01-01 12:00:00",
-                None,
-                "invalid-date-format",  # Invalid format
-                None,
+                None,  # due_date
+                "invalid-date-format",  # Invalid start_date format
+                None,  # icon
+                json.dumps([]),  # tags
                 None,
                 json.dumps([]),
-                None,
                 json.dumps([]),
-                json.dumps([]),
+                json.dumps([]),  # history
             ),
         )
 
@@ -217,27 +219,28 @@ def test_load_user_invalid_tags_json(tmp_path, capsys):  # type: ignore
 
         cursor.execute(
             """INSERT INTO tasks (
-                id, user_username, description, priority, difficulty, duration,
-                is_complete, creation_date, due_date, start_date, title, icon,
-                tags, project, subtasks, dependencies
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    id, user_username, title, text_description, priority, difficulty, duration,
+                is_complete, creation_date, due_date, start_date, icon,
+                tags, project, subtasks, dependencies, history
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 "test-id",
                 "test_user",
                 "Test Task",
+                None,  # text_description
                 "Low",
                 "Trivial",
                 "Miniscule",
                 0,
                 "2023-01-01 12:00:00",
-                None,
-                None,
-                None,
-                None,
-                "invalid-json",  # Invalid JSON
+                None,  # due_date
+                None,  # start_date
+                None,  # icon
+                "invalid-json",  # Invalid tags  # Invalid JSON
                 None,
                 json.dumps([]),
                 json.dumps([]),
+                json.dumps([]),  # history
             ),
         )
 
@@ -279,27 +282,28 @@ def test_load_user_invalid_subtasks_json(tmp_path, capsys):  # type: ignore
 
         cursor.execute(
             """INSERT INTO tasks (
-                id, user_username, description, priority, difficulty, duration,
-                is_complete, creation_date, due_date, start_date, title, icon,
-                tags, project, subtasks, dependencies
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    id, user_username, title, text_description, priority, difficulty, duration,
+                is_complete, creation_date, due_date, start_date, icon,
+                tags, project, subtasks, dependencies, history
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 "test-id",
                 "test_user",
                 "Test Task",
+                None,  # text_description
                 "Low",
                 "Trivial",
                 "Miniscule",
                 0,
                 "2023-01-01 12:00:00",
-                None,
-                None,
-                None,
-                None,
-                json.dumps([]),
-                None,
-                "invalid-json",  # Invalid JSON
-                json.dumps([]),
+                None,  # due_date
+                None,  # start_date
+                None,  # icon
+                json.dumps([]),  # tags
+                None,  # project
+                "invalid-json",  # Invalid subtasks  # Invalid JSON
+                json.dumps([]),  # dependencies
+                json.dumps([]),  # history
             ),
         )
 
@@ -341,27 +345,28 @@ def test_load_user_invalid_dependencies_json(tmp_path, capsys):  # type: ignore
 
         cursor.execute(
             """INSERT INTO tasks (
-                id, user_username, description, priority, difficulty, duration,
-                is_complete, creation_date, due_date, start_date, title, icon,
-                tags, project, subtasks, dependencies
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    id, user_username, title, text_description, priority, difficulty, duration,
+                is_complete, creation_date, due_date, start_date, icon,
+                tags, project, subtasks, dependencies, history
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 "test-id",
                 "test_user",
                 "Test Task",
+                None,  # text_description
                 "Low",
                 "Trivial",
                 "Miniscule",
                 0,
                 "2023-01-01 12:00:00",
-                None,
-                None,
-                None,
-                None,
-                json.dumps([]),
-                None,
-                json.dumps([]),
-                "invalid-json",  # Invalid JSON
+                None,  # due_date
+                None,  # start_date
+                None,  # icon
+                json.dumps([]),  # tags
+                None,  # project
+                json.dumps([]),  # subtasks
+                "invalid-json",  # Invalid dependencies  # Invalid JSON
+                json.dumps([]),  # history
             ),
         )
 
@@ -380,3 +385,66 @@ def test_load_user_invalid_dependencies_json(tmp_path, capsys):  # type: ignore
         # Check that warning was printed
         captured = capsys.readouterr()
         assert "Warning: Invalid JSON in dependencies" in captured.out
+
+
+def test_load_user_invalid_history_json(tmp_path, capsys):  # type: ignore
+    """Test that load_user handles invalid history JSON gracefully."""
+    db_path = tmp_path / "test.db"
+
+    # Patch _get_db_path to use our temp database
+    with patch.object(DatabaseDataManager, "_get_db_path", return_value=str(db_path)):
+        manager = DatabaseDataManager()
+
+        # Initialize the database schema
+        manager.initialize()
+
+        # Now insert a task directly with invalid history JSON
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+
+        # Insert user first
+        cursor.execute(
+            "INSERT INTO users (username, total_xp) VALUES (?, ?)",
+            ("test_user", 0),
+        )
+
+        cursor.execute(
+            """INSERT INTO tasks (
+                    id, user_username, title, text_description, priority, difficulty, duration,
+                is_complete, creation_date, due_date, start_date, icon,
+                tags, project, subtasks, dependencies, history
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "test-id",
+                "test_user",
+                "Test Task",
+                None,  # text_description
+                "Low",
+                "Trivial",
+                "Miniscule",
+                0,
+                "2023-01-01 12:00:00",
+                None,  # due_date
+                None,  # start_date
+                None,  # icon
+                json.dumps([]),  # tags
+                None,  # project
+                json.dumps([]),  # subtasks
+                json.dumps([]),  # dependencies
+                "invalid-json",  # Invalid history
+            ),
+        )
+
+        conn.commit()
+        conn.close()
+
+        user = manager.load_user("test_user")
+
+        # User should still load successfully
+        assert user is not None
+        assert len(user.tasks) == 1
+        assert user.tasks[0].history == []  # Should be empty list due to invalid JSON
+
+        # Check that warning was printed
+        captured = capsys.readouterr()
+        assert "Warning: Invalid JSON in history" in captured.out

@@ -30,7 +30,7 @@ def test_handle_list_scoring_config_error() -> None:
     # Create a user with tasks
     user = User(username="test_user")
     task = Task(
-        description="Test task",
+        title="Test task",
         creation_date=datetime.now(),
         id="abc123",
     )
@@ -61,7 +61,7 @@ def test_handle_list_score_calculation_error() -> None:
     # Create a user with tasks
     user = User(username="test_user")
     task = Task(
-        description="Test task",
+        title="Test task",
         creation_date=datetime.now(),
         id="abc123",
     )
@@ -106,7 +106,7 @@ def test_handle_list_green_score_style() -> None:
     # Create a user with tasks
     user = User(username="test_user")
     task = Task(
-        description="Test task",
+        title="Test task",
         creation_date=datetime.now(),
         id="abc123",
         is_complete=False,  # Important: not completed
@@ -149,7 +149,7 @@ def test_handle_list_no_scoring_config() -> None:
     # Create a user with tasks
     user = User(username="test_user")
     task = Task(
-        description="Test task",
+        title="Test task",
         creation_date=datetime.now(),
         id="abc123",
     )
@@ -178,7 +178,7 @@ def test_handle_view_scoring_config_error() -> None:
     # Create a mock user and task
     mock_user = MagicMock(spec=User)
     mock_task = Task(
-        description="Test task",
+        title="Test task",
         creation_date=datetime.now(),
         id="abc123",
         difficulty=Difficulty.HIGH,
@@ -218,7 +218,7 @@ def test_handle_view_score_color_styles() -> None:
                 with patch("motido.cli.main.Text", return_value=mock_text):
                     mock_user = MagicMock(spec=User)
                     mock_task = Task(
-                        description="Test task",
+                        title="Test task",
                         creation_date=datetime.now(),
                         id="abc123",
                         difficulty=Difficulty.HIGH,
@@ -264,7 +264,7 @@ def test_handle_complete_scoring_config_error() -> None:
     # Create a mock user and task
     mock_user = MagicMock(spec=User)
     mock_task = Task(
-        description="Test task",
+        title="Test task",
         creation_date=datetime.now(),
         id="complete-123",
         is_complete=False,
@@ -300,7 +300,7 @@ def test_handle_complete_zero_score() -> None:
     # Create a mock user and task
     mock_user = MagicMock(spec=User)
     mock_task = Task(
-        description="Test task",
+        title="Test task",
         creation_date=datetime.now(),
         id="complete-123",
         is_complete=False,
@@ -322,7 +322,7 @@ def test_handle_complete_zero_score() -> None:
 
                 # Verify the correct completion message without XP was printed
                 mock_p.assert_any_call(
-                    f"Marked task '{mock_task.description}' (ID: {mock_task.id[:8]}) as complete."
+                    f"Marked task '{mock_task.title}' (ID: {mock_task.id[:8]}) as complete."
                 )
 
 
@@ -334,7 +334,7 @@ def test_handle_run_penalties_scoring_config_error() -> None:
     # Create a mock user with tasks
     mock_user = MagicMock(spec=User)
     mock_user.tasks = [
-        Task(description="Task 1", creation_date=datetime.now(), id="task1"),
+        Task(title="Task 1", creation_date=datetime.now(), id="task1"),
     ]
 
     # Mock the load_scoring_config function to raise ValueError
@@ -367,7 +367,7 @@ def test_handle_run_penalties_invalid_date() -> None:
     # Create a mock user with tasks
     mock_user = MagicMock(spec=User)
     mock_user.tasks = [
-        Task(description="Task 1", creation_date=datetime.now(), id="task1"),
+        Task(title="Task 1", creation_date=datetime.now(), id="task1"),
     ]
 
     # Execute the test with all mocks applied
@@ -414,7 +414,7 @@ def test_handle_run_penalties_value_error() -> None:
     # Create a mock user with tasks
     mock_user = MagicMock(spec=User)
     mock_user.tasks = [
-        Task(description="Task 1", creation_date=datetime.now(), id="task1"),
+        Task(title="Task 1", creation_date=datetime.now(), id="task1"),
     ]
 
     # Mock the load_scoring_config function
@@ -449,7 +449,7 @@ def test_handle_run_penalties_generic_exception() -> None:
     # Create a mock user with tasks
     mock_user = MagicMock(spec=User)
     mock_user.tasks = [
-        Task(description="Task 1", creation_date=datetime.now(), id="task1"),
+        Task(title="Task 1", creation_date=datetime.now(), id="task1"),
     ]
 
     # Mock the load_scoring_config function

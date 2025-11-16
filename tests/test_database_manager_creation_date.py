@@ -30,7 +30,7 @@ def test_load_user_invalid_creation_date_format(mocker: Any) -> None:
     mock_cursor.fetchall.return_value = [
         {
             "id": "task-123",
-            "description": "Task with invalid date",
+            "title": "Task with invalid date",
             "priority": Priority.LOW.value,
             "creation_date": "not-a-valid-date-format",
         }
@@ -51,7 +51,7 @@ def test_load_user_invalid_creation_date_format(mocker: Any) -> None:
     # Verify the task was created with a default creation_date
     task = loaded_user.tasks[0]
     assert task.id == "task-123"
-    assert task.description == "Task with invalid date"
+    assert task.title == "Task with invalid date"
     assert task.priority == Priority.LOW
     assert isinstance(task.creation_date, datetime)
 

@@ -73,8 +73,8 @@ class DatabaseDataManager(DataManager):
                 """
                 CREATE TABLE IF NOT EXISTS tasks (
                     id TEXT PRIMARY KEY,
-                    description TEXT NOT NULL,
-                    title TEXT,
+                    title TEXT NOT NULL,
+                    text_description TEXT,
                     priority TEXT NOT NULL DEFAULT 'Low',
                     difficulty TEXT NOT NULL DEFAULT 'Trivial',
                     duration TEXT NOT NULL DEFAULT 'Miniscule',
@@ -87,6 +87,7 @@ class DatabaseDataManager(DataManager):
                     project TEXT,
                     subtasks TEXT,
                     dependencies TEXT,
+                    history TEXT,
                     user_username TEXT NOT NULL,
                     FOREIGN KEY (user_username) REFERENCES users (username)
                         ON DELETE CASCADE ON UPDATE CASCADE
@@ -137,9 +138,9 @@ class DatabaseDataManager(DataManager):
 
                 # Load tasks for the user
                 cursor.execute(
-                    "SELECT id, description, title, priority, difficulty, duration, "
+                    "SELECT id, title, text_description, priority, difficulty, duration, "
                     "is_complete, creation_date, due_date, start_date, icon, tags, "
-                    "project, subtasks, dependencies FROM tasks "
+                    "project, subtasks, dependencies, history FROM tasks "
                     "WHERE user_username = ?",
                     (username,),
                 )
@@ -240,10 +241,35 @@ class DatabaseDataManager(DataManager):
                                 f"Warning: Invalid JSON in dependencies for task {row['id']}, using empty list."
                             )
 
+                    history = []
+                    if "history" in row.keys() and row["history"]:
+                        try:
+                            history = json.loads(row["history"])
+                        except json.JSONDecodeError:
+                            print(
+                                f"Warning: Invalid JSON in history for task {row['id']}, using empty list."
+                            )
+
+                    # Handle migration from old 'description' column to new 'title' column
+                    title = row["title"] if "title" in row.keys() else None
+                    if not title:
+                        # Migrate old data if description column exists
+                        title = (  # pragma: no cover
+                            row["description"]
+                            if "description" in row.keys()
+                            else "Untitled Task"
+                        )
+
+                    text_description = (
+                        row["text_description"]
+                        if "text_description" in row.keys()
+                        else None
+                    )
+
                     task = Task(
                         id=row["id"],
-                        description=row["description"],
-                        title=row["title"] if "title" in row.keys() else None,
+                        title=title,
+                        text_description=text_description,
                         creation_date=creation_date,
                         priority=priority,
                         difficulty=difficulty,
@@ -256,6 +282,7 @@ class DatabaseDataManager(DataManager):
                         project=row["project"] if "project" in row.keys() else None,
                         subtasks=subtasks,
                         dependencies=dependencies,
+                        history=history,
                     )
                     tasks.append(task)
 
@@ -310,8 +337,8 @@ class DatabaseDataManager(DataManager):
                 tasks_to_insert = [
                     (
                         task.id,
-                        task.description,
                         task.title,
+                        task.text_description,
                         task.priority.value,
                         task.difficulty.value,
                         task.duration.value,
@@ -336,6 +363,7 @@ class DatabaseDataManager(DataManager):
                         task.project,
                         json.dumps(task.subtasks) if task.subtasks else None,
                         json.dumps(task.dependencies) if task.dependencies else None,
+                        json.dumps(task.history) if task.history else None,
                         user.username,
                     )
                     for task in user.tasks
@@ -344,10 +372,10 @@ class DatabaseDataManager(DataManager):
                 # Insert new tasks if any exist
                 if tasks_to_insert:
                     cursor.executemany(
-                        "INSERT INTO tasks (id, description, title, priority, difficulty, "
+                        "INSERT INTO tasks (id, title, text_description, priority, difficulty, "
                         "duration, is_complete, creation_date, due_date, start_date, "
-                        "icon, tags, project, subtasks, dependencies, user_username) "
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        "icon, tags, project, subtasks, dependencies, history, user_username) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         tasks_to_insert,
                     )
                     print(

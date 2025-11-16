@@ -250,7 +250,7 @@ def test_load_user_success(
     # Check that tasks are loaded with correct properties
     for i, task in enumerate(loaded_user.tasks):
         assert task.id == sample_user.tasks[i].id
-        assert task.description == sample_user.tasks[i].description
+        assert task.title == sample_user.tasks[i].title
         assert task.priority == sample_user.tasks[i].priority
 
 
@@ -274,8 +274,8 @@ def test_load_user_deserialization_error(
         DEFAULT_USERNAME: {
             "username": DEFAULT_USERNAME,
             "tasks": [
-                {"description": "Task with missing ID"},  # Missing 'id'
-                {"description": "Task Good", "id": "uuid-good-2"},
+                {"title": "Task with missing ID"},  # Missing 'id'
+                {"title": "Task Good", "id": "uuid-good-2"},
             ],
         }
     }
@@ -334,7 +334,7 @@ def test_save_user_new_user(
     expected_tasks_data = [
         {
             "id": task.id,
-            "description": task.description,
+            "title": task.title,
             "priority": task.priority.value,
         }
         for task in sample_user.tasks
@@ -358,7 +358,7 @@ def test_save_user_new_user(
 
     for i, task in enumerate(sample_user.tasks):
         assert saved_tasks[i]["id"] == task.id
-        assert saved_tasks[i]["description"] == task.description
+        assert saved_tasks[i]["title"] == task.title
         assert saved_tasks[i]["priority"] == task.priority.value
 
 

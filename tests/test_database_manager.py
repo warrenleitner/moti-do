@@ -65,12 +65,8 @@ def sample_user_db() -> User:
     user = User(username=DEFAULT_USERNAME)
     # Use a fixed datetime for testing
     test_date = datetime(2023, 1, 1, 12, 0, 0)
-    user.add_task(
-        Task(description="DB Task 1", creation_date=test_date, id="db-uuid-1")
-    )
-    user.add_task(
-        Task(description="DB Task 2", creation_date=test_date, id="db-uuid-2")
-    )
+    user.add_task(Task(title="DB Task 1", creation_date=test_date, id="db-uuid-1"))
+    user.add_task(Task(title="DB Task 2", creation_date=test_date, id="db-uuid-2"))
     return user
 
 
@@ -170,8 +166,8 @@ def test_create_tables(
             """
                 CREATE TABLE IF NOT EXISTS tasks (
                     id TEXT PRIMARY KEY,
-                    description TEXT NOT NULL,
-                    title TEXT,
+                    title TEXT NOT NULL,
+                    text_description TEXT,
                     priority TEXT NOT NULL DEFAULT 'Low',
                     difficulty TEXT NOT NULL DEFAULT 'Trivial',
                     duration TEXT NOT NULL DEFAULT 'Miniscule',
@@ -184,6 +180,7 @@ def test_create_tables(
                     project TEXT,
                     subtasks TEXT,
                     dependencies TEXT,
+                    history TEXT,
                     user_username TEXT NOT NULL,
                     FOREIGN KEY (user_username) REFERENCES users (username)
                         ON DELETE CASCADE ON UPDATE CASCADE
@@ -267,8 +264,8 @@ def test_load_user_success(
     cursor.fetchone.side_effect = [{"username": DEFAULT_USERNAME}, None]
     # Mock cursor.fetchall for task lookup - return 2 tasks
     cursor.fetchall.return_value = [
-        {"id": "task1", "description": "Task 1", "priority": "Low"},
-        {"id": "task2", "description": "Task 2", "priority": "High"},
+        {"id": "task1", "title": "Task 1", "priority": "Low"},
+        {"id": "task2", "title": "Task 2", "priority": "High"},
     ]
 
     user = manager.load_user()
@@ -280,10 +277,10 @@ def test_load_user_success(
     assert len(user.tasks) == 2
     # Check task properties including priority
     assert user.tasks[0].id == "task1"
-    assert user.tasks[0].description == "Task 1"
+    assert user.tasks[0].title == "Task 1"
     assert user.tasks[0].priority == Priority.LOW
     assert user.tasks[1].id == "task2"
-    assert user.tasks[1].description == "Task 2"
+    assert user.tasks[1].title == "Task 2"
     assert user.tasks[1].priority == Priority.HIGH
 
 
@@ -299,7 +296,7 @@ def test_load_user_invalid_priority(
     cursor.fetchone.side_effect = [{"username": DEFAULT_USERNAME}, None]
     # Mock cursor.fetchall for task lookup - return a task with invalid priority
     cursor.fetchall.return_value = [
-        {"id": "task1", "description": "Task 1", "priority": "InvalidPriority"},
+        {"id": "task1", "title": "Task 1", "priority": "InvalidPriority"},
     ]
 
     user = manager.load_user()
@@ -355,9 +352,9 @@ def test_load_user_no_tasks(
     expected_calls = [
         call("SELECT username FROM users WHERE username = ?", (username,)),
         call(
-            "SELECT id, description, title, priority, difficulty, duration, "
+            "SELECT id, title, text_description, priority, difficulty, duration, "
             "is_complete, creation_date, due_date, start_date, icon, tags, "
-            "project, subtasks, dependencies FROM tasks "
+            "project, subtasks, dependencies, history FROM tasks "
             "WHERE user_username = ?",
             (username,),
         ),
@@ -429,11 +426,11 @@ def test_save_user(
     user = User(username=DEFAULT_USERNAME)
     test_date = datetime(2023, 1, 1, 12, 0, 0)
     task1 = Task(
-        id="task1", description="Task 1", creation_date=test_date, priority=Priority.LOW
+        id="task1", title="Task 1", creation_date=test_date, priority=Priority.LOW
     )
     task2 = Task(
         id="task2",
-        description="Task 2",
+        title="Task 2",
         creation_date=test_date,
         priority=Priority.HIGH,
     )
@@ -469,17 +466,17 @@ def test_save_user(
     assert "due_date" in sql
     assert "start_date" in sql
     assert (
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" in sql
-    )  # 16 parameters for all task fields
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" in sql
+    )  # 17 parameters for all task fields
 
     # Check that the task parameters include all field values
     assert len(params) == 2  # Two tasks
-    # Each task tuple has 16 elements:
-    # (id, desc, title, priority, difficulty, duration, is_complete, creation_date,
-    #  due_date, start_date, icon, tags, project, subtasks, dependencies, username)
+    # Each task tuple has 17 elements:
+    # (id, title, text_description, priority, difficulty, duration, is_complete, creation_date,
+    #  due_date, start_date, icon, tags, project, subtasks, dependencies, history, username)
     assert params[0][0] == task1.id
-    assert params[0][1] == task1.description
-    assert params[0][2] == task1.title  # None by default
+    assert params[0][1] == task1.title
+    assert params[0][2] == task1.text_description  # None by default
     assert params[0][3] == task1.priority.value
     assert params[0][4] == task1.difficulty.value
     assert params[0][5] == task1.duration.value
@@ -490,16 +487,17 @@ def test_save_user(
     assert params[0][8] is None  # due_date
     assert params[0][9] is None  # start_date
     assert params[0][10] is None  # icon
-    # params[0][11-14] are JSON strings for tags, project, subtasks, dependencies
+    # params[0][11-15] are JSON strings for tags, project, subtasks, dependencies, history
     assert params[0][11] is None  # tags (empty list serialized as None)
     assert params[0][12] is None  # project
     assert params[0][13] is None  # subtasks
     assert params[0][14] is None  # dependencies
-    assert params[0][15] == user.username
+    assert params[0][15] is None  # history
+    assert params[0][16] == user.username
 
     assert params[1][0] == task2.id
-    assert params[1][1] == task2.description
-    assert params[1][15] == user.username
+    assert params[1][1] == task2.title
+    assert params[1][16] == user.username
 
 
 def test_save_user_no_tasks(

@@ -29,7 +29,7 @@ def test_save_user_update_existing(
     updated_user = User(username=sample_user.username)
     updated_user.tasks = sample_user.tasks + [
         Task(
-            description="Task C",
+            title="Task C",
             creation_date=datetime.now(),
             id="uuid-c",
             priority=Priority.LOW,
@@ -63,8 +63,8 @@ def test_save_user_update_existing(
 
     task_a: Dict[str, Any] = {
         "id": "uuid-a",
-        "description": "Task A",
-        "title": None,
+        "title": "Task A",
+        "text_description": None,
         "priority": "Low",
         "difficulty": "Trivial",
         "duration": "Miniscule",
@@ -77,11 +77,12 @@ def test_save_user_update_existing(
         "project": None,
         "subtasks": [],
         "dependencies": [],
+        "history": [],
     }
     task_b: Dict[str, Any] = {
         "id": "uuid-b",
-        "description": "Task B",
-        "title": None,
+        "title": "Task B",
+        "text_description": None,
         "priority": "Medium",
         "difficulty": "Trivial",
         "duration": "Miniscule",
@@ -94,11 +95,12 @@ def test_save_user_update_existing(
         "project": None,
         "subtasks": [],
         "dependencies": [],
+        "history": [],
     }
     task_c: Dict[str, Any] = {
         "id": "uuid-c",
-        "description": "Task C",
-        "title": None,
+        "title": "Task C",
+        "text_description": None,
         "priority": "Low",
         "difficulty": "Trivial",
         "duration": "Miniscule",
@@ -111,6 +113,7 @@ def test_save_user_update_existing(
         "project": None,
         "subtasks": [],
         "dependencies": [],
+        "history": [],
     }
     expected_tasks_data = [task_a, task_b, task_c]
 

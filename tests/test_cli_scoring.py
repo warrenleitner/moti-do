@@ -29,7 +29,7 @@ def mock_user() -> User:
     # Task 1: High difficulty, Long duration
     task1 = Task(
         id="task1",
-        description="High difficulty task",
+        title="High difficulty task",
         creation_date=datetime.now() - timedelta(days=5),
         difficulty=Difficulty.HIGH,
         duration=Duration.LONG,
@@ -39,7 +39,7 @@ def mock_user() -> User:
     # Task 2: Medium difficulty, Medium duration
     task2 = Task(
         id="task2",
-        description="Medium difficulty task",
+        title="Medium difficulty task",
         creation_date=datetime.now() - timedelta(days=2),
         difficulty=Difficulty.MEDIUM,
         duration=Duration.MEDIUM,
@@ -49,7 +49,7 @@ def mock_user() -> User:
     # Task 3: Low difficulty, Short duration, already completed
     task3 = Task(
         id="task3",
-        description="Easy completed task",
+        title="Easy completed task",
         creation_date=datetime.now() - timedelta(days=1),
         difficulty=Difficulty.LOW,
         duration=Duration.SHORT,
@@ -65,7 +65,7 @@ def mock_config() -> dict:
     """Create a mock scoring config."""
     return {
         "base_score": 10,
-        "field_presence_bonus": {"description": 5},
+        "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {
             "NOT_SET": 1.0,
             "TRIVIAL": 1.1,

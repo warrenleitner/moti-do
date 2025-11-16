@@ -215,7 +215,7 @@ def test_calculate_score_with_green_style_range() -> None:
     config = get_simple_scoring_config()
     # Modify for green style test
     config["base_score"] = 20  # Set base score to 20 to test green style range
-    config["field_presence_bonus"] = {"description": 0}
+    config["field_presence_bonus"] = {"title": 0}
     config["difficulty_multiplier"] = {
         "NOT_SET": 1.0,
         "TRIVIAL": 1.0,  # Set to 1.0 to maintain base score of 20
@@ -227,7 +227,7 @@ def test_calculate_score_with_green_style_range() -> None:
     config["age_factor"] = {"unit": "days", "multiplier_per_unit": 0.0}  # No age factor
 
     task = Task(
-        description="Task in green score range",
+        title="Task in green score range",
         creation_date=datetime.now(),
         id="green-score-task",
         difficulty=Difficulty.TRIVIAL,
@@ -303,8 +303,8 @@ def test_apply_penalties_disabled() -> None:
     config["daily_penalty"] = {"apply_penalty": False, "penalty_points": 5}  # Disabled
 
     tasks = [
-        Task(description="Task 1", creation_date=datetime.now(), id="task1"),
-        Task(description="Task 2", creation_date=datetime.now(), id="task2"),
+        Task(title="Task 1", creation_date=datetime.now(), id="task1"),
+        Task(title="Task 2", creation_date=datetime.now(), id="task2"),
     ]
 
     # No exception should be raised, and function should return early
@@ -317,8 +317,8 @@ def test_apply_penalties_last_check_is_today() -> None:
     config = get_simple_scoring_config()
 
     tasks = [
-        Task(description="Task 1", creation_date=datetime.now(), id="task1"),
-        Task(description="Task 2", creation_date=datetime.now(), id="task2"),
+        Task(title="Task 1", creation_date=datetime.now(), id="task1"),
+        Task(title="Task 2", creation_date=datetime.now(), id="task2"),
     ]
 
     today = date.today()
@@ -335,8 +335,8 @@ def test_apply_penalties_last_check_is_future() -> None:
     config = get_simple_scoring_config()
 
     tasks = [
-        Task(description="Task 1", creation_date=datetime.now(), id="task1"),
-        Task(description="Task 2", creation_date=datetime.now(), id="task2"),
+        Task(title="Task 1", creation_date=datetime.now(), id="task1"),
+        Task(title="Task 2", creation_date=datetime.now(), id="task2"),
     ]
 
     today = date.today()

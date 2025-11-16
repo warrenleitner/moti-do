@@ -20,14 +20,14 @@ def test_load_user_invalid_due_date_format(
             "tasks": [
                 {
                     "id": "test-id",
-                    "description": "Test Task",
+                    "title": "Test Task",
                     "priority": "Low",
                     "difficulty": "Trivial",
                     "duration": "Miniscule",
                     "is_complete": False,
                     "creation_date": "2023-01-01 12:00:00",
                     "due_date": "invalid-date-format",  # Invalid format
-                    "title": None,
+                    "text_description": None,
                     "start_date": None,
                     "icon": None,
                     "tags": [],
@@ -66,7 +66,7 @@ def test_load_user_invalid_start_date_format(
             "tasks": [
                 {
                     "id": "test-id",
-                    "description": "Test Task",
+                    "title": "Test Task",
                     "priority": "Low",
                     "difficulty": "Trivial",
                     "duration": "Miniscule",
@@ -74,7 +74,7 @@ def test_load_user_invalid_start_date_format(
                     "creation_date": "2023-01-01 12:00:00",
                     "due_date": None,
                     "start_date": "invalid-date-format",  # Invalid format
-                    "title": None,
+                    "text_description": None,
                     "icon": None,
                     "tags": [],
                     "project": None,

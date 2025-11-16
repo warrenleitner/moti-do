@@ -21,7 +21,7 @@ def test_load_user_invalid_creation_date_format(
             "tasks": [
                 {
                     "id": "task-123",
-                    "description": "Task with invalid date",
+                    "title": "Task with invalid date",
                     "priority": Priority.LOW.value,
                     "creation_date": "not-a-valid-date-format",
                 },
@@ -45,11 +45,11 @@ def test_load_user_invalid_creation_date_format(
     # Verify the task was created with a default creation_date
     task = loaded_user.tasks[0]
     assert task.id == "task-123"
-    assert task.description == "Task with invalid date"
+    assert task.title == "Task with invalid date"
     assert task.priority == Priority.LOW
     assert isinstance(task.creation_date, datetime)
 
     # Verify the warning message was printed
     mock_print.assert_any_call(
-        "Warning: Invalid creation_date format for task task-123, using current time."
+        "Warning: Invalid creation_date format for task task-123, ignoring."
     )
