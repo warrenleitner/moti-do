@@ -357,6 +357,86 @@ def test_load_scoring_config_invalid_approaching_multiplier_per_day_value() -> N
     )
 
 
+def test_load_scoring_config_invalid_start_date_aging_type() -> None:
+    """Test load_scoring_config with invalid start_date_aging type."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["start_date_aging"] = "not a dictionary"  # Invalid type
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'start_date_aging' must be a dictionary" in str(excinfo.value)
+
+
+def test_load_scoring_config_missing_start_date_aging_enabled_key() -> None:
+    """Test load_scoring_config with missing start_date_aging enabled key."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["start_date_aging"] = {
+        "bonus_points_per_day": 0.5,
+    }  # Missing enabled
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'start_date_aging' must contain 'enabled' key" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_start_date_aging_enabled_type() -> None:
+    """Test load_scoring_config with invalid start_date_aging enabled type."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["start_date_aging"] = {
+        "enabled": "yes",  # String, not bool
+        "bonus_points_per_day": 0.5,
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'start_date_aging.enabled' must be a boolean" in str(excinfo.value)
+
+
+def test_load_scoring_config_missing_bonus_points_per_day_key() -> None:
+    """Test load_scoring_config with missing bonus_points_per_day key."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["start_date_aging"] = {
+        "enabled": True,
+    }  # Missing bonus_points_per_day
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'start_date_aging' must contain 'bonus_points_per_day' key" in str(
+        excinfo.value
+    )
+
+
+def test_load_scoring_config_invalid_bonus_points_per_day_value() -> None:
+    """Test load_scoring_config with invalid bonus_points_per_day value."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["start_date_aging"] = {
+        "enabled": True,
+        "bonus_points_per_day": -0.5,  # Negative value
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert (
+        "'start_date_aging.bonus_points_per_day' must be a non-negative number"
+        in str(excinfo.value)
+    )
+
+
 def test_load_scoring_config_ioerror() -> None:
     """Test load_scoring_config handling of IOError."""
     with patch("builtins.open", side_effect=IOError("File not found")):

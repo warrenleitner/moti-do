@@ -55,6 +55,10 @@ def load_scoring_config() -> Dict[str, Any]:
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
         },
+        "start_date_aging": {
+            "enabled": True,
+            "bonus_points_per_day": 0.5,
+        },
     }
 
     if not os.path.exists(config_path):
@@ -76,6 +80,7 @@ def load_scoring_config() -> Dict[str, Any]:
             "age_factor",
             "daily_penalty",
             "due_date_proximity",
+            "start_date_aging",
         ]
 
         for key in required_keys:
@@ -201,6 +206,32 @@ def load_scoring_config() -> Dict[str, Any]:
                 "'due_date_proximity.approaching_multiplier_per_day' must be a non-negative number."
             )
 
+        # Validate start_date_aging
+        if not isinstance(config_data["start_date_aging"], dict):
+            raise ValueError("'start_date_aging' must be a dictionary.")
+
+        if "enabled" not in config_data["start_date_aging"]:
+            raise ValueError("'start_date_aging' must contain 'enabled' key.")
+
+        if not isinstance(config_data["start_date_aging"]["enabled"], bool):
+            raise ValueError("'start_date_aging.enabled' must be a boolean.")
+
+        if "bonus_points_per_day" not in config_data["start_date_aging"]:
+            raise ValueError(
+                "'start_date_aging' must contain 'bonus_points_per_day' key."
+            )
+
+        if (
+            not isinstance(
+                config_data["start_date_aging"]["bonus_points_per_day"],
+                (int, float),
+            )
+            or config_data["start_date_aging"]["bonus_points_per_day"] < 0
+        ):
+            raise ValueError(
+                "'start_date_aging.bonus_points_per_day' must be a non-negative number."
+            )
+
         return config_data
 
     except json.JSONDecodeError as e:
@@ -264,6 +295,54 @@ def calculate_due_date_multiplier(
     return 1.0
 
 
+def calculate_start_date_bonus(
+    task: Task, config: Dict[str, Any], effective_date: date
+) -> float:
+    """
+    Calculate the start date aging bonus for a task.
+
+    Adds linear bonus based on days past the start date.
+    Only applies if start_date is set, in the past, and task is not overdue.
+
+    Args:
+        task: The task to calculate the bonus for
+        config: The scoring configuration containing start_date_aging settings
+        effective_date: The date to calculate from
+
+    Returns:
+        Bonus points to add to base score (0.0 if disabled or not applicable)
+    """
+    # Check if feature is enabled
+    if not config.get("start_date_aging", {}).get("enabled", False):
+        return 0.0
+
+    # No start date set
+    if not task.start_date:
+        return 0.0
+
+    start_date = task.start_date.date()
+
+    # Start date is in the future
+    if start_date > effective_date:
+        return 0.0
+
+    # If task has a due date and is overdue, don't apply start date bonus
+    # (avoid double-counting urgency - due date proximity handles this)
+    if task.due_date:
+        due_date = task.due_date.date()
+        if due_date < effective_date:
+            return 0.0
+
+    # Calculate days past start date
+    days_past_start = (effective_date - start_date).days
+
+    # Get config value with type cast
+    bonus_per_day = float(config["start_date_aging"]["bonus_points_per_day"])
+
+    # Linear bonus: days_past_start * 0.5 (default)
+    return days_past_start * bonus_per_day
+
+
 # pylint: disable=too-many-locals
 def calculate_score(task: Task, config: Dict[str, Any], effective_date: date) -> int:
     """
@@ -282,6 +361,10 @@ def calculate_score(task: Task, config: Dict[str, Any], effective_date: date) ->
     # Bonus for having a text description (rich text content)
     if task.text_description:
         additive_base += config["field_presence_bonus"].get("text_description", 5)
+
+    # Add start date aging bonus (additive, not multiplicative)
+    start_date_bonus = calculate_start_date_bonus(task, config, effective_date)
+    additive_base += start_date_bonus
 
     # Get difficulty multiplier
     difficulty_level = task.difficulty

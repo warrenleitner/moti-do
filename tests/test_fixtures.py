@@ -34,6 +34,10 @@ def get_default_scoring_config() -> Dict[str, Any]:
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
         },
+        "start_date_aging": {
+            "enabled": True,
+            "bonus_points_per_day": 0.5,
+        },
     }
 
 
@@ -51,5 +55,9 @@ def get_simple_scoring_config() -> Dict[str, Any]:
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
+        },
+        "start_date_aging": {
+            "enabled": True,
+            "bonus_points_per_day": 0.5,
         },
     }

@@ -32,5 +32,9 @@
     "overdue_multiplier_per_day": 0.5,
     "approaching_threshold_days": 14,
     "approaching_multiplier_per_day": 0.1
+  },
+  "start_date_aging": {
+    "enabled": true,
+    "bonus_points_per_day": 0.5
   }
 }

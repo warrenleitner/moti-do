@@ -2,7 +2,7 @@
 """
 Tests for the scoring module functionality.
 """
-# pylint: disable=redefined-outer-name,duplicate-code
+# pylint: disable=redefined-outer-name,duplicate-code,too-many-lines
 
 import json
 import os
@@ -18,10 +18,13 @@ from motido.core.scoring import (
     apply_penalties,
     calculate_due_date_multiplier,
     calculate_score,
+    calculate_start_date_bonus,
     get_last_penalty_check_date,
     load_scoring_config,
 )
 from motido.data.abstraction import DEFAULT_USERNAME
+
+from .test_fixtures import get_default_scoring_config
 
 # --- Test Configuration Loading ---
 
@@ -54,6 +57,10 @@ def test_load_scoring_config_valid() -> None:
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
+        },
+        "start_date_aging": {
+            "enabled": True,
+            "bonus_points_per_day": 0.5,
         },
     }
 
@@ -134,6 +141,10 @@ def test_load_scoring_config_invalid_multiplier() -> None:
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
         },
+        "start_date_aging": {
+            "enabled": True,
+            "bonus_points_per_day": 0.5,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -162,6 +173,10 @@ def test_load_scoring_config_invalid_age_factor() -> None:
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
         },
+        "start_date_aging": {
+            "enabled": True,
+            "bonus_points_per_day": 0.5,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -188,6 +203,10 @@ def test_load_scoring_config_invalid_daily_penalty() -> None:
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
+        },
+        "start_date_aging": {
+            "enabled": True,
+            "bonus_points_per_day": 0.5,
         },
     }
 
@@ -820,3 +839,172 @@ def test_calculate_score_with_overdue_multiplier() -> None:
     # due_date_mult = 1.0 + (7 * 0.5) = 4.5
     # score = 10 * 1.5 * 1.2 * 1.0 * 4.5 = 81
     assert score == 81
+
+
+def test_calculate_start_date_bonus_no_start_date() -> None:
+    """Test calculate_start_date_bonus returns 0 when no start date."""
+    task = Task(
+        title="No start date",
+        creation_date=datetime(2025, 1, 1, 12, 0, 0),
+        start_date=None,
+    )
+
+    config = get_default_scoring_config()
+    effective_date = date(2025, 1, 15)
+
+    bonus = calculate_start_date_bonus(task, config, effective_date)
+    assert bonus == 0.0
+
+
+def test_calculate_start_date_bonus_disabled() -> None:
+    """Test calculate_start_date_bonus returns 0 when feature disabled."""
+    task = Task(
+        title="Task with start date",
+        creation_date=datetime(2025, 1, 1, 12, 0, 0),
+        start_date=datetime(2025, 1, 5, 0, 0, 0),
+    )
+
+    config = get_default_scoring_config()
+    config["start_date_aging"]["enabled"] = False
+    effective_date = date(2025, 1, 15)
+
+    bonus = calculate_start_date_bonus(task, config, effective_date)
+    assert bonus == 0.0
+
+
+def test_calculate_start_date_bonus_future_start() -> None:
+    """Test calculate_start_date_bonus returns 0 when start date in future."""
+    task = Task(
+        title="Future start",
+        creation_date=datetime(2025, 1, 1, 12, 0, 0),
+        start_date=datetime(2025, 1, 20, 0, 0, 0),
+    )
+
+    config = get_default_scoring_config()
+    effective_date = date(2025, 1, 15)
+
+    bonus = calculate_start_date_bonus(task, config, effective_date)
+    assert bonus == 0.0
+
+
+def test_calculate_start_date_bonus_past_start() -> None:
+    """Test calculate_start_date_bonus for task 10 days past start date."""
+    task = Task(
+        title="Past start",
+        creation_date=datetime(2025, 1, 1, 12, 0, 0),
+        start_date=datetime(2025, 1, 5, 0, 0, 0),
+    )
+
+    config = get_default_scoring_config()
+    effective_date = date(2025, 1, 15)
+
+    bonus = calculate_start_date_bonus(task, config, effective_date)
+    # 10 days past start * 0.5 = 5.0
+    assert bonus == 5.0
+
+
+def test_calculate_start_date_bonus_overdue_task() -> None:
+    """Test calculate_start_date_bonus returns 0 for overdue task."""
+    task = Task(
+        title="Overdue task",
+        creation_date=datetime(2025, 1, 1, 12, 0, 0),
+        start_date=datetime(2025, 1, 5, 0, 0, 0),
+        due_date=datetime(2025, 1, 10, 0, 0, 0),
+    )
+
+    config = get_default_scoring_config()
+    effective_date = date(2025, 1, 15)
+
+    bonus = calculate_start_date_bonus(task, config, effective_date)
+    # Task is overdue (due 1/10, now 1/15), so no start date bonus
+    assert bonus == 0.0
+
+
+def test_calculate_start_date_bonus_with_future_due_date() -> None:
+    """Test calculate_start_date_bonus applies when due date is in future."""
+    task = Task(
+        title="Task with future due date",
+        creation_date=datetime(2025, 1, 1, 12, 0, 0),
+        start_date=datetime(2025, 1, 5, 0, 0, 0),
+        due_date=datetime(2025, 1, 25, 0, 0, 0),
+    )
+
+    config = get_default_scoring_config()
+    effective_date = date(2025, 1, 15)
+
+    bonus = calculate_start_date_bonus(task, config, effective_date)
+    # 10 days past start, due date in future, so bonus applies
+    assert bonus == 5.0
+
+
+def test_calculate_score_with_start_date_bonus() -> None:
+    """Test calculate_score integration with start date aging bonus."""
+    effective_date = date(2025, 1, 15)
+    task = Task(
+        title="Task with start date",
+        creation_date=datetime(2025, 1, 1, 12, 0, 0),
+        start_date=datetime(2025, 1, 5, 0, 0, 0),
+        difficulty=Difficulty.MEDIUM,
+        duration=Duration.MEDIUM,
+    )
+
+    config = {
+        "base_score": 10,
+        "field_presence_bonus": {},
+        "difficulty_multiplier": {"MEDIUM": 2.0},
+        "duration_multiplier": {"MEDIUM": 1.5},
+        "age_factor": {"unit": "days", "multiplier_per_unit": 0.0},
+        "due_date_proximity": {
+            "enabled": False,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
+        "start_date_aging": {
+            "enabled": True,
+            "bonus_points_per_day": 0.5,
+        },
+    }
+
+    score = calculate_score(task, config, effective_date)
+    # base = 10 + (10 days * 0.5) = 15
+    # difficulty = 2.0, duration = 1.5, age = 1.0, due_date = 1.0
+    # score = 15 * 2.0 * 1.5 * 1.0 * 1.0 = 45
+    assert score == 45
+
+
+def test_calculate_score_with_both_start_and_due_date() -> None:
+    """Test calculate_score with both start date bonus and due date multiplier."""
+    effective_date = date(2025, 1, 15)
+    task = Task(
+        title="Task with both dates",
+        creation_date=datetime(2025, 1, 1, 12, 0, 0),
+        start_date=datetime(2025, 1, 5, 0, 0, 0),
+        due_date=datetime(2025, 1, 18, 0, 0, 0),
+        difficulty=Difficulty.HIGH,
+        duration=Duration.MEDIUM,
+    )
+
+    config = {
+        "base_score": 10,
+        "field_presence_bonus": {},
+        "difficulty_multiplier": {"HIGH": 3.0},
+        "duration_multiplier": {"MEDIUM": 1.5},
+        "age_factor": {"unit": "days", "multiplier_per_unit": 0.0},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
+        "start_date_aging": {
+            "enabled": True,
+            "bonus_points_per_day": 0.5,
+        },
+    }
+
+    score = calculate_score(task, config, effective_date)
+    # base = 10 + (10 days past start * 0.5) = 15
+    # due in 3 days: 1.0 + ((14 - 3) * 0.1) = 2.1
+    # score = 15 * 3.0 * 1.5 * 1.0 * 2.1 = 141.75 = 142
+    assert score == 142

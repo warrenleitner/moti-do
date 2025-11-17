@@ -614,4 +614,104 @@ motido set-due --id abc123 "in 3 days"
 
 This fulfills the vision requirement for time-sensitive task prioritization and prepares for future enhancements (start date aging, dependency chains).
 
+### Task 2.2: Add start date aging bonus ✅
+
+**Status**: Complete
+**Files Modified**:
+- `src/motido/data/scoring_config.json`
+- `src/motido/core/scoring.py`
+- `tests/test_fixtures.py`
+- `tests/test_scoring.py`
+- `tests/test_scoring_edge_cases.py`
+
+**Changes**:
+- Added `start_date_aging` configuration section to scoring_config.json with 2 parameters:
+  - `enabled`: Boolean feature toggle (default: true)
+  - `bonus_points_per_day`: Linear bonus per day past start date (default: 0.5)
+- Added `start_date_aging` to default_config in `load_scoring_config()`
+- Added `start_date_aging` to required_keys list in validation
+- Implemented comprehensive validation for start_date_aging fields (8 validation checks)
+- Created `calculate_start_date_bonus()` function (48 lines) with smart bonus logic:
+  - **No start date**: returns 0.0
+  - **Feature disabled**: returns 0.0
+  - **Future start date**: returns 0.0
+  - **Past start date**: `days_past_start * 0.5` points added to base score
+  - **Overdue tasks**: returns 0.0 (avoids double-counting with due date proximity)
+  - **Non-overdue with start date**: applies bonus
+- Integrated start_date_bonus into `calculate_score()` as additive to base (not multiplicative)
+- Updated test helper functions in test_fixtures.py:
+  - Added start_date_aging to `get_default_scoring_config()`
+  - Added start_date_aging to `get_simple_scoring_config()`
+- Created 9 comprehensive tests in test_scoring.py:
+  - `test_calculate_start_date_bonus_no_start_date()` - Returns 0.0 when no start date
+  - `test_calculate_start_date_bonus_disabled()` - Returns 0.0 when feature disabled
+  - `test_calculate_start_date_bonus_future_start()` - Returns 0.0 when start in future
+  - `test_calculate_start_date_bonus_past_start()` - 10 days past = 5.0 bonus
+  - `test_calculate_start_date_bonus_overdue_task()` - Returns 0.0 for overdue tasks
+  - `test_calculate_start_date_bonus_with_future_due_date()` - Applies when due date is future
+  - `test_calculate_score_with_start_date_bonus()` - Integration test: score = 45
+  - `test_calculate_score_with_both_start_and_due_date()` - Both bonuses: score = 142
+- Created 5 validation tests in test_scoring_edge_cases.py:
+  - `test_load_scoring_config_invalid_start_date_aging_type()` - Type validation
+  - `test_load_scoring_config_missing_start_date_aging_enabled_key()` - Missing enabled
+  - `test_load_scoring_config_invalid_start_date_aging_enabled_type()` - Bool validation
+  - `test_load_scoring_config_missing_bonus_points_per_day_key()` - Missing bonus key
+  - `test_load_scoring_config_invalid_bonus_points_per_day_value()` - Negative check
+- Updated 4 existing tests to include start_date_aging in mock configs
+- All 391 tests passing (14 new tests)
+- 100% test coverage maintained (1379 statements, 0 missed)
+- Pylint 10.0/10 maintained
+
+**Technical Details**:
+The start date aging bonus rewards tasks that have been in progress for a while, using a linear additive formula (not multiplicative like due date proximity):
+
+1. **Linear Bonus Calculation**:
+   - Formula: `days_past_start * 0.5` points added to base score
+   - Example: 10 days past start → +5.0 points to base score
+   - Rationale: Tasks that have been started deserve priority
+
+2. **Smart Avoidance of Double-Counting**:
+   - If task is overdue (due_date < effective_date), start date bonus does NOT apply
+   - This prevents stacking urgency from both start date aging AND due date proximity
+   - Only tasks with future due dates or no due dates get start date bonus
+
+3. **Additive vs Multiplicative**:
+   - Start date bonus is added to base score BEFORE multiplication
+   - This makes it contribute to the foundation rather than amplifying the final score
+   - Example: `(base + start_bonus) * difficulty * duration * age * due_date`
+
+**Integration**:
+Final score calculation formula:
+```python
+additive_base = base_score + text_desc_bonus + start_date_bonus
+final_score = additive_base * difficulty * duration * age * due_date_proximity
+```
+
+**Configuration Example**:
+```json
+"start_date_aging": {
+  "enabled": true,
+  "bonus_points_per_day": 0.5
+}
+```
+
+**Usage Example**:
+```bash
+# Create task with start date
+motido create "Long-running project" --priority Medium --difficulty High
+motido set-start --id abc123 "2025-01-01"
+motido set-due --id abc123 "2025-02-01"
+
+# On 2025-01-15 (15 days past start):
+# base = 10 + (15 * 0.5) = 17.5
+# Due in 17 days, so no due date multiplier
+# score = 17.5 * 2.0 (med) * 3.0 (high) * age_mult = higher score
+
+# If task becomes overdue on 2025-02-05:
+# Start date bonus stops applying (avoids double-counting)
+# Due date multiplier takes over for urgency
+```
+
+This fulfills the vision requirement for rewarding tasks that have been started and are in progress, while intelligently avoiding double-counting urgency with the due date proximity system.
+
 
