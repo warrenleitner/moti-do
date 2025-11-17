@@ -31,7 +31,7 @@ from motido.core.scoring import (
     calculate_score,
     load_scoring_config,
 )
-from motido.core.utils import parse_date
+from motido.core.utils import parse_date, process_day
 from motido.data.abstraction import DataManager  # For type hinting
 from motido.data.abstraction import DEFAULT_USERNAME
 from motido.data.backend_factory import get_data_manager
@@ -1041,6 +1041,48 @@ def handle_run_penalties(
         sys.exit(1)
 
 
+def handle_advance(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handle the 'advance' command to move forward one day."""
+    if not user:
+        print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
+        sys.exit(1)
+
+    print_verbose(args, f"Advancing from {user.last_processed_date}...")
+
+    # Store initial values
+    initial_date = user.last_processed_date
+    initial_xp = user.total_xp
+
+    # Advance date by 1 day
+    new_date = user.last_processed_date + timedelta(days=1)
+    user.last_processed_date = new_date
+
+    try:
+        # Load scoring config
+        try:
+            scoring_config = load_scoring_config()
+        except ValueError as e:
+            print(f"Error: Could not load scoring config: {e}")
+            sys.exit(1)
+
+        # Process penalties for the new date
+        xp_change = process_day(user, manager, new_date, scoring_config)
+
+        # Save updated user
+        manager.save_user(user)
+
+        # Display results
+        print(f"Date: {initial_date} → {new_date}")
+        if xp_change < 0:
+            print(f"XP: {initial_xp} → {user.total_xp} ({xp_change:+d})")
+        else:
+            print(f"XP: {initial_xp} → {user.total_xp} (no penalty)")
+
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        print(f"An unexpected error occurred: {e}")
+        sys.exit(1)
+
+
 def _wrap_handler(
     handler_func: Callable[[argparse.Namespace, DataManager, User | None], T],
 ) -> Callable[[argparse.Namespace, DataManager, User | None], T]:
@@ -1283,6 +1325,12 @@ def setup_parser() -> argparse.ArgumentParser:
         help="The date to calculate penalties for, in YYYY-MM-DD format. Defaults to today.",
     )
     parser_penalties.set_defaults(func=_wrap_handler(handle_run_penalties))
+
+    # --- Advance Command ---
+    parser_advance = subparsers.add_parser(
+        "advance", help="Advance virtual date by one day."
+    )
+    parser_advance.set_defaults(func=_wrap_handler(handle_advance))
 
     return parser
 

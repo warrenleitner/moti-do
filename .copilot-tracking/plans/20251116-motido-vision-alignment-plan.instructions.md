@@ -37,8 +37,11 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 
 ## Implementation Checklist
 
+### [x] Phase 1: Foundation Completion (Milestone 0.1+ - Week 1-2)
+
 - [x] Task 1.1: Fix XP persistence system
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 20-35)
+
 - [x] Task 1.2: Add `describe` command for text_description field
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 37-52)
 
@@ -60,9 +63,7 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 - [x] Task 1.8: Write comprehensive tests for new commands
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 147-165)
 
-### [x] Phase 1: Foundation Completion (Milestone 0.1+ - Week 1-2)
-
-### [ ] Phase 2: Enhanced Scoring System (Milestone 0.2 - Week 3-4)
+### [x] Phase 2: Enhanced Scoring System (Milestone 0.2 - Week 3-4)
 
 - [x] Task 2.1: Implement due date proximity scoring
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 169-190)
@@ -82,14 +83,12 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 - [x] Task 2.6: Write scoring integration tests
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 270-287)
 
-### [x] Phase 2: Enhanced Scoring System (Milestone 0.2 - Week 3-4)
-
 ### [ ] Phase 3: Incremental Completion (Milestone 0.3 - Week 5)
 
 - [x] Task 3.1: Add last_processed_date to User model
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 291-308)
 
-- [ ] Task 3.2: Implement `advance` command for date progression
+- [x] Task 3.2: Implement `advance` command for date progression
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 310-330)
 
 - [ ] Task 3.3: Implement `skip-to` command for date jumping

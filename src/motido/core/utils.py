@@ -6,6 +6,7 @@ Could include things like validation, formatting, etc. later.
 
 import uuid
 from datetime import datetime, timedelta
+from typing import Any
 
 from motido.core.models import Difficulty, Duration, Priority
 
@@ -162,3 +163,28 @@ def parse_date(date_str: str) -> datetime:
         f"Unable to parse date '{date_str}'. "
         f"Supported formats: YYYY-MM-DD, today, tomorrow, next friday, in 3 days"
     )
+
+
+def process_day(
+    user: Any, manager: Any, effective_date: Any, scoring_config: Any
+) -> int:
+    """
+    Process penalties for a single day.
+
+    Args:
+        user: User object to process penalties for
+        manager: DataManager for persisting changes
+        effective_date: Date to process penalties for
+        scoring_config: Scoring configuration dict
+
+    Returns:
+        int: XP change (negative for penalty, 0 for no penalty)
+    """
+    # Import here to avoid circular dependency (utils -> scoring -> utils)
+    # pylint: disable=import-outside-toplevel
+    from motido.core.scoring import apply_penalties
+
+    initial_xp: int = user.total_xp
+    apply_penalties(user, manager, effective_date, scoring_config, user.tasks)
+    xp_change: int = user.total_xp - initial_xp
+    return xp_change
