@@ -42,6 +42,8 @@ def get_default_scoring_config() -> Dict[str, Any]:
             "enabled": True,
             "dependent_score_percentage": 0.1,
         },
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }
 
 
@@ -68,4 +70,6 @@ def get_simple_scoring_config() -> Dict[str, Any]:
             "enabled": True,
             "dependent_score_percentage": 0.1,
         },
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }

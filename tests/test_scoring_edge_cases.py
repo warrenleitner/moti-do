@@ -554,6 +554,114 @@ def test_load_scoring_config_json_decode_error() -> None:
     assert "Invalid JSON in scoring config file" in str(excinfo.value)
 
 
+def test_load_scoring_config_invalid_tag_multipliers_type() -> None:
+    """Test load_scoring_config with non-dict tag_multipliers."""
+    invalid_config = get_default_scoring_config()
+    invalid_config["tag_multipliers"] = "not a dict"
+
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'tag_multipliers' must be a dictionary" in str(excinfo.value)
+
+
+def test_load_scoring_config_missing_tag_multipliers_key() -> None:
+    """Test load_scoring_config with missing tag_multipliers key."""
+    invalid_config = get_default_scoring_config()
+    del invalid_config["tag_multipliers"]
+
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "Missing required key 'tag_multipliers'" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_tag_multiplier_value() -> None:
+    """Test load_scoring_config with tag multiplier < 1.0."""
+    invalid_config = get_default_scoring_config()
+    invalid_config["tag_multipliers"] = {"urgent": 0.5}
+
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "Tag multiplier for 'urgent' must be a number >= 1.0" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_tag_multiplier_type() -> None:
+    """Test load_scoring_config with non-numeric tag multiplier."""
+    invalid_config = get_default_scoring_config()
+    invalid_config["tag_multipliers"] = {"urgent": "invalid"}
+
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "Tag multiplier for 'urgent' must be a number >= 1.0" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_project_multipliers_type() -> None:
+    """Test load_scoring_config with non-dict project_multipliers."""
+    invalid_config = get_default_scoring_config()
+    invalid_config["project_multipliers"] = "not a dict"
+
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'project_multipliers' must be a dictionary" in str(excinfo.value)
+
+
+def test_load_scoring_config_missing_project_multipliers_key() -> None:
+    """Test load_scoring_config with missing project_multipliers key."""
+    invalid_config = get_default_scoring_config()
+    del invalid_config["project_multipliers"]
+
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "Missing required key 'project_multipliers'" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_project_multiplier_value() -> None:
+    """Test load_scoring_config with project multiplier < 1.0."""
+    invalid_config = get_default_scoring_config()
+    invalid_config["project_multipliers"] = {"WorkProject": 0.3}
+
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "Project multiplier for 'WorkProject' must be a number >= 1.0" in str(
+        excinfo.value
+    )
+
+
+def test_load_scoring_config_invalid_project_multiplier_type() -> None:
+    """Test load_scoring_config with non-numeric project multiplier."""
+    invalid_config = get_default_scoring_config()
+    invalid_config["project_multipliers"] = {"WorkProject": "invalid"}
+
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "Project multiplier for 'WorkProject' must be a number >= 1.0" in str(
+        excinfo.value
+    )
+
+
 # --- Test Score Calculation Edge Cases ---
 
 

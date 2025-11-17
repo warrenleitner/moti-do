@@ -73,7 +73,7 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 - [x] Task 2.3: Implement dependency chain scoring
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 210-230)
 
-- [ ] Task 2.4: Add tag/project multiplier configuration
+- [x] Task 2.4: Add tag/project multiplier configuration
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 232-250)
 
 - [ ] Task 2.5: Add priority multiplier to scoring

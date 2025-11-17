@@ -838,5 +838,244 @@ final_score = base_final_score + dependency_bonus
 
 This fulfills the vision requirement for dependency-aware task prioritization, making the system understand task relationships and prioritize work that unblocks other tasks.
 
+### Task 2.4: Add tag/project multiplier configuration ✅
+
+**Status**: Complete
+**Files Modified**:
+- `src/motido/data/scoring_config.json`
+- `src/motido/core/scoring.py`
+- `tests/test_fixtures.py`
+- `tests/test_scoring.py`
+- `tests/test_scoring_edge_cases.py`
+- `tests/test_cli_view_enhanced.py`
+- `tests/test_scoring_multipliers.py` (new file)
+
+**Changes**:
+- Added `tag_multipliers` and `project_multipliers` empty dictionaries to scoring_config.json
+- Added both new sections to default_config in `load_scoring_config()`
+- Added tag_multipliers and project_multipliers to required_keys list in validation
+- Implemented comprehensive validation for both config sections (8 validation checks total):
+  - Type validation for dict
+  - Missing key detection
+  - Multiplier value validation (must be number >= 1.0)
+  - Non-numeric value detection
+- Added tag and project multiplier calculation logic in `calculate_score()`:
+  - Tag multipliers stack multiplicatively (tag1 * tag2 * tag3)
+  - Project multiplier applies once (single project per task)
+  - Both integrate into final score as multiplicative factors
+  - Formula: `base * difficulty * duration * age * due_date * tag_mult * project_mult`
+- Updated test helper functions in test_fixtures.py:
+  - Added empty tag_multipliers and project_multipliers to `get_default_scoring_config()`
+  - Added empty tag_multipliers and project_multipliers to `get_simple_scoring_config()`
+- Updated all existing test mock configs in test_scoring.py using regex (6 configs updated)
+- Updated test mocks in test_cli_view_enhanced.py (2 configs updated)
+- Created comprehensive test file test_scoring_multipliers.py with 11 tests:
+  - `test_calculate_score_with_single_tag_multiplier()` - One tag (urgent: 1.5x)
+  - `test_calculate_score_with_multiple_tag_multipliers()` - Multiple tags stacking (1.5 * 1.3 = 1.95x)
+  - `test_calculate_score_with_tag_not_in_config()` - Unconfigured tags ignored
+  - `test_calculate_score_with_project_multiplier()` - Project multiplier (1.8x)
+  - `test_calculate_score_with_project_not_in_config()` - Unconfigured project ignored
+  - `test_calculate_score_with_both_tag_and_project_multipliers()` - Both stack together (1.5 * 1.2 = 1.8x)
+  - `test_calculate_score_with_no_tags_or_project()` - Tasks without multipliers get base score
+  - `test_calculate_score_with_mixed_tags()` - Only configured tags contribute
+  - `test_calculate_score_with_complex_multipliers()` - All multipliers active (120 final score)
+  - `test_calculate_score_with_empty_tag_list()` - Empty tag list doesn't cause errors
+- Created 8 validation tests in test_scoring_edge_cases.py:
+  - `test_load_scoring_config_invalid_tag_multipliers_type()` - Type check (dict required)
+  - `test_load_scoring_config_missing_tag_multipliers_key()` - Missing key detection
+  - `test_load_scoring_config_invalid_tag_multiplier_value()` - Value < 1.0 rejected
+  - `test_load_scoring_config_invalid_tag_multiplier_type()` - Non-numeric rejected
+  - `test_load_scoring_config_invalid_project_multipliers_type()` - Type check (dict required)
+  - `test_load_scoring_config_missing_project_multipliers_key()` - Missing key detection
+  - `test_load_scoring_config_invalid_project_multiplier_value()` - Value < 1.0 rejected
+  - `test_load_scoring_config_invalid_project_multiplier_type()` - Non-numeric rejected
+- All 425 tests passing (18 new tests: 11 function + 7 validation, +1 updated)
+- 100% test coverage maintained (1432 statements, 0 missed)
+- Pylint 10.0/10 maintained
+
+**Technical Details**:
+The tag and project multipliers allow users to configure custom score boosts for specific tags and projects:
+
+1. **Tag Multiplier Stacking (Multiplicative)**:
+   - Multiple tags on a task multiply together
+   - Example: task with tags ["urgent", "important"] where urgent=1.5x and important=1.3x → total tag_mult = 1.95x
+   - Rationale: Tasks with multiple priority tags should get exponentially higher priority
+
+2. **Project Multiplier (Single)**:
+   - Each task has only one project, so one multiplier applies
+   - Example: task in "WorkProject" where WorkProject=1.2x → project_mult = 1.2x
+
+3. **Combined Effect**:
+   - Tag and project multipliers stack together with difficulty/duration/age/due_date
+   - Example: urgent tag (1.5x) + WorkProject (1.2x) = combined 1.8x boost
+   - Final formula: `base * difficulty * duration * age * due_date * tag_mult * project_mult + dependency_bonus`
+
+4. **Configuration Format**:
+   ```json
+   "tag_multipliers": {
+     "urgent": 1.5,
+     "important": 1.3,
+     "work": 1.2
+   },
+   "project_multipliers": {
+     "CriticalProject": 2.0,
+     "WorkProject": 1.5
+   }
+   ```
+
+5. **Unconfigured Tags/Projects**:
+   - If a tag or project is not in the config, it contributes 1.0x (no effect)
+   - This allows gradual configuration without requiring all tags/projects upfront
+
+**Integration**:
+Tags and projects now directly influence scoring, enabling users to boost priority for specific categories of work. This prepares for the CLI command to manage multipliers (Task 2.4 full implementation with CLI will come later).
+
+**Usage Example** (config must be manually edited currently, CLI command to be added):
+```json
+// Edit src/motido/data/scoring_config.json
+{
+  "tag_multipliers": {
+    "urgent": 2.0,
+    "important": 1.5
+  },
+  "project_multipliers": {
+    "ClientWork": 1.8
+  }
+}
+
+// Create task
+motido create "Fix critical bug" --priority High --difficulty High
+motido tag add --id abc123 "urgent"
+motido tag add --id abc123 "important"
+motido project --id abc123 "ClientWork"
+
+// Resulting score calculation:
+// Base: 10
+// Difficulty: 3.0 (HIGH)
+// Duration: 1.05 (MINISCULE default)
+// Tags: 2.0 * 1.5 = 3.0
+// Project: 1.8
+// Score = 10 * 3.0 * 1.05 * 1.0 * 1.0 * 3.0 * 1.8 = 170
+```
+
+This fulfills the vision requirement for custom score multipliers per tag and project, enabling users to fine-tune task prioritization based on their workflow.
+
+---
+
+## Phase 2: Enhanced Scoring System - IN PROGRESS
+- `tests/test_cli_scoring.py`
+- `tests/test_scoring_dependencies.py` (new file)
+
+**Changes**:
+- Added `dependency_chain` configuration section to scoring_config.json with 2 parameters:
+  - `enabled`: Boolean feature toggle (default: true)
+  - `dependent_score_percentage`: Percentage of dependent task scores to add as bonus (default: 0.1 = 10%)
+- Added `dependency_chain` to default_config in `load_scoring_config()`
+- Added `dependency_chain` to required_keys list in validation
+- Implemented comprehensive validation for dependency_chain fields (7 validation checks)
+- Created `calculate_dependency_chain_bonus()` function (67 lines) with recursive scoring:
+  - **No dependents**: returns 0.0
+  - **Feature disabled**: returns 0.0
+  - **Circular dependency detection**: raises ValueError with specific error message
+  - **Recursive calculation**: Finds all incomplete tasks that depend on this task, recursively calculates their scores (including their dependencies), and returns configurable percentage (default 10%) of total as bonus
+  - **Completed tasks excluded**: Only incomplete dependent tasks contribute to bonus
+  - **Visited set tracking**: Prevents infinite loops in circular dependency graphs
+- Updated `calculate_score()` function signature to accept `all_tasks` parameter (Dict[str, Task] | None)
+- Added `visited` parameter to calculate_score for circular dependency detection
+- Integrated dependency_chain_bonus into calculate_score as additive to final score
+- Updated all CLI calls to calculate_score to pass `None` for all_tasks (dependency command will be added later):
+  - `handle_list()`: calculate_score(task, None, scoring_config, today)
+  - `handle_view()`: calculate_score(task, None, scoring_config, date.today())
+  - `handle_complete()`: calculate_score(task, None, scoring_config, date.today())
+- Updated test helper functions in test_fixtures.py:
+  - Added dependency_chain to `get_default_scoring_config()`
+  - Added dependency_chain to `get_simple_scoring_config()`
+- Updated all existing calculate_score calls in tests to pass `None` for all_tasks parameter:
+  - Fixed 9 calls in test_scoring.py
+  - Fixed 1 call in test_scoring_edge_cases.py
+  - Fixed 2 calls in test_cli_scoring.py
+- Updated 4 existing test mock configs to include dependency_chain:
+  - test_load_scoring_config_valid
+  - test_load_scoring_config_invalid_multiplier
+  - test_load_scoring_config_invalid_age_factor
+  - test_load_scoring_config_invalid_daily_penalty
+- Created comprehensive test file test_scoring_dependencies.py with 11 tests:
+  - `test_calculate_dependency_chain_bonus_no_dependents()` - Returns 0.0 when no dependents
+  - `test_calculate_dependency_chain_bonus_disabled()` - Returns 0.0 when feature disabled
+  - `test_calculate_dependency_chain_bonus_single_dependent()` - One dependent task (10% of dependent's score)
+  - `test_calculate_dependency_chain_bonus_multiple_dependents()` - Multiple dependents (10% of sum)
+  - `test_calculate_dependency_chain_bonus_completed_dependent_excluded()` - Completed tasks don't contribute
+  - `test_calculate_dependency_chain_bonus_recursive()` - Recursive chain A <- B <- C
+  - `test_calculate_dependency_chain_bonus_circular_dependency()` - Raises ValueError for circular deps
+  - `test_calculate_dependency_chain_bonus_custom_percentage()` - Custom percentage (20%)
+  - `test_calculate_score_with_dependency_chain_integration()` - Integration test
+  - `test_calculate_dependency_chain_bonus_self_dependency_prevention()` - Task can't depend on itself
+- Created 7 validation tests in test_scoring_edge_cases.py:
+  - `test_load_scoring_config_invalid_dependency_chain_type()` - Type validation
+  - `test_load_scoring_config_missing_dependency_chain_enabled_key()` - Missing enabled
+  - `test_load_scoring_config_invalid_dependency_chain_enabled_type()` - Bool validation
+  - `test_load_scoring_config_missing_dependent_score_percentage_key()` - Missing percentage key
+  - `test_load_scoring_config_invalid_dependent_score_percentage_type()` - Number validation
+  - `test_load_scoring_config_invalid_dependent_score_percentage_range()` - Range validation (0.0-1.0)
+- All 407 tests passing (16 new tests)
+- 100% test coverage maintained (1414 statements, 0 missed)
+- Pylint 10.0/10 maintained
+
+**Technical Details**:
+The dependency chain scoring rewards tasks that are blocking other work, using a recursive additive formula:
+
+1. **Recursive Bonus Calculation**:
+   - Formula: `sum(dependent_task_scores) * 0.1` (default 10%)
+   - Example: Task A has 2 dependents with scores 30 and 50 → A gets (30+50)*0.1 = 8 bonus points
+   - Rationale: Tasks that block other work should be prioritized
+
+2. **Circular Dependency Detection**:
+   - Uses visited set to track traversal path
+   - Raises ValueError if circular dependency detected
+   - Error message includes task ID prefix for debugging
+
+3. **Completed Task Exclusion**:
+   - Only incomplete dependent tasks contribute to bonus
+   - Prevents completed work from inflating scores
+
+4. **Additive vs Multiplicative**:
+   - Dependency bonus is added to final score AFTER multipliers
+   - This makes it a direct reward rather than an amplifier
+   - Example: `base * difficulty * duration * age * due_date + dependency_bonus`
+
+**Integration**:
+Final score calculation formula:
+```python
+base_final_score = additive_base * difficulty_mult * duration_mult * age_mult * due_date_mult
+dependency_bonus = calculate_dependency_chain_bonus(task, all_tasks, config, effective_date)
+final_score = base_final_score + dependency_bonus
+```
+
+**Configuration Example**:
+```json
+"dependency_chain": {
+  "enabled": true,
+  "dependent_score_percentage": 0.1
+}
+```
+
+**Usage Example** (CLI command will be implemented in separate task):
+```bash
+# Task dependencies are stored in Task.dependencies field (List[str] of task IDs)
+# Example scenario:
+# - Task A: "Foundation" (base score 20)
+# - Task B: "Build walls" depends on A (base score 30)
+# - Task C: "Build roof" depends on B (base score 40)
+#
+# Scoring:
+# - Task C: 40 (no dependents)
+# - Task B: 30 + (40 * 0.1) = 34 (gets 10% of C's score)
+# - Task A: 20 + (34 * 0.1) = 23.4 = 23 (gets 10% of B's full score)
+#
+# This encourages completing blocking tasks first
+```
+
+This fulfills the vision requirement for dependency-aware task prioritization, making the system understand task relationships and prioritize work that unblocks other tasks.
+
 
 

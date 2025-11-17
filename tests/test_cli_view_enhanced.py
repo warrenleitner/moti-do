@@ -120,6 +120,17 @@ def test_handle_view_with_all_fields(  # type: ignore[misc]
             "ODYSSEYAN": 1.0,
         },
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
+        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
+        "start_date_aging": {"enabled": True, "bonus_points_per_day": 0.5},
+        "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }
     args = MockArgs(id="abc123", verbose=False)
 
@@ -158,6 +169,17 @@ def test_handle_view_with_minimal_fields(  # type: ignore[misc]
             "ODYSSEYAN": 1.0,
         },
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
+        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
+        "start_date_aging": {"enabled": True, "bonus_points_per_day": 0.5},
+        "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }
     args = MockArgs(id="xyz789", verbose=False)
 
@@ -195,6 +217,17 @@ def test_handle_view_with_overdue_task(  # type: ignore[misc]
             "ODYSSEYAN": 1.0,
         },
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
+        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
+        "start_date_aging": {"enabled": True, "bonus_points_per_day": 0.5},
+        "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }
     args = MockArgs(id="overdue", verbose=False)
 
@@ -232,6 +265,17 @@ def test_handle_view_with_due_soon_task(  # type: ignore[misc]
             "ODYSSEYAN": 1.0,
         },
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
+        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
+        "start_date_aging": {"enabled": True, "bonus_points_per_day": 0.5},
+        "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }
     args = MockArgs(id="duesoon", verbose=False)
 

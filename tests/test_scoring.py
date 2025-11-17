@@ -66,6 +66,8 @@ def test_load_scoring_config_valid() -> None:
             "enabled": True,
             "dependent_score_percentage": 0.1,
         },
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -153,6 +155,8 @@ def test_load_scoring_config_invalid_multiplier() -> None:
             "enabled": True,
             "dependent_score_percentage": 0.1,
         },
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -189,6 +193,8 @@ def test_load_scoring_config_invalid_age_factor() -> None:
             "enabled": True,
             "dependent_score_percentage": 0.1,
         },
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -224,6 +230,8 @@ def test_load_scoring_config_invalid_daily_penalty() -> None:
             "enabled": True,
             "dependent_score_percentage": 0.1,
         },
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -984,6 +992,8 @@ def test_calculate_score_with_start_date_bonus() -> None:
             "enabled": True,
             "dependent_score_percentage": 0.1,
         },
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }
 
     score = calculate_score(task, None, config, effective_date)
@@ -1025,6 +1035,8 @@ def test_calculate_score_with_both_start_and_due_date() -> None:
             "enabled": True,
             "dependent_score_percentage": 0.1,
         },
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }
 
     score = calculate_score(task, None, config, effective_date)

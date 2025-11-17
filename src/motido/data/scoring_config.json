@@ -40,5 +40,7 @@
   "dependency_chain": {
     "enabled": true,
     "dependent_score_percentage": 0.1
-  }
+  },
+  "tag_multipliers": {},
+  "project_multipliers": {}
 }

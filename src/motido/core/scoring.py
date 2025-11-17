@@ -63,6 +63,8 @@ def load_scoring_config() -> Dict[str, Any]:
             "enabled": True,
             "dependent_score_percentage": 0.1,
         },
+        "tag_multipliers": {},
+        "project_multipliers": {},
     }
 
     if not os.path.exists(config_path):
@@ -86,6 +88,8 @@ def load_scoring_config() -> Dict[str, Any]:
             "due_date_proximity",
             "start_date_aging",
             "dependency_chain",
+            "tag_multipliers",
+            "project_multipliers",
         ]
         for key in required_keys:
             if key not in config_data:
@@ -265,6 +269,26 @@ def load_scoring_config() -> Dict[str, Any]:
             raise ValueError(
                 "'dependency_chain.dependent_score_percentage' must be between 0.0 and 1.0."
             )
+
+        # Validate tag_multipliers
+        if not isinstance(config_data["tag_multipliers"], dict):
+            raise ValueError("'tag_multipliers' must be a dictionary.")
+
+        for tag_name, tag_mult in config_data["tag_multipliers"].items():
+            if not isinstance(tag_mult, (int, float)) or tag_mult < 1.0:
+                raise ValueError(
+                    f"Tag multiplier for '{tag_name}' must be a number >= 1.0."
+                )
+
+        # Validate project_multipliers
+        if not isinstance(config_data["project_multipliers"], dict):
+            raise ValueError("'project_multipliers' must be a dictionary.")
+
+        for proj_name, proj_mult in config_data["project_multipliers"].items():
+            if not isinstance(proj_mult, (int, float)) or proj_mult < 1.0:
+                raise ValueError(
+                    f"Project multiplier for '{proj_name}' must be a number >= 1.0."
+                )
 
         return config_data
 
@@ -508,12 +532,31 @@ def calculate_score(
     age_mult = 1.0 + (age_in_units * mult_per_unit)
     age_mult = max(1.0, age_mult)  # Ensure age_mult is at least 1.0
 
+    # Calculate tag multipliers (all tags stack multiplicatively)
+    tag_mult = 1.0
+    if task.tags:
+        for tag in task.tags:
+            if tag in config["tag_multipliers"]:
+                tag_mult *= float(config["tag_multipliers"][tag])
+
+    # Calculate project multiplier
+    project_mult = 1.0
+    if task.project and task.project in config["project_multipliers"]:
+        project_mult = float(config["project_multipliers"][task.project])
+
     # Calculate due date proximity multiplier
     due_date_mult = calculate_due_date_multiplier(task, config, effective_date)
 
     # Calculate base score (before dependency bonus)
+    # Tags and projects are multiplicative like difficulty/duration
     base_final_score = (
-        additive_base * difficulty_mult * duration_mult * age_mult * due_date_mult
+        additive_base
+        * difficulty_mult
+        * duration_mult
+        * age_mult
+        * due_date_mult
+        * tag_mult
+        * project_mult
     )
 
     # Add dependency chain bonus (additive, not multiplicative)
