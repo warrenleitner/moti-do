@@ -359,8 +359,9 @@ def test_handle_complete_success(
     # Check that the task was marked as complete
     assert mock_task.is_complete is True
 
-    # Check that the user was saved
-    mock_manager.save_user.assert_called_once_with(mock_user)
+    # Check that the user was saved (now called twice: once by add_xp, once by handle_complete)
+    assert mock_manager.save_user.call_count == 2
+    mock_manager.save_user.assert_called_with(mock_user)
 
     # Check that the correct success message was printed
     mock_print.assert_any_call(

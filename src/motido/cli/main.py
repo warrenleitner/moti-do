@@ -446,10 +446,10 @@ def handle_complete(args: Namespace, manager: DataManager, user: User | None) ->
 
                 # Add XP based on score
                 if score_to_add > 0:
-                    add_xp(score_to_add)
+                    add_xp(user, manager, score_to_add)
                     print(
                         f"Marked task '{task.title}' (ID: {task.id[:8]}) as complete. "
-                        f"Added {score_to_add} XP points!"
+                        f"Added {score_to_add} XP points! Total XP: {user.total_xp}"
                     )
                 else:
                     print(
@@ -475,6 +475,45 @@ def handle_complete(args: Namespace, manager: DataManager, user: User | None) ->
         # Broad exception required to handle any unforeseen issues when accessing task data
         # and ensure clean CLI exit
         print(f"An unexpected error occurred: {e}")
+        sys.exit(1)
+
+
+def handle_describe(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'describe' command to set text description on a task."""
+    print_verbose(args, f"Setting description for task with ID prefix: '{args.id}'...")
+
+    if not user:
+        print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
+        sys.exit(1)
+
+    try:
+        task = user.find_task_by_id(args.id)
+        if task:
+            old_description = task.text_description
+            task.text_description = args.description
+
+            # Save the updated user data
+            try:
+                manager.save_user(user)
+                if old_description:
+                    print(
+                        f"Updated description for task '{task.title}' (ID: {task.id[:8]})."
+                    )
+                else:
+                    print(
+                        f"Added description to task '{task.title}' (ID: {task.id[:8]})."
+                    )
+            except (IOError, OSError) as e:
+                print(f"Error saving task update: {e}")
+                sys.exit(1)
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                print(f"Error saving updated task: {e}")
+                sys.exit(1)
+        else:
+            print(f"Error: Task with ID prefix '{args.id}' not found.")
+            sys.exit(1)
+    except ValueError as e:
+        print(f"Error: {e}")
         sys.exit(1)
 
 
@@ -665,7 +704,7 @@ def handle_delete(args: Namespace, manager: DataManager, user: User | None) -> N
 
 
 def handle_run_penalties(
-    args: Namespace, _manager: DataManager, user: User | None
+    args: Namespace, manager: DataManager, user: User | None
 ) -> None:
     """Handles the 'run-penalties' command to apply daily penalties for incomplete tasks."""
     print_verbose(args, "Running penalty calculation...")
@@ -695,7 +734,7 @@ def handle_run_penalties(
                 sys.exit(1)
 
         # Apply penalties
-        apply_penalties(effective_date, scoring_config, user.tasks)
+        apply_penalties(user, manager, effective_date, scoring_config, user.tasks)
         print(f"Penalties calculated successfully for date: {effective_date}")
 
     except ValueError as e:
@@ -858,6 +897,21 @@ def setup_parser() -> argparse.ArgumentParser:
         help="The full or unique partial ID of the task to mark as complete.",
     )
     parser_complete.set_defaults(func=_wrap_handler(handle_complete))
+
+    # --- Describe Command ---
+    parser_describe = subparsers.add_parser(
+        "describe", help="Set or update the text description of a task."
+    )
+    parser_describe.add_argument(
+        "--id",
+        required=True,
+        help="The full or unique partial ID of the task to describe.",
+    )
+    parser_describe.add_argument(
+        "description",
+        help="The text description to set for the task.",
+    )
+    parser_describe.set_defaults(func=_wrap_handler(handle_describe))
 
     # --- Run Penalties Command ---
     parser_penalties = subparsers.add_parser(

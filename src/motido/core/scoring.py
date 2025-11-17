@@ -246,31 +246,41 @@ def set_last_penalty_check_date(check_date: date) -> None:
         raise IOError(f"Error saving last penalty check date: {e}") from e
 
 
-def add_xp(points: int) -> None:
+def add_xp(user: Any, manager: Any, points: int) -> None:
     """
-    Add XP points to the user's total.
-
-    This is a placeholder function that will be implemented in a future release.
-    For now, it just prints a message.
+    Add XP points to the user's total and persist to storage.
 
     Args:
+        user: The User object to update
+        manager: The DataManager instance to persist changes
         points: The number of XP points to add (can be negative for penalties).
     """
-    if points > 0:
-        print(f"Added {points} XP points!")
-    else:
-        print(f"Deducted {abs(points)} XP points as penalty.")
+    # Update user's total XP
+    user.total_xp += points
 
-    # FUTURE: Implement actual XP tracking in a future release with a database table
+    # Persist the change to backend
+    manager.save_user(user)
+
+    # Print confirmation message
+    if points > 0:
+        print(f"Added {points} XP points! Total XP: {user.total_xp}")
+    else:
+        print(f"Deducted {abs(points)} XP points as penalty. Total XP: {user.total_xp}")
 
 
 def apply_penalties(
-    effective_date: date, config: Dict[str, Any], all_tasks: list[Task]
+    user: Any,
+    manager: Any,
+    effective_date: date,
+    config: Dict[str, Any],
+    all_tasks: list[Task],
 ) -> None:
     """
     Apply daily penalties for incomplete tasks.
 
     Args:
+        user: The User object to update
+        manager: The DataManager instance to persist changes
         effective_date: The date to calculate penalties for
         config: The scoring configuration
         all_tasks: List of all tasks to check for penalties
@@ -301,7 +311,7 @@ def apply_penalties(
         for task in all_tasks:
             if not task.is_complete and task.creation_date.date() < current_date:
                 # Apply penalty for incomplete task
-                add_xp(-penalty_points)
+                add_xp(user, manager, -penalty_points)
                 # You could log the penalty here if desired
 
         # Move to next day

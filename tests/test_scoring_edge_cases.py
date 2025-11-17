@@ -2,11 +2,11 @@
 
 import json
 from datetime import date, datetime, timedelta
-from unittest.mock import mock_open, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from motido.core.models import Difficulty, Duration, Task
+from motido.core.models import Difficulty, Duration, Task, User
 from motido.core.scoring import (
     add_xp,
     apply_penalties,
@@ -240,9 +240,20 @@ def test_calculate_score_with_green_style_range() -> None:
 
 def test_add_xp_with_negative_points() -> None:
     """Test add_xp with negative points (penalty)."""
+    # Create mock user and manager
+    mock_user = User(username="testuser", total_xp=100)
+    mock_manager = MagicMock()
+
     with patch("builtins.print") as mock_print:
-        add_xp(-10)
-        mock_print.assert_called_once_with("Deducted 10 XP points as penalty.")
+        add_xp(mock_user, mock_manager, -10)
+        # Verify XP was deducted
+        assert mock_user.total_xp == 90
+        # Verify user was saved
+        mock_manager.save_user.assert_called_once_with(mock_user)
+        # Verify print message
+        mock_print.assert_called_once_with(
+            "Deducted 10 XP points as penalty. Total XP: 90"
+        )
 
 
 # --- Test Last Penalty Check ---
@@ -307,8 +318,12 @@ def test_apply_penalties_disabled() -> None:
         Task(title="Task 2", creation_date=datetime.now(), id="task2"),
     ]
 
+    # Create mock user and manager
+    mock_user = User(username="testuser")
+    mock_manager = MagicMock()
+
     # No exception should be raised, and function should return early
-    apply_penalties(date.today(), config, tasks)
+    apply_penalties(mock_user, mock_manager, date.today(), config, tasks)
     # No assertions needed as we're just testing that no exception occurs
 
 
@@ -321,12 +336,16 @@ def test_apply_penalties_last_check_is_today() -> None:
         Task(title="Task 2", creation_date=datetime.now(), id="task2"),
     ]
 
+    # Create mock user and manager
+    mock_user = User(username="testuser")
+    mock_manager = MagicMock()
+
     today = date.today()
 
     with patch("motido.core.scoring.get_last_penalty_check_date", return_value=today):
         with patch("motido.core.scoring.add_xp") as mock_add_xp:
             # Function should return early without calling add_xp
-            apply_penalties(today, config, tasks)
+            apply_penalties(mock_user, mock_manager, today, config, tasks)
             mock_add_xp.assert_not_called()
 
 
@@ -339,6 +358,10 @@ def test_apply_penalties_last_check_is_future() -> None:
         Task(title="Task 2", creation_date=datetime.now(), id="task2"),
     ]
 
+    # Create mock user and manager
+    mock_user = User(username="testuser")
+    mock_manager = MagicMock()
+
     today = date.today()
     tomorrow = today + timedelta(days=1)
 
@@ -347,5 +370,5 @@ def test_apply_penalties_last_check_is_future() -> None:
     ):
         with patch("motido.core.scoring.add_xp") as mock_add_xp:
             # Function should return early without calling add_xp
-            apply_penalties(today, config, tasks)
+            apply_penalties(mock_user, mock_manager, today, config, tasks)
             mock_add_xp.assert_not_called()

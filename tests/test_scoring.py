@@ -12,13 +12,15 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from motido.core.models import Difficulty, Duration, Task
+from motido.core.models import Difficulty, Duration, Task, User
 from motido.core.scoring import (
+    add_xp,
     apply_penalties,
     calculate_score,
     get_last_penalty_check_date,
     load_scoring_config,
 )
+from motido.data.abstraction import DEFAULT_USERNAME
 
 # --- Test Configuration Loading ---
 
@@ -329,63 +331,75 @@ def test_get_set_last_penalty_check_date() -> None:
             assert date_read == test_date
 
 
-@patch("motido.core.scoring.add_xp")
-@patch("motido.core.scoring.get_last_penalty_check_date")
 @patch("motido.core.scoring.set_last_penalty_check_date")
-def test_apply_penalties_first_run(
-    mock_set: MagicMock,
-    mock_get: MagicMock,
+@patch("motido.core.scoring.get_last_penalty_check_date")
+@patch("motido.core.scoring.add_xp")
+def test_apply_penalties_basic(
     mock_add_xp: MagicMock,
-    sample_config: dict,
+    mock_get: MagicMock,
+    mock_set: MagicMock,
 ) -> None:
-    """Test applying penalties for the first time."""
+    """Test apply_penalties with a basic scenario."""
+    # Sample config
+    sample_config = {
+        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+    }
+
     # Mock get_last_penalty_check_date to return None (first run)
     mock_get.return_value = None
 
-    # Create some tasks
-    today = date.today()
-    yesterday = today - timedelta(days=1)
+    # Create mock user and manager
+    mock_user = MagicMock()
+    mock_manager = MagicMock()
 
-    # Task created yesterday
+    # Create tasks created yesterday
+    yesterday = date.today() - timedelta(days=1)
     task1 = Task(
         title="Task 1",
         creation_date=datetime.combine(yesterday, datetime.min.time()),
         is_complete=False,
     )
-
-    # Task created today
     task2 = Task(
         title="Task 2",
-        creation_date=datetime.combine(today, datetime.min.time()),
-        is_complete=False,
+        creation_date=datetime.combine(yesterday, datetime.min.time()),
+        is_complete=True,  # Completed task should not get penalty
     )
 
+    today = date.today()
     # Apply penalties with today's date
-    apply_penalties(today, sample_config, [task1, task2])
+    apply_penalties(mock_user, mock_manager, today, sample_config, [task1, task2])
 
     # Verify add_xp was called once for the incomplete task created yesterday
     mock_add_xp.assert_called_once_with(
-        -sample_config["daily_penalty"]["penalty_points"]
+        mock_user, mock_manager, -sample_config["daily_penalty"]["penalty_points"]
     )
 
     # Verify set_last_penalty_check_date was called with today's date
     mock_set.assert_called_once_with(today)
 
 
-@patch("motido.core.scoring.add_xp")
-@patch("motido.core.scoring.get_last_penalty_check_date")
 @patch("motido.core.scoring.set_last_penalty_check_date")
+@patch("motido.core.scoring.get_last_penalty_check_date")
+@patch("motido.core.scoring.add_xp")
 def test_apply_penalties_multiple_days(
-    mock_set: MagicMock,
-    mock_get: MagicMock,
     mock_add_xp: MagicMock,
-    sample_config: dict,
+    mock_get: MagicMock,
+    mock_set: MagicMock,
 ) -> None:
     """Test applying penalties for multiple days."""
+    # Sample config
+    sample_config = {
+        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+    }
+
     # Mock get_last_penalty_check_date to return 3 days ago
     today = date.today()
     three_days_ago = today - timedelta(days=3)
     mock_get.return_value = three_days_ago
+
+    # Create mock user and manager
+    mock_user = MagicMock()
+    mock_manager = MagicMock()
 
     # Task created 4 days ago (should get 3 days of penalties)
     task = Task(
@@ -395,30 +409,40 @@ def test_apply_penalties_multiple_days(
     )
 
     # Apply penalties with today's date
-    apply_penalties(today, sample_config, [task])
+    apply_penalties(mock_user, mock_manager, today, sample_config, [task])
 
     # Verify add_xp was called 3 times (-5 points each day for 3 days)
     assert mock_add_xp.call_count == 3
-    mock_add_xp.assert_called_with(-sample_config["daily_penalty"]["penalty_points"])
+    mock_add_xp.assert_called_with(
+        mock_user, mock_manager, -sample_config["daily_penalty"]["penalty_points"]
+    )
 
     # Verify set_last_penalty_check_date was called with today's date
     mock_set.assert_called_once_with(today)
 
 
-@patch("motido.core.scoring.add_xp")
-@patch("motido.core.scoring.get_last_penalty_check_date")
 @patch("motido.core.scoring.set_last_penalty_check_date")
+@patch("motido.core.scoring.get_last_penalty_check_date")
+@patch("motido.core.scoring.add_xp")
 def test_apply_penalties_completed_task(
-    mock_set: MagicMock,
-    mock_get: MagicMock,
     mock_add_xp: MagicMock,
-    sample_config: dict,
+    mock_get: MagicMock,
+    mock_set: MagicMock,
 ) -> None:
     """Test that completed tasks don't receive penalties."""
+    # Sample config
+    sample_config = {
+        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+    }
+
     # Mock get_last_penalty_check_date to return yesterday
     today = date.today()
     yesterday = today - timedelta(days=1)
     mock_get.return_value = yesterday
+
+    # Create mock user and manager
+    mock_user = MagicMock()
+    mock_manager = MagicMock()
 
     # Task created 2 days ago but marked as complete
     task = Task(
@@ -428,7 +452,7 @@ def test_apply_penalties_completed_task(
     )
 
     # Apply penalties with today's date
-    apply_penalties(today, sample_config, [task])
+    apply_penalties(mock_user, mock_manager, today, sample_config, [task])
 
     # Verify add_xp was not called (no penalties for completed tasks)
     mock_add_xp.assert_not_called()
@@ -437,24 +461,28 @@ def test_apply_penalties_completed_task(
     mock_set.assert_called_once_with(today)
 
 
-@patch("motido.core.scoring.add_xp")
-@patch("motido.core.scoring.get_last_penalty_check_date")
 @patch("motido.core.scoring.set_last_penalty_check_date")
+@patch("motido.core.scoring.get_last_penalty_check_date")
+@patch("motido.core.scoring.add_xp")
 def test_apply_penalties_disabled(
-    mock_set: MagicMock,
-    mock_get: MagicMock,
     mock_add_xp: MagicMock,
-    sample_config: dict,
+    mock_get: MagicMock,
+    mock_set: MagicMock,
 ) -> None:
     """Test that penalties are not applied when disabled in config."""
-    # Disable penalties in config
-    disabled_config = sample_config.copy()
-    disabled_config["daily_penalty"]["apply_penalty"] = False
+    # Config with penalties disabled
+    disabled_config = {
+        "daily_penalty": {"apply_penalty": False, "penalty_points": 5},
+    }
 
     # Mock get_last_penalty_check_date to return yesterday
     today = date.today()
     yesterday = today - timedelta(days=1)
     mock_get.return_value = yesterday
+
+    # Create mock user and manager
+    mock_user = MagicMock()
+    mock_manager = MagicMock()
 
     # Create an incomplete task
     task = Task(
@@ -464,10 +492,81 @@ def test_apply_penalties_disabled(
     )
 
     # Apply penalties with today's date
-    apply_penalties(today, disabled_config, [task])
+    apply_penalties(mock_user, mock_manager, today, disabled_config, [task])
 
     # Verify add_xp was not called (penalties disabled)
     mock_add_xp.assert_not_called()
 
     # Verify set_last_penalty_check_date was not called
     mock_set.assert_not_called()
+
+
+# --- XP Persistence Tests ---
+
+
+def test_add_xp_persists_to_user() -> None:
+    """Test that add_xp correctly updates User.total_xp and persists to backend."""
+    # Create mock user and manager
+    user = User(username=DEFAULT_USERNAME, total_xp=100)
+    mock_manager = MagicMock()
+
+    # Add positive XP
+    add_xp(user, mock_manager, 50)
+
+    # Verify user's total_xp was updated
+    assert user.total_xp == 150
+
+    # Verify manager.save_user was called with the user
+    mock_manager.save_user.assert_called_once_with(user)
+
+
+def test_add_xp_with_penalty_persists() -> None:
+    """Test that add_xp correctly handles negative XP (penalties) and persists."""
+    # Create mock user and manager
+    user = User(username=DEFAULT_USERNAME, total_xp=100)
+    mock_manager = MagicMock()
+
+    # Apply penalty (negative XP)
+    add_xp(user, mock_manager, -25)
+
+    # Verify user's total_xp was decremented
+    assert user.total_xp == 75
+
+    # Verify manager.save_user was called
+    mock_manager.save_user.assert_called_once_with(user)
+
+
+def test_add_xp_multiple_calls_accumulate() -> None:
+    """Test that multiple add_xp calls correctly accumulate XP."""
+    # Create mock user and manager
+    user = User(username=DEFAULT_USERNAME, total_xp=0)
+    mock_manager = MagicMock()
+
+    # Add XP multiple times
+    add_xp(user, mock_manager, 10)
+    add_xp(user, mock_manager, 20)
+    add_xp(user, mock_manager, 30)
+
+    # Verify total XP is cumulative
+    assert user.total_xp == 60
+
+    # Verify manager.save_user was called 3 times
+    assert mock_manager.save_user.call_count == 3
+
+
+def test_add_xp_mixed_positive_and_negative() -> None:
+    """Test that add_xp handles mixed positive and negative XP correctly."""
+    # Create mock user and manager
+    user = User(username=DEFAULT_USERNAME, total_xp=100)
+    mock_manager = MagicMock()
+
+    # Mix positive and negative XP
+    add_xp(user, mock_manager, 50)  # 100 + 50 = 150
+    add_xp(user, mock_manager, -30)  # 150 - 30 = 120
+    add_xp(user, mock_manager, 20)  # 120 + 20 = 140
+
+    # Verify final XP
+    assert user.total_xp == 140
+
+    # Verify manager.save_user was called 3 times
+    assert mock_manager.save_user.call_count == 3

@@ -175,8 +175,8 @@ def test_handle_complete_adds_xp(
     task = next(task for task in mock_user.tasks if task.id == "task1")
     mock_calculate_score.assert_called_once_with(task, {"mock": "config"}, date.today())
 
-    # Verify XP addition
-    mock_add_xp.assert_called_once_with(42)
+    # Verify XP addition with user and manager
+    mock_add_xp.assert_called_once_with(mock_user, mock_manager, 42)
 
     # Verify task was marked complete
     assert task.is_complete is True
@@ -233,9 +233,9 @@ def test_handle_run_penalties(
     args = MockArgs()
     handle_run_penalties(args, mock_manager, mock_user)
 
-    # Verify apply_penalties was called
+    # Verify apply_penalties was called with user, manager, date, config, and tasks
     mock_apply_penalties.assert_called_once_with(
-        date.today(), mock_config, mock_user.tasks
+        mock_user, mock_manager, date.today(), mock_config, mock_user.tasks
     )
 
 
@@ -257,9 +257,13 @@ def test_handle_run_penalties_with_custom_date(
     args = MockArgs(date=custom_date)
     handle_run_penalties(args, mock_manager, mock_user)
 
-    # Verify apply_penalties was called with parsed date
+    # Verify apply_penalties was called with user, manager, parsed date, config, and tasks
     mock_apply_penalties.assert_called_once_with(
-        date.fromisoformat(custom_date), mock_config, mock_user.tasks
+        mock_user,
+        mock_manager,
+        date.fromisoformat(custom_date),
+        mock_config,
+        mock_user.tasks,
     )
 
 
