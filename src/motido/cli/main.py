@@ -1,4 +1,5 @@
 # cli/main.py
+# pylint: disable=too-many-lines
 """
 Command Line Interface (CLI) for the Moti-Do application.
 Provides commands to initialize, create, view, list, and edit tasks.
@@ -29,6 +30,7 @@ from motido.core.scoring import (
     calculate_score,
     load_scoring_config,
 )
+from motido.core.utils import parse_date
 from motido.data.abstraction import DataManager  # For type hinting
 from motido.data.abstraction import DEFAULT_USERNAME
 from motido.data.backend_factory import get_data_manager
@@ -517,6 +519,96 @@ def handle_describe(args: Namespace, manager: DataManager, user: User | None) ->
         sys.exit(1)
 
 
+def handle_set_due(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'set-due' command to set or clear the due date of a task."""
+    print_verbose(args, f"Setting due date for task with ID prefix: '{args.id}'...")
+
+    if not user:
+        print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
+        sys.exit(1)
+
+    try:
+        task = user.find_task_by_id(args.id)
+        if task:
+            if args.clear:
+                task.due_date = None
+                manager.save_user(user)
+                print(f"Cleared due date for task '{task.title}'.")
+            elif args.date:
+                try:
+                    parsed_date = parse_date(args.date)
+                    task.due_date = parsed_date
+                    manager.save_user(user)
+                    print(
+                        f"Set due date to {parsed_date.strftime('%Y-%m-%d')} for task '{task.title}'."
+                    )
+                except ValueError as e:
+                    print(f"Error parsing date: {e}")
+                    sys.exit(1)
+            else:
+                print(
+                    "Error: Please provide a date or use --clear to remove the due date."
+                )
+                sys.exit(1)
+        else:
+            print(f"Error: Task with ID prefix '{args.id}' not found.")
+            sys.exit(1)
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except IOError as e:
+        print(f"Error saving task: {e}")
+        sys.exit(1)
+    except Exception as e:  # pragma: no cover  # pylint: disable=broad-exception-caught
+        print(f"Unexpected error: {e}")
+        sys.exit(1)
+
+
+def handle_set_start(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'set-start' command to set or clear the start date of a task."""
+    print_verbose(args, f"Setting start date for task with ID prefix: '{args.id}'...")
+
+    if not user:
+        print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
+        sys.exit(1)
+
+    try:
+        task = user.find_task_by_id(args.id)
+        if task:
+            if args.clear:
+                task.start_date = None
+                manager.save_user(user)
+                print(f"Cleared start date for task '{task.title}'.")
+            elif args.date:
+                try:
+                    parsed_date = parse_date(args.date)
+                    task.start_date = parsed_date
+                    manager.save_user(user)
+                    print(
+                        f"Set start date to {parsed_date.strftime('%Y-%m-%d')} for task '{task.title}'."
+                    )
+                except ValueError as e:
+                    print(f"Error parsing date: {e}")
+                    sys.exit(1)
+            else:
+                print(
+                    "Error: Please provide a date or use --clear to remove the start date."
+                )
+                sys.exit(1)
+        else:
+            print(f"Error: Task with ID prefix '{args.id}' not found.")
+            sys.exit(1)
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except IOError as e:
+        print(f"Error saving task: {e}")
+        sys.exit(1)
+    except Exception as e:  # pragma: no cover  # pylint: disable=broad-exception-caught
+        print(f"Unexpected error: {e}")
+        sys.exit(1)
+
+
 # pylint: disable=too-many-arguments,too-many-positional-arguments
 def _print_task_updates(
     task: Task,
@@ -912,6 +1004,40 @@ def setup_parser() -> argparse.ArgumentParser:
         help="The text description to set for the task.",
     )
     parser_describe.set_defaults(func=_wrap_handler(handle_describe))
+
+    # --- Set Due Date Command ---
+    parser_set_due = subparsers.add_parser(
+        "set-due", help="Set or clear the due date of a task."
+    )
+    parser_set_due.add_argument(
+        "--id", required=True, help="The full or unique partial ID of the task."
+    )
+    parser_set_due.add_argument(
+        "date",
+        nargs="?",
+        help="The due date (e.g., '2025-12-31', 'tomorrow', 'next friday', 'in 3 days').",
+    )
+    parser_set_due.add_argument(
+        "--clear", action="store_true", help="Clear the due date."
+    )
+    parser_set_due.set_defaults(func=_wrap_handler(handle_set_due))
+
+    # --- Set Start Date Command ---
+    parser_set_start = subparsers.add_parser(
+        "set-start", help="Set or clear the start date of a task."
+    )
+    parser_set_start.add_argument(
+        "--id", required=True, help="The full or unique partial ID of the task."
+    )
+    parser_set_start.add_argument(
+        "date",
+        nargs="?",
+        help="The start date (e.g., '2025-12-31', 'tomorrow', 'next friday', 'in 3 days').",
+    )
+    parser_set_start.add_argument(
+        "--clear", action="store_true", help="Clear the start date."
+    )
+    parser_set_start.set_defaults(func=_wrap_handler(handle_set_start))
 
     # --- Run Penalties Command ---
     parser_penalties = subparsers.add_parser(

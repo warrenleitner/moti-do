@@ -5,6 +5,7 @@ Could include things like validation, formatting, etc. later.
 """
 
 import uuid
+from datetime import datetime, timedelta
 
 from motido.core.models import Difficulty, Duration, Priority
 
@@ -83,3 +84,81 @@ def parse_duration_safely(duration_str: str, task_id: str | None = None) -> Dura
             f"Warning: Invalid duration '{duration_str}'{task_context}. Using default."
         )
         return Duration.MINISCULE
+
+
+# pylint: disable=too-many-return-statements
+def parse_date(date_str: str) -> datetime:
+    """
+    Parse flexible date string formats into datetime object.
+
+    Supports:
+    - ISO format: "2025-12-31"
+    - Relative: "tomorrow", "today"
+    - Named days: "next friday", "next monday"
+    - Intervals: "in 3 days", "in 1 week"
+
+    Args:
+        date_str: String representation of the date
+
+    Returns:
+        datetime object set to midnight of the parsed date
+
+    Raises:
+        ValueError: If date string cannot be parsed
+    """
+    date_str = date_str.lower().strip()
+
+    # Handle ISO format (YYYY-MM-DD)
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        pass
+
+    # Handle relative dates
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if date_str == "today":
+        return today
+    if date_str == "tomorrow":
+        return today + timedelta(days=1)
+    if date_str == "yesterday":
+        return today - timedelta(days=1)
+
+    # Handle "in X days/weeks" format
+    if date_str.startswith("in "):
+        parts = date_str[3:].split()
+        if len(parts) == 2:
+            try:
+                num = int(parts[0])
+                unit = parts[1].rstrip("s")  # Remove plural 's'
+                if unit == "day":
+                    return today + timedelta(days=num)
+                if unit == "week":
+                    return today + timedelta(weeks=num)
+            except (ValueError, IndexError):
+                pass
+
+    # Handle "next <weekday>" format
+    if date_str.startswith("next "):
+        weekday_str = date_str[5:].strip()
+        weekdays = {
+            "monday": 0,
+            "tuesday": 1,
+            "wednesday": 2,
+            "thursday": 3,
+            "friday": 4,
+            "saturday": 5,
+            "sunday": 6,
+        }
+        if weekday_str in weekdays:
+            target_weekday = weekdays[weekday_str]
+            current_weekday = today.weekday()
+            days_ahead = target_weekday - current_weekday
+            if days_ahead <= 0:  # Target day already passed this week
+                days_ahead += 7
+            return today + timedelta(days=days_ahead)
+
+    raise ValueError(
+        f"Unable to parse date '{date_str}'. "
+        f"Supported formats: YYYY-MM-DD, today, tomorrow, next friday, in 3 days"
+    )

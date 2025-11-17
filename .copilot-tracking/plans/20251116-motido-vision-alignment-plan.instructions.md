@@ -44,7 +44,7 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 - [x] Task 1.2: Add `describe` command for text_description field
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 37-52)
 
-- [ ] Task 1.3: Add `set-due` and `set-start` commands for date fields
+- [x] Task 1.3: Add `set-due` and `set-start` commands for date fields
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 54-72)
 
 - [ ] Task 1.4: Add `tag` command for tag management

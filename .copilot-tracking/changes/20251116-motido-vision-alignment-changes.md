@@ -78,3 +78,66 @@ with multiple lines
 and comprehensive context"
 ```
 
+### Task 1.3: Add `set-due` and `set-start` commands for date fields ✅
+
+**Status**: Complete
+**Files Modified**:
+- `src/motido/core/utils.py`
+- `src/motido/cli/main.py`
+- `tests/test_cli_dates.py` (new file)
+- `tests/test_utils_parse_date.py` (new file)
+
+**Changes**:
+- Added `parse_date()` utility function to `core/utils.py` supporting multiple date formats:
+  - ISO format: "2025-12-31"
+  - Relative dates: "today", "tomorrow", "yesterday"
+  - Named weekdays: "next friday", "next monday", etc.
+  - Intervals: "in 3 days", "in 2 weeks"
+- Added `handle_set_due()` function to set or clear task due dates
+- Added `handle_set_start()` function to set or clear task start dates
+- Both commands support `--clear` flag to remove dates
+- Added validation: error if neither date nor --clear is provided
+- Added two CLI subparsers: `set-due` and `set-start`
+- Created `test_cli_dates.py` with 24 comprehensive tests covering:
+  - ISO date format
+  - Relative date formats (tomorrow, today, next friday, in 3 days)
+  - Clear flag functionality
+  - Invalid date handling
+  - Task not found
+  - Missing user
+  - Ambiguous ID
+  - Save errors (IOError, RuntimeError)
+  - Verbose mode
+  - Missing date/clear validation
+- Created `test_utils_parse_date.py` with 14 tests for date parsing:
+  - All supported date formats
+  - Case insensitivity
+  - Whitespace handling
+  - Invalid format error handling
+- All 319 tests passing
+- 100% test coverage maintained
+
+**Technical Details**:
+The flexible date parsing system allows users to set due and start dates using natural language instead of only strict ISO format dates. The `parse_date()` function:
+1. Normalizes input to lowercase and strips whitespace
+2. Attempts ISO format first (YYYY-MM-DD)
+3. Falls through to relative dates (today/tomorrow)
+4. Handles interval formats ("in X days/weeks")
+5. Supports next weekday calculations
+6. Returns datetime at midnight for consistency
+7. Raises ValueError with helpful message for invalid formats
+
+This fulfills the vision requirement for user-friendly date entry and prepares the system for future scoring enhancements based on due date proximity.
+
+Example usage:
+```bash
+motido set-due --id abc123 "2025-12-31"
+motido set-due --id abc123 "next friday"
+motido set-due --id abc123 "in 3 days"
+motido set-due --id abc123 --clear
+
+motido set-start --id abc123 "today"
+motido set-start --id abc123 "2025-01-15"
+motido set-start --id abc123 --clear
+```
+
