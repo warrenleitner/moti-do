@@ -662,6 +662,47 @@ def test_load_scoring_config_invalid_project_multiplier_type() -> None:
     )
 
 
+def test_load_scoring_config_invalid_priority_multiplier_type() -> None:
+    """Test load_scoring_config with non-dict priority_multiplier."""
+    invalid_config = get_default_scoring_config()
+    invalid_config["priority_multiplier"] = "not a dict"
+
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'priority_multiplier' must be a dictionary" in str(excinfo.value)
+
+
+def test_load_scoring_config_missing_priority_multiplier_key() -> None:
+    """Test load_scoring_config with missing priority_multiplier key."""
+    invalid_config = get_default_scoring_config()
+    del invalid_config["priority_multiplier"]
+
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "Missing required key 'priority_multiplier'" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_priority_multiplier_value() -> None:
+    """Test load_scoring_config with priority multiplier < 1.0."""
+    invalid_config = get_default_scoring_config()
+    invalid_config["priority_multiplier"] = {"HIGH": 0.5}
+
+    with patch("os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "All multipliers in 'priority_multiplier' must be numeric and >= 1.0" in str(
+        excinfo.value
+    )
+
+
 # --- Test Score Calculation Edge Cases ---
 
 
@@ -671,6 +712,13 @@ def test_calculate_score_with_green_style_range() -> None:
     # Modify for green style test
     config["base_score"] = 20  # Set base score to 20 to test green style range
     config["field_presence_bonus"] = {"title": 0}
+    config["priority_multiplier"] = {
+        "NOT_SET": 1.0,
+        "LOW": 1.0,  # Override default 1.2 to get exact score of 20
+        "MEDIUM": 1.0,
+        "HIGH": 1.0,
+        "DEFCON_ONE": 1.0,
+    }
     config["difficulty_multiplier"] = {
         "NOT_SET": 1.0,
         "TRIVIAL": 1.0,  # Set to 1.0 to maintain base score of 20

@@ -22,9 +22,10 @@ def test_calculate_score_with_single_tag_multiplier() -> None:
     )
 
     # Base: 10, Difficulty: 1.1, Duration: 1.05, Age: 1.0, Due date: 1.0, Tag: 1.5
-    # Score = 10 * 1.1 * 1.05 * 1.0 * 1.0 * 1.5 = 17.325 = 17
+    # Priority: 1.0 (defaults to LOW which is 1.2, but we'll use NOT_SET)
+    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.5 = 20.79 = 21
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 17
+    assert score == 21
 
 
 def test_calculate_score_with_multiple_tag_multipliers() -> None:
@@ -43,9 +44,9 @@ def test_calculate_score_with_multiple_tag_multipliers() -> None:
 
     # Base: 10, Difficulty: 1.1, Duration: 1.05, Age: 1.0, Due date: 1.0
     # Tag: 1.5 * 1.3 = 1.95
-    # Score = 10 * 1.1 * 1.05 * 1.0 * 1.0 * 1.95 = 22.522 = 23
+    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.95 = 27.027 = 27
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 23
+    assert score == 27
 
 
 def test_calculate_score_with_tag_not_in_config() -> None:
@@ -63,9 +64,9 @@ def test_calculate_score_with_tag_not_in_config() -> None:
     )
 
     # Tag "other" not in config, so tag_mult = 1.0
-    # Score = 10 * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 = 11.55 = 12
+    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 = 13.86 = 14
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 12
+    assert score == 14
 
 
 def test_calculate_score_with_project_multiplier() -> None:
@@ -83,9 +84,9 @@ def test_calculate_score_with_project_multiplier() -> None:
     )
 
     # Base: 10, Difficulty: 1.1, Duration: 1.05, Age: 1.0, Due date: 1.0, Project: 1.8
-    # Score = 10 * 1.1 * 1.05 * 1.0 * 1.0 * 1.8 = 20.79 = 21
+    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.8 = 24.948 = 25
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 21
+    assert score == 25
 
 
 def test_calculate_score_with_project_not_in_config() -> None:
@@ -103,9 +104,9 @@ def test_calculate_score_with_project_not_in_config() -> None:
     )
 
     # Project "PersonalProject" not in config, so project_mult = 1.0
-    # Score = 10 * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 = 11.55 = 12
+    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 = 13.86 = 14
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 12
+    assert score == 14
 
 
 def test_calculate_score_with_both_tag_and_project_multipliers() -> None:
@@ -126,9 +127,9 @@ def test_calculate_score_with_both_tag_and_project_multipliers() -> None:
 
     # Base: 10, Difficulty: 1.1, Duration: 1.05, Age: 1.0, Due date: 1.0
     # Tag: 1.5, Project: 1.2
-    # Score = 10 * 1.1 * 1.05 * 1.0 * 1.0 * 1.5 * 1.2 = 20.79 = 21
+    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.5 * 1.2 = 24.948 = 25
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 21
+    assert score == 25
 
 
 def test_calculate_score_with_no_tags_or_project() -> None:
@@ -145,10 +146,10 @@ def test_calculate_score_with_no_tags_or_project() -> None:
         duration=Duration.MINISCULE,
     )
 
-    # No tags or project, so both multipliers = 1.0
-    # Score = 10 * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 * 1.0 = 11.55 = 12
+    # No tags or project, so tag/project multipliers = 1.0
+    # Score = 10 * 1.2 (LOW) * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 * 1.0 = 13.86 = 14
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 12
+    assert score == 14
 
 
 def test_calculate_score_with_mixed_tags() -> None:
@@ -167,9 +168,9 @@ def test_calculate_score_with_mixed_tags() -> None:
 
     # Only "urgent" and "work" contribute
     # Tag: 1.5 * 1.2 = 1.8
-    # Score = 10 * 1.1 * 1.05 * 1.0 * 1.0 * 1.8 = 20.79 = 21
+    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.8 = 24.948 = 25
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 21
+    assert score == 25
 
 
 def test_calculate_score_with_complex_multipliers() -> None:
@@ -195,9 +196,9 @@ def test_calculate_score_with_complex_multipliers() -> None:
     # Due date: 1.0
     # Tag: 2.0
     # Project: 1.5
-    # Score = 10 * 2.0 * 2.0 * 1.0 * 1.0 * 2.0 * 1.5 = 120
+    # Score = 10 * 2.0 (HIGH) * 2.0 * 2.0 * 1.0 * 1.0 * 2.0 * 1.5 = 240
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 120
+    assert score == 240
 
 
 def test_calculate_score_with_empty_tag_list() -> None:
@@ -215,6 +216,6 @@ def test_calculate_score_with_empty_tag_list() -> None:
     )
 
     # Empty tags, so tag_mult = 1.0
-    # Score = 10 * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 = 11.55 = 12
+    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 = 13.86 = 14
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 12
+    assert score == 14

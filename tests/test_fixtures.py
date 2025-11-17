@@ -44,6 +44,13 @@ def get_default_scoring_config() -> Dict[str, Any]:
         },
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
 
 
@@ -72,4 +79,11 @@ def get_simple_scoring_config() -> Dict[str, Any]:
         },
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }

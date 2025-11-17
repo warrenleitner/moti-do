@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from motido.core.models import Difficulty, Duration, Task, User
+from motido.core.models import Difficulty, Duration, Priority, Task, User
 from motido.core.scoring import (
     add_xp,
     apply_penalties,
@@ -68,6 +68,13 @@ def test_load_scoring_config_valid() -> None:
         },
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -157,6 +164,13 @@ def test_load_scoring_config_invalid_multiplier() -> None:
         },
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -195,6 +209,13 @@ def test_load_scoring_config_invalid_age_factor() -> None:
         },
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -232,6 +253,13 @@ def test_load_scoring_config_invalid_daily_penalty() -> None:
         },
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -270,6 +298,29 @@ def sample_config() -> dict:
         },
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
+        "start_date_aging": {
+            "enabled": True,
+            "bonus_points_per_day": 0.5,
+        },
+        "dependency_chain": {
+            "enabled": True,
+            "dependent_score_percentage": 0.1,
+        },
+        "tag_multipliers": {},
+        "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
 
 
@@ -286,9 +337,9 @@ def test_calculate_score_base_case(sample_config: dict) -> None:
     # Calculate score with today's date
     score = calculate_score(task, None, sample_config, date.today())
 
-    # Expected: base_score * difficulty_mult * duration_mult * age_mult
-    # 10 * 1.1 * 1.05 * 1.0 = 17.325 -> rounded to 17
-    expected_score = int(round(10 * 1.1 * 1.05 * 1.0))
+    # Expected: base_score * priority_mult * difficulty_mult * duration_mult * age_mult
+    # 10 * 1.2 * 1.1 * 1.05 * 1.0 = 13.86 -> rounded to 14
+    expected_score = int(round(10 * 1.2 * 1.1 * 1.05 * 1.0))
     assert score == expected_score
 
 
@@ -303,8 +354,8 @@ def test_calculate_score_high_difficulty_long_duration(sample_config: dict) -> N
 
     score = calculate_score(task, None, sample_config, date.today())
 
-    # Expected: 10 * 3.0 * 2.0 * 1.0 = 90
-    expected_score = int(round(10 * 3.0 * 2.0 * 1.0))
+    # Expected: 10 * 1.2 (LOW) * 3.0 * 2.0 * 1.0 = 72
+    expected_score = int(round(10 * 1.2 * 3.0 * 2.0 * 1.0))
     assert score == expected_score
 
 
@@ -321,9 +372,9 @@ def test_calculate_score_with_age(sample_config: dict) -> None:
 
     score = calculate_score(task, None, sample_config, date.today())
 
-    # Expected: 10 * 2.0 * 1.5 * (1.0 + 10 * 0.01) = 49.5 -> rounded to 50
+    # Expected: 10 * 1.2 (LOW) * 2.0 * 1.5 * (1.0 + 10 * 0.01) = 39.6 -> rounded to 40
     age_mult = 1.0 + (10 * 0.01)  # 1.1
-    expected_score = int(round(10 * 2.0 * 1.5 * age_mult))
+    expected_score = int(round(10 * 1.2 * 2.0 * 1.5 * age_mult))
     assert score == expected_score
 
 
@@ -344,9 +395,9 @@ def test_calculate_score_weeks_age_unit(sample_config: dict) -> None:
 
     score = calculate_score(task, None, sample_config_with_weeks, date.today())
 
-    # Expected: 10 * 2.0 * 1.5 * (1.0 + 3 * 0.01) = 45.9 -> rounded to 46
+    # Expected: 10 * 1.2 (LOW) * 2.0 * 1.5 * (1.0 + 3 * 0.01) = 37.08 -> rounded to 37
     age_mult = 1.0 + (3 * 0.01)  # 1.03
-    expected_score = int(round(10 * 2.0 * 1.5 * age_mult))
+    expected_score = int(round(10 * 1.2 * 2.0 * 1.5 * age_mult))
     assert score == expected_score
 
 
@@ -365,9 +416,9 @@ def test_calculate_score_missing_enum_keys(sample_config: dict) -> None:
 
     score = calculate_score(task, None, custom_config, date.today())
 
-    # Expected: 10 * 1.0 * 1.5 * 1.0 = 22.5 -> rounded to 23
+    # Expected: 10 * 1.2 (LOW) * 1.0 * 1.5 * 1.0 = 18.0 -> rounded to 18
     # Uses default multiplier 1.0 for missing difficulty key
-    expected_score = int(round(10 * 1.0 * 1.5 * 1.0))
+    expected_score = int(round(10 * 1.2 * 1.0 * 1.5 * 1.0))
     assert score == expected_score
 
 
@@ -652,6 +703,13 @@ def test_calculate_due_date_multiplier_no_due_date() -> None:
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
+            "priority_multiplier": {
+                "NOT_SET": 1.0,
+                "LOW": 1.2,
+                "MEDIUM": 1.5,
+                "HIGH": 2.0,
+                "DEFCON_ONE": 3.0,
+            },
         }
     }
     effective_date = date.today()
@@ -673,6 +731,13 @@ def test_calculate_due_date_multiplier_disabled() -> None:
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
+            "priority_multiplier": {
+                "NOT_SET": 1.0,
+                "LOW": 1.2,
+                "MEDIUM": 1.5,
+                "HIGH": 2.0,
+                "DEFCON_ONE": 3.0,
+            },
         }
     }
     effective_date = date.today()
@@ -696,6 +761,13 @@ def test_calculate_due_date_multiplier_overdue() -> None:
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
+            "priority_multiplier": {
+                "NOT_SET": 1.0,
+                "LOW": 1.2,
+                "MEDIUM": 1.5,
+                "HIGH": 2.0,
+                "DEFCON_ONE": 3.0,
+            },
         }
     }
 
@@ -719,6 +791,13 @@ def test_calculate_due_date_multiplier_approaching() -> None:
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
+            "priority_multiplier": {
+                "NOT_SET": 1.0,
+                "LOW": 1.2,
+                "MEDIUM": 1.5,
+                "HIGH": 2.0,
+                "DEFCON_ONE": 3.0,
+            },
         }
     }
 
@@ -744,6 +823,13 @@ def test_calculate_due_date_multiplier_at_threshold() -> None:
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
+            "priority_multiplier": {
+                "NOT_SET": 1.0,
+                "LOW": 1.2,
+                "MEDIUM": 1.5,
+                "HIGH": 2.0,
+                "DEFCON_ONE": 3.0,
+            },
         }
     }
 
@@ -769,6 +855,13 @@ def test_calculate_due_date_multiplier_beyond_threshold() -> None:
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
+            "priority_multiplier": {
+                "NOT_SET": 1.0,
+                "LOW": 1.2,
+                "MEDIUM": 1.5,
+                "HIGH": 2.0,
+                "DEFCON_ONE": 3.0,
+            },
         }
     }
 
@@ -791,6 +884,13 @@ def test_calculate_due_date_multiplier_one_day_overdue() -> None:
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
+            "priority_multiplier": {
+                "NOT_SET": 1.0,
+                "LOW": 1.2,
+                "MEDIUM": 1.5,
+                "HIGH": 2.0,
+                "DEFCON_ONE": 3.0,
+            },
         }
     }
 
@@ -823,13 +923,30 @@ def test_calculate_score_with_due_date_multiplier() -> None:
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
         },
+        "start_date_aging": {
+            "enabled": False,
+            "bonus_points_per_day": 0.0,
+        },
+        "dependency_chain": {
+            "enabled": False,
+            "dependent_score_percentage": 0.0,
+        },
+        "tag_multipliers": {},
+        "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
 
     score = calculate_score(task, None, config, effective_date)
-    # base = 10, difficulty = 2.0, duration = 1.5, age = 1.0
+    # base = 10, priority = 1.2 (LOW), difficulty = 2.0, duration = 1.5, age = 1.0
     # due_date_mult = 1.0 + (14 - 3) * 0.1 = 1.0 + 1.1 = 2.1
-    # score = 10 * 2.0 * 1.5 * 1.0 * 2.1 = 63
-    assert score == 63
+    # score = 10 * 1.2 * 2.0 * 1.5 * 1.0 * 2.1 = 75.6 = 76
+    assert score == 76
 
 
 def test_calculate_score_with_overdue_multiplier() -> None:
@@ -856,13 +973,30 @@ def test_calculate_score_with_overdue_multiplier() -> None:
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
         },
+        "start_date_aging": {
+            "enabled": False,
+            "bonus_points_per_day": 0.0,
+        },
+        "dependency_chain": {
+            "enabled": False,
+            "dependent_score_percentage": 0.0,
+        },
+        "tag_multipliers": {},
+        "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
 
     score = calculate_score(task, None, config, effective_date)
-    # base = 10, difficulty = 1.5, duration = 1.2, age = 1.0
+    # base = 10, priority = 1.2 (LOW), difficulty = 1.5, duration = 1.2, age = 1.0
     # due_date_mult = 1.0 + (7 * 0.5) = 4.5
-    # score = 10 * 1.5 * 1.2 * 1.0 * 4.5 = 81
-    assert score == 81
+    # score = 10 * 1.2 * 1.5 * 1.2 * 1.0 * 4.5 = 97.2 = 97
+    assert score == 97
 
 
 def test_calculate_start_date_bonus_no_start_date() -> None:
@@ -994,13 +1128,20 @@ def test_calculate_score_with_start_date_bonus() -> None:
         },
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
 
     score = calculate_score(task, None, config, effective_date)
     # base = 10 + (10 days * 0.5) = 15
-    # difficulty = 2.0, duration = 1.5, age = 1.0, due_date = 1.0
-    # score = 15 * 2.0 * 1.5 * 1.0 * 1.0 = 45
-    assert score == 45
+    # priority = 1.2 (LOW), difficulty = 2.0, duration = 1.5, age = 1.0, due_date = 1.0
+    # score = 15 * 1.2 * 2.0 * 1.5 * 1.0 * 1.0 = 54
+    assert score == 54
 
 
 def test_calculate_score_with_both_start_and_due_date() -> None:
@@ -1037,10 +1178,109 @@ def test_calculate_score_with_both_start_and_due_date() -> None:
         },
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
 
     score = calculate_score(task, None, config, effective_date)
     # base = 10 + (10 days past start * 0.5) = 15
-    # due in 3 days: 1.0 + ((14 - 3) * 0.1) = 2.1
-    # score = 15 * 3.0 * 1.5 * 1.0 * 2.1 = 141.75 = 142
-    assert score == 142
+    # priority = 1.2 (LOW), due in 3 days: 1.0 + ((14 - 3) * 0.1) = 2.1
+    # score = 15 * 1.2 * 3.0 * 1.5 * 1.0 * 2.1 = 170.1 = 170
+    assert score == 170
+
+
+def test_calculate_score_with_priority_low() -> None:
+    """Test score calculation with LOW priority multiplier."""
+    config = get_default_scoring_config()
+
+    task = Task(
+        title="Low priority task",
+        creation_date=datetime(2025, 1, 1),
+        priority=Priority.LOW,
+        difficulty=Difficulty.TRIVIAL,
+        duration=Duration.MINISCULE,
+    )
+
+    # Score = 10 * 1.2 (LOW) * 1.1 (TRIVIAL) * 1.05 (MINISCULE) = 13.86 = 14
+    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
+    assert score == 14
+
+
+def test_calculate_score_with_priority_medium() -> None:
+    """Test score calculation with MEDIUM priority multiplier."""
+    config = get_default_scoring_config()
+
+    task = Task(
+        title="Medium priority task",
+        creation_date=datetime(2025, 1, 1),
+        priority=Priority.MEDIUM,
+        difficulty=Difficulty.TRIVIAL,
+        duration=Duration.MINISCULE,
+    )
+
+    # Score = 10 * 1.5 (MEDIUM) * 1.1 (TRIVIAL) * 1.05 (MINISCULE) = 17.325 = 17
+    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
+    assert score == 17
+
+
+def test_calculate_score_with_priority_high() -> None:
+    """Test score calculation with HIGH priority multiplier."""
+    config = get_default_scoring_config()
+
+    task = Task(
+        title="High priority task",
+        creation_date=datetime(2025, 1, 1),
+        priority=Priority.HIGH,
+        difficulty=Difficulty.TRIVIAL,
+        duration=Duration.MINISCULE,
+    )
+
+    # Score = 10 * 2.0 (HIGH) * 1.1 (TRIVIAL) * 1.05 (MINISCULE) = 23.1 = 23
+    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
+    assert score == 23
+
+
+def test_calculate_score_with_priority_defcon_one() -> None:
+    """Test score calculation with DEFCON_ONE priority multiplier."""
+    config = get_default_scoring_config()
+
+    task = Task(
+        title="Defcon One priority task",
+        creation_date=datetime(2025, 1, 1),
+        priority=Priority.DEFCON_ONE,
+        difficulty=Difficulty.TRIVIAL,
+        duration=Duration.MINISCULE,
+    )
+
+    # Score = 10 * 3.0 (DEFCON_ONE) * 1.1 (TRIVIAL) * 1.05 (MINISCULE) = 34.65 = 35
+    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
+    assert score == 35
+
+
+def test_calculate_score_with_all_multipliers_active() -> None:
+    """Test score with priority, difficulty, duration, age, due_date, tag, project all active."""
+    config = get_default_scoring_config()
+    config["tag_multipliers"] = {"urgent": 1.5}
+    config["project_multipliers"] = {"CriticalProject": 1.2}
+
+    task = Task(
+        title="All multipliers task",
+        creation_date=datetime(2025, 1, 1),
+        priority=Priority.HIGH,
+        difficulty=Difficulty.MEDIUM,
+        duration=Duration.LONG,
+        due_date=datetime(2025, 1, 8),  # 7 days away
+        tags=["urgent"],
+        project="CriticalProject",
+    )
+
+    effective_date = date(2025, 1, 1)
+    # Score = 10 * 2.0 (HIGH) * 2.0 (MED diff) * 2.0 (LONG) * 1.0 (age) * 1.7 (due 7 days) * 1.5 (tag) * 1.2 (proj)
+    # = 10 * 2.0 * 2.0 * 2.0 * 1.0 * 1.7 * 1.5 * 1.2 = 244.8 = 245
+    score = calculate_score(task, None, config, effective_date)
+    assert score == 245

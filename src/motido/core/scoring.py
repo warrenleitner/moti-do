@@ -65,6 +65,13 @@ def load_scoring_config() -> Dict[str, Any]:
         },
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
 
     if not os.path.exists(config_path):
@@ -90,13 +97,18 @@ def load_scoring_config() -> Dict[str, Any]:
             "dependency_chain",
             "tag_multipliers",
             "project_multipliers",
+            "priority_multiplier",
         ]
         for key in required_keys:
             if key not in config_data:
                 raise ValueError(f"Missing required key '{key}' in scoring config.")
 
         # Validate multiplier structures
-        for mult_key in ["difficulty_multiplier", "duration_multiplier"]:
+        for mult_key in [
+            "difficulty_multiplier",
+            "duration_multiplier",
+            "priority_multiplier",
+        ]:
             if not isinstance(config_data[mult_key], dict):
                 raise ValueError(f"'{mult_key}' must be a dictionary.")
 
@@ -516,6 +528,13 @@ def calculate_score(
     )  # Enum.name gets the constant name (e.g., "MEDIUM")
     duration_mult = config["duration_multiplier"].get(duration_key, 1.0)
 
+    # Get priority multiplier
+    priority_level = task.priority
+    priority_key = (
+        priority_level.name
+    )  # Enum.name gets the constant name (e.g., "HIGH")
+    priority_mult = config["priority_multiplier"].get(priority_key, 1.0)
+
     # Calculate age multiplier
     task_creation_date = task.creation_date.date()
     task_age = effective_date - task_creation_date
@@ -548,9 +567,10 @@ def calculate_score(
     due_date_mult = calculate_due_date_multiplier(task, config, effective_date)
 
     # Calculate base score (before dependency bonus)
-    # Tags and projects are multiplicative like difficulty/duration
+    # Priority, tags, and projects are multiplicative like difficulty/duration
     base_final_score = (
         additive_base
+        * priority_mult
         * difficulty_mult
         * duration_mult
         * age_mult

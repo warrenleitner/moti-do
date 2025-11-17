@@ -131,6 +131,13 @@ def test_handle_view_with_all_fields(  # type: ignore[misc]
         "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
     args = MockArgs(id="abc123", verbose=False)
 
@@ -180,6 +187,13 @@ def test_handle_view_with_minimal_fields(  # type: ignore[misc]
         "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
     args = MockArgs(id="xyz789", verbose=False)
 
@@ -228,6 +242,13 @@ def test_handle_view_with_overdue_task(  # type: ignore[misc]
         "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
     args = MockArgs(id="overdue", verbose=False)
 
@@ -276,6 +297,13 @@ def test_handle_view_with_due_soon_task(  # type: ignore[misc]
         "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
         "tag_multipliers": {},
         "project_multipliers": {},
+        "priority_multiplier": {
+            "NOT_SET": 1.0,
+            "LOW": 1.2,
+            "MEDIUM": 1.5,
+            "HIGH": 2.0,
+            "DEFCON_ONE": 3.0,
+        },
     }
     args = MockArgs(id="duesoon", verbose=False)
 

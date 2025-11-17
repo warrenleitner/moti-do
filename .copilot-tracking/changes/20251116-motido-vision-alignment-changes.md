@@ -1079,3 +1079,32 @@ This fulfills the vision requirement for dependency-aware task prioritization, m
 
 
 
+
+### Task 2.5: Add priority multiplier to scoring ✅
+
+**Status**: Complete
+**Files Modified**:
+- src/motido/data/scoring_config.json
+- src/motido/core/scoring.py
+- tests/test_fixtures.py
+- tests/test_scoring.py
+- tests/test_scoring_edge_cases.py
+- tests/test_scoring_multipliers.py
+- tests/test_cli_view_enhanced.py
+
+**Changes**:
+- Added priority_multiplier configuration with 5 levels (NOT_SET=1.0, LOW=1.2, MEDIUM=1.5, HIGH=2.0, DEFCON_ONE=3.0)
+- Integrated priority multiplier into calculate_score() as multiplicative factor
+- Created 8 new tests (5 function + 3 validation)
+- Updated 30+ existing test configs to include priority_multiplier
+- Updated expected scores to account for default Priority.LOW (1.2x multiplier)
+- All 433 tests passing, 100% coverage, Pylint 10.0/10
+
+**Technical Details**:
+Priority multiplier enables urgency/importance-based scoring. Default Priority.LOW (1.2x) provides baseline boost. Multiplier stacks with difficulty, duration, age, due_date, tag, and project multipliers.
+
+Formula: `base * priority * difficulty * duration * age * due_date * tag * project + dependency_bonus`
+
+Example: HIGH priority (2.0x) + MEDIUM difficulty (2.0x) = 4.0x combined boost
+
+This fulfills the vision requirement for priority-based task scoring, allowing users to explicitly mark task urgency and have it drive task prioritization automatically.
