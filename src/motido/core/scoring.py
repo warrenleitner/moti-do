@@ -18,7 +18,7 @@ def get_scoring_config_path() -> str:
     return os.path.join(data_dir, "scoring_config.json")
 
 
-# pylint: disable=too-many-branches
+# pylint: disable=too-many-branches,too-many-statements
 def load_scoring_config() -> Dict[str, Any]:
     """
     Loads the scoring configuration from the scoring_config.json file.
@@ -49,6 +49,12 @@ def load_scoring_config() -> Dict[str, Any]:
         },
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
     }
 
     if not os.path.exists(config_path):
@@ -69,6 +75,7 @@ def load_scoring_config() -> Dict[str, Any]:
             "duration_multiplier",
             "age_factor",
             "daily_penalty",
+            "due_date_proximity",
         ]
 
         for key in required_keys:
@@ -136,12 +143,125 @@ def load_scoring_config() -> Dict[str, Any]:
                 "'daily_penalty.penalty_points' must be a non-negative number."
             )
 
+        # Validate due_date_proximity
+        if not isinstance(config_data["due_date_proximity"], dict):
+            raise ValueError("'due_date_proximity' must be a dictionary.")
+
+        if "enabled" not in config_data["due_date_proximity"]:
+            raise ValueError("'due_date_proximity' must contain 'enabled' key.")
+
+        if not isinstance(config_data["due_date_proximity"]["enabled"], bool):
+            raise ValueError("'due_date_proximity.enabled' must be a boolean.")
+
+        if "overdue_multiplier_per_day" not in config_data["due_date_proximity"]:
+            raise ValueError(
+                "'due_date_proximity' must contain 'overdue_multiplier_per_day' key."
+            )
+
+        if (
+            not isinstance(
+                config_data["due_date_proximity"]["overdue_multiplier_per_day"],
+                (int, float),
+            )
+            or config_data["due_date_proximity"]["overdue_multiplier_per_day"] < 0
+        ):
+            raise ValueError(
+                "'due_date_proximity.overdue_multiplier_per_day' must be a non-negative number."
+            )
+
+        if "approaching_threshold_days" not in config_data["due_date_proximity"]:
+            raise ValueError(
+                "'due_date_proximity' must contain 'approaching_threshold_days' key."
+            )
+
+        if (
+            not isinstance(
+                config_data["due_date_proximity"]["approaching_threshold_days"],
+                (int, float),
+            )
+            or config_data["due_date_proximity"]["approaching_threshold_days"] < 0
+        ):
+            raise ValueError(
+                "'due_date_proximity.approaching_threshold_days' must be a non-negative number."
+            )
+
+        if "approaching_multiplier_per_day" not in config_data["due_date_proximity"]:
+            raise ValueError(
+                "'due_date_proximity' must contain 'approaching_multiplier_per_day' key."
+            )
+
+        if (
+            not isinstance(
+                config_data["due_date_proximity"]["approaching_multiplier_per_day"],
+                (int, float),
+            )
+            or config_data["due_date_proximity"]["approaching_multiplier_per_day"] < 0
+        ):
+            raise ValueError(
+                "'due_date_proximity.approaching_multiplier_per_day' must be a non-negative number."
+            )
+
         return config_data
 
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in scoring config file: {e}") from e
     except IOError as e:
         raise ValueError(f"Error reading scoring config file: {e}") from e
+
+
+def calculate_due_date_multiplier(
+    task: Task, config: Dict[str, Any], effective_date: date
+) -> float:
+    """
+    Calculate the due date proximity multiplier for a task.
+
+    Returns a multiplier based on how close the task is to its due date:
+    - Overdue tasks: 1.0 + (days_overdue * overdue_multiplier_per_day)
+    - Approaching tasks: 1.0 + max(0, (threshold - days_until_due) * approaching_multiplier_per_day)
+    - Future tasks (beyond threshold): 1.0 (no bonus)
+    - No due date: 1.0 (no bonus)
+
+    Args:
+        task: The task to calculate the multiplier for
+        config: The scoring configuration
+        effective_date: The date to calculate from
+
+    Returns:
+        The due date multiplier (>= 1.0)
+    """
+    # Check if due date proximity scoring is enabled
+    if not config.get("due_date_proximity", {}).get("enabled", False):
+        return 1.0
+
+    # No due date = no multiplier
+    if not task.due_date:
+        return 1.0
+
+    # Calculate days until due (negative if overdue)
+    due_date = task.due_date.date()
+    days_until_due = (due_date - effective_date).days
+
+    # Get configuration values
+    overdue_mult_per_day = float(
+        config["due_date_proximity"]["overdue_multiplier_per_day"]
+    )
+    threshold_days = int(config["due_date_proximity"]["approaching_threshold_days"])
+    approaching_mult_per_day = float(
+        config["due_date_proximity"]["approaching_multiplier_per_day"]
+    )
+
+    # Overdue tasks: aggressive multiplier
+    if days_until_due < 0:
+        days_overdue = abs(days_until_due)
+        return 1.0 + (days_overdue * overdue_mult_per_day)
+
+    # Approaching due date: gradual increase
+    if days_until_due <= threshold_days:
+        days_within_threshold = threshold_days - days_until_due
+        return 1.0 + (days_within_threshold * approaching_mult_per_day)
+
+    # Future task beyond threshold: no bonus
+    return 1.0
 
 
 # pylint: disable=too-many-locals
@@ -193,8 +313,13 @@ def calculate_score(task: Task, config: Dict[str, Any], effective_date: date) ->
     age_mult = 1.0 + (age_in_units * mult_per_unit)
     age_mult = max(1.0, age_mult)  # Ensure age_mult is at least 1.0
 
+    # Calculate due date proximity multiplier
+    due_date_mult = calculate_due_date_multiplier(task, config, effective_date)
+
     # Calculate final score
-    final_score = additive_base * difficulty_mult * duration_mult * age_mult
+    final_score = (
+        additive_base * difficulty_mult * duration_mult * age_mult * due_date_mult
+    )
 
     # Return rounded integer
     return int(round(final_score))

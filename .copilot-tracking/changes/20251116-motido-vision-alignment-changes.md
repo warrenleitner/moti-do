@@ -509,3 +509,109 @@ Phase 1 complete! Ready to proceed to Phase 2: Enhanced Scoring System, which wi
 - Tag/project custom multipliers
 - Priority multiplier integration
 
+---
+
+## Phase 2: Enhanced Scoring System (Week 3-4)
+
+### Task 2.1: Implement due date proximity scoring ✅
+
+**Status**: Complete
+**Files Modified**:
+- `src/motido/data/scoring_config.json`
+- `src/motido/core/scoring.py`
+- `tests/test_fixtures.py`
+- `tests/test_scoring.py`
+- `tests/test_scoring_edge_cases.py`
+
+**Changes**:
+- Added `due_date_proximity` configuration section to scoring_config.json with 4 parameters:
+  - `enabled`: Boolean feature toggle (default: true)
+  - `overdue_multiplier_per_day`: Exponential scaling for overdue tasks (default: 0.5)
+  - `approaching_threshold_days`: Days before due date to start increasing score (default: 14)
+  - `approaching_multiplier_per_day`: Linear scaling within threshold (default: 0.1)
+- Added `due_date_proximity` to default_config in `load_scoring_config()`
+- Added `due_date_proximity` to required_keys list in validation
+- Implemented comprehensive validation for all 4 due_date_proximity fields (20 validation checks)
+- Created `calculate_due_date_multiplier()` function (51 lines) with three scoring modes:
+  - **Overdue tasks**: `1.0 + (days_overdue × 0.5)` - aggressive exponential growth
+  - **Approaching tasks**: `1.0 + ((14 - days_until_due) × 0.1)` - gradual linear increase
+  - **Future tasks** (>14 days): `1.0` - no bonus
+- Integrated due_date_multiplier into `calculate_score()` formula
+- Added type casts for mypy compliance (float/int explicit conversions)
+- Updated test helper functions in test_fixtures.py:
+  - Added due_date_proximity to `get_default_scoring_config()`
+  - Added due_date_proximity to `get_simple_scoring_config()`
+- Created 9 comprehensive tests in test_scoring.py:
+  - `test_calculate_due_date_multiplier_no_due_date()` - Returns 1.0 when no due date
+  - `test_calculate_due_date_multiplier_disabled()` - Returns 1.0 when feature disabled
+  - `test_calculate_due_date_multiplier_overdue()` - 7 days overdue = 4.5x multiplier
+  - `test_calculate_due_date_multiplier_approaching()` - 3 days away = 2.1x multiplier
+  - `test_calculate_due_date_multiplier_at_threshold()` - 14 days = 1.0x (boundary case)
+  - `test_calculate_due_date_multiplier_beyond_threshold()` - 30 days = 1.0x
+  - `test_calculate_due_date_multiplier_one_day_overdue()` - 1 day = 1.5x
+  - `test_calculate_score_with_due_date_multiplier()` - Integration test: score = 63
+  - `test_calculate_score_with_overdue_multiplier()` - Overdue integration: score = 81
+- Created 9 validation tests in test_scoring_edge_cases.py:
+  - `test_load_scoring_config_invalid_due_date_proximity_type()` - Type validation
+  - `test_load_scoring_config_missing_due_date_proximity_enabled_key()` - Missing enabled
+  - `test_load_scoring_config_invalid_due_date_proximity_enabled_type()` - Bool validation
+  - `test_load_scoring_config_missing_overdue_multiplier_per_day_key()` - Missing multiplier
+  - `test_load_scoring_config_invalid_overdue_multiplier_per_day_value()` - Negative check
+  - `test_load_scoring_config_missing_approaching_threshold_days_key()` - Missing threshold
+  - `test_load_scoring_config_invalid_approaching_threshold_days_value()` - Negative check
+  - `test_load_scoring_config_missing_approaching_multiplier_per_day_key()` - Missing multiplier
+  - `test_load_scoring_config_invalid_approaching_multiplier_per_day_value()` - Negative check
+- All 378 tests passing (18 new tests)
+- 100% test coverage maintained (1352 statements, 0 missed)
+- Pylint 10.0/10 maintained
+
+**Technical Details**:
+The due date proximity scoring creates urgency for approaching and overdue tasks using two different scaling strategies:
+
+1. **Overdue Scoring (Exponential)**:
+   - Formula: `1.0 + (days_overdue × 0.5)`
+   - Example: 7 days overdue → 4.5x multiplier
+   - Rationale: Overdue tasks should become exponentially more urgent each day
+
+2. **Approaching Scoring (Linear)**:
+   - Formula: `1.0 + ((threshold - days_until_due) × 0.1)`
+   - Threshold: 14 days (configurable)
+   - Example: 3 days until due → 2.1x multiplier
+   - Rationale: Gradual increase as deadline approaches
+
+3. **Future Tasks (Beyond Threshold)**:
+   - Formula: `1.0` (no bonus)
+   - Example: 30 days until due → 1.0x multiplier
+   - Rationale: Far-future tasks don't need urgency boost
+
+**Integration**:
+Final score calculation now includes due date multiplier:
+```python
+final_score = base * difficulty * duration * age * due_date_proximity
+```
+
+**Configuration Example**:
+```json
+"due_date_proximity": {
+  "enabled": true,
+  "overdue_multiplier_per_day": 0.5,
+  "approaching_threshold_days": 14,
+  "approaching_multiplier_per_day": 0.1
+}
+```
+
+**Usage Example**:
+```bash
+# Create task with due date
+motido create "Urgent task" --priority High --difficulty Medium
+motido set-due --id abc123 "in 3 days"
+
+# Task score increases as due date approaches
+# 14+ days: base score
+# 3 days: base × 2.1
+# Overdue 7 days: base × 4.5
+```
+
+This fulfills the vision requirement for time-sensitive task prioritization and prepares for future enhancements (start date aging, dependency chains).
+
+

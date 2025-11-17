@@ -64,7 +64,7 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 
 ### [ ] Phase 2: Enhanced Scoring System (Milestone 0.2 - Week 3-4)
 
-- [ ] Task 2.1: Implement due date proximity scoring
+- [x] Task 2.1: Implement due date proximity scoring
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 169-190)
 
 - [ ] Task 2.2: Add start date aging bonus

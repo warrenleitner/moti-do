@@ -188,6 +188,175 @@ def test_load_scoring_config_invalid_daily_penalty_points_value() -> None:
     )
 
 
+def test_load_scoring_config_invalid_due_date_proximity_type() -> None:
+    """Test load_scoring_config with invalid due_date_proximity type."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["due_date_proximity"] = "not a dictionary"  # Invalid type
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'due_date_proximity' must be a dictionary" in str(excinfo.value)
+
+
+def test_load_scoring_config_missing_due_date_proximity_enabled_key() -> None:
+    """Test load_scoring_config with missing due_date_proximity enabled key."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["due_date_proximity"] = {
+        "overdue_multiplier_per_day": 0.5,
+        "approaching_threshold_days": 14,
+        "approaching_multiplier_per_day": 0.1,
+    }  # Missing enabled
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'due_date_proximity' must contain 'enabled' key" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_due_date_proximity_enabled_type() -> None:
+    """Test load_scoring_config with invalid due_date_proximity enabled type."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["due_date_proximity"] = {
+        "enabled": "yes",  # String, not bool
+        "overdue_multiplier_per_day": 0.5,
+        "approaching_threshold_days": 14,
+        "approaching_multiplier_per_day": 0.1,
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'due_date_proximity.enabled' must be a boolean" in str(excinfo.value)
+
+
+def test_load_scoring_config_missing_overdue_multiplier_per_day_key() -> None:
+    """Test load_scoring_config with missing overdue_multiplier_per_day key."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["due_date_proximity"] = {
+        "enabled": True,
+        "approaching_threshold_days": 14,
+        "approaching_multiplier_per_day": 0.1,
+    }  # Missing overdue_multiplier_per_day
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'due_date_proximity' must contain 'overdue_multiplier_per_day' key" in str(
+        excinfo.value
+    )
+
+
+def test_load_scoring_config_invalid_overdue_multiplier_per_day_value() -> None:
+    """Test load_scoring_config with invalid overdue_multiplier_per_day value."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["due_date_proximity"] = {
+        "enabled": True,
+        "overdue_multiplier_per_day": -0.5,  # Negative value
+        "approaching_threshold_days": 14,
+        "approaching_multiplier_per_day": 0.1,
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert (
+        "'due_date_proximity.overdue_multiplier_per_day' must be a non-negative number"
+        in str(excinfo.value)
+    )
+
+
+def test_load_scoring_config_missing_approaching_threshold_days_key() -> None:
+    """Test load_scoring_config with missing approaching_threshold_days key."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["due_date_proximity"] = {
+        "enabled": True,
+        "overdue_multiplier_per_day": 0.5,
+        "approaching_multiplier_per_day": 0.1,
+    }  # Missing approaching_threshold_days
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'due_date_proximity' must contain 'approaching_threshold_days' key" in str(
+        excinfo.value
+    )
+
+
+def test_load_scoring_config_invalid_approaching_threshold_days_value() -> None:
+    """Test load_scoring_config with invalid approaching_threshold_days value."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["due_date_proximity"] = {
+        "enabled": True,
+        "overdue_multiplier_per_day": 0.5,
+        "approaching_threshold_days": -14,  # Negative value
+        "approaching_multiplier_per_day": 0.1,
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert (
+        "'due_date_proximity.approaching_threshold_days' must be a non-negative number"
+        in str(excinfo.value)
+    )
+
+
+def test_load_scoring_config_missing_approaching_multiplier_per_day_key() -> None:
+    """Test load_scoring_config with missing approaching_multiplier_per_day key."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["due_date_proximity"] = {
+        "enabled": True,
+        "overdue_multiplier_per_day": 0.5,
+        "approaching_threshold_days": 14,
+    }  # Missing approaching_multiplier_per_day
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert (
+        "'due_date_proximity' must contain 'approaching_multiplier_per_day' key"
+        in str(excinfo.value)
+    )
+
+
+def test_load_scoring_config_invalid_approaching_multiplier_per_day_value() -> None:
+    """Test load_scoring_config with invalid approaching_multiplier_per_day value."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["due_date_proximity"] = {
+        "enabled": True,
+        "overdue_multiplier_per_day": 0.5,
+        "approaching_threshold_days": 14,
+        "approaching_multiplier_per_day": -0.1,  # Negative value
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert (
+        "'due_date_proximity.approaching_multiplier_per_day' must be a non-negative number"
+        in str(excinfo.value)
+    )
+
+
 def test_load_scoring_config_ioerror() -> None:
     """Test load_scoring_config handling of IOError."""
     with patch("builtins.open", side_effect=IOError("File not found")):

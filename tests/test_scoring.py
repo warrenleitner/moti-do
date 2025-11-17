@@ -16,6 +16,7 @@ from motido.core.models import Difficulty, Duration, Task, User
 from motido.core.scoring import (
     add_xp,
     apply_penalties,
+    calculate_due_date_multiplier,
     calculate_score,
     get_last_penalty_check_date,
     load_scoring_config,
@@ -48,6 +49,12 @@ def test_load_scoring_config_valid() -> None:
         },
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -121,6 +128,12 @@ def test_load_scoring_config_invalid_multiplier() -> None:
         "duration_multiplier": {"MINISCULE": 1.05},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -143,6 +156,12 @@ def test_load_scoring_config_invalid_age_factor() -> None:
         "duration_multiplier": {"MINISCULE": 1.05},
         "age_factor": {"unit": "months", "multiplier_per_unit": 0.01},  # Invalid unit
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -164,6 +183,12 @@ def test_load_scoring_config_invalid_daily_penalty() -> None:
         "duration_multiplier": {"MINISCULE": 1.05},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
         "daily_penalty": {"penalty_points": 5},  # Missing apply_penalty
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -570,3 +595,228 @@ def test_add_xp_mixed_positive_and_negative() -> None:
 
     # Verify manager.save_user was called 3 times
     assert mock_manager.save_user.call_count == 3
+
+
+# --- Test Due Date Proximity Scoring ---
+
+
+def test_calculate_due_date_multiplier_no_due_date() -> None:
+    """Test due date multiplier returns 1.0 when task has no due date."""
+    task = Task(title="Test task", creation_date=datetime.now())
+    config = {
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        }
+    }
+    effective_date = date.today()
+
+    multiplier = calculate_due_date_multiplier(task, config, effective_date)
+    assert multiplier == 1.0
+
+
+def test_calculate_due_date_multiplier_disabled() -> None:
+    """Test due date multiplier returns 1.0 when feature is disabled."""
+    task = Task(
+        title="Test task",
+        creation_date=datetime.now(),
+        due_date=datetime.now() + timedelta(days=3),
+    )
+    config = {
+        "due_date_proximity": {
+            "enabled": False,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        }
+    }
+    effective_date = date.today()
+
+    multiplier = calculate_due_date_multiplier(task, config, effective_date)
+    assert multiplier == 1.0
+
+
+def test_calculate_due_date_multiplier_overdue() -> None:
+    """Test due date multiplier for overdue tasks."""
+    effective_date = date(2025, 11, 16)
+    # Task is 7 days overdue
+    task = Task(
+        title="Test task",
+        creation_date=datetime(2025, 11, 1),
+        due_date=datetime(2025, 11, 9),
+    )
+    config = {
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        }
+    }
+
+    multiplier = calculate_due_date_multiplier(task, config, effective_date)
+    # 1.0 + (7 days * 0.5) = 1.0 + 3.5 = 4.5
+    assert multiplier == 4.5
+
+
+def test_calculate_due_date_multiplier_approaching() -> None:
+    """Test due date multiplier for tasks approaching due date."""
+    effective_date = date(2025, 11, 16)
+    # Task is 3 days away (within 14-day threshold)
+    task = Task(
+        title="Test task",
+        creation_date=datetime(2025, 11, 1),
+        due_date=datetime(2025, 11, 19),
+    )
+    config = {
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        }
+    }
+
+    multiplier = calculate_due_date_multiplier(task, config, effective_date)
+    # days_until_due = 3, threshold = 14
+    # days_within_threshold = 14 - 3 = 11
+    # 1.0 + (11 * 0.1) = 1.0 + 1.1 = 2.1
+    assert multiplier == 2.1
+
+
+def test_calculate_due_date_multiplier_at_threshold() -> None:
+    """Test due date multiplier at threshold boundary."""
+    effective_date = date(2025, 11, 16)
+    # Task is exactly 14 days away (at threshold)
+    task = Task(
+        title="Test task",
+        creation_date=datetime(2025, 11, 1),
+        due_date=datetime(2025, 11, 30),
+    )
+    config = {
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        }
+    }
+
+    multiplier = calculate_due_date_multiplier(task, config, effective_date)
+    # days_until_due = 14, threshold = 14
+    # days_within_threshold = 14 - 14 = 0
+    # 1.0 + (0 * 0.1) = 1.0
+    assert multiplier == 1.0
+
+
+def test_calculate_due_date_multiplier_beyond_threshold() -> None:
+    """Test due date multiplier for tasks beyond threshold."""
+    effective_date = date(2025, 11, 16)
+    # Task is 30 days away (beyond 14-day threshold)
+    task = Task(
+        title="Test task",
+        creation_date=datetime(2025, 11, 1),
+        due_date=datetime(2025, 12, 16),
+    )
+    config = {
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        }
+    }
+
+    multiplier = calculate_due_date_multiplier(task, config, effective_date)
+    # days_until_due = 30, beyond threshold, no bonus
+    assert multiplier == 1.0
+
+
+def test_calculate_due_date_multiplier_one_day_overdue() -> None:
+    """Test due date multiplier for task that is 1 day overdue."""
+    effective_date = date(2025, 11, 16)
+    task = Task(
+        title="Test task",
+        creation_date=datetime(2025, 11, 1),
+        due_date=datetime(2025, 11, 15),
+    )
+    config = {
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        }
+    }
+
+    multiplier = calculate_due_date_multiplier(task, config, effective_date)
+    # 1.0 + (1 day * 0.5) = 1.5
+    assert multiplier == 1.5
+
+
+def test_calculate_score_with_due_date_multiplier() -> None:
+    """Test calculate_score integrates due date multiplier."""
+    effective_date = date(2025, 11, 16)
+    # Task due in 3 days
+    task = Task(
+        title="Test task",
+        creation_date=datetime(2025, 11, 15),
+        due_date=datetime(2025, 11, 19),
+        difficulty=Difficulty.MEDIUM,
+        duration=Duration.MEDIUM,
+    )
+
+    config = {
+        "base_score": 10,
+        "field_presence_bonus": {},
+        "difficulty_multiplier": {"MEDIUM": 2.0},
+        "duration_multiplier": {"MEDIUM": 1.5},
+        "age_factor": {"unit": "days", "multiplier_per_unit": 0.0},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
+    }
+
+    score = calculate_score(task, config, effective_date)
+    # base = 10, difficulty = 2.0, duration = 1.5, age = 1.0
+    # due_date_mult = 1.0 + (14 - 3) * 0.1 = 1.0 + 1.1 = 2.1
+    # score = 10 * 2.0 * 1.5 * 1.0 * 2.1 = 63
+    assert score == 63
+
+
+def test_calculate_score_with_overdue_multiplier() -> None:
+    """Test calculate_score with overdue task."""
+    effective_date = date(2025, 11, 16)
+    # Task 7 days overdue
+    task = Task(
+        title="Overdue task",
+        creation_date=datetime(2025, 11, 1),
+        due_date=datetime(2025, 11, 9),
+        difficulty=Difficulty.LOW,
+        duration=Duration.SHORT,
+    )
+
+    config = {
+        "base_score": 10,
+        "field_presence_bonus": {},
+        "difficulty_multiplier": {"LOW": 1.5},
+        "duration_multiplier": {"SHORT": 1.2},
+        "age_factor": {"unit": "days", "multiplier_per_unit": 0.0},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
+    }
+
+    score = calculate_score(task, config, effective_date)
+    # base = 10, difficulty = 1.5, duration = 1.2, age = 1.0
+    # due_date_mult = 1.0 + (7 * 0.5) = 4.5
+    # score = 10 * 1.5 * 1.2 * 1.0 * 4.5 = 81
+    assert score == 81

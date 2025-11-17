@@ -26,5 +26,11 @@
   "daily_penalty": {
     "apply_penalty": true,
     "penalty_points": 5
+  },
+  "due_date_proximity": {
+    "enabled": true,
+    "overdue_multiplier_per_day": 0.5,
+    "approaching_threshold_days": 14,
+    "approaching_multiplier_per_day": 0.1
   }
 }

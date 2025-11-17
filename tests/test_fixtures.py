@@ -28,6 +28,12 @@ def get_default_scoring_config() -> Dict[str, Any]:
         },
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
     }
 
 
@@ -40,4 +46,10 @@ def get_simple_scoring_config() -> Dict[str, Any]:
         "duration_multiplier": {"NOT_SET": 1.0},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_multiplier_per_day": 0.5,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.1,
+        },
     }
