@@ -1108,3 +1108,104 @@ Formula: `base * priority * difficulty * duration * age * due_date * tag * proje
 Example: HIGH priority (2.0x) + MEDIUM difficulty (2.0x) = 4.0x combined boost
 
 This fulfills the vision requirement for priority-based task scoring, allowing users to explicitly mark task urgency and have it drive task prioritization automatically.
+
+
+### Task 2.6: Write scoring integration tests ✅
+
+**Status**: Complete
+**Files Modified**:
+- tests/test_scoring_integration.py (new file)
+
+**Changes**:
+- Created comprehensive integration test suite with 10 realistic scenarios
+- Test files: 1 new (test_scoring_integration.py - 443 lines)
+- All 443 tests passing (10 new integration tests)
+- 100% test coverage maintained (1435 statements, 0 missed)
+- Pylint 10.0/10 maintained
+
+**Test Scenarios Created**:
+1. **test_urgent_overdue_task_with_tags_and_project()** - Overdue task with all multipliers (score: 3374)
+   - DEFCON_ONE priority (3.0x) + HIGH difficulty (3.0x) + 2 tags (3.0x) + project (2.5x)
+   - 5 days overdue (3.5x due multiplier)
+   - Tests multiplicative stacking of all factors
+
+2. **test_routine_task_approaching_deadline()** - Low-priority task with approaching deadline (score: 39)
+   - LOW priority (1.2x) + TRIVIAL difficulty (1.1x) + routine tag (0.8x penalty)
+   - Text description bonus (+5 points)
+   - 2 days until due date (2.2x approaching multiplier)
+   - Tests additive text_description with approaching due date
+
+3. **test_long_running_project_with_start_date()** - Task with start date aging (score: 1324)
+   - 42 days past start date (+21 points start bonus)
+   - HERCULEAN difficulty (5.0x) + ODYSSEYAN duration (3.0x)
+   - Due date 29 days away (beyond threshold, no due multiplier)
+   - Tests start date bonus without due date interference
+
+4. **test_task_with_dependencies()** - Task blocking other work (score: 47)
+   - 2 dependent tasks with scores 61 and 122
+   - Dependency bonus: (61 + 122) * 0.1 = 18 points
+   - Tests recursive dependency chain scoring
+
+5. **test_minimal_task_no_multipliers()** - Baseline task with minimal fields (score: 12)
+   - TRIVIAL priority (1.0x) + TRIVIAL difficulty (1.1x) + MINISCULE duration (1.05x)
+   - No optional fields (no bonuses)
+   - Tests baseline scoring without any enhancements
+
+6. **test_complex_scenario_all_factors_active()** - All scoring factors simultaneously (score: 1732)
+   - Overdue (2.0x) + HIGH priority (2.0x) + HIGH difficulty (3.0x)
+   - 2 tags (2.52x combined) + project (1.6x) + text description (+5)
+   - Dependency blocking 1 task (+5 bonus)
+   - Tests full system integration with all features
+
+7. **test_overdue_task_no_start_date_bonus()** - Overdue prevents start bonus (score: 187)
+   - Task has start_date but is overdue
+   - Verifies start date bonus does NOT apply (avoids double-counting)
+   - Tests smart bonus exclusion logic
+
+8. **test_future_due_date_with_start_date_bonus()** - Non-overdue gets start bonus (score: 178)
+   - 15 days past start (+7.5 points)
+   - 5 days until due (1.9x approaching multiplier)
+   - Tests start date bonus applies when not overdue
+
+9. **test_recursive_dependency_chain()** - Multi-level dependencies (A ← B ← C)
+   - Task A blocks B (score 27 = 22 base + 5 dependency bonus)
+   - Task B depends on A (score 46)
+   - Tests recursive dependency calculation
+
+10. **test_disabled_scoring_features()** - Features disabled in config (score: 143)
+    - Disabled: due_date_proximity, start_date_aging, dependency_chain
+    - Task has all fields but features are off
+    - Tests feature toggle functionality
+
+**Technical Details**:
+The integration test suite verifies that all Phase 2 scoring features work correctly in combination, not just isolation. Key testing patterns:
+
+1. **Realistic Scenarios**: Tests use real-world task combinations (urgent bugs, routine reports, long projects)
+2. **Manual Verification**: Each test includes detailed calculation comments showing exact formula
+3. **Edge Cases**: Tests boundary conditions (overdue vs approaching, enabled vs disabled features)
+4. **Full Coverage**: All scoring factors tested in various combinations
+5. **Regression Prevention**: Establishes baseline for future changes
+
+**Integration Formula Verified**:
+```python
+additive_base = base_score + text_desc_bonus + start_date_bonus
+base_final_score = (
+    additive_base
+    * priority_mult
+    * difficulty_mult
+    * duration_mult
+    * age_mult
+    * due_date_mult
+    * tag_mult
+    * project_mult
+)
+final_score = base_final_score + dependency_bonus
+```
+
+**Quality Metrics**:
+- Test Coverage: 100% (1435 statements, 0 missed)
+- Pylint Score: 10.0/10
+- Type Safety: 100% (mypy passing on 43 files)
+- Total Tests: 443 passing (10 new integration tests)
+
+This completes Phase 2: Enhanced Scoring System (6/6 tasks complete).

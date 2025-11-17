@@ -79,8 +79,10 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 - [x] Task 2.5: Add priority multiplier to scoring
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 252-268)
 
-- [ ] Task 2.6: Write scoring integration tests
+- [x] Task 2.6: Write scoring integration tests
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 270-287)
+
+### [x] Phase 2: Enhanced Scoring System (Milestone 0.2 - Week 3-4)
 
 ### [ ] Phase 3: Incremental Completion (Milestone 0.3 - Week 5)
 
