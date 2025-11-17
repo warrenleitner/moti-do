@@ -6,9 +6,10 @@ Provides commands to initialize, create, view, list, and edit tasks.
 """
 
 import argparse
+import re
 import sys
 from argparse import Namespace  # Import Namespace
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Callable, TypeVar
 
 # Import rich for table formatting
@@ -215,7 +216,26 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
         table.add_column("Difficulty", width=15)
         table.add_column("Duration", width=15)
         table.add_column("Score", width=8)
+
+        # Check if any tasks have optional fields populated
+        has_due_dates = any(task.due_date for task, _ in tasks_with_scores)
+        has_start_dates = any(task.start_date for task, _ in tasks_with_scores)
+        has_tags = any(task.tags for task, _ in tasks_with_scores)
+        has_projects = any(task.project for task, _ in tasks_with_scores)
+
+        # Add optional columns if any task has those fields
+        if has_due_dates:
+            table.add_column("Due Date", width=12)
+        if has_start_dates:
+            table.add_column("Start Date", width=12)
+        if has_tags:
+            table.add_column("Tags", width=20)
+        if has_projects:
+            table.add_column("Project", width=15)
+
         table.add_column("Title")
+
+        today = date.today()
 
         for task, score in tasks_with_scores:
             # Add task details to the table with priority, difficulty, and duration emoji
@@ -244,16 +264,58 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
 
             score_text = Text(str(score), style=score_style or "")
 
-            table.add_row(
+            # Build row data starting with fixed columns
+            row_data: list[str | Text] = [
                 status_text,
                 task.id[:8],
                 priority_text,
                 difficulty_text,
                 duration_text,
                 score_text,
-                task.title,
-                style=description_style,
-            )
+            ]
+
+            # Add optional columns if they exist
+            if has_due_dates:
+                if task.due_date:
+                    due_date_str = task.due_date.strftime("%Y-%m-%d")
+                    # Color code due dates: red if overdue, yellow if within 3 days
+                    if task.due_date.date() < today and not task.is_complete:
+                        due_text = Text(due_date_str, style="red bold")
+                    elif (
+                        task.due_date.date() <= today + timedelta(days=3)
+                        and not task.is_complete
+                    ):
+                        due_text = Text(due_date_str, style="yellow")
+                    else:
+                        due_text = Text(due_date_str, style=description_style or "")
+                    row_data.append(due_text)
+                else:
+                    row_data.append(Text("-", style="dim"))
+
+            if has_start_dates:
+                if task.start_date:
+                    start_date_str = task.start_date.strftime("%Y-%m-%d")
+                    row_data.append(Text(start_date_str, style=description_style or ""))
+                else:
+                    row_data.append(Text("-", style="dim"))
+
+            if has_tags:
+                if task.tags:
+                    tags_str = ", ".join(task.tags)
+                    row_data.append(Text(tags_str, style=description_style or ""))
+                else:
+                    row_data.append(Text("-", style="dim"))
+
+            if has_projects:
+                if task.project:
+                    row_data.append(Text(task.project, style=description_style or ""))
+                else:
+                    row_data.append(Text("-", style="dim"))
+
+            # Add title as the last column
+            row_data.append(task.title)
+
+            table.add_row(*row_data)
 
         console.print(table)
         # --- End rich table display ---
@@ -648,6 +710,52 @@ def handle_tag(args: Namespace, manager: DataManager, user: User | None) -> None
                     print(f"Tags for task '{task.title}': {', '.join(task.tags)}")
                 else:
                     print(f"Task '{task.title}' has no tags.")
+        else:
+            print(f"Error: Task with ID prefix '{args.id}' not found.")
+            sys.exit(1)
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except IOError as e:
+        print(f"Error saving task: {e}")
+        sys.exit(1)
+    except Exception as e:  # pragma: no cover  # pylint: disable=broad-exception-caught
+        print(f"Unexpected error: {e}")
+        sys.exit(1)
+
+
+def handle_project(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'project' command to set or clear a project on a task."""
+    print_verbose(args, f"Setting project for task with ID prefix: '{args.id}'...")
+
+    if not user:
+        print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
+        sys.exit(1)
+
+    try:
+        task = user.find_task_by_id(args.id)
+        if task:
+            if args.clear:
+                task.project = None
+                manager.save_user(user)
+                print(f"Cleared project for task '{task.title}'.")
+            elif args.project:
+                # Validate project name (alphanumeric, spaces, dashes, underscores)
+                if not re.match(r"^[a-zA-Z0-9\s\-_]+$", args.project):
+                    print(
+                        "Error: Project name must contain only alphanumeric "
+                        "characters, spaces, dashes, and underscores."
+                    )
+                    sys.exit(1)
+                project_name = args.project.strip()
+                task.project = project_name
+                manager.save_user(user)
+                print(f"Set project to '{project_name}' for task '{task.title}'.")
+            else:
+                print(
+                    "Error: Please provide a project name or use --clear to remove the project."
+                )
+                sys.exit(1)
         else:
             print(f"Error: Task with ID prefix '{args.id}' not found.")
             sys.exit(1)
@@ -1108,6 +1216,19 @@ def setup_parser() -> argparse.ArgumentParser:
         "tag", nargs="?", help="The tag to add or remove (not needed for 'list')."
     )
     parser_tag.set_defaults(func=_wrap_handler(handle_tag))
+
+    # --- Project Command ---
+    parser_project = subparsers.add_parser(
+        "project", help="Set or clear the project for a task."
+    )
+    parser_project.add_argument(
+        "--id", required=True, help="The full or unique partial ID of the task."
+    )
+    parser_project.add_argument("project", nargs="?", help="The project name to set.")
+    parser_project.add_argument(
+        "--clear", action="store_true", help="Clear the project."
+    )
+    parser_project.set_defaults(func=_wrap_handler(handle_project))
 
     # --- Run Penalties Command ---
     parser_penalties = subparsers.add_parser(

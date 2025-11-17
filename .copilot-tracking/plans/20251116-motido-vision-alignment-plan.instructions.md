@@ -50,10 +50,10 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 - [x] Task 1.4: Add `tag` command for tag management
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 74-92)
 
-- [ ] Task 1.5: Add `project` command for project assignment
+- [x] Task 1.5: Add `project` command for project assignment
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 94-110)
 
-- [ ] Task 1.6: Update `list` command to display new fields
+- [x] Task 1.6: Update `list` command to display new fields
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 112-128)
 
 - [ ] Task 1.7: Update `view` command to show all fields

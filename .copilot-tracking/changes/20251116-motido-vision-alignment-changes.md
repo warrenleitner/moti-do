@@ -202,3 +202,115 @@ motido tag list --id abc123
 # Output: Tags for task 'Task Title': work
 ```
 
+### Task 1.5: Add `project` command for project assignment ✅
+
+**Status**: Complete
+**Files Modified**:
+- `src/motido/cli/main.py`
+- `tests/test_cli_project.py` (new file)
+
+**Changes**:
+- Added `import re` to module imports for project name validation
+- Added `handle_project()` function to set or clear task projects
+- Command syntax: `motido project --id <task-id> <project-name>` or `motido project --id <task-id> --clear`
+- Implemented project name validation using regex pattern `^[a-zA-Z0-9\s\-_]+$`
+- Supports alphanumeric characters, spaces, dashes, and underscores in project names
+- Strips leading/trailing whitespace from project names
+- Added validation requiring either project name or --clear flag
+- Added project CLI subparser with optional project argument and --clear flag
+- Created comprehensive test suite with 17 test cases:
+  - `test_handle_project_set_new_project()` - Setting new project on task
+  - `test_handle_project_update_existing_project()` - Updating existing project
+  - `test_handle_project_with_spaces()` - Project names with spaces
+  - `test_handle_project_with_dashes()` - Project names with dashes
+  - `test_handle_project_with_underscores()` - Project names with underscores
+  - `test_handle_project_with_whitespace()` - Whitespace stripping
+  - `test_handle_project_clear_existing_project()` - Clearing existing project
+  - `test_handle_project_clear_when_no_project()` - Clearing when no project set
+  - `test_handle_project_invalid_characters()` - Validation for invalid characters
+  - `test_handle_project_no_project_no_clear()` - Validation for missing arguments
+  - `test_handle_project_task_not_found()` - Non-existent task ID
+  - `test_handle_project_no_user()` - Missing user handling
+  - `test_handle_project_ambiguous_id()` - Ambiguous ID prefix
+  - `test_handle_project_save_error()` - IOError during set
+  - `test_handle_project_clear_save_error()` - IOError during clear
+  - `test_handle_project_generic_exception()` - Generic exception handling
+  - `test_handle_project_verbose_mode()` - Verbose output verification
+- All 353 tests passing (17 new tests)
+- 100% test coverage maintained (1256 statements, 0 missed)
+- Pylint 10.0/10 maintained
+
+**Technical Details**:
+The `project` command enables users to organize tasks by assigning them to projects. The implementation:
+1. Uses regex validation to ensure project names contain only safe characters
+2. Strips whitespace for consistency
+3. Validates that either a project name or --clear flag is provided
+4. Provides clear feedback for set and clear operations
+5. Follows the same error handling pattern as other CLI commands (ValueError, IOError, Exception)
+6. Uses Task.project str | None field from the model
+
+This prepares for future project-based filtering and custom scoring multipliers planned for Phase 2.
+
+Example usage:
+```bash
+motido project --id abc123 "Work Tasks"
+motido project --id abc123 "my-project"
+motido project --id abc123 --clear
+```
+
+### Task 1.6: Update `list` command to display new fields ✅
+
+**Status**: Complete
+**Files Modified**:
+- `src/motido/cli/main.py`
+- `tests/test_cli_list_enhanced.py` (new file)
+
+**Changes**:
+- Added `timedelta` to datetime imports for date comparison logic
+- Enhanced `handle_list()` function to conditionally display optional task fields
+- Implemented field detection logic:
+  - `has_due_dates = any(task.due_date for task, _ in tasks_with_scores)`
+  - `has_start_dates = any(task.start_date for task, _ in tasks_with_scores)`
+  - `has_tags = any(task.tags for task, _ in tasks_with_scores)`
+  - `has_projects = any(task.project for task, _ in tasks_with_scores)`
+- Conditionally add columns to table only if any task has that field
+- Added color coding for due dates:
+  - Red bold: Overdue tasks (due_date < today and not complete)
+  - Yellow: Tasks due within 3 days
+  - Normal style: Future dates
+  - Dim: Empty values displayed as "-"
+- Added start date column with formatted dates (YYYY-MM-DD)
+- Added tags column displaying comma-separated list
+- Added project column displaying project name
+- Updated row building with type hint: `row_data: list[str | Text]`
+- Created comprehensive test suite with 3 test cases:
+  - `test_handle_list_with_all_fields()` - Tasks with all optional fields populated
+  - `test_handle_list_with_partial_fields()` - Mixed tasks (some with fields, some without)
+  - `test_handle_list_without_optional_fields()` - Tasks with no optional fields
+- All 356 tests passing (3 new tests)
+- 100% test coverage maintained (1295 statements, 0 missed)
+- Pylint 10.0/10 maintained
+
+**Technical Details**:
+The enhanced list command provides a dynamic table view that adapts to the data. Key implementation patterns:
+1. **Conditional columns**: Only show columns if at least one task has that field populated
+2. **Color coding strategy**:
+   - Overdue tasks highlighted in red bold to draw attention
+   - Tasks due within 3 days shown in yellow for urgency
+   - Completed tasks use dim style throughout
+3. **Graceful degradation**: Empty values shown as "-" in dim style
+4. **Type safety**: Used `list[str | Text]` for row_data to support mixed content types
+5. **Date comparison**: `timedelta(days=3)` for "due soon" threshold
+
+Example output with all fields:
+```
+┌─────────┬──────────┬───────────┬──────────────┬──────────┬───────┬────────────┬────────────┬─────────────┬──────────┐
+│ Status  │ ID       │ Priority  │ Difficulty   │ Duration │ Score │ Due Date   │ Start Date │ Tags        │ Project  │
+├─────────┼──────────┼───────────┼──────────────┼──────────┼───────┼────────────┼────────────┼─────────────┼──────────┤
+│ ⭕ TODO │ uuid-001 │ High      │ Medium       │ Medium   │   30  │ 2025-01-20 │ 2025-01-10 │ urgent,work │ MyProject│
+│ ⭕ TODO │ uuid-002 │ Defcon 1  │ High         │ Long     │   90  │ 2025-01-10 │ 2025-01-01 │ late        │ Old...   │
+└─────────┴──────────┴───────────┴──────────────┴──────────┴───────┴────────────┴────────────┴─────────────┴──────────┘
+```
+
+This prepares the UI for enhanced scoring factors (due date proximity) planned in Phase 2.
+
