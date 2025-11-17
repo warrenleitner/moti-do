@@ -714,4 +714,129 @@ motido set-due --id abc123 "2025-02-01"
 
 This fulfills the vision requirement for rewarding tasks that have been started and are in progress, while intelligently avoiding double-counting urgency with the due date proximity system.
 
+### Task 2.3: Implement dependency chain scoring ✅
+
+**Status**: Complete
+**Files Modified**:
+- `src/motido/data/scoring_config.json`
+- `src/motido/core/scoring.py`
+- `src/motido/cli/main.py`
+- `tests/test_fixtures.py`
+- `tests/test_scoring.py`
+- `tests/test_scoring_edge_cases.py`
+- `tests/test_cli_scoring.py`
+- `tests/test_scoring_dependencies.py` (new file)
+
+**Changes**:
+- Added `dependency_chain` configuration section to scoring_config.json with 2 parameters:
+  - `enabled`: Boolean feature toggle (default: true)
+  - `dependent_score_percentage`: Percentage of dependent task scores to add as bonus (default: 0.1 = 10%)
+- Added `dependency_chain` to default_config in `load_scoring_config()`
+- Added `dependency_chain` to required_keys list in validation
+- Implemented comprehensive validation for dependency_chain fields (7 validation checks)
+- Created `calculate_dependency_chain_bonus()` function (67 lines) with recursive scoring:
+  - **No dependents**: returns 0.0
+  - **Feature disabled**: returns 0.0
+  - **Circular dependency detection**: raises ValueError with specific error message
+  - **Recursive calculation**: Finds all incomplete tasks that depend on this task, recursively calculates their scores (including their dependencies), and returns configurable percentage (default 10%) of total as bonus
+  - **Completed tasks excluded**: Only incomplete dependent tasks contribute to bonus
+  - **Visited set tracking**: Prevents infinite loops in circular dependency graphs
+- Updated `calculate_score()` function signature to accept `all_tasks` parameter (Dict[str, Task] | None)
+- Added `visited` parameter to calculate_score for circular dependency detection
+- Integrated dependency_chain_bonus into calculate_score as additive to final score
+- Updated all CLI calls to calculate_score to pass `None` for all_tasks (dependency command will be added later):
+  - `handle_list()`: calculate_score(task, None, scoring_config, today)
+  - `handle_view()`: calculate_score(task, None, scoring_config, date.today())
+  - `handle_complete()`: calculate_score(task, None, scoring_config, date.today())
+- Updated test helper functions in test_fixtures.py:
+  - Added dependency_chain to `get_default_scoring_config()`
+  - Added dependency_chain to `get_simple_scoring_config()`
+- Updated all existing calculate_score calls in tests to pass `None` for all_tasks parameter:
+  - Fixed 9 calls in test_scoring.py
+  - Fixed 1 call in test_scoring_edge_cases.py
+  - Fixed 2 calls in test_cli_scoring.py
+- Updated 4 existing test mock configs to include dependency_chain:
+  - test_load_scoring_config_valid
+  - test_load_scoring_config_invalid_multiplier
+  - test_load_scoring_config_invalid_age_factor
+  - test_load_scoring_config_invalid_daily_penalty
+- Created comprehensive test file test_scoring_dependencies.py with 11 tests:
+  - `test_calculate_dependency_chain_bonus_no_dependents()` - Returns 0.0 when no dependents
+  - `test_calculate_dependency_chain_bonus_disabled()` - Returns 0.0 when feature disabled
+  - `test_calculate_dependency_chain_bonus_single_dependent()` - One dependent task (10% of dependent's score)
+  - `test_calculate_dependency_chain_bonus_multiple_dependents()` - Multiple dependents (10% of sum)
+  - `test_calculate_dependency_chain_bonus_completed_dependent_excluded()` - Completed tasks don't contribute
+  - `test_calculate_dependency_chain_bonus_recursive()` - Recursive chain A <- B <- C
+  - `test_calculate_dependency_chain_bonus_circular_dependency()` - Raises ValueError for circular deps
+  - `test_calculate_dependency_chain_bonus_custom_percentage()` - Custom percentage (20%)
+  - `test_calculate_score_with_dependency_chain_integration()` - Integration test
+  - `test_calculate_dependency_chain_bonus_self_dependency_prevention()` - Task can't depend on itself
+- Created 7 validation tests in test_scoring_edge_cases.py:
+  - `test_load_scoring_config_invalid_dependency_chain_type()` - Type validation
+  - `test_load_scoring_config_missing_dependency_chain_enabled_key()` - Missing enabled
+  - `test_load_scoring_config_invalid_dependency_chain_enabled_type()` - Bool validation
+  - `test_load_scoring_config_missing_dependent_score_percentage_key()` - Missing percentage key
+  - `test_load_scoring_config_invalid_dependent_score_percentage_type()` - Number validation
+  - `test_load_scoring_config_invalid_dependent_score_percentage_range()` - Range validation (0.0-1.0)
+- All 407 tests passing (16 new tests)
+- 100% test coverage maintained (1414 statements, 0 missed)
+- Pylint 10.0/10 maintained
+
+**Technical Details**:
+The dependency chain scoring rewards tasks that are blocking other work, using a recursive additive formula:
+
+1. **Recursive Bonus Calculation**:
+   - Formula: `sum(dependent_task_scores) * 0.1` (default 10%)
+   - Example: Task A has 2 dependents with scores 30 and 50 → A gets (30+50)*0.1 = 8 bonus points
+   - Rationale: Tasks that block other work should be prioritized
+
+2. **Circular Dependency Detection**:
+   - Uses visited set to track traversal path
+   - Raises ValueError if circular dependency detected
+   - Error message includes task ID prefix for debugging
+
+3. **Completed Task Exclusion**:
+   - Only incomplete dependent tasks contribute to bonus
+   - Prevents completed work from inflating scores
+
+4. **Additive vs Multiplicative**:
+   - Dependency bonus is added to final score AFTER multipliers
+   - This makes it a direct reward rather than an amplifier
+   - Example: `base * difficulty * duration * age * due_date + dependency_bonus`
+
+**Integration**:
+Final score calculation formula:
+```python
+base_final_score = additive_base * difficulty_mult * duration_mult * age_mult * due_date_mult
+dependency_bonus = calculate_dependency_chain_bonus(task, all_tasks, config, effective_date)
+final_score = base_final_score + dependency_bonus
+```
+
+**Configuration Example**:
+```json
+"dependency_chain": {
+  "enabled": true,
+  "dependent_score_percentage": 0.1
+}
+```
+
+**Usage Example** (CLI command will be implemented in separate task):
+```bash
+# Task dependencies are stored in Task.dependencies field (List[str] of task IDs)
+# Example scenario:
+# - Task A: "Foundation" (base score 20)
+# - Task B: "Build walls" depends on A (base score 30)
+# - Task C: "Build roof" depends on B (base score 40)
+#
+# Scoring:
+# - Task C: 40 (no dependents)
+# - Task B: 30 + (40 * 0.1) = 34 (gets 10% of C's score)
+# - Task A: 20 + (34 * 0.1) = 23.4 = 23 (gets 10% of B's full score)
+#
+# This encourages completing blocking tasks first
+```
+
+This fulfills the vision requirement for dependency-aware task prioritization, making the system understand task relationships and prioritize work that unblocks other tasks.
+
+
 

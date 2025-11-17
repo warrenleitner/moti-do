@@ -157,7 +157,7 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
             today = date.today()
             for task in user.tasks:
                 try:
-                    score = calculate_score(task, scoring_config, today)
+                    score = calculate_score(task, None, scoring_config, today)
                     tasks_with_scores.append((task, score))
                 except Exception as e:  # pylint: disable=broad-exception-caught
                     print(
@@ -347,7 +347,9 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
             # Load scoring config and calculate score
             try:
                 scoring_config = load_scoring_config()
-                current_score = calculate_score(task, scoring_config, date.today())
+                current_score = calculate_score(
+                    task, None, scoring_config, date.today()
+                )
             except ValueError as e:
                 print(f"Warning: Could not calculate score: {e}")
                 current_score = None
@@ -538,7 +540,7 @@ def handle_complete(args: Namespace, manager: DataManager, user: User | None) ->
             score_to_add = 0
             try:
                 scoring_config = load_scoring_config()
-                score_to_add = calculate_score(task, scoring_config, date.today())
+                score_to_add = calculate_score(task, None, scoring_config, date.today())
             except ValueError as e:
                 print(f"Warning: Could not calculate score: {e}")
 

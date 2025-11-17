@@ -62,6 +62,10 @@ def test_load_scoring_config_valid() -> None:
             "enabled": True,
             "bonus_points_per_day": 0.5,
         },
+        "dependency_chain": {
+            "enabled": True,
+            "dependent_score_percentage": 0.1,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -145,6 +149,10 @@ def test_load_scoring_config_invalid_multiplier() -> None:
             "enabled": True,
             "bonus_points_per_day": 0.5,
         },
+        "dependency_chain": {
+            "enabled": True,
+            "dependent_score_percentage": 0.1,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -177,6 +185,10 @@ def test_load_scoring_config_invalid_age_factor() -> None:
             "enabled": True,
             "bonus_points_per_day": 0.5,
         },
+        "dependency_chain": {
+            "enabled": True,
+            "dependent_score_percentage": 0.1,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -207,6 +219,10 @@ def test_load_scoring_config_invalid_daily_penalty() -> None:
         "start_date_aging": {
             "enabled": True,
             "bonus_points_per_day": 0.5,
+        },
+        "dependency_chain": {
+            "enabled": True,
+            "dependent_score_percentage": 0.1,
         },
     }
 
@@ -260,7 +276,7 @@ def test_calculate_score_base_case(sample_config: dict) -> None:
     )
 
     # Calculate score with today's date
-    score = calculate_score(task, sample_config, date.today())
+    score = calculate_score(task, None, sample_config, date.today())
 
     # Expected: base_score * difficulty_mult * duration_mult * age_mult
     # 10 * 1.1 * 1.05 * 1.0 = 17.325 -> rounded to 17
@@ -277,7 +293,7 @@ def test_calculate_score_high_difficulty_long_duration(sample_config: dict) -> N
         duration=Duration.LONG,
     )
 
-    score = calculate_score(task, sample_config, date.today())
+    score = calculate_score(task, None, sample_config, date.today())
 
     # Expected: 10 * 3.0 * 2.0 * 1.0 = 90
     expected_score = int(round(10 * 3.0 * 2.0 * 1.0))
@@ -295,7 +311,7 @@ def test_calculate_score_with_age(sample_config: dict) -> None:
         duration=Duration.MEDIUM,
     )
 
-    score = calculate_score(task, sample_config, date.today())
+    score = calculate_score(task, None, sample_config, date.today())
 
     # Expected: 10 * 2.0 * 1.5 * (1.0 + 10 * 0.01) = 49.5 -> rounded to 50
     age_mult = 1.0 + (10 * 0.01)  # 1.1
@@ -318,7 +334,7 @@ def test_calculate_score_weeks_age_unit(sample_config: dict) -> None:
         duration=Duration.MEDIUM,
     )
 
-    score = calculate_score(task, sample_config_with_weeks, date.today())
+    score = calculate_score(task, None, sample_config_with_weeks, date.today())
 
     # Expected: 10 * 2.0 * 1.5 * (1.0 + 3 * 0.01) = 45.9 -> rounded to 46
     age_mult = 1.0 + (3 * 0.01)  # 1.03
@@ -339,7 +355,7 @@ def test_calculate_score_missing_enum_keys(sample_config: dict) -> None:
         duration=Duration.MEDIUM,
     )
 
-    score = calculate_score(task, custom_config, date.today())
+    score = calculate_score(task, None, custom_config, date.today())
 
     # Expected: 10 * 1.0 * 1.5 * 1.0 = 22.5 -> rounded to 23
     # Uses default multiplier 1.0 for missing difficulty key
@@ -801,7 +817,7 @@ def test_calculate_score_with_due_date_multiplier() -> None:
         },
     }
 
-    score = calculate_score(task, config, effective_date)
+    score = calculate_score(task, None, config, effective_date)
     # base = 10, difficulty = 2.0, duration = 1.5, age = 1.0
     # due_date_mult = 1.0 + (14 - 3) * 0.1 = 1.0 + 1.1 = 2.1
     # score = 10 * 2.0 * 1.5 * 1.0 * 2.1 = 63
@@ -834,7 +850,7 @@ def test_calculate_score_with_overdue_multiplier() -> None:
         },
     }
 
-    score = calculate_score(task, config, effective_date)
+    score = calculate_score(task, None, config, effective_date)
     # base = 10, difficulty = 1.5, duration = 1.2, age = 1.0
     # due_date_mult = 1.0 + (7 * 0.5) = 4.5
     # score = 10 * 1.5 * 1.2 * 1.0 * 4.5 = 81
@@ -964,9 +980,13 @@ def test_calculate_score_with_start_date_bonus() -> None:
             "enabled": True,
             "bonus_points_per_day": 0.5,
         },
+        "dependency_chain": {
+            "enabled": True,
+            "dependent_score_percentage": 0.1,
+        },
     }
 
-    score = calculate_score(task, config, effective_date)
+    score = calculate_score(task, None, config, effective_date)
     # base = 10 + (10 days * 0.5) = 15
     # difficulty = 2.0, duration = 1.5, age = 1.0, due_date = 1.0
     # score = 15 * 2.0 * 1.5 * 1.0 * 1.0 = 45
@@ -1001,9 +1021,13 @@ def test_calculate_score_with_both_start_and_due_date() -> None:
             "enabled": True,
             "bonus_points_per_day": 0.5,
         },
+        "dependency_chain": {
+            "enabled": True,
+            "dependent_score_percentage": 0.1,
+        },
     }
 
-    score = calculate_score(task, config, effective_date)
+    score = calculate_score(task, None, config, effective_date)
     # base = 10 + (10 days past start * 0.5) = 15
     # due in 3 days: 1.0 + ((14 - 3) * 0.1) = 2.1
     # score = 15 * 3.0 * 1.5 * 1.0 * 2.1 = 141.75 = 142

@@ -59,6 +59,10 @@ def load_scoring_config() -> Dict[str, Any]:
             "enabled": True,
             "bonus_points_per_day": 0.5,
         },
+        "dependency_chain": {
+            "enabled": True,
+            "dependent_score_percentage": 0.1,
+        },
     }
 
     if not os.path.exists(config_path):
@@ -81,8 +85,8 @@ def load_scoring_config() -> Dict[str, Any]:
             "daily_penalty",
             "due_date_proximity",
             "start_date_aging",
+            "dependency_chain",
         ]
-
         for key in required_keys:
             if key not in config_data:
                 raise ValueError(f"Missing required key '{key}' in scoring config.")
@@ -232,6 +236,36 @@ def load_scoring_config() -> Dict[str, Any]:
                 "'start_date_aging.bonus_points_per_day' must be a non-negative number."
             )
 
+        # Validate dependency_chain configuration
+        if not isinstance(config_data.get("dependency_chain"), dict):
+            raise ValueError("'dependency_chain' must be a dictionary.")
+
+        if "enabled" not in config_data["dependency_chain"]:
+            raise ValueError("'dependency_chain' missing 'enabled' key.")
+
+        if not isinstance(config_data["dependency_chain"]["enabled"], bool):
+            raise ValueError("'dependency_chain.enabled' must be a boolean.")
+
+        if "dependent_score_percentage" not in config_data["dependency_chain"]:
+            raise ValueError(
+                "'dependency_chain' missing 'dependent_score_percentage' key."
+            )
+
+        if not isinstance(
+            config_data["dependency_chain"]["dependent_score_percentage"],
+            (int, float),
+        ):
+            raise ValueError(
+                "'dependency_chain.dependent_score_percentage' must be a number."
+            )
+
+        if not (
+            0.0 <= config_data["dependency_chain"]["dependent_score_percentage"] <= 1.0
+        ):
+            raise ValueError(
+                "'dependency_chain.dependent_score_percentage' must be between 0.0 and 1.0."
+            )
+
         return config_data
 
     except json.JSONDecodeError as e:
@@ -343,15 +377,93 @@ def calculate_start_date_bonus(
     return days_past_start * bonus_per_day
 
 
+def calculate_dependency_chain_bonus(
+    task: Task,
+    all_tasks: Dict[str, Task],
+    config: Dict[str, Any],
+    effective_date: date,
+    visited: Optional[set] = None,
+) -> float:
+    """
+    Calculate bonus points from tasks that depend on this task.
+
+    Recursively calculates scores of all tasks that list this task as a dependency,
+    then adds a configurable percentage of those scores as a bonus.
+
+    Args:
+        task: The task to calculate dependency bonus for
+        all_tasks: Dictionary mapping task IDs to Task objects (for lookup)
+        config: The scoring configuration
+        effective_date: The date to calculate from
+        visited: Set of task IDs already visited (for circular dependency detection)
+
+    Returns:
+        Bonus points from dependent tasks (0.0 if disabled or no dependents)
+
+    Raises:
+        ValueError: If circular dependency is detected
+    """
+    # Check if feature is enabled
+    if not config.get("dependency_chain", {}).get("enabled", False):
+        return 0.0
+
+    # Initialize visited set for circular dependency detection
+    if visited is None:
+        visited = set()
+
+    # Check for circular dependency
+    if task.id in visited:
+        raise ValueError(f"Circular dependency detected involving task {task.id[:8]}")
+
+    # Mark this task as visited
+    visited.add(task.id)
+
+    # Find all tasks that depend on this task
+    dependent_tasks = [
+        t for t in all_tasks.values() if task.id in t.dependencies and not t.is_complete
+    ]
+
+    # If no dependents, no bonus
+    if not dependent_tasks:
+        visited.remove(task.id)  # Unmark for other traversal paths
+        return 0.0
+
+    # Calculate total score of dependent tasks (recursively)
+    total_dependent_score = 0.0
+    for dependent_task in dependent_tasks:
+        # Recursively calculate score (including their dependencies)
+        dependent_score = calculate_score(
+            dependent_task, all_tasks, config, effective_date, visited.copy()
+        )
+        total_dependent_score += dependent_score
+
+    # Unmark this task for other traversal paths
+    visited.remove(task.id)
+
+    # Get percentage config value with type cast
+    percentage = float(config["dependency_chain"]["dependent_score_percentage"])
+
+    # Return percentage of total dependent scores
+    return total_dependent_score * percentage
+
+
 # pylint: disable=too-many-locals
-def calculate_score(task: Task, config: Dict[str, Any], effective_date: date) -> int:
+def calculate_score(
+    task: Task,
+    all_tasks: Optional[Dict[str, Task]],
+    config: Dict[str, Any],
+    effective_date: date,
+    visited: Optional[set] = None,
+) -> int:
     """
     Calculate the score for a task based on its attributes and the scoring configuration.
 
     Args:
         task: The task to calculate the score for
+        all_tasks: Dictionary of all tasks (for dependency chain calculation)
         config: The scoring configuration
         effective_date: The date to calculate the score for
+        visited: Set of visited task IDs (for circular dependency detection)
 
     Returns:
         The calculated score as an integer
@@ -399,10 +511,20 @@ def calculate_score(task: Task, config: Dict[str, Any], effective_date: date) ->
     # Calculate due date proximity multiplier
     due_date_mult = calculate_due_date_multiplier(task, config, effective_date)
 
-    # Calculate final score
-    final_score = (
+    # Calculate base score (before dependency bonus)
+    base_final_score = (
         additive_base * difficulty_mult * duration_mult * age_mult * due_date_mult
     )
+
+    # Add dependency chain bonus (additive, not multiplicative)
+    dependency_bonus = 0.0
+    if all_tasks is not None:
+        dependency_bonus = calculate_dependency_chain_bonus(
+            task, all_tasks, config, effective_date, visited
+        )
+
+    # Calculate final score with dependency bonus
+    final_score = base_final_score + dependency_bonus
 
     # Return rounded integer
     return int(round(final_score))

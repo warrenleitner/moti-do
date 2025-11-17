@@ -70,7 +70,7 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 - [x] Task 2.2: Add start date aging bonus
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 192-208)
 
-- [ ] Task 2.3: Implement dependency chain scoring
+- [x] Task 2.3: Implement dependency chain scoring
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 210-230)
 
 - [ ] Task 2.4: Add tag/project multiplier configuration

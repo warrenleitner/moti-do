@@ -38,6 +38,10 @@ def get_default_scoring_config() -> Dict[str, Any]:
             "enabled": True,
             "bonus_points_per_day": 0.5,
         },
+        "dependency_chain": {
+            "enabled": True,
+            "dependent_score_percentage": 0.1,
+        },
     }
 
 
@@ -59,5 +63,9 @@ def get_simple_scoring_config() -> Dict[str, Any]:
         "start_date_aging": {
             "enabled": True,
             "bonus_points_per_day": 0.5,
+        },
+        "dependency_chain": {
+            "enabled": True,
+            "dependent_score_percentage": 0.1,
         },
     }

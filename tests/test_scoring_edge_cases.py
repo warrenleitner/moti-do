@@ -437,6 +437,104 @@ def test_load_scoring_config_invalid_bonus_points_per_day_value() -> None:
     )
 
 
+def test_load_scoring_config_invalid_dependency_chain_type() -> None:
+    """Test load_scoring_config with invalid dependency_chain type."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["dependency_chain"] = "not_a_dict"  # Wrong type
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'dependency_chain' must be a dictionary" in str(excinfo.value)
+
+
+def test_load_scoring_config_missing_dependency_chain_enabled_key() -> None:
+    """Test load_scoring_config with missing dependency_chain.enabled key."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["dependency_chain"] = {
+        "dependent_score_percentage": 0.1  # Missing 'enabled'
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'dependency_chain' missing 'enabled' key" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_dependency_chain_enabled_type() -> None:
+    """Test load_scoring_config with invalid dependency_chain.enabled type."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["dependency_chain"] = {
+        "enabled": "yes",  # Wrong type (should be bool)
+        "dependent_score_percentage": 0.1,
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'dependency_chain.enabled' must be a boolean" in str(excinfo.value)
+
+
+def test_load_scoring_config_missing_dependent_score_percentage_key() -> None:
+    """Test load_scoring_config with missing dependent_score_percentage key."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["dependency_chain"] = {
+        "enabled": True  # Missing 'dependent_score_percentage'
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'dependency_chain' missing 'dependent_score_percentage' key" in str(
+        excinfo.value
+    )
+
+
+def test_load_scoring_config_invalid_dependent_score_percentage_type() -> None:
+    """Test load_scoring_config with invalid dependent_score_percentage type."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["dependency_chain"] = {
+        "enabled": True,
+        "dependent_score_percentage": "0.1",  # Wrong type (should be number)
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'dependency_chain.dependent_score_percentage' must be a number" in str(
+        excinfo.value
+    )
+
+
+def test_load_scoring_config_invalid_dependent_score_percentage_range() -> None:
+    """Test load_scoring_config with dependent_score_percentage out of range."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["dependency_chain"] = {
+        "enabled": True,
+        "dependent_score_percentage": 1.5,  # Greater than 1.0
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert (
+        "'dependency_chain.dependent_score_percentage' must be between 0.0 and 1.0"
+        in str(excinfo.value)
+    )
+
+
 def test_load_scoring_config_ioerror() -> None:
     """Test load_scoring_config handling of IOError."""
     with patch("builtins.open", side_effect=IOError("File not found")):
@@ -483,7 +581,7 @@ def test_calculate_score_with_green_style_range() -> None:
         duration=Duration.MINISCULE,
     )
 
-    score = calculate_score(task, config, date.today())
+    score = calculate_score(task, None, config, date.today())
     assert score == 20  # Should be in the green range (20-29)
 
 

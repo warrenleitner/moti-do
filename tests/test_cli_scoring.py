@@ -129,7 +129,9 @@ def test_handle_view_displays_score(
     mock_load_config.assert_called_once()
     # Find the task with id "task1"
     task = next(task for task in mock_user.tasks if task.id == "task1")
-    mock_calculate_score.assert_called_once_with(task, {"mock": "config"}, date.today())
+    mock_calculate_score.assert_called_once_with(
+        task, None, {"mock": "config"}, date.today()
+    )
 
     # Verify score display - check that add_row was called with score
     found_score = False
@@ -173,7 +175,9 @@ def test_handle_complete_adds_xp(
     mock_load_config.assert_called_once()
     # Find the task with id "task1"
     task = next(task for task in mock_user.tasks if task.id == "task1")
-    mock_calculate_score.assert_called_once_with(task, {"mock": "config"}, date.today())
+    mock_calculate_score.assert_called_once_with(
+        task, None, {"mock": "config"}, date.today()
+    )
 
     # Verify XP addition with user and manager
     mock_add_xp.assert_called_once_with(mock_user, mock_manager, 42)

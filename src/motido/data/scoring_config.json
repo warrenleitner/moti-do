@@ -36,5 +36,9 @@
   "start_date_aging": {
     "enabled": true,
     "bonus_points_per_day": 0.5
+  },
+  "dependency_chain": {
+    "enabled": true,
+    "dependent_score_percentage": 0.1
   }
 }
