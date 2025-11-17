@@ -37,8 +37,6 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 
 ## Implementation Checklist
 
-### [ ] Phase 1: Foundation Completion (Milestone 0.1+ - Week 1-2)
-
 - [x] Task 1.1: Fix XP persistence system
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 20-35)
 - [x] Task 1.2: Add `describe` command for text_description field
@@ -56,11 +54,13 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 - [x] Task 1.6: Update `list` command to display new fields
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 112-128)
 
-- [ ] Task 1.7: Update `view` command to show all fields
+- [x] Task 1.7: Update `view` command to show all fields
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 130-145)
 
-- [ ] Task 1.8: Write comprehensive tests for new commands
+- [x] Task 1.8: Write comprehensive tests for new commands
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 147-165)
+
+### [x] Phase 1: Foundation Completion (Milestone 0.1+ - Week 1-2)
 
 ### [ ] Phase 2: Enhanced Scoring System (Milestone 0.2 - Week 3-4)
 

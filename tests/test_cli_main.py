@@ -797,6 +797,12 @@ def test_handle_view_success_with_difficulty(mocker: Any) -> None:
     mock_task.duration = Duration.MEDIUM  # Example duration
     mock_task.is_complete = False  # Default is incomplete
     mock_task.creation_date = datetime(2023, 1, 1, 12, 0, 0)
+    # Add new optional fields
+    mock_task.text_description = None
+    mock_task.due_date = None
+    mock_task.start_date = None
+    mock_task.tags = []
+    mock_task.project = None
 
     # Setup user.find_task_by_id to return the mock task
     mock_user.find_task_by_id.return_value = mock_task
@@ -822,13 +828,15 @@ def test_handle_view_success_with_difficulty(mocker: Any) -> None:
     # Check add_row calls, especially for priority formatting
     add_row_calls = mock_table_instance.add_row.call_args_list
     assert (
-        len(add_row_calls) == 9
-    )  # Now 9 rows: ID, Status, Priority, Created, Difficulty, Duration, Title,
-    # and Score (+ Description only if present)
+        len(add_row_calls) == 13
+    )  # Now 13 rows: ID, Status, Priority, Created, Difficulty, Duration, Title,
+    # Description, Due Date, Start Date, Tags, Project, and Score
     assert add_row_calls[0] == call("ID:", "abc-123")
 
-    # Verify the Text object creation - now called five times (for status, priority, difficulty, duration, and score)
-    assert mock_text_class.call_count == 5
+    # Verify the Text object creation - now called 10 times:
+    # status, priority, difficulty, duration, description "Not set",
+    # due date "Not set", start date "Not set", tags "Not set", project "Not set", score
+    assert mock_text_class.call_count == 10
 
     # We can't check the exact append calls since Text() is called twice
     # and returns the same mock instance both times

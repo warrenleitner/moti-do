@@ -314,3 +314,198 @@ Example output with all fields:
 
 This prepares the UI for enhanced scoring factors (due date proximity) planned in Phase 2.
 
+### Task 1.7: Update `view` command to show all fields ✅
+
+**Status**: Complete
+**Files Modified**:
+- `src/motido/cli/main.py`
+- `tests/test_cli_main.py`
+- `tests/test_cli_view_enhanced.py` (new file)
+
+**Changes**:
+- Enhanced `handle_view()` function to display all Task model fields
+- Updated text_description display to always show ("Not set" if empty)
+- Added due_date display with color coding:
+  - Red bold: Overdue tasks (due_date < today and not complete)
+  - Yellow: Tasks due within 3 days
+  - Normal: Future dates
+  - Dim "Not set": No due date
+- Added start_date display (formatted YYYY-MM-DD or "Not set")
+- Added tags display (comma-separated list or "Not set")
+- Added project display (project name or "Not set")
+- Updated existing test `test_handle_view_success_with_difficulty()` to accommodate new fields
+- Added mock fields to test: text_description, due_date, start_date, tags, project
+- Updated assertion from 9 rows to 13 rows (added 5 new fields: Description, Due Date, Start Date, Tags, Project)
+- Updated Text() call count from 5 to 10 (added 5 "Not set" Text objects)
+- Created comprehensive test suite with 4 test cases:
+  - `test_handle_view_with_all_fields()` - Task with all optional fields populated
+  - `test_handle_view_with_minimal_fields()` - Task with only required fields
+  - `test_handle_view_with_overdue_task()` - Overdue task (red color coding)
+  - `test_handle_view_with_due_soon_task()` - Task due soon (yellow color coding)
+- All 360 tests passing (4 new tests)
+- 100% test coverage maintained (1316 statements, 0 missed)
+- Pylint 10.0/10 maintained
+
+**Technical Details**:
+The view command now provides a complete task detail view with all fields visible:
+1. **Always visible fields**: ID, Status, Priority, Created, Difficulty, Duration, Title
+2. **Always shown with fallback**: Description, Due Date, Start Date, Tags, Project ("Not set" if empty)
+3. **Color coding**: Matches list command pattern for due dates
+4. **Rich formatting**: Uses Text objects for styled output, emojis for enums
+5. **Row count**: 13 rows total (was 9, added 4 new fields + Description now always shown)
+
+Example output with all fields:
+```
+ID:           abc123def456
+Status:       Incomplete
+Priority:     🟡 High
+Created:      2025-11-16 14:30:00
+Difficulty:   🟠 Medium
+Duration:     🟣 Long
+Title:        Task with all fields
+Description:  This is a detailed description
+              with multiple lines
+Due Date:     2025-11-21
+Start Date:   2025-11-14
+Tags:         urgent, work, important
+Project:      MyProject
+Score:        45
+```
+
+Example output with minimal fields:
+```
+ID:           xyz789abc123
+Status:       Incomplete
+Priority:     ⚪ Low
+Created:      2025-11-16 14:30:00
+Difficulty:   ⚪ Trivial
+Duration:     ⚪ Miniscule
+Title:        Minimal task
+Description:  Not set
+Due Date:     Not set
+Start Date:   Not set
+Tags:         Not set
+Project:      Not set
+Score:        10
+```
+
+This provides users with complete visibility into all task details, supporting informed decision-making.
+
+### Task 1.8: Write comprehensive tests for new commands ✅
+
+**Status**: Complete
+**Files Verified**:
+- `tests/test_cli_describe.py` - 10 comprehensive tests for describe command
+- `tests/test_cli_dates.py` - 24 comprehensive tests for set-due and set-start commands
+- `tests/test_cli_tags.py` - 17 comprehensive tests for tag management
+- `tests/test_cli_project.py` - 17 comprehensive tests for project assignment
+- `tests/test_cli_list_enhanced.py` - 3 comprehensive tests for enhanced list display
+- `tests/test_cli_view_enhanced.py` - 4 comprehensive tests for enhanced view display
+- `tests/test_cli_main.py` - Updated existing tests for compatibility
+
+**Test Coverage Summary**:
+- Total CLI tests: 189 tests passing
+- CLI module coverage: 100% (709 statements, 0 missed)
+- Total project coverage: 100% (1316 statements, 0 missed)
+- All tests pass with Pylint 10.0/10.0
+- Type checking passes with mypy (40 source files)
+
+**Technical Details**:
+All test files created during Phase 1 implementation provide comprehensive coverage:
+
+1. **test_cli_describe.py** (Task 1.2):
+   - Adding description to task without one
+   - Updating existing description
+   - Multi-line text support
+   - Error handling (task not found, no user, ambiguous ID, save errors)
+   - Verbose mode
+   - Empty description to clear
+
+2. **test_cli_dates.py** (Task 1.3):
+   - ISO date format parsing
+   - Relative date formats (tomorrow, today, next friday, in 3 days)
+   - Clear flag functionality
+   - Invalid date handling
+   - Error handling (task not found, missing user, ambiguous ID, save errors)
+   - Verbose mode
+   - Both set-due and set-start commands
+
+3. **test_cli_tags.py** (Task 1.4):
+   - Adding new tags
+   - Duplicate prevention
+   - Whitespace stripping
+   - Removing existing/non-existent tags
+   - Listing tags (with tags, without tags, multiple tags)
+   - Error handling (task not found, no user, ambiguous ID, save errors)
+   - Verbose mode
+   - Missing tag argument validation
+
+4. **test_cli_project.py** (Task 1.5):
+   - Setting new project
+   - Updating existing project
+   - Project names with spaces, dashes, underscores
+   - Whitespace stripping
+   - Clearing existing project
+   - Invalid character validation
+   - Error handling (task not found, no user, ambiguous ID, save errors)
+   - Verbose mode
+   - Missing arguments validation
+
+5. **test_cli_list_enhanced.py** (Task 1.6):
+   - Tasks with all optional fields populated
+   - Mixed tasks (some with fields, some without)
+   - Tasks with no optional fields
+   - Conditional column display logic
+
+6. **test_cli_view_enhanced.py** (Task 1.7):
+   - Task with all optional fields populated
+   - Task with only required fields
+   - Overdue task (red color coding)
+   - Task due soon (yellow color coding)
+
+**Verification Results**:
+- ✅ 100% code coverage maintained across all modules
+- ✅ All tests pass (360 total, 189 CLI-specific)
+- ✅ Pylint 10.0/10.0 score maintained
+- ✅ Type checking passes (mypy)
+- ✅ Tests cover happy path and error cases
+- ✅ Tests verify data persistence
+- ✅ Edge cases handled (invalid input, missing data, errors)
+
+## Phase 1: Foundation Completion - COMPLETE ✅
+
+**All 8 tasks completed successfully!**
+
+**Summary of Phase 1 Achievements**:
+1. ✅ Fixed XP persistence system - XP now properly saves to user data
+2. ✅ Activated text_description field with `describe` command
+3. ✅ Activated due_date and start_date fields with `set-due` and `set-start` commands
+4. ✅ Activated tags field with `tag` command (add/remove/list operations)
+5. ✅ Activated project field with `project` command (set/clear operations)
+6. ✅ Enhanced `list` command with conditional columns and color coding
+7. ✅ Enhanced `view` command to display all fields with fallbacks
+8. ✅ Comprehensive test suite with 100% coverage
+
+**Quality Metrics**:
+- Test Coverage: 100% (1316 statements, 0 missed)
+- Pylint Score: 10.0/10.0
+- Type Safety: 100% (mypy passing on 40 files)
+- Total Tests: 360 passing
+- CLI Tests: 189 passing
+
+**Fields Now Accessible**:
+- ✅ text_description (via `describe` command)
+- ✅ due_date (via `set-due` command)
+- ✅ start_date (via `set-start` command)
+- ✅ tags (via `tag` command)
+- ✅ project (via `project` command)
+- ✅ All fields visible in `list` and `view` commands
+
+**Next Steps**:
+Phase 1 complete! Ready to proceed to Phase 2: Enhanced Scoring System, which will implement:
+- Due date proximity scoring (exponential)
+- Start date aging bonus
+- Dependency chain scoring
+- Tag/project custom multipliers
+- Priority multiplier integration
+

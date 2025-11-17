@@ -394,8 +394,49 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
             table.add_row("Duration:", duration_text)
 
             table.add_row("Title:", task.title)
-            if task.text_description:
-                table.add_row("Description:", task.text_description)
+
+            # Display text_description (always show, even if empty)
+            description_value = (
+                task.text_description
+                if task.text_description
+                else Text("Not set", style="dim")
+            )
+            table.add_row("Description:", description_value)
+
+            # Display due_date
+            if task.due_date:
+                due_date_str = task.due_date.strftime("%Y-%m-%d")
+                # Color code based on proximity
+                today = date.today()
+                if task.due_date.date() < today and not task.is_complete:
+                    due_text = Text(due_date_str, style="red bold")
+                elif task.due_date.date() <= today + timedelta(days=3):
+                    due_text = Text(due_date_str, style="yellow")
+                else:
+                    due_text = Text(due_date_str)
+                table.add_row("Due Date:", due_text)
+            else:
+                table.add_row("Due Date:", Text("Not set", style="dim"))
+
+            # Display start_date
+            if task.start_date:
+                start_date_str = task.start_date.strftime("%Y-%m-%d")
+                table.add_row("Start Date:", start_date_str)
+            else:
+                table.add_row("Start Date:", Text("Not set", style="dim"))
+
+            # Display tags
+            if task.tags:
+                tags_str = ", ".join(task.tags)
+                table.add_row("Tags:", tags_str)
+            else:
+                table.add_row("Tags:", Text("Not set", style="dim"))
+
+            # Display project
+            if task.project:
+                table.add_row("Project:", task.project)
+            else:
+                table.add_row("Project:", Text("Not set", style="dim"))
 
             # Display score if available
             if current_score is not None:
