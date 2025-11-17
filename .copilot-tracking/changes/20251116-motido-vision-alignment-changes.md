@@ -141,3 +141,64 @@ motido set-start --id abc123 "2025-01-15"
 motido set-start --id abc123 --clear
 ```
 
+### Task 1.4: Add `tag` command for tag management ✅
+
+**Status**: Complete
+**Files Modified**:
+- `src/motido/cli/main.py`
+- `tests/test_cli_tags.py` (new file)
+
+**Changes**:
+- Added `handle_tag()` function with three subcommands: add, remove, list
+- Command syntax: `motido tag <add|remove|list> --id <task-id> [tag]`
+- Add operation prevents duplicate tags and strips whitespace
+- Remove operation validates tag exists before removing
+- List operation displays all tags or indicates none present
+- Added validation to require tag argument for add/remove operations
+- Added tag CLI subparser with choices constraint
+- Created comprehensive test suite with 17 test cases:
+  - `test_handle_tag_add_new_tag()` - Adding new tag to task
+  - `test_handle_tag_add_duplicate_tag()` - Duplicate prevention
+  - `test_handle_tag_add_with_whitespace()` - Whitespace stripping
+  - `test_handle_tag_remove_existing_tag()` - Removing existing tag
+  - `test_handle_tag_remove_nonexistent_tag()` - Removing non-existent tag
+  - `test_handle_tag_list_with_tags()` - Listing tags when present
+  - `test_handle_tag_list_without_tags()` - Listing when no tags
+  - `test_handle_tag_list_with_multiple_tags()` - Multiple tags display
+  - `test_handle_tag_task_not_found()` - Non-existent task ID
+  - `test_handle_tag_no_user()` - Missing user handling
+  - `test_handle_tag_ambiguous_id()` - Ambiguous ID prefix
+  - `test_handle_tag_add_save_error()` - IOError during add
+  - `test_handle_tag_remove_save_error()` - IOError during remove
+  - `test_handle_tag_generic_exception()` - Generic exception handling
+  - `test_handle_tag_verbose_mode()` - Verbose output verification
+  - `test_handle_tag_add_missing_tag_argument()` - Validation for missing tag on add
+  - `test_handle_tag_remove_missing_tag_argument()` - Validation for missing tag on remove
+- All 336 tests passing (17 new tests)
+- 100% test coverage maintained (1220 statements, 0 missed)
+- Pylint 10.0/10 maintained
+
+**Technical Details**:
+The `tag` command enables users to organize and categorize tasks using flexible tags. The implementation:
+1. Supports three operations via subcommands (add, remove, list)
+2. Prevents duplicate tags when adding (uses `in` operator for fast lookup)
+3. Strips whitespace from tags for consistency
+4. Validates tag argument is provided for add/remove operations
+5. Provides clear feedback for each operation (added, already exists, removed, not found, listed)
+6. Follows the same error handling pattern as other CLI commands (ValueError, IOError, Exception)
+7. Uses Task.tags List[str] field from the model
+
+This prepares for future tag-based filtering and custom scoring multipliers planned for Phase 2.
+
+Example usage:
+```bash
+motido tag add --id abc123 "urgent"
+motido tag add --id abc123 "work"
+motido tag list --id abc123
+# Output: Tags for task 'Task Title': urgent, work
+
+motido tag remove --id abc123 "urgent"
+motido tag list --id abc123
+# Output: Tags for task 'Task Title': work
+```
+

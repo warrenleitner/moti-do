@@ -47,7 +47,7 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 - [x] Task 1.3: Add `set-due` and `set-start` commands for date fields
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 54-72)
 
-- [ ] Task 1.4: Add `tag` command for tag management
+- [x] Task 1.4: Add `tag` command for tag management
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 74-92)
 
 - [ ] Task 1.5: Add `project` command for project assignment

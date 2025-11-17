@@ -609,6 +609,59 @@ def handle_set_start(args: Namespace, manager: DataManager, user: User | None) -
         sys.exit(1)
 
 
+def handle_tag(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'tag' command to add, remove, or list tags on a task."""
+    print_verbose(
+        args, f"Tag operation '{args.tag_command}' for task ID: '{args.id}'..."
+    )
+
+    if not user:
+        print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
+        sys.exit(1)
+
+    # Validate that tag is provided for add/remove operations
+    if args.tag_command in ["add", "remove"] and not args.tag:
+        print(f"Error: Tag argument is required for '{args.tag_command}' operation.")
+        sys.exit(1)
+
+    try:
+        task = user.find_task_by_id(args.id)
+        if task:
+            if args.tag_command == "add":
+                tag = args.tag.strip()
+                if tag in task.tags:
+                    print(f"Tag '{tag}' already exists on task '{task.title}'.")
+                else:
+                    task.tags.append(tag)
+                    manager.save_user(user)
+                    print(f"Added tag '{tag}' to task '{task.title}'.")
+            elif args.tag_command == "remove":
+                tag = args.tag.strip()
+                if tag in task.tags:
+                    task.tags.remove(tag)
+                    manager.save_user(user)
+                    print(f"Removed tag '{tag}' from task '{task.title}'.")
+                else:
+                    print(f"Tag '{tag}' not found on task '{task.title}'.")
+            elif args.tag_command == "list":
+                if task.tags:
+                    print(f"Tags for task '{task.title}': {', '.join(task.tags)}")
+                else:
+                    print(f"Task '{task.title}' has no tags.")
+        else:
+            print(f"Error: Task with ID prefix '{args.id}' not found.")
+            sys.exit(1)
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except IOError as e:
+        print(f"Error saving task: {e}")
+        sys.exit(1)
+    except Exception as e:  # pragma: no cover  # pylint: disable=broad-exception-caught
+        print(f"Unexpected error: {e}")
+        sys.exit(1)
+
+
 # pylint: disable=too-many-arguments,too-many-positional-arguments
 def _print_task_updates(
     task: Task,
@@ -1038,6 +1091,23 @@ def setup_parser() -> argparse.ArgumentParser:
         "--clear", action="store_true", help="Clear the start date."
     )
     parser_set_start.set_defaults(func=_wrap_handler(handle_set_start))
+
+    # --- Tag Command ---
+    parser_tag = subparsers.add_parser(
+        "tag", help="Add, remove, or list tags on a task."
+    )
+    parser_tag.add_argument(
+        "tag_command",
+        choices=["add", "remove", "list"],
+        help="Tag operation: add, remove, or list.",
+    )
+    parser_tag.add_argument(
+        "--id", required=True, help="The full or unique partial ID of the task."
+    )
+    parser_tag.add_argument(
+        "tag", nargs="?", help="The tag to add or remove (not needed for 'list')."
+    )
+    parser_tag.set_defaults(func=_wrap_handler(handle_tag))
 
     # --- Run Penalties Command ---
     parser_penalties = subparsers.add_parser(
