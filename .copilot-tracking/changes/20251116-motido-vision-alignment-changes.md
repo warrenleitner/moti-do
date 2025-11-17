@@ -1209,3 +1209,119 @@ final_score = base_final_score + dependency_bonus
 - Total Tests: 443 passing (10 new integration tests)
 
 This completes Phase 2: Enhanced Scoring System (6/6 tasks complete).
+
+---
+
+## Phase 3: Incremental Completion (Week 5)
+
+### Task 3.1: Add last_processed_date to User model ✅
+
+**Status**: Complete
+**Files Modified**:
+- src/motido/core/models.py
+- src/motido/data/json_manager.py
+- src/motido/data/database_manager.py
+- tests/test_models.py
+- tests/test_database_manager.py
+- tests/test_json_manager.py
+- tests/conftest.py
+
+**Changes**:
+- Added `date` import to models.py, json_manager.py, database_manager.py, and test files
+- Added `last_processed_date: date = field(default_factory=date.today)` to User dataclass
+- Updated JSON serialization to include last_processed_date with `.isoformat()` format
+- Updated JSON deserialization with backwards compatibility (defaults to `date.today()` if missing)
+- Updated database schema: added `last_processed_date TEXT NOT NULL DEFAULT (date('now'))` column to users table
+- Updated database deserialization with backwards compatibility (defaults to `date.today()` if missing)
+- Changed `_ensure_user_exists()` signature from `(conn, username: str)` to `(conn, user: User)` to access last_processed_date
+- Updated all call sites and tests for new signature
+- Created 2 new model tests in test_models.py:
+  - `test_user_initialization()` - Enhanced to verify default last_processed_date
+  - `test_user_initialization_with_last_processed_date()` - Test custom date assignment
+- Created 2 backwards compatibility tests:
+  - `test_load_user_without_last_processed_date()` in test_json_manager.py
+  - `test_load_user_without_last_processed_date()` in test_database_manager.py
+- Updated test fixtures in conftest.py and test_database_manager.py to include last_processed_date
+- Updated 3 save_user tests in test_database_manager.py to pass User object instead of username
+- Updated 1 save_user test in test_json_manager_update.py to include last_processed_date in expected data
+- All 446 tests passing (2 new tests)
+- 100% test coverage maintained (1444 statements, 0 missed)
+- Pylint 10.0/10 maintained
+
+**Technical Details**:
+The last_processed_date field enables incremental task completion by tracking the user's current "virtual date" in the system. This field:
+
+1. **Purpose**: Stores the date that the user has processed up to (for advance/skip-to commands)
+2. **Default behavior**: Defaults to `date.today()` on first use
+3. **Storage format**: ISO 8601 string ("YYYY-MM-DD") in both JSON and SQLite
+4. **Backwards compatibility**: Missing values default to today's date (no data migration required)
+5. **Database schema**: Uses SQLite DEFAULT (date('now')) for new users
+
+**Signature Change Impact**:
+The `_ensure_user_exists()` function previously accepted only username string but needed access to last_processed_date. Changed to accept full User object:
+
+```python
+# Before
+def _ensure_user_exists(self, conn: sqlite3.Connection, username: str) -> None:
+    cursor.execute("INSERT OR IGNORE INTO users (username, total_xp) VALUES (?, ?)", (username, 0))
+
+# After
+def _ensure_user_exists(self, conn: sqlite3.Connection, user: User) -> None:
+    cursor.execute(
+        "INSERT OR IGNORE INTO users (username, total_xp, last_processed_date) VALUES (?, ?, ?)",
+        (user.username, user.total_xp, user.last_processed_date.isoformat()),
+    )
+```
+
+This required updating 1 call site in save_user() and 3 test assertions.
+
+**Backwards Compatibility**:
+Both data managers handle missing last_processed_date gracefully:
+
+```python
+# JSON deserialization
+last_processed_str = user_data.get("last_processed_date")
+if last_processed_str:
+    last_processed = date.fromisoformat(last_processed_str)
+else:
+    last_processed = date.today()
+
+# Database deserialization
+last_processed_str = (
+    user_row["last_processed_date"]
+    if "last_processed_date" in user_row.keys()
+    else None
+)
+if last_processed_str:
+    last_processed = date.fromisoformat(last_processed_str)
+else:
+    last_processed = date.today()
+```
+
+**Usage Example**:
+```python
+# Default initialization (today)
+user = User(username="player1")
+print(user.last_processed_date)  # 2025-11-16
+
+# Custom date (for testing or backdating)
+from datetime import date
+user = User(username="player2", last_processed_date=date(2025, 1, 15))
+print(user.last_processed_date)  # 2025-01-15
+
+# Stored in JSON as:
+{
+  "username": "player1",
+  "total_xp": 100,
+  "last_processed_date": "2025-11-16",
+  "tasks": []
+}
+```
+
+This field is a prerequisite for Phase 3 Tasks 3.2-3.5 which implement incremental date progression (advance/skip-to commands) and backdated task completion.
+
+**Quality Metrics**:
+- Test Coverage: 100% (1444 statements, 0 missed)
+- Pylint Score: 10.0/10
+- Type Safety: 100% (mypy passing on 43 files)
+- Total Tests: 446 passing (2 new model tests + 2 new compatibility tests)

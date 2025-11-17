@@ -2,7 +2,7 @@
 
 import os
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Tuple
 from unittest.mock import MagicMock, call
 
@@ -158,7 +158,8 @@ def test_create_tables(
             """
                 CREATE TABLE IF NOT EXISTS users (
                     username TEXT PRIMARY KEY,
-                    total_xp INTEGER NOT NULL DEFAULT 0
+                    total_xp INTEGER NOT NULL DEFAULT 0,
+                    last_processed_date TEXT NOT NULL DEFAULT (date('now'))
                 )
             """
         ),
@@ -261,7 +262,14 @@ def test_load_user_success(
     mock_get_connection, _, cursor = mock_conn_fixture
 
     # Mock cursor.fetchone for user lookup
-    cursor.fetchone.side_effect = [{"username": DEFAULT_USERNAME}, None]
+    cursor.fetchone.side_effect = [
+        {
+            "username": DEFAULT_USERNAME,
+            "total_xp": 0,
+            "last_processed_date": "2025-11-16",
+        },
+        None,
+    ]
     # Mock cursor.fetchall for task lookup - return 2 tasks
     cursor.fetchall.return_value = [
         {"id": "task1", "title": "Task 1", "priority": "Low"},
@@ -282,6 +290,34 @@ def test_load_user_success(
     assert user.tasks[1].id == "task2"
     assert user.tasks[1].title == "Task 2"
     assert user.tasks[1].priority == Priority.HIGH
+
+
+def test_load_user_without_last_processed_date(
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
+) -> None:
+    """Test loading a user without last_processed_date defaults to today."""
+    mock_get_connection, _, cursor = mock_conn_fixture
+
+    # Mock cursor.fetchone for user lookup WITHOUT last_processed_date field
+    cursor.fetchone.side_effect = [
+        {
+            "username": "testuser",
+            "total_xp": 50,
+            # No last_processed_date key (backwards compatibility)
+        },
+        None,
+    ]
+    # Mock cursor.fetchall for task lookup - no tasks
+    cursor.fetchall.return_value = []
+
+    user = manager.load_user("testuser")
+
+    mock_get_connection.assert_called_once()
+    assert user is not None
+    assert user.username == "testuser"
+    assert user.total_xp == 50
+    assert user.last_processed_date == date.today()
 
 
 def test_load_user_invalid_priority(
@@ -388,14 +424,15 @@ def test_ensure_user_exists(
 ) -> None:
     """Test _ensure_user_exists executes correct SQL using mocked connection."""
     _, connection, cursor = mock_conn_fixture
-    username = "new_user"
 
-    # Note: _ensure_user_exists takes connection as arg, so we pass the mock
-    manager._ensure_user_exists(connection, username)
+    user = User(username="new_user", total_xp=0, last_processed_date=date(2025, 11, 16))
+
+    # Note: _ensure_user_exists takes connection and user as args
+    manager._ensure_user_exists(connection, user)
 
     cursor.execute.assert_called_once_with(
-        "INSERT OR IGNORE INTO users (username, total_xp) VALUES (?, ?)",
-        (username, 0),
+        "INSERT OR IGNORE INTO users (username, total_xp, last_processed_date) VALUES (?, ?, ?)",
+        ("new_user", 0, "2025-11-16"),
     )
 
 
@@ -406,13 +443,16 @@ def test_ensure_user_exists_db_error(
 ) -> None:
     """Test _ensure_user_exists handles database errors using mocked connection."""
     _, connection, cursor = mock_conn_fixture
-    username = "new_user"
+
+    user = User(username="new_user", total_xp=0, last_processed_date=date(2025, 11, 16))
     cursor.execute.side_effect = sqlite3.Error("Insert failed")
 
-    manager._ensure_user_exists(connection, username)
+    manager._ensure_user_exists(connection, user)
 
     captured = capsys.readouterr()
-    assert f"Error ensuring user '{username}' exists: Insert failed" in captured.out
+    assert (
+        f"Error ensuring user '{user.username}' exists: Insert failed" in captured.out
+    )
 
 
 def test_save_user(
@@ -515,7 +555,7 @@ def test_save_user_no_tasks(
     manager.save_user(user_no_tasks)
 
     # Check that _ensure_user_exists was called correctly (without self)
-    mock_ensure_user.assert_called_once_with(connection, user_no_tasks.username)
+    mock_ensure_user.assert_called_once_with(connection, user_no_tasks)
     # Should have 2 execute calls: UPDATE total_xp and DELETE tasks
     assert cursor.execute.call_count == 2
     cursor.executemany.assert_not_called()
@@ -539,7 +579,7 @@ def test_save_user_db_error_on_delete(
     manager.save_user(sample_user_db)
 
     # Check that _ensure_user_exists was called correctly (without self)
-    mock_ensure_user.assert_called_once_with(connection, sample_user_db.username)
+    mock_ensure_user.assert_called_once_with(connection, sample_user_db)
     cursor.execute.assert_called_once()
     cursor.executemany.assert_not_called()
     captured = capsys.readouterr()
@@ -568,7 +608,7 @@ def test_save_user_db_error_on_insert(
     manager.save_user(sample_user_db)
 
     # Check that _ensure_user_exists was called correctly (without self)
-    mock_ensure_user.assert_called_once_with(connection, sample_user_db.username)
+    mock_ensure_user.assert_called_once_with(connection, sample_user_db)
     assert cursor.execute.call_count == 2  # UPDATE and DELETE calls
     assert cursor.executemany.call_count == 1  # INSERT is attempted once
     captured = capsys.readouterr()

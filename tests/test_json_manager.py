@@ -3,6 +3,7 @@
 # pylint: disable=redefined-outer-name, protected-access
 
 import json
+from datetime import date
 from typing import Any, Dict, Tuple
 from unittest.mock import mock_open
 
@@ -252,6 +253,32 @@ def test_load_user_success(
         assert task.id == sample_user.tasks[i].id
         assert task.title == sample_user.tasks[i].title
         assert task.priority == sample_user.tasks[i].priority
+
+
+def test_load_user_without_last_processed_date(
+    manager: JsonDataManager, mocker: Any
+) -> None:
+    """Test loading a user without last_processed_date defaults to today."""
+    # User data without last_processed_date (backwards compatibility)
+    user_data_without_date = {
+        "testuser": {
+            "username": "testuser",
+            "total_xp": 100,
+            "tasks": [],
+            # No last_processed_date field
+        }
+    }
+    mock_read = mocker.patch.object(
+        manager, "_read_data", return_value=user_data_without_date
+    )
+
+    loaded_user = manager.load_user("testuser")
+
+    mock_read.assert_called_once()
+    assert loaded_user is not None
+    assert loaded_user.username == "testuser"
+    assert loaded_user.total_xp == 100
+    assert loaded_user.last_processed_date == date.today()
 
 
 def test_load_user_not_found(manager: JsonDataManager, mocker: Any) -> None:

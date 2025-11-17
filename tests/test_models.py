@@ -1,7 +1,7 @@
 """Tests for the core application models (Task and User)."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import List
 
 import pytest
@@ -296,6 +296,17 @@ def test_user_initialization() -> None:
     user = User(username=username)
     assert user.username == username
     assert user.tasks == []
+    # Verify last_processed_date defaults to today
+    assert user.last_processed_date == date.today()
+
+
+def test_user_initialization_with_last_processed_date() -> None:
+    """Test that a User can be initialized with a specific last_processed_date."""
+    username = "tester"
+    test_date = date(2025, 1, 15)
+    user = User(username=username, last_processed_date=test_date)
+    assert user.username == username
+    assert user.last_processed_date == test_date
 
 
 def test_user_add_task(empty_user: User) -> None:

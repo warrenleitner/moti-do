@@ -6,7 +6,7 @@ Implementation of the DataManager interface using SQLite database storage.
 import json
 import os
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from motido.core.models import Difficulty, Duration, Priority, Task, User
@@ -64,7 +64,8 @@ class DatabaseDataManager(DataManager):
                 """
                 CREATE TABLE IF NOT EXISTS users (
                     username TEXT PRIMARY KEY,
-                    total_xp INTEGER NOT NULL DEFAULT 0
+                    total_xp INTEGER NOT NULL DEFAULT 0,
+                    last_processed_date TEXT NOT NULL DEFAULT (date('now'))
                 )
             """
             )
@@ -135,6 +136,17 @@ class DatabaseDataManager(DataManager):
 
                 # Get total_xp from user row
                 total_xp = user_row["total_xp"] if "total_xp" in user_row.keys() else 0
+
+                # Get last_processed_date from user row
+                last_processed_str = (
+                    user_row["last_processed_date"]
+                    if "last_processed_date" in user_row.keys()
+                    else None
+                )
+                if last_processed_str:
+                    last_processed = date.fromisoformat(last_processed_str)
+                else:
+                    last_processed = date.today()
 
                 # Load tasks for the user
                 cursor.execute(
@@ -286,7 +298,12 @@ class DatabaseDataManager(DataManager):
                     )
                     tasks.append(task)
 
-                user = User(username=username, total_xp=total_xp, tasks=tasks)
+                user = User(
+                    username=username,
+                    total_xp=total_xp,
+                    tasks=tasks,
+                    last_processed_date=last_processed,
+                )
                 print(f"User '{username}' loaded successfully with {len(tasks)} tasks.")
                 return user
 
@@ -294,18 +311,18 @@ class DatabaseDataManager(DataManager):
             print(f"Error loading user '{username}' from motido.database: {e}")
             return None
 
-    def _ensure_user_exists(self, conn: sqlite3.Connection, username: str) -> None:
+    def _ensure_user_exists(self, conn: sqlite3.Connection, user: User) -> None:
         """Ensures the user exists in the users table, inserting if necessary."""
         try:
             cursor = conn.cursor()
             # Use INSERT OR IGNORE to avoid errors if user already exists
             cursor.execute(
-                "INSERT OR IGNORE INTO users (username, total_xp) VALUES (?, ?)",
-                (username, 0),
+                "INSERT OR IGNORE INTO users (username, total_xp, last_processed_date) VALUES (?, ?, ?)",
+                (user.username, user.total_xp, user.last_processed_date.isoformat()),
             )
             # No commit needed due to autocommit (isolation_level=None)
         except sqlite3.Error as e:
-            print(f"Error ensuring user '{username}' exists: {e}")
+            print(f"Error ensuring user '{user.username}' exists: {e}")
             # Decide how to handle this - maybe raise an exception?
 
     def save_user(self, user: User) -> None:
@@ -316,12 +333,16 @@ class DatabaseDataManager(DataManager):
                 cursor = conn.cursor()
 
                 # Ensure the user exists in the users table
-                self._ensure_user_exists(conn, user.username)
+                self._ensure_user_exists(conn, user)
 
-                # Update user's total_xp
+                # Update user's total_xp and last_processed_date
                 cursor.execute(
-                    "UPDATE users SET total_xp = ? WHERE username = ?",
-                    (user.total_xp, user.username),
+                    "UPDATE users SET total_xp = ?, last_processed_date = ? WHERE username = ?",
+                    (
+                        user.total_xp,
+                        user.last_processed_date.isoformat(),
+                        user.username,
+                    ),
                 )
 
                 # Strategy: Delete existing tasks for the user and insert current ones.

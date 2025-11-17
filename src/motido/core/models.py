@@ -5,7 +5,7 @@ Defines the core data models for the Moti-Do application.
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from typing import Any, Dict, List
 
@@ -176,6 +176,7 @@ class User:
     username: str
     total_xp: int = 0
     tasks: List[Task] = field(default_factory=list)
+    last_processed_date: date = field(default_factory=date.today)
 
     def find_task_by_id(self, task_id_prefix: str) -> Task | None:
         """

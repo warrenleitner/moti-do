@@ -71,6 +71,8 @@ def sample_user_data(
     return {
         sample_user.username: {
             "username": sample_user.username,
+            "total_xp": 0,
+            "last_processed_date": "2025-11-16",
             "tasks": [
                 {
                     "id": "uuid-a",

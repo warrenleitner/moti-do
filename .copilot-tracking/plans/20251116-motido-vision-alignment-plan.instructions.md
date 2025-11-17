@@ -86,7 +86,7 @@ Systematically align MotiDo v0.1.0 CLI with the comprehensive vision document an
 
 ### [ ] Phase 3: Incremental Completion (Milestone 0.3 - Week 5)
 
-- [ ] Task 3.1: Add last_processed_date to User model
+- [x] Task 3.1: Add last_processed_date to User model
   - Details: .copilot-tracking/details/20251116-motido-vision-alignment-details.md (Lines 291-308)
 
 - [ ] Task 3.2: Implement `advance` command for date progression

@@ -5,7 +5,7 @@ Implementation of the DataManager interface using JSON file storage.
 
 import json
 import os
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict
 
 from motido.core.models import Difficulty, Duration, Priority, Task, User
@@ -173,10 +173,19 @@ class JsonDataManager(DataManager):
 
                 # Create User object
                 total_xp = user_data.get("total_xp", 0)
+
+                # Parse last_processed_date if present
+                last_processed_str = user_data.get("last_processed_date")
+                if last_processed_str:
+                    last_processed = date.fromisoformat(last_processed_str)
+                else:
+                    last_processed = date.today()
+
                 user = User(
                     username=user_data.get("username", username),
                     total_xp=total_xp,
                     tasks=tasks,
+                    last_processed_date=last_processed,
                 )
                 print(f"User '{username}' loaded successfully.")
                 return user
@@ -233,6 +242,7 @@ class JsonDataManager(DataManager):
             "username": user.username,
             "total_xp": user.total_xp,
             "tasks": tasks_data,
+            "last_processed_date": user.last_processed_date.isoformat(),
         }
 
         # Update the specific user's data in the overall structure
