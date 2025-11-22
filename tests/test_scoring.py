@@ -76,6 +76,16 @@ def test_load_scoring_config_valid() -> None:
             "HIGH": 2.0,
             "DEFCON_ONE": 3.0,
         },
+        "habit_streak_bonus": {
+            "enabled": True,
+            "bonus_per_streak_day": 1.0,
+            "max_bonus": 50.0,
+        },
+        "status_bumps": {
+            "in_progress_bonus": 5.0,
+            "next_up_bonus": 10.0,
+            "next_up_threshold_days": 3,
+        },
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -1157,3 +1167,85 @@ def test_calculate_score_with_all_multipliers_active() -> None:
     # = 10 * 2.0 * 2.0 * 2.0 * 1.0 * 1.7 * 1.5 * 1.2 = 244.8 = 245
     score = calculate_score(task, None, config, effective_date)
     assert score == 245
+
+
+def test_calculate_score_habit_streak_bonus(sample_config: Dict[str, Any]) -> None:
+    """Test calculating score with habit streak bonus."""
+    task = Task(
+        title="Habit task",
+        creation_date=datetime.now(),
+        is_habit=True,
+        streak_current=10,
+    )
+
+    # Default config has bonus_per_streak_day=1.0
+    score = calculate_score(task, None, sample_config, date.today())
+
+    # Base (10) + Streak (10 * 1.0) = 20
+    # Multipliers: 1.1 (Trivial) * 1.05 (Miniscule) * 1.2 (Low) * 1.0 (Age) = 1.386
+    # 20 * 1.386 = 27.72 -> 28
+    expected_score = int(round(20 * 1.1 * 1.05 * 1.2 * 1.0))
+    assert score == expected_score
+
+
+def test_calculate_score_habit_streak_max_bonus(sample_config: Dict[str, Any]) -> None:
+    """Test calculating score with habit streak bonus capped at max."""
+    task = Task(
+        title="Habit task",
+        creation_date=datetime.now(),
+        is_habit=True,
+        streak_current=100,  # Should be capped at 50
+    )
+
+    score = calculate_score(task, None, sample_config, date.today())
+
+    # Base (10) + Max Streak (50) = 60
+    # Multipliers: 1.386
+    # 60 * 1.386 = 83.16 -> 83
+    expected_score = int(round(60 * 1.1 * 1.05 * 1.2 * 1.0))
+    assert score == expected_score
+
+
+def test_calculate_score_in_progress_bonus(sample_config: Dict[str, Any]) -> None:
+    """Test calculating score with 'In Progress' bonus."""
+    today = date.today()
+    task = Task(
+        title="In Progress task",
+        creation_date=datetime.now(),
+        start_date=datetime.combine(today, datetime.min.time()),  # Started today
+        is_complete=False,
+    )
+
+    score = calculate_score(task, None, sample_config, today)
+
+    # Base (10) + In Progress (5) = 15
+    # Multipliers: 1.386
+    # 15 * 1.386 = 20.79 -> 21
+    expected_score = int(round(15 * 1.1 * 1.05 * 1.2 * 1.0))
+    assert score == expected_score
+
+
+def test_calculate_score_next_up_bonus(sample_config: Dict[str, Any]) -> None:
+    """Test calculating score with 'Next Up' bonus."""
+    today = date.today()
+    task = Task(
+        title="Next Up task",
+        creation_date=datetime.now(),
+        due_date=datetime.combine(today + timedelta(days=2), datetime.min.time()),
+        is_complete=False,
+    )
+
+    score = calculate_score(task, None, sample_config, today)
+
+    # Base (10) + Next Up (10) = 20
+    # Multipliers: 1.386
+    # Due Date Multiplier: 1.0 + (12 * 0.1) = 2.2 (14 - 2 = 12 days within threshold)
+    # Wait, due date proximity logic:
+    # threshold=14, days_until_due=2. days_within=12. mult = 1.0 + 1.2 = 2.2.
+    # Total Multiplier: 1.386 * 2.2 = 3.0492
+    # 20 * 3.0492 = 60.984 -> 61
+
+    # Let's verify due date multiplier calculation separately or trust the integration
+    # 20 * 1.1 * 1.05 * 1.2 * 1.0 * 2.2 = 60.984
+    expected_score = int(round(20 * 1.1 * 1.05 * 1.2 * 1.0 * 2.2))
+    assert score == expected_score

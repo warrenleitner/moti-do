@@ -72,6 +72,16 @@ def load_scoring_config() -> Dict[str, Any]:
             "HIGH": 2.0,
             "DEFCON_ONE": 3.0,
         },
+        "habit_streak_bonus": {
+            "enabled": True,
+            "bonus_per_streak_day": 1.0,
+            "max_bonus": 50.0,
+        },
+        "status_bumps": {
+            "in_progress_bonus": 5.0,
+            "next_up_bonus": 10.0,
+            "next_up_threshold_days": 3,
+        },
     }
 
     if not os.path.exists(config_path):
@@ -98,10 +108,19 @@ def load_scoring_config() -> Dict[str, Any]:
             "tag_multipliers",
             "project_multipliers",
             "priority_multiplier",
+            # Optional keys for backward compatibility, but we'll check them if present
+            # "habit_streak_bonus",
+            # "status_bumps",
         ]
         for key in required_keys:
             if key not in config_data:
                 raise ValueError(f"Missing required key '{key}' in scoring config.")
+
+        # Ensure new keys are present even if not in required_keys list (for logic below)
+        if "habit_streak_bonus" not in config_data:
+            config_data["habit_streak_bonus"] = default_config["habit_streak_bonus"]
+        if "status_bumps" not in config_data:
+            config_data["status_bumps"] = default_config["status_bumps"]
 
         # Validate multiplier structures
         for mult_key in [
@@ -565,6 +584,37 @@ def calculate_score(
 
     # Calculate due date proximity multiplier
     due_date_mult = calculate_due_date_multiplier(task, config, effective_date)
+
+    # Calculate habit streak bonus (additive)
+    habit_bonus = 0.0
+    if task.is_habit and config.get("habit_streak_bonus", {}).get("enabled", False):
+        streak_bonus_per_day = config["habit_streak_bonus"].get(
+            "bonus_per_streak_day", 1.0
+        )
+        max_streak_bonus = config["habit_streak_bonus"].get("max_bonus", 50.0)
+        habit_bonus = min(task.streak_current * streak_bonus_per_day, max_streak_bonus)
+        additive_base += habit_bonus
+
+    # Calculate status bumps (additive)
+    status_bonus = 0.0
+    status_config = config.get("status_bumps", {})
+
+    # "In Progress" bonus: Start date <= effective date and not complete
+    if (
+        task.start_date
+        and task.start_date.date() <= effective_date
+        and not task.is_complete
+    ):
+        status_bonus += status_config.get("in_progress_bonus", 0.0)
+
+    # "Next Up" bonus: Due date within threshold
+    if task.due_date and not task.is_complete:
+        days_until_due = (task.due_date.date() - effective_date).days
+        threshold = status_config.get("next_up_threshold_days", 3)
+        if 0 <= days_until_due <= threshold:
+            status_bonus += status_config.get("next_up_bonus", 0.0)
+
+    additive_base += status_bonus
 
     # Calculate base score (before dependency bonus)
     # Priority, tags, and projects are multiplicative like difficulty/duration

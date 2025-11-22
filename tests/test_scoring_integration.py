@@ -63,7 +63,7 @@ def test_routine_task_approaching_deadline() -> None:
 
     score = calculate_score(task, None, config, effective_date)
 
-    # Base: 10 + 5 (text_description) = 15
+    # Base: 10 + 5 (text_description) + 10 (Next Up bonus) = 25
     # Priority: 1.2 (LOW)
     # Difficulty: 1.1 (TRIVIAL)
     # Duration: 1.05 (MINISCULE)
@@ -71,8 +71,8 @@ def test_routine_task_approaching_deadline() -> None:
     # Due date: 1.0 + ((14 - 2) * 0.1) = 2.2 (approaching)
     # Tags: 0.8
     # Project: 1.0
-    # Score = 15 * 1.2 * 1.1 * 1.05 * 1.06 * 2.2 * 0.8 * 1.0 = 38.86 = 39
-    assert score == 39
+    # Score = 25 * 1.2 * 1.1 * 1.05 * 1.06 * 2.2 * 0.8 * 1.0 = 64.76 = 65
+    assert score == 65
 
 
 def test_long_running_project_with_start_date() -> None:
@@ -94,7 +94,7 @@ def test_long_running_project_with_start_date() -> None:
 
     score = calculate_score(task, None, config, effective_date)
 
-    # Base: 10 + (42 * 0.5) = 31
+    # Base: 10 + (42 * 0.5) + 5 (In Progress bonus) = 36
     # Priority: 1.5 (MEDIUM)
     # Difficulty: 5.0 (HERCULEAN)
     # Duration: 3.0 (ODYSSEYAN)
@@ -102,8 +102,8 @@ def test_long_running_project_with_start_date() -> None:
     # Due date: 1.0 (beyond threshold)
     # Tags: 1.0
     # Project: 1.3
-    # Score = 31 * 1.5 * 5.0 * 3.0 * 1.46 * 1.0 * 1.0 * 1.3 = 1324.05 = 1324
-    assert score == 1324
+    # Score = 36 * 1.5 * 5.0 * 3.0 * 1.46 * 1.0 * 1.0 * 1.3 = 1537.4 = 1537
+    assert score == 1537
 
 
 def test_task_with_dependencies() -> None:
@@ -224,7 +224,7 @@ def test_complex_scenario_all_factors_active() -> None:
 
     score = calculate_score(complex_task, all_tasks, config, effective_date)
 
-    # Base: 10 + 5 (text_description) = 15 (start date doesn't apply - overdue)
+    # Base: 10 + 5 (text_description) + 5 (In Progress) = 20 (start date doesn't apply - overdue)
     # Priority: 2.0 (HIGH)
     # Difficulty: 3.0 (HIGH)
     # Duration: 2.0 (LONG)
@@ -232,11 +232,11 @@ def test_complex_scenario_all_factors_active() -> None:
     # Due date: 1.0 + (2 * 0.5) = 2.0 (overdue)
     # Tags: 1.8 * 1.4 = 2.52
     # Project: 1.6
-    # Base score: 15 * 2.0 * 3.0 * 2.0 * 1.19 * 2.0 * 2.52 * 1.6 = 1727.31 = 1727
+    # Base score: 20 * 2.0 * 3.0 * 2.0 * 1.19 * 2.0 * 2.52 * 1.6 = 2303.08 = 2303
     # Dependent score: 10 * 1.5 * 2.0 * 1.5 * 1.02 = 45.9 = 46
     # Dependency bonus: 46 * 0.1 = 4.6 = 5
-    # Total: 1727 + 5 = 1732
-    assert score == 1732
+    # Total: 2303 + 5 = 2308
+    assert score == 2308
 
 
 def test_overdue_task_no_start_date_bonus() -> None:
@@ -256,14 +256,14 @@ def test_overdue_task_no_start_date_bonus() -> None:
 
     score = calculate_score(task, None, config, effective_date)
 
-    # Base: 10 (NO start date bonus because overdue)
+    # Base: 10 + 5 (In Progress) = 15 (NO start date bonus because overdue)
     # Priority: 1.5 (MEDIUM)
     # Difficulty: 2.0 (MEDIUM)
     # Duration: 1.5 (MEDIUM)
     # Age: 1.0 + (19 * 0.01) = 1.19
     # Due date: 1.0 + (5 * 0.5) = 3.5 (overdue)
-    # Score = 10 * 1.5 * 2.0 * 1.5 * 1.19 * 3.5 = 187.425 = 187
-    assert score == 187
+    # Score = 15 * 1.5 * 2.0 * 1.5 * 1.19 * 3.5 = 281.13 = 281
+    assert score == 281
 
 
 def test_future_due_date_with_start_date_bonus() -> None:
@@ -283,14 +283,14 @@ def test_future_due_date_with_start_date_bonus() -> None:
 
     score = calculate_score(task, None, config, effective_date)
 
-    # Base: 10 + (15 * 0.5) = 17.5
+    # Base: 10 + 5 (In Progress) + (15 * 0.5) = 22.5
     # Priority: 1.5 (MEDIUM)
     # Difficulty: 2.0 (MEDIUM)
     # Duration: 1.5 (MEDIUM)
     # Age: 1.0 + (19 * 0.01) = 1.19
     # Due date: 1.0 + ((14 - 5) * 0.1) = 1.9 (approaching)
-    # Score = 17.5 * 1.5 * 2.0 * 1.5 * 1.19 * 1.9 = 178.05 = 178
-    assert score == 178
+    # Score = 22.5 * 1.5 * 2.0 * 1.5 * 1.19 * 1.9 = 228.9 = 229
+    assert score == 229
 
 
 def test_recursive_dependency_chain() -> None:
@@ -361,6 +361,9 @@ def test_disabled_scoring_features() -> None:
     config["due_date_proximity"]["enabled"] = False
     config["start_date_aging"]["enabled"] = False
     config["dependency_chain"]["enabled"] = False
+    config["habit_streak_bonus"]["enabled"] = False
+    config["status_bumps"]["in_progress_bonus"] = 0.0
+    config["status_bumps"]["next_up_bonus"] = 0.0
 
     effective_date = date(2025, 11, 20)
 

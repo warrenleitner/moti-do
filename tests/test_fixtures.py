@@ -51,6 +51,16 @@ def get_default_scoring_config() -> Dict[str, Any]:
             "HIGH": 2.0,
             "DEFCON_ONE": 3.0,
         },
+        "habit_streak_bonus": {
+            "enabled": True,
+            "bonus_per_streak_day": 1.0,
+            "max_bonus": 50.0,
+        },
+        "status_bumps": {
+            "in_progress_bonus": 5.0,
+            "next_up_bonus": 10.0,
+            "next_up_threshold_days": 3,
+        },
     }
 
 
@@ -99,5 +109,15 @@ def get_simple_scoring_config() -> Dict[str, Any]:
             "MEDIUM": 1.5,
             "HIGH": 2.0,
             "DEFCON_ONE": 3.0,
+        },
+        "habit_streak_bonus": {
+            "enabled": True,
+            "bonus_per_streak_day": 1.0,
+            "max_bonus": 50.0,
+        },
+        "status_bumps": {
+            "in_progress_bonus": 5.0,
+            "next_up_bonus": 10.0,
+            "next_up_threshold_days": 3,
         },
     }

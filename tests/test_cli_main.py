@@ -855,6 +855,9 @@ def test_handle_view_success_with_difficulty(mocker: Any) -> None:
     mock_task.start_date = None
     mock_task.tags = []
     mock_task.project = None
+    # Habit fields
+    mock_task.is_habit = False
+    mock_task.streak_current = 0
 
     # Setup user.find_task_by_id to return the mock task
     mock_user.find_task_by_id.return_value = mock_task
