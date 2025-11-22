@@ -533,7 +533,7 @@ def calculate_score(
     priority_key = (
         priority_level.name
     )  # Enum.name gets the constant name (e.g., "HIGH")
-    priority_mult = config["priority_multiplier"].get(priority_key, 1.0)
+    priority_mult = config.get("priority_multiplier", {}).get(priority_key, 1.0)
 
     # Calculate age multiplier
     task_creation_date = task.creation_date.date()
@@ -601,9 +601,11 @@ def get_last_penalty_check_date() -> Optional[date]:
         The date of the last penalty check, or None if no check has been performed.
     """
     # Path for storing the last penalty check date
-    package_data_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    data_dir = os.path.join(package_data_dir, "data", "motido_data")
-    penalty_file = os.path.join(data_dir, "last_penalty_check.txt")
+    # Derive from scoring config path to allow mocking in tests
+    config_path = get_scoring_config_path()
+    data_dir = os.path.dirname(config_path)
+    motido_data_dir = os.path.join(data_dir, "motido_data")
+    penalty_file = os.path.join(motido_data_dir, "last_penalty_check.txt")
 
     if not os.path.exists(penalty_file):
         return None
@@ -624,13 +626,14 @@ def set_last_penalty_check_date(check_date: date) -> None:
         check_date: The date to set as the last penalty check date.
     """
     # Path for storing the last penalty check date
-    package_data_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    data_dir = os.path.join(package_data_dir, "data", "motido_data")
+    # Derive from scoring config path to allow mocking in tests
+    config_path = get_scoring_config_path()
+    data_dir = os.path.dirname(config_path)
+    motido_data_dir = os.path.join(data_dir, "motido_data")
+    penalty_file = os.path.join(motido_data_dir, "last_penalty_check.txt")
 
     # Ensure directory exists
-    os.makedirs(data_dir, exist_ok=True)
-
-    penalty_file = os.path.join(data_dir, "last_penalty_check.txt")
+    os.makedirs(motido_data_dir, exist_ok=True)
 
     try:
         with open(penalty_file, "w", encoding="utf-8") as f:
@@ -695,7 +698,10 @@ def apply_penalties(
         start_date = last_check
 
     # Get penalty points from config
-    penalty_points = config["daily_penalty"]["penalty_points"]
+    # penalty_points = config["daily_penalty"]["penalty_points"] # Deprecated in favor of dynamic calculation
+
+    # Create a dict of tasks for dependency resolution in calculate_score
+    task_map = {t.id: t for t in all_tasks}
 
     # Iterate through dates from start_date + 1 to effective_date
     current_date = start_date + timedelta(days=1)
@@ -703,9 +709,23 @@ def apply_penalties(
         # Check each task
         for task in all_tasks:
             if not task.is_complete and task.creation_date.date() < current_date:
-                # Apply penalty for incomplete task
-                add_xp(user, manager, -penalty_points)
-                # You could log the penalty here if desired
+                # Calculate current score
+                current_score = calculate_score(task, task_map, config, current_date)
+
+                # Get multipliers to dampen the penalty
+                difficulty_key = task.difficulty.name
+                difficulty_mult = config["difficulty_multiplier"].get(
+                    difficulty_key, 1.0
+                )
+
+                duration_key = task.duration.name
+                duration_mult = config["duration_multiplier"].get(duration_key, 1.0)
+
+                # Dampen penalty: penalty = score / (diff * dur)
+                if current_score > 0:
+                    penalty = int(current_score / (difficulty_mult * duration_mult))
+                    if penalty > 0:
+                        add_xp(user, manager, -penalty)
 
         # Move to next day
         current_date += timedelta(days=1)

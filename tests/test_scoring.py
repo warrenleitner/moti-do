@@ -8,6 +8,7 @@ import json
 import os
 import tempfile
 from datetime import date, datetime, timedelta
+from typing import Any, Dict
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
@@ -24,7 +25,7 @@ from motido.core.scoring import (
 )
 from motido.data.abstraction import DEFAULT_USERNAME
 
-from .test_fixtures import get_default_scoring_config
+from .test_fixtures import get_default_scoring_config, get_simple_scoring_config
 
 # --- Test Configuration Loading ---
 
@@ -275,56 +276,12 @@ def test_load_scoring_config_invalid_daily_penalty() -> None:
 
 
 @pytest.fixture
-def sample_config() -> dict:
+def sample_config() -> Dict[str, Any]:
     """Sample scoring configuration for testing."""
-    return {
-        "base_score": 10,
-        "field_presence_bonus": {"text_description": 5},
-        "difficulty_multiplier": {
-            "NOT_SET": 1.0,
-            "TRIVIAL": 1.1,
-            "LOW": 1.5,
-            "MEDIUM": 2.0,
-            "HIGH": 3.0,
-            "HERCULEAN": 5.0,
-        },
-        "duration_multiplier": {
-            "NOT_SET": 1.0,
-            "MINISCULE": 1.05,
-            "SHORT": 1.2,
-            "MEDIUM": 1.5,
-            "LONG": 2.0,
-            "ODYSSEYAN": 3.0,
-        },
-        "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
-        "due_date_proximity": {
-            "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
-        },
-        "start_date_aging": {
-            "enabled": True,
-            "bonus_points_per_day": 0.5,
-        },
-        "dependency_chain": {
-            "enabled": True,
-            "dependent_score_percentage": 0.1,
-        },
-        "tag_multipliers": {},
-        "project_multipliers": {},
-        "priority_multiplier": {
-            "NOT_SET": 1.0,
-            "LOW": 1.2,
-            "MEDIUM": 1.5,
-            "HIGH": 2.0,
-            "DEFCON_ONE": 3.0,
-        },
-    }
+    return get_simple_scoring_config()
 
 
-def test_calculate_score_base_case(sample_config: dict) -> None:
+def test_calculate_score_base_case(sample_config: Dict[str, Any]) -> None:
     """Test calculating score with default task attributes."""
     # Default task with trivial difficulty and miniscule duration
     task = Task(
@@ -337,13 +294,15 @@ def test_calculate_score_base_case(sample_config: dict) -> None:
     # Calculate score with today's date
     score = calculate_score(task, None, sample_config, date.today())
 
-    # Expected: base_score * priority_mult * difficulty_mult * duration_mult * age_mult
-    # 10 * 1.2 * 1.1 * 1.05 * 1.0 = 13.86 -> rounded to 14
-    expected_score = int(round(10 * 1.2 * 1.1 * 1.05 * 1.0))
+    # Expected: base_score * difficulty_mult * duration_mult * priority_mult * age_mult
+    # 10 * 1.1 * 1.05 * 1.2 * 1.0 = 13.86 -> rounded to 14
+    expected_score = int(round(10 * 1.1 * 1.05 * 1.2 * 1.0))
     assert score == expected_score
 
 
-def test_calculate_score_high_difficulty_long_duration(sample_config: dict) -> None:
+def test_calculate_score_high_difficulty_long_duration(
+    sample_config: Dict[str, Any],
+) -> None:
     """Test calculating score with high difficulty and long duration."""
     task = Task(
         title="Complex task",
@@ -359,7 +318,7 @@ def test_calculate_score_high_difficulty_long_duration(sample_config: dict) -> N
     assert score == expected_score
 
 
-def test_calculate_score_with_age(sample_config: dict) -> None:
+def test_calculate_score_with_age(sample_config: Dict[str, Any]) -> None:
     """Test calculating score with a task created several days ago."""
     # Task created 10 days ago
     ten_days_ago = datetime.now() - timedelta(days=10)
@@ -378,7 +337,7 @@ def test_calculate_score_with_age(sample_config: dict) -> None:
     assert score == expected_score
 
 
-def test_calculate_score_weeks_age_unit(sample_config: dict) -> None:
+def test_calculate_score_weeks_age_unit(sample_config: Dict[str, Any]) -> None:
     """Test calculating score with weeks as the age unit."""
     # Modify the config to use weeks instead of days
     sample_config_with_weeks = sample_config.copy()
@@ -395,13 +354,13 @@ def test_calculate_score_weeks_age_unit(sample_config: dict) -> None:
 
     score = calculate_score(task, None, sample_config_with_weeks, date.today())
 
-    # Expected: 10 * 1.2 (LOW) * 2.0 * 1.5 * (1.0 + 3 * 0.01) = 37.08 -> rounded to 37
+    # Expected: 10 * 2.0 * 1.5 * 1.2 * (1.0 + 3 * 0.01) = 37.08 -> rounded to 37
     age_mult = 1.0 + (3 * 0.01)  # 1.03
-    expected_score = int(round(10 * 1.2 * 2.0 * 1.5 * age_mult))
+    expected_score = int(round(10 * 2.0 * 1.5 * 1.2 * age_mult))
     assert score == expected_score
 
 
-def test_calculate_score_missing_enum_keys(sample_config: dict) -> None:
+def test_calculate_score_missing_enum_keys(sample_config: Dict[str, Any]) -> None:
     """Test calculating score with enum values not in the config."""
     # Create a custom config with missing enum keys
     custom_config = sample_config.copy()
@@ -416,18 +375,15 @@ def test_calculate_score_missing_enum_keys(sample_config: dict) -> None:
 
     score = calculate_score(task, None, custom_config, date.today())
 
-    # Expected: 10 * 1.2 (LOW) * 1.0 * 1.5 * 1.0 = 18.0 -> rounded to 18
+    # Expected: 10 * 1.0 * 1.5 * 1.2 * 1.0 = 18.0 -> rounded to 18
     # Uses default multiplier 1.0 for missing difficulty key
-    expected_score = int(round(10 * 1.2 * 1.0 * 1.5 * 1.0))
+    expected_score = int(round(10 * 1.0 * 1.5 * 1.2 * 1.0))
     assert score == expected_score
 
 
 # --- Test Penalty System ---
 
 
-@pytest.mark.skip(
-    reason="Pre-existing test failure - function uses hardcoded paths instead of mockable config"
-)
 def test_get_set_last_penalty_check_date() -> None:
     """Test getting and setting the last penalty check date."""
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -436,19 +392,16 @@ def test_get_set_last_penalty_check_date() -> None:
         os.makedirs(motido_data_dir, exist_ok=True)
 
         test_date = date(2023, 5, 15)
-
-        # Write file path directly
+        # Write file path directly instead of using the function
         penalty_file = os.path.join(motido_data_dir, "last_penalty_check.txt")
         with open(penalty_file, "w", encoding="utf-8") as f:
             f.write(test_date.isoformat())
 
-        # Mock the path construction to use our temp directory
-        with patch("os.path.dirname") as mock_dirname:
-            # First call returns temp_dir/data, second returns temp_dir
-            mock_dirname.side_effect = [
-                os.path.join(temp_dir, "data"),
-                temp_dir,
-            ]
+        # Test the reading function
+        with patch(
+            "motido.core.scoring.get_scoring_config_path",
+            return_value=os.path.join(temp_dir, "scoring_config.json"),
+        ):
             # Read the date using the function
             date_read = get_last_penalty_check_date()
 
@@ -456,6 +409,7 @@ def test_get_set_last_penalty_check_date() -> None:
             assert date_read == test_date
 
 
+@patch("motido.core.scoring.calculate_score")
 @patch("motido.core.scoring.set_last_penalty_check_date")
 @patch("motido.core.scoring.get_last_penalty_check_date")
 @patch("motido.core.scoring.add_xp")
@@ -463,12 +417,18 @@ def test_apply_penalties_basic(
     mock_add_xp: MagicMock,
     mock_get: MagicMock,
     mock_set: MagicMock,
+    mock_calculate_score: MagicMock,
 ) -> None:
     """Test apply_penalties with a basic scenario."""
     # Sample config
-    sample_config = {
+    sample_config: Dict[str, Any] = {
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "difficulty_multiplier": {"NOT_SET": 1.0},
+        "duration_multiplier": {"NOT_SET": 1.0},
     }
+
+    # Mock calculate_score
+    mock_calculate_score.return_value = 20
 
     # Mock get_last_penalty_check_date to return None (first run)
     mock_get.return_value = None
@@ -495,14 +455,14 @@ def test_apply_penalties_basic(
     apply_penalties(mock_user, mock_manager, today, sample_config, [task1, task2])
 
     # Verify add_xp was called once for the incomplete task created yesterday
-    mock_add_xp.assert_called_once_with(
-        mock_user, mock_manager, -sample_config["daily_penalty"]["penalty_points"]
-    )
+    # Penalty should be score (20) / (1.0 * 1.0) = 20
+    mock_add_xp.assert_called_once_with(mock_user, mock_manager, -20)
 
     # Verify set_last_penalty_check_date was called with today's date
     mock_set.assert_called_once_with(today)
 
 
+@patch("motido.core.scoring.calculate_score")
 @patch("motido.core.scoring.set_last_penalty_check_date")
 @patch("motido.core.scoring.get_last_penalty_check_date")
 @patch("motido.core.scoring.add_xp")
@@ -510,12 +470,18 @@ def test_apply_penalties_multiple_days(
     mock_add_xp: MagicMock,
     mock_get: MagicMock,
     mock_set: MagicMock,
+    mock_calculate_score: MagicMock,
 ) -> None:
     """Test applying penalties for multiple days."""
     # Sample config
-    sample_config = {
+    sample_config: Dict[str, Any] = {
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "difficulty_multiplier": {"NOT_SET": 1.0},
+        "duration_multiplier": {"NOT_SET": 1.0},
     }
+
+    # Mock calculate_score
+    mock_calculate_score.return_value = 15
 
     # Mock get_last_penalty_check_date to return 3 days ago
     today = date.today()
@@ -536,11 +502,9 @@ def test_apply_penalties_multiple_days(
     # Apply penalties with today's date
     apply_penalties(mock_user, mock_manager, today, sample_config, [task])
 
-    # Verify add_xp was called 3 times (-5 points each day for 3 days)
+    # Verify add_xp was called 3 times (-15 points each day for 3 days)
     assert mock_add_xp.call_count == 3
-    mock_add_xp.assert_called_with(
-        mock_user, mock_manager, -sample_config["daily_penalty"]["penalty_points"]
-    )
+    mock_add_xp.assert_called_with(mock_user, mock_manager, -15)
 
     # Verify set_last_penalty_check_date was called with today's date
     mock_set.assert_called_once_with(today)
@@ -556,7 +520,7 @@ def test_apply_penalties_completed_task(
 ) -> None:
     """Test that completed tasks don't receive penalties."""
     # Sample config
-    sample_config = {
+    sample_config: Dict[str, Any] = {
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
     }
 
@@ -596,7 +560,7 @@ def test_apply_penalties_disabled(
 ) -> None:
     """Test that penalties are not applied when disabled in config."""
     # Config with penalties disabled
-    disabled_config = {
+    disabled_config: Dict[str, Any] = {
         "daily_penalty": {"apply_penalty": False, "penalty_points": 5},
     }
 
@@ -703,19 +667,12 @@ def test_add_xp_mixed_positive_and_negative() -> None:
 def test_calculate_due_date_multiplier_no_due_date() -> None:
     """Test due date multiplier returns 1.0 when task has no due date."""
     task = Task(title="Test task", creation_date=datetime.now())
-    config = {
+    config: Dict[str, Any] = {
         "due_date_proximity": {
             "enabled": True,
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
-            "priority_multiplier": {
-                "NOT_SET": 1.0,
-                "LOW": 1.2,
-                "MEDIUM": 1.5,
-                "HIGH": 2.0,
-                "DEFCON_ONE": 3.0,
-            },
         }
     }
     effective_date = date.today()
@@ -731,19 +688,12 @@ def test_calculate_due_date_multiplier_disabled() -> None:
         creation_date=datetime.now(),
         due_date=datetime.now() + timedelta(days=3),
     )
-    config = {
+    config: Dict[str, Any] = {
         "due_date_proximity": {
             "enabled": False,
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
-            "priority_multiplier": {
-                "NOT_SET": 1.0,
-                "LOW": 1.2,
-                "MEDIUM": 1.5,
-                "HIGH": 2.0,
-                "DEFCON_ONE": 3.0,
-            },
         }
     }
     effective_date = date.today()
@@ -761,19 +711,12 @@ def test_calculate_due_date_multiplier_overdue() -> None:
         creation_date=datetime(2025, 11, 1),
         due_date=datetime(2025, 11, 9),
     )
-    config = {
+    config: Dict[str, Any] = {
         "due_date_proximity": {
             "enabled": True,
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
-            "priority_multiplier": {
-                "NOT_SET": 1.0,
-                "LOW": 1.2,
-                "MEDIUM": 1.5,
-                "HIGH": 2.0,
-                "DEFCON_ONE": 3.0,
-            },
         }
     }
 
@@ -791,19 +734,12 @@ def test_calculate_due_date_multiplier_approaching() -> None:
         creation_date=datetime(2025, 11, 1),
         due_date=datetime(2025, 11, 19),
     )
-    config = {
+    config: Dict[str, Any] = {
         "due_date_proximity": {
             "enabled": True,
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
-            "priority_multiplier": {
-                "NOT_SET": 1.0,
-                "LOW": 1.2,
-                "MEDIUM": 1.5,
-                "HIGH": 2.0,
-                "DEFCON_ONE": 3.0,
-            },
         }
     }
 
@@ -823,19 +759,12 @@ def test_calculate_due_date_multiplier_at_threshold() -> None:
         creation_date=datetime(2025, 11, 1),
         due_date=datetime(2025, 11, 30),
     )
-    config = {
+    config: Dict[str, Any] = {
         "due_date_proximity": {
             "enabled": True,
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
-            "priority_multiplier": {
-                "NOT_SET": 1.0,
-                "LOW": 1.2,
-                "MEDIUM": 1.5,
-                "HIGH": 2.0,
-                "DEFCON_ONE": 3.0,
-            },
         }
     }
 
@@ -855,19 +784,12 @@ def test_calculate_due_date_multiplier_beyond_threshold() -> None:
         creation_date=datetime(2025, 11, 1),
         due_date=datetime(2025, 12, 16),
     )
-    config = {
+    config: Dict[str, Any] = {
         "due_date_proximity": {
             "enabled": True,
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
-            "priority_multiplier": {
-                "NOT_SET": 1.0,
-                "LOW": 1.2,
-                "MEDIUM": 1.5,
-                "HIGH": 2.0,
-                "DEFCON_ONE": 3.0,
-            },
         }
     }
 
@@ -890,13 +812,6 @@ def test_calculate_due_date_multiplier_one_day_overdue() -> None:
             "overdue_multiplier_per_day": 0.5,
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
-            "priority_multiplier": {
-                "NOT_SET": 1.0,
-                "LOW": 1.2,
-                "MEDIUM": 1.5,
-                "HIGH": 2.0,
-                "DEFCON_ONE": 3.0,
-            },
         }
     }
 
@@ -929,30 +844,13 @@ def test_calculate_score_with_due_date_multiplier() -> None:
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
         },
-        "start_date_aging": {
-            "enabled": False,
-            "bonus_points_per_day": 0.0,
-        },
-        "dependency_chain": {
-            "enabled": False,
-            "dependent_score_percentage": 0.0,
-        },
-        "tag_multipliers": {},
-        "project_multipliers": {},
-        "priority_multiplier": {
-            "NOT_SET": 1.0,
-            "LOW": 1.2,
-            "MEDIUM": 1.5,
-            "HIGH": 2.0,
-            "DEFCON_ONE": 3.0,
-        },
     }
 
     score = calculate_score(task, None, config, effective_date)
-    # base = 10, priority = 1.2 (LOW), difficulty = 2.0, duration = 1.5, age = 1.0
-    # due_date_mult = 1.0 + (14 - 3) * 0.1 = 1.0 + 1.1 = 2.1
-    # score = 10 * 1.2 * 2.0 * 1.5 * 1.0 * 2.1 = 75.6 = 76
-    assert score == 76
+    # base = 10, difficulty = 2.0, duration = 1.5, age = 1.0
+    # due_date_mult = 1.0 + ((14 - 3) * 0.1) = 1.0 + 1.1 = 2.1
+    # score = 10 * 2.0 * 1.5 * 1.0 * 2.1 = 63
+    assert score == 63
 
 
 def test_calculate_score_with_overdue_multiplier() -> None:
@@ -979,30 +877,13 @@ def test_calculate_score_with_overdue_multiplier() -> None:
             "approaching_threshold_days": 14,
             "approaching_multiplier_per_day": 0.1,
         },
-        "start_date_aging": {
-            "enabled": False,
-            "bonus_points_per_day": 0.0,
-        },
-        "dependency_chain": {
-            "enabled": False,
-            "dependent_score_percentage": 0.0,
-        },
-        "tag_multipliers": {},
-        "project_multipliers": {},
-        "priority_multiplier": {
-            "NOT_SET": 1.0,
-            "LOW": 1.2,
-            "MEDIUM": 1.5,
-            "HIGH": 2.0,
-            "DEFCON_ONE": 3.0,
-        },
     }
 
     score = calculate_score(task, None, config, effective_date)
-    # base = 10, priority = 1.2 (LOW), difficulty = 1.5, duration = 1.2, age = 1.0
+    # base = 10, difficulty = 1.5, duration = 1.2, age = 1.0
     # due_date_mult = 1.0 + (7 * 0.5) = 4.5
-    # score = 10 * 1.2 * 1.5 * 1.2 * 1.0 * 4.5 = 97.2 = 97
-    assert score == 97
+    # score = 10 * 1.5 * 1.2 * 1.0 * 4.5 = 81
+    assert score == 81
 
 
 def test_calculate_start_date_bonus_no_start_date() -> None:
@@ -1134,20 +1015,13 @@ def test_calculate_score_with_start_date_bonus() -> None:
         },
         "tag_multipliers": {},
         "project_multipliers": {},
-        "priority_multiplier": {
-            "NOT_SET": 1.0,
-            "LOW": 1.2,
-            "MEDIUM": 1.5,
-            "HIGH": 2.0,
-            "DEFCON_ONE": 3.0,
-        },
     }
 
     score = calculate_score(task, None, config, effective_date)
     # base = 10 + (10 days * 0.5) = 15
-    # priority = 1.2 (LOW), difficulty = 2.0, duration = 1.5, age = 1.0, due_date = 1.0
-    # score = 15 * 1.2 * 2.0 * 1.5 * 1.0 * 1.0 = 54
-    assert score == 54
+    # difficulty = 2.0, duration = 1.5, age = 1.0, due_date = 1.0
+    # score = 15 * 2.0 * 1.5 * 1.0 * 1.0 = 45
+    assert score == 45
 
 
 def test_calculate_score_with_both_start_and_due_date() -> None:
@@ -1184,20 +1058,13 @@ def test_calculate_score_with_both_start_and_due_date() -> None:
         },
         "tag_multipliers": {},
         "project_multipliers": {},
-        "priority_multiplier": {
-            "NOT_SET": 1.0,
-            "LOW": 1.2,
-            "MEDIUM": 1.5,
-            "HIGH": 2.0,
-            "DEFCON_ONE": 3.0,
-        },
     }
 
     score = calculate_score(task, None, config, effective_date)
     # base = 10 + (10 days past start * 0.5) = 15
-    # priority = 1.2 (LOW), due in 3 days: 1.0 + ((14 - 3) * 0.1) = 2.1
-    # score = 15 * 1.2 * 3.0 * 1.5 * 1.0 * 2.1 = 170.1 = 170
-    assert score == 170
+    # due in 3 days: 1.0 + ((14 - 3) * 0.1) = 2.1
+    # score = 15 * 3.0 * 1.5 * 1.0 * 2.1 = 141.75 = 142
+    assert score == 142
 
 
 def test_calculate_score_with_priority_low() -> None:

@@ -59,8 +59,22 @@ def get_simple_scoring_config() -> Dict[str, Any]:
     return {
         "base_score": 10,
         "field_presence_bonus": {"title": 5},
-        "difficulty_multiplier": {"NOT_SET": 1.0},
-        "duration_multiplier": {"NOT_SET": 1.0},
+        "difficulty_multiplier": {
+            "NOT_SET": 1.0,
+            "TRIVIAL": 1.1,
+            "LOW": 1.5,
+            "MEDIUM": 2.0,
+            "HIGH": 3.0,
+            "HERCULEAN": 5.0,
+        },
+        "duration_multiplier": {
+            "NOT_SET": 1.0,
+            "MINISCULE": 1.05,
+            "SHORT": 1.2,
+            "MEDIUM": 1.5,
+            "LONG": 2.0,
+            "ODYSSEYAN": 3.0,
+        },
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "due_date_proximity": {

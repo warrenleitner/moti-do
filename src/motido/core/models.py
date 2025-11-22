@@ -130,6 +130,14 @@ class Duration(str, Enum):
             return ""  # Fallback # pragma: no cover
 
 
+class RecurrenceType(str, Enum):
+    """Types of recurrence patterns for habits."""
+
+    STRICT = "Strict"  # Always create next instance
+    FROM_DUE_DATE = "From Due Date"  # Next instance based on original due date
+    FROM_COMPLETION = "From Completion"  # Next instance based on completion date
+
+
 @dataclass
 class Task:  # pylint: disable=too-many-instance-attributes
     """Represents a single task."""
@@ -156,6 +164,12 @@ class Task:  # pylint: disable=too-many-instance-attributes
     history: List[Dict[str, Any]] = field(
         default_factory=list
     )  # {"timestamp": datetime, "field": str, "old_value": Any, "new_value": Any}
+    # Habit fields
+    is_habit: bool = field(default=False)
+    recurrence_rule: str | None = None  # e.g., "daily", "weekly", "every 3 days"
+    recurrence_type: RecurrenceType | None = None
+    streak_current: int = 0
+    streak_best: int = 0
 
     def __str__(self) -> str:
         """String representation for simple display."""

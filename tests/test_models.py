@@ -10,6 +10,7 @@ from motido.core.models import (  # Added Duration
     Difficulty,
     Duration,
     Priority,
+    RecurrenceType,
     Task,
     User,
 )
@@ -393,3 +394,20 @@ def test_user_find_task_by_empty_string_no_tasks(empty_user: User) -> None:
     """Test finding a task with an empty string when no tasks exist."""
     found_task = empty_user.find_task_by_id("")
     assert found_task is None
+
+
+def test_task_initialization_as_habit() -> None:
+    """Test that a Task object can be initialized as a habit."""
+    desc = "Habit task"
+    task = Task(
+        title=desc,
+        creation_date=datetime.now(),
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.STRICT,
+    )
+    assert task.is_habit is True
+    assert task.recurrence_rule == "daily"
+    assert task.recurrence_type == RecurrenceType.STRICT
+    assert task.streak_current == 0
+    assert task.streak_best == 0

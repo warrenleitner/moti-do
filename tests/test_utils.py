@@ -1,11 +1,12 @@
 """Tests for core utility functions."""
 
 import uuid
+from datetime import datetime, timedelta
 from typing import List
 
 import pytest
 
-from motido.core.models import Difficulty, Duration, Priority
+from motido.core.models import Difficulty, Duration, Priority, RecurrenceType, Task
 from motido.core.utils import (
     generate_uuid,
     parse_difficulty_safely,
@@ -126,3 +127,50 @@ def test_parse_duration_safely_with_task_id(monkeypatch: pytest.MonkeyPatch) -> 
     duration = parse_duration_safely("InvalidDuration", "test-task-id")
     assert duration == Duration.MINISCULE
     assert any("in task test-task-id" in msg for msg in printed_messages)
+
+
+def test_process_recurrences_duplicate_prevention() -> None:
+    """Test that _process_recurrences prevents duplicate task generation."""
+    # pylint: disable=import-outside-toplevel,protected-access
+    from motido.core.utils import _process_recurrences
+
+    start_date = datetime(2023, 1, 1)
+    task1 = Task(
+        title="Recurring Task",
+        creation_date=start_date,
+        due_date=start_date,
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.STRICT,
+    )
+    task2 = Task(
+        title="Recurring Task",
+        creation_date=start_date,
+        due_date=start_date,
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.STRICT,
+    )
+
+    # Mock user
+    class MockUser:
+        """Mock user for testing recurrence processing."""
+
+        # pylint: disable=too-few-public-methods
+
+        def __init__(self) -> None:
+            self.tasks = [task1, task2]
+            self.added_tasks: List[Task] = []
+
+        def add_task(self, task: Task) -> None:
+            """Mock add_task method."""
+            self.added_tasks.append(task)
+
+    user = MockUser()
+    effective_date = (start_date + timedelta(days=1)).date()
+
+    _process_recurrences(user, effective_date)
+
+    # Should only create ONE new task
+    assert len(user.added_tasks) == 1
+    assert user.added_tasks[0].title == "Recurring Task"

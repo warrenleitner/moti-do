@@ -9,7 +9,14 @@ import sqlite3
 from datetime import date, datetime
 from typing import Optional
 
-from motido.core.models import Difficulty, Duration, Priority, Task, User
+from motido.core.models import (
+    Difficulty,
+    Duration,
+    Priority,
+    RecurrenceType,
+    Task,
+    User,
+)
 from motido.core.utils import (
     parse_difficulty_safely,
     parse_duration_safely,
@@ -90,11 +97,34 @@ class DatabaseDataManager(DataManager):
                     dependencies TEXT,
                     history TEXT,
                     user_username TEXT NOT NULL,
+                    is_habit INTEGER NOT NULL DEFAULT 0,
+                    recurrence_rule TEXT,
+                    recurrence_type TEXT,
+                    streak_current INTEGER NOT NULL DEFAULT 0,
+                    streak_best INTEGER NOT NULL DEFAULT 0,
                     FOREIGN KEY (user_username) REFERENCES users (username)
                         ON DELETE CASCADE ON UPDATE CASCADE
                 )
             """
             )
+
+            # Migration: Add new columns if they don't exist
+            # SQLite doesn't support IF NOT EXISTS for ADD COLUMN, so we try and ignore error
+            new_columns = [
+                ("is_habit", "INTEGER NOT NULL DEFAULT 0"),
+                ("recurrence_rule", "TEXT"),
+                ("recurrence_type", "TEXT"),
+                ("streak_current", "INTEGER NOT NULL DEFAULT 0"),
+                ("streak_best", "INTEGER NOT NULL DEFAULT 0"),
+            ]
+
+            for col_name, col_def in new_columns:
+                try:
+                    cursor.execute(f"ALTER TABLE tasks ADD COLUMN {col_name} {col_def}")
+                except sqlite3.OperationalError:
+                    # Column likely already exists
+                    pass
+
             conn.commit()  # Commit table creation
             print("Database tables checked/created successfully.")
         except sqlite3.Error as e:
@@ -152,7 +182,8 @@ class DatabaseDataManager(DataManager):
                 cursor.execute(
                     "SELECT id, title, text_description, priority, difficulty, duration, "
                     "is_complete, creation_date, due_date, start_date, icon, tags, "
-                    "project, subtasks, dependencies, history FROM tasks "
+                    "project, subtasks, dependencies, history, is_habit, recurrence_rule, "
+                    "recurrence_type, streak_current, streak_best FROM tasks "
                     "WHERE user_username = ?",
                     (username,),
                 )
@@ -278,6 +309,19 @@ class DatabaseDataManager(DataManager):
                         else None
                     )
 
+                    # Parse recurrence type
+                    recurrence_type_str = (
+                        row["recurrence_type"]
+                        if "recurrence_type" in row.keys()
+                        else None
+                    )
+                    recurrence_type = None
+                    if recurrence_type_str:
+                        try:
+                            recurrence_type = RecurrenceType(recurrence_type_str)
+                        except ValueError:
+                            pass
+
                     task = Task(
                         id=row["id"],
                         title=title,
@@ -295,6 +339,23 @@ class DatabaseDataManager(DataManager):
                         subtasks=subtasks,
                         dependencies=dependencies,
                         history=history,
+                        is_habit=(
+                            bool(row["is_habit"]) if "is_habit" in row.keys() else False
+                        ),
+                        recurrence_rule=(
+                            row["recurrence_rule"]
+                            if "recurrence_rule" in row.keys()
+                            else None
+                        ),
+                        recurrence_type=recurrence_type,
+                        streak_current=(
+                            row["streak_current"]
+                            if "streak_current" in row.keys()
+                            else 0
+                        ),
+                        streak_best=(
+                            row["streak_best"] if "streak_best" in row.keys() else 0
+                        ),
                     )
                     tasks.append(task)
 
@@ -386,6 +447,11 @@ class DatabaseDataManager(DataManager):
                         json.dumps(task.dependencies) if task.dependencies else None,
                         json.dumps(task.history) if task.history else None,
                         user.username,
+                        1 if task.is_habit else 0,
+                        task.recurrence_rule,
+                        task.recurrence_type.value if task.recurrence_type else None,
+                        task.streak_current,
+                        task.streak_best,
                     )
                     for task in user.tasks
                 ]
@@ -395,8 +461,9 @@ class DatabaseDataManager(DataManager):
                     cursor.executemany(
                         "INSERT INTO tasks (id, title, text_description, priority, difficulty, "
                         "duration, is_complete, creation_date, due_date, start_date, "
-                        "icon, tags, project, subtasks, dependencies, history, user_username) "
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        "icon, tags, project, subtasks, dependencies, history, user_username, "
+                        "is_habit, recurrence_rule, recurrence_type, streak_current, streak_best) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         tasks_to_insert,
                     )
                     print(

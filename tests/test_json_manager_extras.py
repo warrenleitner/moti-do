@@ -97,3 +97,34 @@ def test_load_user_invalid_start_date_format(
     # Check that warning was printed
     captured = capsys.readouterr()
     assert "Invalid start_date format" in captured.out
+
+
+def test_load_user_invalid_recurrence_type(
+    manager: JsonDataManager, mocker: Any
+) -> None:
+    """Test loading a user with a task having an invalid recurrence type."""
+    user_data = {
+        "default_user": {
+            "username": "default_user",
+            "total_xp": 0,
+            "tasks": [
+                {
+                    "id": "test-id",
+                    "title": "Test Task",
+                    "priority": "Low",
+                    "difficulty": "Trivial",
+                    "duration": "Miniscule",
+                    "is_complete": False,
+                    "creation_date": "2023-01-01 12:00:00",
+                    "recurrence_type": "InvalidType",  # Invalid
+                }
+            ],
+        }
+    }
+    mocker.patch.object(manager, "_read_data", return_value=user_data)
+
+    user = manager.load_user("default_user")
+
+    assert user is not None
+    assert len(user.tasks) == 1
+    assert user.tasks[0].recurrence_type is None

@@ -187,4 +187,71 @@ def process_day(
     initial_xp: int = user.total_xp
     apply_penalties(user, manager, effective_date, scoring_config, user.tasks)
     xp_change: int = user.total_xp - initial_xp
+
+    # Process recurrences
+    _process_recurrences(user, effective_date)
+
     return xp_change
+
+
+def _process_recurrences(user: Any, effective_date: Any) -> None:
+    """
+    Process task recurrences and generate new instances.
+
+    Args:
+        user: User object
+        effective_date: Date to process recurrences for
+    """
+    # Import here to avoid circular dependency
+    # pylint: disable=import-outside-toplevel
+    from motido.core.models import Task
+    from motido.core.recurrence import calculate_next_occurrence
+
+    new_tasks: list[Task] = []
+    # Create a set of existing (title, due_date) tuples for fast lookup
+    existing_instances = {
+        (t.title, t.due_date.date() if t.due_date else None) for t in user.tasks
+    }
+
+    for task in user.tasks:
+        if task.is_habit and task.recurrence_rule:
+            next_date = calculate_next_occurrence(task)
+
+            # If next_date is valid and falls on or before the effective date
+            if next_date and next_date.date() <= effective_date:
+                # Check if this instance already exists
+                instance_key = (task.title, next_date.date())
+
+                # Also check in new_tasks to avoid duplicates within the same batch
+                already_created = False
+                for nt in new_tasks:
+                    if (
+                        nt.title == task.title
+                        and nt.due_date
+                        and nt.due_date.date() == next_date.date()
+                    ):
+                        already_created = True
+                        break
+
+                if instance_key not in existing_instances and not already_created:
+                    # Create new instance
+                    new_instance = Task(
+                        title=task.title,
+                        priority=task.priority,
+                        difficulty=task.difficulty,
+                        duration=task.duration,
+                        creation_date=datetime.now(),
+                        due_date=next_date,
+                        is_habit=True,
+                        recurrence_rule=task.recurrence_rule,
+                        recurrence_type=task.recurrence_type,
+                        tags=task.tags.copy(),
+                        project=task.project,
+                        is_complete=False,
+                        streak_current=task.streak_current,  # Carry over streak? Or shared?
+                        streak_best=task.streak_best,
+                    )
+                    new_tasks.append(new_instance)
+
+    for t in new_tasks:
+        user.add_task(t)

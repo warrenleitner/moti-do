@@ -183,11 +183,21 @@ def test_create_tables(
                     dependencies TEXT,
                     history TEXT,
                     user_username TEXT NOT NULL,
+                    is_habit INTEGER NOT NULL DEFAULT 0,
+                    recurrence_rule TEXT,
+                    recurrence_type TEXT,
+                    streak_current INTEGER NOT NULL DEFAULT 0,
+                    streak_best INTEGER NOT NULL DEFAULT 0,
                     FOREIGN KEY (user_username) REFERENCES users (username)
                         ON DELETE CASCADE ON UPDATE CASCADE
                 )
             """
         ),
+        call("ALTER TABLE tasks ADD COLUMN is_habit INTEGER NOT NULL DEFAULT 0"),
+        call("ALTER TABLE tasks ADD COLUMN recurrence_rule TEXT"),
+        call("ALTER TABLE tasks ADD COLUMN recurrence_type TEXT"),
+        call("ALTER TABLE tasks ADD COLUMN streak_current INTEGER NOT NULL DEFAULT 0"),
+        call("ALTER TABLE tasks ADD COLUMN streak_best INTEGER NOT NULL DEFAULT 0"),
     ]
     cursor.execute.assert_has_calls(expected_calls)
     connection.commit.assert_called_once()
@@ -390,7 +400,8 @@ def test_load_user_no_tasks(
         call(
             "SELECT id, title, text_description, priority, difficulty, duration, "
             "is_complete, creation_date, due_date, start_date, icon, tags, "
-            "project, subtasks, dependencies, history FROM tasks "
+            "project, subtasks, dependencies, history, is_habit, recurrence_rule, "
+            "recurrence_type, streak_current, streak_best FROM tasks "
             "WHERE user_username = ?",
             (username,),
         ),
@@ -506,8 +517,9 @@ def test_save_user(
     assert "due_date" in sql
     assert "start_date" in sql
     assert (
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" in sql
-    )  # 17 parameters for all task fields
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        in sql
+    )  # 22 parameters for all task fields
 
     # Check that the task parameters include all field values
     assert len(params) == 2  # Two tasks

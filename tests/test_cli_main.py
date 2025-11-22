@@ -16,6 +16,7 @@ from motido.core.models import (  # Added Duration
     Difficulty,
     Duration,
     Priority,
+    RecurrenceType,
     Task,
     User,
 )
@@ -43,6 +44,15 @@ def create_mock_args(**kwargs: Any) -> argparse.Namespace:
     # Ensure 'duration' is present for create/edit commands
     if "duration" not in kwargs:
         kwargs["duration"] = None
+    # Ensure 'recurrence' is present for create commands
+    if "recurrence" not in kwargs:
+        kwargs["recurrence"] = None
+    # Ensure 'recurrence_type' is present for create commands
+    if "recurrence_type" not in kwargs:
+        kwargs["recurrence_type"] = None
+    # Ensure 'habit' is present for create commands
+    if "habit" not in kwargs:
+        kwargs["habit"] = False
     return argparse.Namespace(**kwargs)
 
 
@@ -374,6 +384,9 @@ def test_handle_create_success_existing_user(mocker: Any) -> None:
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
         duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
+        is_habit=False,
+        recurrence_rule=None,
+        recurrence_type=None,
     )
     # Verify that creation_date is a datetime object
     creation_date_arg = mock_task_class.call_args.kwargs["creation_date"]
@@ -409,6 +422,9 @@ def test_handle_create_success_existing_user_not_verbose(mocker: Any) -> None:
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
         duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
+        is_habit=False,
+        recurrence_rule=None,
+        recurrence_type=None,
     )
     # Verify that creation_date is a datetime object
     creation_date_arg = mock_task_class.call_args.kwargs["creation_date"]
@@ -449,6 +465,9 @@ def test_handle_create_success_new_user(mocker: Any) -> None:
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
         duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
+        is_habit=False,
+        recurrence_rule=None,
+        recurrence_type=None,
     )
     # Verify that creation_date is a datetime object
     creation_date_arg = mock_task_class.call_args.kwargs["creation_date"]
@@ -489,6 +508,9 @@ def test_handle_create_success_new_user_not_verbose(mocker: Any) -> None:
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
         duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
+        is_habit=False,
+        recurrence_rule=None,
+        recurrence_type=None,
     )
     # Verify that creation_date is a datetime object
     creation_date_arg = mock_task_class.call_args.kwargs["creation_date"]
@@ -552,6 +574,9 @@ def test_handle_create_save_error(mocker: Any) -> None:
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
         duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
+        is_habit=False,
+        recurrence_rule=None,
+        recurrence_type=None,
     )
     mock_print.assert_any_call(f"Error saving task: {error_message}")
     assert excinfo.value.code == 1
@@ -608,6 +633,9 @@ def test_handle_create_with_difficulty(mocker: Any) -> None:
         difficulty=Difficulty.HIGH,  # Specified difficulty
         duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
+        is_habit=False,
+        recurrence_rule=None,
+        recurrence_type=None,
     )
     mock_user.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user)
@@ -637,6 +665,9 @@ def test_handle_create_with_duration(mocker: Any) -> None:
         difficulty=Difficulty.TRIVIAL,  # Default difficulty
         duration=Duration.LONG,  # Specified duration
         creation_date=ANY,
+        is_habit=False,
+        recurrence_rule=None,
+        recurrence_type=None,
     )
     mock_user.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user)
@@ -669,6 +700,9 @@ def test_handle_create_with_priority_and_difficulty(mocker: Any) -> None:
         difficulty=Difficulty.MEDIUM,
         duration=Duration.MINISCULE,  # Default duration
         creation_date=ANY,
+        is_habit=False,
+        recurrence_rule=None,
+        recurrence_type=None,
     )
     mock_user.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user)
@@ -703,6 +737,24 @@ def test_handle_create_invalid_duration(mocker: Any) -> None:
         "duration",
         invalid_value,
     )
+
+
+def test_handle_create_invalid_recurrence_type(mocker: Any) -> None:
+    """Test handle_create exits if recurrence type is invalid."""
+    mock_print = mocker.patch("builtins.print")
+    mock_manager = mocker.MagicMock(spec=DataManager)
+    args = create_mock_args(
+        title="Task with bad recurrence type", recurrence_type="InvalidType"
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main.handle_create(args, mock_manager, None)
+
+    mock_print.assert_any_call(
+        f"Error: Invalid recurrence type 'InvalidType'. "
+        f"Valid values are: {', '.join([t.value for t in RecurrenceType])}"
+    )
+    assert excinfo.value.code == 1
 
 
 def test_handle_list_success(mocker: Any) -> None:

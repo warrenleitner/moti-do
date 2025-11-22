@@ -8,7 +8,14 @@ import os
 from datetime import date, datetime
 from typing import Any, Dict
 
-from motido.core.models import Difficulty, Duration, Priority, Task, User
+from motido.core.models import (
+    Difficulty,
+    Duration,
+    Priority,
+    RecurrenceType,
+    Task,
+    User,
+)
 from motido.core.utils import (
     parse_difficulty_safely,
     parse_duration_safely,
@@ -137,6 +144,15 @@ class JsonDataManager(DataManager):
         # Handle migration from old 'description' field to new 'title' field
         title = task_dict.get("title") or task_dict.get("description", "Untitled Task")
 
+        # Parse recurrence type
+        recurrence_type_str = task_dict.get("recurrence_type")
+        recurrence_type = None
+        if recurrence_type_str:
+            try:
+                recurrence_type = RecurrenceType(recurrence_type_str)
+            except ValueError:
+                pass  # Handle invalid enum value
+
         return Task(
             id=task_dict["id"],
             title=title,
@@ -154,6 +170,11 @@ class JsonDataManager(DataManager):
             subtasks=task_dict.get("subtasks", []),
             dependencies=task_dict.get("dependencies", []),
             history=task_dict.get("history", []),
+            is_habit=task_dict.get("is_habit", False),
+            recurrence_rule=task_dict.get("recurrence_rule"),
+            recurrence_type=recurrence_type,
+            streak_current=task_dict.get("streak_current", 0),
+            streak_best=task_dict.get("streak_best", 0),
         )
 
     def load_user(self, username: str = DEFAULT_USERNAME) -> User | None:
@@ -234,6 +255,13 @@ class JsonDataManager(DataManager):
                 "subtasks": task.subtasks,
                 "dependencies": task.dependencies,
                 "history": task.history,
+                "is_habit": task.is_habit,
+                "recurrence_rule": task.recurrence_rule,
+                "recurrence_type": (
+                    task.recurrence_type.value if task.recurrence_type else None
+                ),
+                "streak_current": task.streak_current,
+                "streak_best": task.streak_best,
             }
             for task in user.tasks
         ]

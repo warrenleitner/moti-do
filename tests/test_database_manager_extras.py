@@ -2,7 +2,7 @@
 
 import json
 import sqlite3
-from typing import Generator
+from typing import Any, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,9 +13,9 @@ from motido.data.database_manager import DB_NAME, DatabaseDataManager
 
 
 @pytest.fixture
-def mock_db_path() -> str:
+def mock_db_path(tmp_path: Any) -> str:
     """Returns a mock database path."""
-    return "/fake/data/dir/" + DB_NAME
+    return str(tmp_path / "data" / DB_NAME)
 
 
 @pytest.fixture
@@ -448,3 +448,82 @@ def test_load_user_invalid_history_json(tmp_path, capsys):  # type: ignore
         # Check that warning was printed
         captured = capsys.readouterr()
         assert "Warning: Invalid JSON in history" in captured.out
+
+
+def test_load_task_invalid_recurrence_type(manager: DatabaseDataManager) -> None:
+    """Test loading a task with an invalid recurrence type."""
+    # Mock cursor and fetchall
+    mock_row = MagicMock(spec=sqlite3.Row)
+    # Setup row behavior to mimic dict access
+    row_data = {
+        "id": "task1",
+        "title": "Task 1",
+        "text_description": None,
+        "priority": "Low",
+        "difficulty": "Trivial",
+        "duration": "Miniscule",
+        "is_complete": 0,
+        "creation_date": "2023-01-01T12:00:00",
+        "due_date": None,
+        "start_date": None,
+        "icon": None,
+        "tags": "",
+        "project": None,
+        "subtasks": "[]",
+        "dependencies": "[]",
+        "history": "[]",
+        "user_username": "user1",
+        "is_habit": 1,
+        "recurrence_rule": "daily",
+        "recurrence_type": "InvalidType",  # Invalid
+        "streak_current": 0,
+        "streak_best": 0,
+    }
+
+    def getitem(name: str) -> Any:
+        return row_data[name]
+
+    def keys() -> Any:
+        return row_data.keys()
+
+    mock_row.__getitem__.side_effect = getitem
+    mock_row.keys.side_effect = keys
+
+    # Ensure cursor is not None (it is mocked in the fixture)
+    assert manager.cursor is not None
+
+    # Mock user row
+    mock_user_row = MagicMock(spec=sqlite3.Row)
+    user_row_data = {
+        "username": "user1",
+        "total_xp": 0,
+        "last_processed_date": "2023-01-01",
+    }
+
+    def get_user_item(name: str) -> Any:
+        return user_row_data[name]
+
+    def get_user_keys() -> Any:
+        return user_row_data.keys()
+
+    mock_user_row.__getitem__.side_effect = get_user_item
+    mock_user_row.keys.side_effect = get_user_keys
+    mock_user_row.__len__.return_value = 1
+
+    # Create a fresh mock cursor
+    mock_cursor = MagicMock(spec=sqlite3.Cursor)
+    mock_cursor.fetchone.return_value = mock_user_row
+    mock_cursor.fetchall.return_value = [mock_row]
+
+    # Mock connection context manager
+    mock_conn = MagicMock()
+    mock_conn.cursor.return_value = mock_cursor
+    mock_conn.__enter__.return_value = mock_conn
+    mock_conn.__exit__.return_value = None
+
+    with patch.object(manager, "_get_connection", return_value=mock_conn):
+        user = manager.load_user("user1")
+
+    assert user is not None
+    assert len(user.tasks) == 1
+    assert user.tasks[0].recurrence_type is None  # Should be None

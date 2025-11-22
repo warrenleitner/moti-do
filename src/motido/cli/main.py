@@ -22,6 +22,7 @@ from motido.core.models import (  # Added Duration
     Difficulty,
     Duration,
     Priority,
+    RecurrenceType,
     Task,
     User,
 )
@@ -116,6 +117,18 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
         user = User(username=DEFAULT_USERNAME)
     # No need for isinstance check since we're using type hints and mypy
 
+    # Parse recurrence type
+    recurrence_type = None
+    if args.recurrence_type:
+        try:
+            recurrence_type = RecurrenceType(args.recurrence_type)
+        except ValueError:
+            print(
+                f"Error: Invalid recurrence type '{args.recurrence_type}'. "
+                f"Valid values are: {', '.join([t.value for t in RecurrenceType])}"
+            )
+            sys.exit(1)
+
     # Create a new task with the current timestamp as creation_date
     new_task = Task(
         title=args.title,
@@ -123,6 +136,9 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
         difficulty=difficulty,
         duration=duration,
         creation_date=datetime.now(),
+        is_habit=args.habit,
+        recurrence_rule=args.recurrence,
+        recurrence_type=recurrence_type,
     )
     user.add_task(new_task)
     try:
@@ -1154,6 +1170,20 @@ def setup_parser() -> argparse.ArgumentParser:
         choices=[d.value for d in Duration],
         # Default is handled in the model, no CLI default needed
         help=f"The duration of the task. Valid values: {', '.join([d.value for d in Duration])}.",
+    )
+    parser_create.add_argument(
+        "--habit",
+        action="store_true",
+        help="Mark this task as a habit.",
+    )
+    parser_create.add_argument(
+        "--recurrence",
+        help="Recurrence rule (e.g., 'daily', 'weekly', 'every 3 days').",
+    )
+    parser_create.add_argument(
+        "--recurrence-type",
+        choices=[t.value for t in RecurrenceType],
+        help="Type of recurrence logic.",
     )
     parser_create.set_defaults(func=_wrap_handler(handle_create))
 

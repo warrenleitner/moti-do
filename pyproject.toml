@@ -18,6 +18,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.9"
 rich = ">=13.9.4"
+python-dateutil = "^2.8.2"
 # Add runtime dependencies here if needed, e.g.,
 # requests = "^2.20"
 
@@ -31,6 +32,7 @@ pylint = ">=3.2.5"    # Linter
 mypy = ">=1.10.1"     # Static type checker
 safety = ">=3.4.0"    # Security checker
 poethepoet = "^0.34.0"
+types-python-dateutil = "^2.9.0"
 
 [tool.poetry.scripts]
 motido = "motido.cli.main:main"
@@ -95,6 +97,18 @@ omit = [
 fail_under = 80 # Set a minimum coverage threshold
 show_missing = true
 skip_covered = true # Don't report on 100% covered files
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
 
 [tool.coverage.xml]
 output = "coverage.xml" # Output for CI/CD systems

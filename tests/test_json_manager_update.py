@@ -78,6 +78,11 @@ def test_save_user_update_existing(
         "subtasks": [],
         "dependencies": [],
         "history": [],
+        "is_habit": False,
+        "recurrence_rule": None,
+        "recurrence_type": None,
+        "streak_current": 0,
+        "streak_best": 0,
     }
     task_b: Dict[str, Any] = {
         "id": "uuid-b",
@@ -96,6 +101,11 @@ def test_save_user_update_existing(
         "subtasks": [],
         "dependencies": [],
         "history": [],
+        "is_habit": False,
+        "recurrence_rule": None,
+        "recurrence_type": None,
+        "streak_current": 0,
+        "streak_best": 0,
     }
     task_c: Dict[str, Any] = {
         "id": "uuid-c",
@@ -114,6 +124,11 @@ def test_save_user_update_existing(
         "subtasks": [],
         "dependencies": [],
         "history": [],
+        "is_habit": False,
+        "recurrence_rule": None,
+        "recurrence_type": None,
+        "streak_current": 0,
+        "streak_best": 0,
     }
     expected_tasks_data = [task_a, task_b, task_c]
 
