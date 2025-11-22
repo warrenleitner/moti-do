@@ -714,6 +714,31 @@ def add_xp(user: Any, manager: Any, points: int) -> None:
         print(f"Deducted {abs(points)} XP points as penalty. Total XP: {user.total_xp}")
 
 
+def withdraw_xp(user: Any, manager: Any, points: int) -> bool:
+    """
+    Withdraw XP points from the user's total and persist to storage.
+
+    Args:
+        user: The User object to update
+        manager: The DataManager instance to persist changes
+        points: The number of XP points to withdraw (must be positive).
+
+    Returns:
+        True if withdrawal was successful (sufficient funds), False otherwise.
+    """
+    if points <= 0:
+        raise ValueError("Withdrawal amount must be positive.")
+
+    if user.total_xp >= points:
+        user.total_xp -= points
+        manager.save_user(user)
+        print(f"Withdrew {points} XP points. Total XP: {user.total_xp}")
+        return True
+
+    print(f"Insufficient XP. Required: {points}, Available: {user.total_xp}")
+    return False
+
+
 def apply_penalties(
     user: Any,
     manager: Any,

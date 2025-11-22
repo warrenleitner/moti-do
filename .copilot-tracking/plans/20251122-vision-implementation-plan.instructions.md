@@ -37,7 +37,7 @@ Implement missing features from the `basic_idea.md` vision document, focusing on
 - [x] Task 1.3: Update CLI for Habits
   - Details: .copilot-tracking/details/20251122-vision-implementation-details.md (Lines 52-70)
 
-### [ ] Phase 2: Scoring Overhaul
+### [x] Phase 2: Scoring Overhaul
 
 - [x] Task 2.1: Advanced Penalty Logic
   - Details: .copilot-tracking/details/20251122-vision-implementation-details.md (Lines 75-95)
@@ -45,7 +45,7 @@ Implement missing features from the `basic_idea.md` vision document, focusing on
 - [x] Task 2.2: Habit Bonuses & Status Bumps
   - Details: .copilot-tracking/details/20251122-vision-implementation-details.md (Lines 97-115)
 
-- [ ] Task 2.3: XP Management (Withdraw/Scale)
+- [x] Task 2.3: XP Management (Withdraw/Scale)
   - Details: .copilot-tracking/details/20251122-vision-implementation-details.md (Lines 117-135)
 
 ### [ ] Phase 3: CLI Enhancements

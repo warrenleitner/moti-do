@@ -22,6 +22,7 @@ from motido.core.scoring import (
     calculate_start_date_bonus,
     get_last_penalty_check_date,
     load_scoring_config,
+    withdraw_xp,
 )
 from motido.data.abstraction import DEFAULT_USERNAME
 
@@ -1249,3 +1250,42 @@ def test_calculate_score_next_up_bonus(sample_config: Dict[str, Any]) -> None:
     # 20 * 1.1 * 1.05 * 1.2 * 1.0 * 2.2 = 60.984
     expected_score = int(round(20 * 1.1 * 1.05 * 1.2 * 1.0 * 2.2))
     assert score == expected_score
+
+
+# --- Test Withdraw XP ---
+
+
+def test_withdraw_xp_success() -> None:
+    """Test successful XP withdrawal."""
+    user = User(username=DEFAULT_USERNAME, total_xp=100)
+    mock_manager = MagicMock()
+
+    result = withdraw_xp(user, mock_manager, 50)
+
+    assert result is True
+    assert user.total_xp == 50
+    mock_manager.save_user.assert_called_once_with(user)
+
+
+def test_withdraw_xp_insufficient_funds() -> None:
+    """Test XP withdrawal fails with insufficient funds."""
+    user = User(username=DEFAULT_USERNAME, total_xp=40)
+    mock_manager = MagicMock()
+
+    result = withdraw_xp(user, mock_manager, 50)
+
+    assert result is False
+    assert user.total_xp == 40
+    mock_manager.save_user.assert_not_called()
+
+
+def test_withdraw_xp_invalid_amount() -> None:
+    """Test XP withdrawal raises error for non-positive amount."""
+    user = User(username=DEFAULT_USERNAME, total_xp=100)
+    mock_manager = MagicMock()
+
+    with pytest.raises(ValueError, match="Withdrawal amount must be positive"):
+        withdraw_xp(user, mock_manager, -10)
+
+    with pytest.raises(ValueError, match="Withdrawal amount must be positive"):
+        withdraw_xp(user, mock_manager, 0)

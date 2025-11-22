@@ -14,6 +14,8 @@ Implementing missing features from the vision document, focusing on Habits, Adva
 
 - src/motido/core/models.py - Added habit fields (is_habit, recurrence_rule, recurrence_type, streak_current, streak_best) to Task model.
 - src/motido/core/recurrence.py - Added recurrence calculation logic.
+- src/motido/core/scoring.py - Added withdraw_xp function.
+- src/motido/cli/main.py - Added xp withdraw command.
 
 ### Modified
 

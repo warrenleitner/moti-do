@@ -31,6 +31,7 @@ from motido.core.scoring import (
     apply_penalties,
     calculate_score,
     load_scoring_config,
+    withdraw_xp,
 )
 from motido.core.utils import parse_date, process_day
 from motido.data.abstraction import DataManager  # For type hinting
@@ -1099,6 +1100,21 @@ def handle_advance(args: Namespace, manager: DataManager, user: User | None) -> 
         sys.exit(1)
 
 
+def handle_xp(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'xp' command."""
+    if user is None:
+        print("Error: User not found.")
+        sys.exit(1)
+
+    if args.xp_command == "withdraw":
+        if args.amount <= 0:
+            print("Error: Withdrawal amount must be positive.")
+            sys.exit(1)
+
+        withdraw_xp(user, manager, args.amount)
+    else:
+        print(f"Error: Unknown xp command '{args.xp_command}'")
+        sys.exit(1)
 def _wrap_handler(
     handler_func: Callable[[argparse.Namespace, DataManager, User | None], T],
 ) -> Callable[[argparse.Namespace, DataManager, User | None], T]:
@@ -1362,6 +1378,17 @@ def setup_parser() -> argparse.ArgumentParser:
     )
     parser_advance.set_defaults(func=_wrap_handler(handle_advance))
 
+    # --- XP Command ---
+    parser_xp = subparsers.add_parser("xp", help="Manage XP.")
+    xp_subparsers = parser_xp.add_subparsers(dest="xp_command", required=True)
+
+    # XP Withdraw
+    parser_xp_withdraw = xp_subparsers.add_parser("withdraw", help="Withdraw XP.")
+    parser_xp_withdraw.add_argument(
+        "amount", type=int, help="The amount of XP to withdraw."
+    )
+    parser_xp.set_defaults(func=_wrap_handler(handle_xp))
+
     return parser
 
 
@@ -1389,6 +1416,7 @@ def main() -> None:
         "delete",
         "complete",
         "run-penalties",
+        "xp",
     ]:
         try:
             user = manager.load_user(DEFAULT_USERNAME)
