@@ -7,7 +7,17 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal
+
+# Type for XP transaction sources
+XPSource = Literal[
+    "task_completion",
+    "subtask_completion",
+    "penalty",
+    "withdrawal",
+    "habit_completion",
+    "manual_adjustment",
+]
 
 
 class Priority(str, Enum):
@@ -138,6 +148,41 @@ class RecurrenceType(str, Enum):
     FROM_COMPLETION = "From Completion"  # Next instance based on completion date
 
 
+class SubtaskRecurrenceMode(str, Enum):
+    """Options for how subtasks recur with habits."""
+
+    DEFAULT = "default"  # New recurrence only after ALL subtasks complete
+    PARTIAL = "partial"  # New task with only completed subtasks carried over
+    ALWAYS = "always"  # Full new task regardless of subtask state
+
+
+@dataclass
+class XPTransaction:
+    """Represents a single XP transaction (gain or loss)."""
+
+    amount: int
+    source: XPSource
+    timestamp: datetime
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    task_id: str | None = None
+    description: str = ""
+
+
+@dataclass
+class Badge:
+    """Represents an achievement badge."""
+
+    id: str
+    name: str
+    description: str
+    glyph: str  # Emoji representation
+    earned_date: datetime | None = None
+
+    def is_earned(self) -> bool:
+        """Check if the badge has been earned."""
+        return self.earned_date is not None
+
+
 @dataclass
 class Task:  # pylint: disable=too-many-instance-attributes
     """Represents a single task."""
@@ -192,6 +237,8 @@ class User:
     tasks: List[Task] = field(default_factory=list)
     last_processed_date: date = field(default_factory=date.today)
     vacation_mode: bool = False
+    xp_transactions: List[XPTransaction] = field(default_factory=list)
+    badges: List[Badge] = field(default_factory=list)
 
     def find_task_by_id(self, task_id_prefix: str) -> Task | None:
         """

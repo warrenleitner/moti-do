@@ -692,7 +692,15 @@ def set_last_penalty_check_date(check_date: date) -> None:
         raise IOError(f"Error saving last penalty check date: {e}") from e
 
 
-def add_xp(user: Any, manager: Any, points: int) -> None:
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+def add_xp(
+    user: Any,
+    manager: Any,
+    points: int,
+    source: str = "task_completion",
+    task_id: str | None = None,
+    description: str = "",
+) -> None:
     """
     Add XP points to the user's total and persist to storage.
 
@@ -700,9 +708,35 @@ def add_xp(user: Any, manager: Any, points: int) -> None:
         user: The User object to update
         manager: The DataManager instance to persist changes
         points: The number of XP points to add (can be negative for penalties).
+        source: The source of XP (task_completion, penalty, withdrawal, etc.)
+        task_id: Optional associated task ID
+        description: Optional description of the transaction
     """
+    # Import XPTransaction here to avoid circular import
+    # pylint: disable=import-outside-toplevel
+    from datetime import datetime as dt
+
+    from motido.core.models import XPTransaction
+
     # Update user's total XP
     user.total_xp += points
+
+    # Create transaction record
+    # Cast source to valid type - the caller should ensure it's valid
+    valid_source: Any = source
+    transaction = XPTransaction(
+        amount=points,
+        source=valid_source,
+        timestamp=dt.now(),
+        task_id=task_id,
+        description=description
+        or f"{'Added' if points > 0 else 'Deducted'} {abs(points)} XP",
+    )
+
+    # Ensure xp_transactions list exists (for backward compatibility)
+    if not hasattr(user, "xp_transactions"):
+        user.xp_transactions = []
+    user.xp_transactions.append(transaction)
 
     # Persist the change to backend
     manager.save_user(user)
@@ -726,11 +760,31 @@ def withdraw_xp(user: Any, manager: Any, points: int) -> bool:
     Returns:
         True if withdrawal was successful (sufficient funds), False otherwise.
     """
+    # Import XPTransaction here to avoid circular import
+    # pylint: disable=import-outside-toplevel
+    from datetime import datetime as dt
+
+    from motido.core.models import XPTransaction
+
     if points <= 0:
         raise ValueError("Withdrawal amount must be positive.")
 
     if user.total_xp >= points:
         user.total_xp -= points
+
+        # Create transaction record
+        transaction = XPTransaction(
+            amount=-points,  # Negative for withdrawal
+            source="withdrawal",  # type: ignore[arg-type]
+            timestamp=dt.now(),
+            description=f"Manual withdrawal of {points} XP",
+        )
+
+        # Ensure xp_transactions list exists (for backward compatibility)
+        if not hasattr(user, "xp_transactions"):
+            user.xp_transactions = []
+        user.xp_transactions.append(transaction)
+
         manager.save_user(user)
         print(f"Withdrew {points} XP points. Total XP: {user.total_xp}")
         return True

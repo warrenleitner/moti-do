@@ -1270,9 +1270,161 @@ def handle_xp(args: Namespace, manager: DataManager, user: User | None) -> None:
             sys.exit(1)
 
         withdraw_xp(user, manager, args.amount)
+    elif args.xp_command == "log":
+        _handle_xp_log(user)
     else:
         print(f"Error: Unknown xp command '{args.xp_command}'")
         sys.exit(1)
+
+
+def _handle_xp_log(user: User) -> None:
+    """Display XP transaction log."""
+    console = Console()
+
+    # Get transactions (with backward compatibility)
+    transactions = getattr(user, "xp_transactions", [])
+
+    if not transactions:
+        print("No XP transactions recorded yet.")
+        return
+
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("#", width=5)
+    table.add_column("Timestamp", width=18)
+    table.add_column("Amount", width=10)
+    table.add_column("Source", width=18)
+    table.add_column("Description")
+
+    for i, trans in enumerate(reversed(transactions[-50:]), 1):  # Show last 50
+        amount_text = Text(
+            f"{trans.amount:+d}",
+            style="green" if trans.amount > 0 else "red",
+        )
+        timestamp_str = trans.timestamp.strftime("%Y-%m-%d %H:%M")
+        source_display = trans.source.replace("_", " ").title()
+        table.add_row(
+            str(i),
+            timestamp_str,
+            amount_text,
+            source_display,
+            trans.description[:40] if trans.description else "-",
+        )
+
+    console.print(f"XP Transaction Log (Current XP: {user.total_xp})")
+    console.print(table)
+
+
+def handle_habits(_args: Namespace, _manager: DataManager, user: User | None) -> None:
+    """Handles the 'habits' command to list habit statistics."""
+    if user is None:
+        print("Error: User not found.")
+        sys.exit(1)
+
+    # Filter to habit tasks only
+    habits = [t for t in user.tasks if t.is_habit]
+
+    if not habits:
+        print("No habits found. Create a habit with 'motido create --habit'")
+        return
+
+    console = Console()
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("ID", width=8)
+    table.add_column("Habit", width=25)
+    table.add_column("Current", width=9, justify="center")
+    table.add_column("Best", width=9, justify="center")
+    table.add_column("Recurrence", width=15)
+    table.add_column("Status", width=12)
+
+    today = date.today()
+
+    for habit in habits:
+        # Streak styling
+        current_style = "green bold" if habit.streak_current >= 7 else "default"
+        current_text = Text(f"🔥 {habit.streak_current}", style=current_style)
+        best_text = Text(f"⭐ {habit.streak_best}")
+
+        # Status
+        if habit.is_complete:
+            status = Text("✓ Done", style="green")
+        elif habit.due_date and habit.due_date.date() < today:
+            status = Text("⚠ Overdue", style="red bold")
+        elif habit.due_date and habit.due_date.date() == today:
+            status = Text("📅 Due", style="yellow")
+        else:
+            status = Text("○ Pending", style="dim")
+
+        recurrence = habit.recurrence_rule or "Not set"
+
+        table.add_row(
+            habit.id[:8],
+            habit.title,
+            current_text,
+            best_text,
+            recurrence,
+            status,
+        )
+
+    console.print("Habit Statistics")
+    console.print(table)
+    print(f"\nTotal habits: {len(habits)}")
+
+
+def handle_stats(_args: Namespace, _manager: DataManager, user: User | None) -> None:
+    """Handles the 'stats' command to show productivity statistics."""
+    if user is None:
+        print("Error: User not found.")
+        sys.exit(1)
+
+    console = Console()
+    today = date.today()
+    thirty_days_ago = today - timedelta(days=30)
+
+    # Calculate stats
+    all_tasks = user.tasks
+    completed_tasks = [t for t in all_tasks if t.is_complete]
+    habits = [t for t in all_tasks if t.is_habit]
+
+    # Calculate completion rate
+    active_non_complete = len([t for t in all_tasks if not t.is_complete])
+    total_relevant = len(completed_tasks) + active_non_complete
+    completion_rate = (
+        (len(completed_tasks) / total_relevant * 100) if total_relevant > 0 else 0
+    )
+
+    # XP stats from transactions
+    transactions = getattr(user, "xp_transactions", [])
+    recent_trans = [t for t in transactions if t.timestamp.date() >= thirty_days_ago]
+    xp_earned = sum(t.amount for t in recent_trans if t.amount > 0)
+    xp_spent = abs(sum(t.amount for t in recent_trans if t.amount < 0))
+
+    # Badge stats
+    badges = getattr(user, "badges", [])
+    earned_badges = [b for b in badges if b.earned_date is not None]
+
+    console.print("[bold cyan]═══ Productivity Stats (Last 30 Days) ═══[/bold cyan]")
+    console.print()
+    console.print(f"[bold]Tasks Created:[/bold]     {len(all_tasks)}")
+    console.print(f"[bold]Tasks Completed:[/bold]   {len(completed_tasks)}")
+    console.print(f"[bold]Completion Rate:[/bold]   {completion_rate:.0f}%")
+    console.print()
+    console.print(f"[bold]XP Earned:[/bold]         {xp_earned:,}")
+    console.print(f"[bold]XP Spent:[/bold]          {xp_spent:,}")
+    console.print(f"[bold]Total XP:[/bold]          {user.total_xp:,}")
+    console.print()
+    console.print(f"[bold]Active Habits:[/bold]     {len(habits)}")
+    console.print(
+        f"[bold]Badges Earned:[/bold]     {len(earned_badges)}/{len(badges) or '?'}"
+    )
+    console.print()
+
+    # Top streaks
+    if habits:
+        top_habits = sorted(habits, key=lambda h: h.streak_current, reverse=True)[:3]
+        if top_habits:
+            console.print("[bold]Top Habit Streaks:[/bold]")
+            for h in top_habits:
+                console.print(f"  🔥 {h.streak_current} days - {h.title}")
 
 
 def handle_vacation(args: Namespace, manager: DataManager, user: User | None) -> None:
@@ -1943,7 +2095,19 @@ def setup_parser() -> argparse.ArgumentParser:
     parser_xp_withdraw.add_argument(
         "amount", type=int, help="The amount of XP to withdraw."
     )
+
+    # XP Log
+    xp_subparsers.add_parser("log", help="View XP transaction history.")
+
     parser_xp.set_defaults(func=_wrap_handler(handle_xp))
+
+    # --- Habits Command ---
+    parser_habits = subparsers.add_parser("habits", help="List habits with statistics.")
+    parser_habits.set_defaults(func=_wrap_handler(handle_habits))
+
+    # --- Stats Command ---
+    parser_stats = subparsers.add_parser("stats", help="Show productivity statistics.")
+    parser_stats.set_defaults(func=_wrap_handler(handle_stats))
 
     # --- Vacation Command ---
     parser_vacation = subparsers.add_parser("vacation", help="Manage vacation mode.")
@@ -2038,6 +2202,14 @@ def main() -> None:
         "subtask",
         "history",
         "undo",
+        "habits",
+        "stats",
+        "advance",
+        "describe",
+        "set-due",
+        "set-start",
+        "tag",
+        "project",
     ]:
         try:
             user = manager.load_user(DEFAULT_USERNAME)

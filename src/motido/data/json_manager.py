@@ -5,16 +5,19 @@ Implementation of the DataManager interface using JSON file storage.
 
 import json
 import os
+import uuid
 from datetime import date, datetime
 from typing import Any, Dict
 
 from motido.core.models import (
+    Badge,
     Difficulty,
     Duration,
     Priority,
     RecurrenceType,
     Task,
     User,
+    XPTransaction,
 )
 from motido.core.utils import (
     parse_difficulty_safely,
@@ -177,6 +180,34 @@ class JsonDataManager(DataManager):
             streak_best=task_dict.get("streak_best", 0),
         )
 
+    def _deserialize_xp_transaction(self, trans_dict: Dict[str, Any]) -> XPTransaction:
+        """Deserialize an XP transaction dictionary."""
+        timestamp_str = trans_dict.get("timestamp")
+        timestamp = (
+            self._parse_datetime_field(timestamp_str, "timestamp", None)
+            or datetime.now()
+        )
+        return XPTransaction(
+            id=trans_dict.get("id", str(uuid.uuid4())),
+            amount=trans_dict.get("amount", 0),
+            source=trans_dict.get("source", "task_completion"),
+            timestamp=timestamp,
+            task_id=trans_dict.get("task_id"),
+            description=trans_dict.get("description", ""),
+        )
+
+    def _deserialize_badge(self, badge_dict: Dict[str, Any]) -> Badge:
+        """Deserialize a badge dictionary."""
+        earned_date_str = badge_dict.get("earned_date")
+        earned_date = self._parse_datetime_field(earned_date_str, "earned_date", None)
+        return Badge(
+            id=badge_dict.get("id", str(uuid.uuid4())),
+            name=badge_dict.get("name", "Unknown"),
+            description=badge_dict.get("description", ""),
+            glyph=badge_dict.get("glyph", "🏆"),
+            earned_date=earned_date,
+        )
+
     def load_user(self, username: str = DEFAULT_USERNAME) -> User | None:
         """Loads a specific user's data from the JSON file."""
         # Placeholder for future sync: Check for remote changes before loading
@@ -190,6 +221,18 @@ class JsonDataManager(DataManager):
                 tasks = [
                     self._deserialize_task(task_dict)
                     for task_dict in user_data.get("tasks", [])
+                ]
+
+                # Deserialize XP transactions
+                xp_transactions = [
+                    self._deserialize_xp_transaction(trans_dict)
+                    for trans_dict in user_data.get("xp_transactions", [])
+                ]
+
+                # Deserialize badges
+                badges = [
+                    self._deserialize_badge(badge_dict)
+                    for badge_dict in user_data.get("badges", [])
                 ]
 
                 # Create User object
@@ -208,6 +251,8 @@ class JsonDataManager(DataManager):
                     tasks=tasks,
                     last_processed_date=last_processed,
                     vacation_mode=user_data.get("vacation_mode", False),
+                    xp_transactions=xp_transactions,
+                    badges=badges,
                 )
                 print(f"User '{username}' loaded successfully.")
                 return user
@@ -273,6 +318,31 @@ class JsonDataManager(DataManager):
             "tasks": tasks_data,
             "last_processed_date": user.last_processed_date.isoformat(),
             "vacation_mode": user.vacation_mode,
+            "xp_transactions": [
+                {
+                    "id": trans.id,
+                    "amount": trans.amount,
+                    "source": trans.source,
+                    "timestamp": trans.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                    "task_id": trans.task_id,
+                    "description": trans.description,
+                }
+                for trans in getattr(user, "xp_transactions", [])
+            ],
+            "badges": [
+                {
+                    "id": badge.id,
+                    "name": badge.name,
+                    "description": badge.description,
+                    "glyph": badge.glyph,
+                    "earned_date": (
+                        badge.earned_date.strftime("%Y-%m-%d %H:%M:%S")
+                        if badge.earned_date
+                        else None
+                    ),
+                }
+                for badge in getattr(user, "badges", [])
+            ],
         }
 
         # Update the specific user's data in the overall structure

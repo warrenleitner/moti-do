@@ -1273,6 +1273,37 @@ def test_withdraw_xp_success() -> None:
     mock_manager.save_user.assert_called_once_with(user)
 
 
+def test_withdraw_xp_creates_transaction() -> None:
+    """Test that withdraw_xp creates an XP transaction."""
+    user = User(username=DEFAULT_USERNAME, total_xp=100)
+    mock_manager = MagicMock()
+
+    result = withdraw_xp(user, mock_manager, 30)
+
+    assert result is True
+    assert len(user.xp_transactions) == 1
+    assert user.xp_transactions[0].amount == -30
+    assert user.xp_transactions[0].source == "withdrawal"
+
+
+def test_withdraw_xp_without_xp_transactions_attr() -> None:
+    """Test withdraw_xp creates xp_transactions attribute if missing."""
+    user = User(username=DEFAULT_USERNAME, total_xp=100)
+    # Simulate a legacy user object without xp_transactions attribute
+    del user.xp_transactions
+    assert not hasattr(user, "xp_transactions")
+
+    mock_manager = MagicMock()
+    result = withdraw_xp(user, mock_manager, 25)
+
+    assert result is True
+    assert user.total_xp == 75
+    # Should have created the xp_transactions list and added a transaction
+    assert hasattr(user, "xp_transactions")
+    assert len(user.xp_transactions) == 1
+    assert user.xp_transactions[0].amount == -25
+
+
 def test_withdraw_xp_insufficient_funds() -> None:
     """Test XP withdrawal fails with insufficient funds."""
     user = User(username=DEFAULT_USERNAME, total_xp=40)
