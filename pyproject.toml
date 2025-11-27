@@ -116,6 +116,9 @@ output = "coverage.xml" # Output for CI/CD systems
 
 # -- Poe the Poet Task Runner Configuration --
 
+[tool.poe]
+default_task_type = "cmd"
+
 [tool.poe.tasks]
 # Define tasks directly with their commands
 format = [

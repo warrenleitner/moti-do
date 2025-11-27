@@ -128,7 +128,9 @@ class DatabaseDataManager(DataManager):
 
             # Migration: Add vacation_mode to users if missing
             try:
-                cursor.execute("ALTER TABLE users ADD COLUMN vacation_mode INTEGER NOT NULL DEFAULT 0")
+                cursor.execute(
+                    "ALTER TABLE users ADD COLUMN vacation_mode INTEGER NOT NULL DEFAULT 0"
+                )
             except sqlite3.OperationalError:
                 pass  # Column likely already exists
 
@@ -371,7 +373,11 @@ class DatabaseDataManager(DataManager):
                     total_xp=total_xp,
                     tasks=tasks,
                     last_processed_date=last_processed,
-                    vacation_mode=bool(user_row["vacation_mode"]) if "vacation_mode" in user_row.keys() else False,
+                    vacation_mode=(
+                        bool(user_row["vacation_mode"])
+                        if "vacation_mode" in user_row.keys()
+                        else False
+                    ),
                 )
                 print(f"User '{username}' loaded successfully with {len(tasks)} tasks.")
                 return user
@@ -385,8 +391,13 @@ class DatabaseDataManager(DataManager):
         try:
             cursor = conn.cursor()
             # Use INSERT OR IGNORE to avoid errors if user already exists
+            sql = (
+                "INSERT OR IGNORE INTO users "
+                "(username, total_xp, last_processed_date, vacation_mode) "
+                "VALUES (?, ?, ?, ?)"
+            )
             cursor.execute(
-                "INSERT OR IGNORE INTO users (username, total_xp, last_processed_date, vacation_mode) VALUES (?, ?, ?, ?)",
+                sql,
                 (
                     user.username,
                     user.total_xp,

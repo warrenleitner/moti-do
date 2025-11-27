@@ -531,7 +531,7 @@ def test_apply_penalties_completed_task(
     mock_add_xp: MagicMock,
     mock_get: MagicMock,
     mock_set: MagicMock,
-    mock_calculate_score: MagicMock,
+    mock_calculate_score: MagicMock,  # pylint: disable=unused-argument
 ) -> None:
     """Test that completed tasks don't receive penalties."""
     # Sample config
@@ -1304,7 +1304,7 @@ def test_apply_penalties_vacation_mode() -> None:
     manager = MagicMock()
     effective_date = date(2025, 11, 20)
     config = get_default_scoring_config()
-    
+
     # Create an overdue task that would normally incur a penalty
     task = Task(
         title="Overdue Task",
@@ -1319,7 +1319,7 @@ def test_apply_penalties_vacation_mode() -> None:
     # Mock get_last_penalty_check_date to return yesterday
     with patch("motido.core.scoring.get_last_penalty_check_date") as mock_get_date:
         mock_get_date.return_value = date(2025, 11, 19)
-        
+
         # Mock set_last_penalty_check_date
         with patch("motido.core.scoring.set_last_penalty_check_date") as mock_set_date:
             # Execute
@@ -1329,6 +1329,6 @@ def test_apply_penalties_vacation_mode() -> None:
             # XP should not change
             assert user.total_xp == 100
             manager.save_user.assert_not_called()
-            
+
             # Last check date SHOULD be updated
             mock_set_date.assert_called_once_with(effective_date)

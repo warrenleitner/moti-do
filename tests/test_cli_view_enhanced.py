@@ -3,6 +3,7 @@ Tests for the enhanced View CLI commands (Calendar, Graph).
 """
 
 # pylint: disable=redefined-outer-name,unused-argument,too-few-public-methods
+# pylint: disable=consider-using-with
 
 import argparse
 from datetime import datetime, timedelta
@@ -14,7 +15,7 @@ from rich.console import Console
 
 from motido.cli.main import handle_view
 from motido.cli.views import render_calendar, render_dependency_graph
-from motido.core.models import User, Task, Priority
+from motido.core.models import Priority, Task, User
 from motido.data.abstraction import DEFAULT_USERNAME, DataManager
 
 
@@ -106,7 +107,10 @@ def test_handle_view_no_args(capsys: Any) -> None:
         handle_view(args, mock_manager, user)
 
     captured = capsys.readouterr()
-    assert "Error: Please provide a task ID prefix using --id, or use a subcommand" in captured.out
+    assert (
+        "Error: Please provide a task ID prefix using --id, or use a subcommand"
+        in captured.out
+    )
 
 
 def test_render_calendar_execution(sample_user_with_tasks: User) -> None:
@@ -137,7 +141,13 @@ def test_render_dependency_graph_execution(sample_user_with_tasks: User) -> None
 
     # Test with complete dependency
     t3 = Task(title="C", id="c", creation_date=datetime.now())
-    t4 = Task(title="D", id="d", dependencies=["c"], creation_date=datetime.now(), is_complete=True)
+    t4 = Task(
+        title="D",
+        id="d",
+        dependencies=["c"],
+        creation_date=datetime.now(),
+        is_complete=True,
+    )
     # t3 is root. t4 depends on t3.
     # Wait, t4 depends on t3. So t3 is prerequisite.
     # In my graph logic: Roots are tasks with NO dependencies.
@@ -151,10 +161,17 @@ def test_render_calendar_coverage(sample_user_with_tasks: User) -> None:
     console = Console(file=open("/dev/null", "w", encoding="utf-8"))
 
     # Task with start date but no due date
-    t1 = Task(title="Start Only", id="s1", start_date=datetime.now(), creation_date=datetime.now())
+    t1 = Task(
+        title="Start Only",
+        id="s1",
+        start_date=datetime.now(),
+        creation_date=datetime.now(),
+    )
 
     # Task with due date
-    t2 = Task(title="Due Only", id="d1", due_date=datetime.now(), creation_date=datetime.now())
+    t2 = Task(
+        title="Due Only", id="d1", due_date=datetime.now(), creation_date=datetime.now()
+    )
 
     render_calendar([t1, t2], console)
 
@@ -190,7 +207,13 @@ def test_render_dependency_graph_complete_child() -> None:
     """Test render_dependency_graph with a complete child task."""
     console = Console(file=open("/dev/null", "w", encoding="utf-8"))
     t1 = Task(title="Root", id="root", creation_date=datetime.now(), is_complete=True)
-    t2 = Task(title="Child", id="child", dependencies=["root"], is_complete=True, creation_date=datetime.now())
+    t2 = Task(
+        title="Child",
+        id="child",
+        dependencies=["root"],
+        is_complete=True,
+        creation_date=datetime.now(),
+    )
 
     # This should hit 'if child_task.is_complete:' AND 'if root.is_complete:'
     render_dependency_graph([t1, t2], console)
@@ -202,22 +225,24 @@ def test_render_dependency_graph_cycle_recursion() -> None:
     # A -> B -> A
     t1 = Task(title="A", id="a", dependencies=["b"], creation_date=datetime.now())
     t2 = Task(title="B", id="b", dependencies=["a"], creation_date=datetime.now())
-    
+
     # This will call _add_children for 'a' then 'b' then 'a' again.
     # The second 'a' should hit 'if task_id in processed: return'
     # But wait, render_dependency_graph iterates roots.
     # If there are no roots (cycle), it prints warning and returns.
     # So we need a root that points to a cycle?
     # Root -> A -> B -> A
-    
+
     root = Task(title="Root", id="root", creation_date=datetime.now())
-    t1 = Task(title="A", id="a", dependencies=["root", "b"], creation_date=datetime.now())
+    t1 = Task(
+        title="A", id="a", dependencies=["root", "b"], creation_date=datetime.now()
+    )
     t2 = Task(title="B", id="b", dependencies=["a"], creation_date=datetime.now())
-    
+
     # Root is a root because it has no dependencies.
     # A depends on Root (and B).
     # B depends on A.
-    
+
     render_dependency_graph([root, t1, t2], console)
 
 
@@ -225,19 +250,33 @@ def test_handle_view_legacy_coverage(capsys: Any) -> None:
     """Test handle_view legacy mode coverage for due dates and tags."""
     user = User(username=DEFAULT_USERNAME)
     today = datetime.now()
-    
+
     # Task overdue
-    t1 = Task(title="Overdue", id="over", due_date=today - timedelta(days=1), creation_date=today)
-    
+    t1 = Task(
+        title="Overdue",
+        id="over",
+        due_date=today - timedelta(days=1),
+        creation_date=today,
+    )
+
     # Task due soon
-    t2 = Task(title="Soon", id="soon", due_date=today + timedelta(days=1), creation_date=today)
-    
+    t2 = Task(
+        title="Soon", id="soon", due_date=today + timedelta(days=1), creation_date=today
+    )
+
     # Task due later
-    t3 = Task(title="Later", id="later", due_date=today + timedelta(days=10), creation_date=today)
-    
+    t3 = Task(
+        title="Later",
+        id="later",
+        due_date=today + timedelta(days=10),
+        creation_date=today,
+    )
+
     # Task with tags and project
-    t4 = Task(title="Full", id="full", tags=["tag1"], project="proj1", creation_date=today)
-    
+    t4 = Task(
+        title="Full", id="full", tags=["tag1"], project="proj1", creation_date=today
+    )
+
     user.tasks = [t1, t2, t3, t4]
     mock_manager = MagicMock(spec=DataManager)
 
@@ -245,15 +284,15 @@ def test_handle_view_legacy_coverage(capsys: Any) -> None:
         # View overdue
         args = create_mock_args(id="over")
         handle_view(args, mock_manager, user)
-        
+
         # View soon
         args = create_mock_args(id="soon")
         handle_view(args, mock_manager, user)
-        
+
         # View later
         args = create_mock_args(id="later")
         handle_view(args, mock_manager, user)
-        
+
         # View full
         args = create_mock_args(id="full")
         handle_view(args, mock_manager, user)
@@ -263,17 +302,17 @@ def test_handle_view_legacy_start_date(capsys: Any) -> None:
     """Test handle_view legacy mode coverage for start date."""
     user = User(username=DEFAULT_USERNAME)
     today = datetime.now()
-    
+
     # Task with start date
     t1 = Task(title="Start", id="start", start_date=today, creation_date=today)
-    
+
     user.tasks = [t1]
     mock_manager = MagicMock(spec=DataManager)
 
     with patch("motido.cli.main.calculate_score", return_value=None):
         args = create_mock_args(id="start")
         handle_view(args, mock_manager, user)
-    
+
     captured = capsys.readouterr()
     assert "Start Date:" in captured.out
     # Should verify the date is printed

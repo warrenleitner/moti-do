@@ -352,15 +352,21 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
         print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
         sys.exit(1)
 
-    # Check for subcommands
+    # Check for subcommands (lazy imports to avoid circular dependencies)
     if hasattr(args, "view_mode") and args.view_mode == "calendar":
-        from motido.cli.views import render_calendar
+        # pylint: disable-next=import-outside-toplevel
+        from motido.cli.views import (
+            render_calendar,
+        )
 
         console = Console()
         render_calendar(user.tasks, console)
         return
     if hasattr(args, "view_mode") and args.view_mode == "graph":
-        from motido.cli.views import render_dependency_graph
+        # pylint: disable-next=import-outside-toplevel
+        from motido.cli.views import (
+            render_dependency_graph,
+        )
 
         console = Console()
         render_dependency_graph(user.tasks, console)
@@ -545,6 +551,36 @@ def _update_task_duration(task: Task, duration_str: str) -> Duration:
     old_duration = task.duration
     task.duration = Duration(duration_str)  # Raises ValueError if invalid
     return old_duration
+
+
+def _record_history(
+    task: Task, field: str, old_value: Any, new_value: Any
+) -> dict[str, Any]:
+    """Record a change to the task's history field.
+
+    Args:
+        task: The task to record history for.
+        field: The field name that was changed.
+        old_value: The previous value of the field.
+        new_value: The new value of the field.
+
+    Returns:
+        The history entry that was added.
+    """
+    # Convert enum values to strings for JSON serialization
+    if hasattr(old_value, "value"):
+        old_value = old_value.value
+    if hasattr(new_value, "value"):
+        new_value = new_value.value
+
+    entry: dict[str, Any] = {
+        "timestamp": datetime.now().isoformat(),
+        "field": field,
+        "old_value": old_value,
+        "new_value": new_value,
+    }
+    task.history.append(entry)
+    return entry
 
 
 # pylint: disable=too-many-branches
@@ -917,6 +953,7 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
         description_updated = False
         if args.title:
             old_description = _update_task_description(task_to_edit, args.title)
+            _record_history(task_to_edit, "title", old_description, args.title)
             description_updated = True
             changes_made = True
 
@@ -925,6 +962,7 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
         if args.priority:
             try:
                 old_priority = _update_task_priority(task_to_edit, args.priority)
+                _record_history(task_to_edit, "priority", old_priority, args.priority)
                 priority_updated = True
                 changes_made = True
             except ValueError:
@@ -939,6 +977,7 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
         if args.duration:
             try:
                 old_duration = _update_task_duration(task_to_edit, args.duration)
+                _record_history(task_to_edit, "duration", old_duration, args.duration)
                 duration_updated = True
                 changes_made = True
             except ValueError:
@@ -953,6 +992,9 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
         if args.difficulty:
             try:
                 old_difficulty = _update_task_difficulty(task_to_edit, args.difficulty)
+                _record_history(
+                    task_to_edit, "difficulty", old_difficulty, args.difficulty
+                )
                 difficulty_updated = True
                 changes_made = True
             except ValueError:
@@ -1006,7 +1048,7 @@ def handle_delete(args: Namespace, manager: DataManager, user: User | None) -> N
         # and raises ValueError for ambiguity (delegated from find_task_by_id)
         task_deleted = user.remove_task(args.id)
         if task_deleted:
-            try: # pragma: no cover
+            try:  # pragma: no cover
                 manager.save_user(user)  # Save first
                 print(f"Task '{args.id}' deleted successfully.")  # Then print success
             except IOError as e:
@@ -1132,6 +1174,7 @@ def handle_xp(args: Namespace, manager: DataManager, user: User | None) -> None:
         print(f"Error: Unknown xp command '{args.xp_command}'")
         sys.exit(1)
 
+
 def handle_vacation(args: Namespace, manager: DataManager, user: User | None) -> None:
     """Handles the 'vacation' command."""
     if user is None:
@@ -1150,6 +1193,353 @@ def handle_vacation(args: Namespace, manager: DataManager, user: User | None) ->
 
     if args.status in ["on", "off"]:
         manager.save_user(user)
+
+
+def handle_depends(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'depends' command to add, remove, or list dependencies."""
+    if user is None:
+        print("Error: User not found.")
+        sys.exit(1)
+
+    try:
+        task = user.find_task_by_id(args.id)
+        if not task:
+            print(f"Error: Task with ID prefix '{args.id}' not found.")
+            sys.exit(1)
+
+        if args.depends_command == "add":
+            if not args.dependency_id:
+                print("Error: Dependency ID is required for 'add' operation.")
+                sys.exit(1)
+
+            # Find the dependency task
+            dep_task = user.find_task_by_id(args.dependency_id)
+            if not dep_task:
+                print(
+                    f"Error: Dependency task with ID prefix '{args.dependency_id}' not found."
+                )
+                sys.exit(1)
+
+            # Check for self-dependency
+            if dep_task.id == task.id:
+                print("Error: A task cannot depend on itself.")
+                sys.exit(1)
+
+            # Check if dependency already exists
+            if dep_task.id in task.dependencies:
+                print(f"Task '{task.title}' already depends on '{dep_task.title}'.")
+                return
+
+            # Check for circular dependency
+            if _would_create_cycle(task.id, dep_task.id, user.tasks):
+                print(
+                    "Error: Adding this dependency would create a circular dependency."
+                )
+                sys.exit(1)
+
+            task.dependencies.append(dep_task.id)
+            manager.save_user(user)
+            print(
+                f"Added dependency: '{task.title}' now depends on '{dep_task.title}'."
+            )
+
+        elif args.depends_command == "remove":
+            if not args.dependency_id:
+                print("Error: Dependency ID is required for 'remove' operation.")
+                sys.exit(1)
+
+            # Find the dependency task by prefix
+            dep_task = user.find_task_by_id(args.dependency_id)
+            if not dep_task:
+                print(
+                    f"Error: Dependency task with ID prefix '{args.dependency_id}' not found."
+                )
+                sys.exit(1)
+
+            if dep_task.id not in task.dependencies:
+                print(f"Task '{task.title}' does not depend on '{dep_task.title}'.")
+                return
+
+            task.dependencies.remove(dep_task.id)
+            manager.save_user(user)
+            print(
+                f"Removed dependency: '{task.title}' no longer depends on '{dep_task.title}'."
+            )
+
+        elif args.depends_command == "list":
+            if not task.dependencies:
+                print(f"Task '{task.title}' has no dependencies.")
+            else:
+                console = Console()
+                table = Table(show_header=True, header_style="bold magenta")
+                table.add_column("ID Prefix", width=10)
+                table.add_column("Title")
+                table.add_column("Status", width=10)
+
+                for dep_id in task.dependencies:
+                    dep_task = next((t for t in user.tasks if t.id == dep_id), None)
+                    if dep_task:
+                        status = "✓ Complete" if dep_task.is_complete else "○ Pending"
+                        status_style = "green" if dep_task.is_complete else "yellow"
+                        table.add_row(
+                            dep_task.id[:8],
+                            dep_task.title,
+                            Text(status, style=status_style),
+                        )
+                    else:
+                        table.add_row(dep_id[:8], "[deleted]", Text("?", style="dim"))
+
+                console.print(f"Dependencies for '{task.title}':")
+                console.print(table)
+
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except IOError as e:
+        print(f"Error saving task: {e}")
+        sys.exit(1)
+
+
+def handle_subtask(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'subtask' command to add, complete, remove, or list subtasks."""
+    if user is None:
+        print("Error: User not found.")
+        sys.exit(1)
+
+    try:
+        task = user.find_task_by_id(args.id)
+        if not task:
+            print(f"Error: Task with ID prefix '{args.id}' not found.")
+            sys.exit(1)
+
+        if args.subtask_command == "add":
+            if not args.text:
+                print("Error: Subtask text is required for 'add' operation.")
+                sys.exit(1)
+
+            # Add the subtask
+            subtask: dict[str, str | bool] = {"text": args.text, "complete": False}
+            task.subtasks.append(subtask)
+            manager.save_user(user)
+            subtask_idx = len(task.subtasks)
+            print(f"Added subtask #{subtask_idx} '{args.text}' to task '{task.title}'.")
+
+        elif args.subtask_command == "complete":
+            if not args.index:
+                print("Error: Subtask index is required for 'complete' operation.")
+                sys.exit(1)
+
+            idx = int(args.index) - 1  # Convert to 0-based index
+            if idx < 0 or idx >= len(task.subtasks):
+                print(
+                    f"Error: Subtask index {args.index} is out of range. "
+                    f"Task has {len(task.subtasks)} subtask(s)."
+                )
+                sys.exit(1)
+
+            subtask = task.subtasks[idx]
+            if subtask["complete"]:
+                print(f"Subtask #{args.index} is already complete.")
+                return
+
+            # Mark subtask as complete
+            subtask["complete"] = True
+
+            # Calculate proportional XP
+            xp_to_add = 0
+            try:
+                scoring_config = load_scoring_config()
+                total_score = calculate_score(task, None, scoring_config, date.today())
+                num_subtasks = len(task.subtasks)
+                xp_to_add = total_score // num_subtasks if num_subtasks > 0 else 0
+            except ValueError as e:
+                print(f"Warning: Could not calculate XP: {e}")
+
+            manager.save_user(user)
+
+            # Award XP for completing subtask
+            if xp_to_add > 0:
+                add_xp(user, manager, xp_to_add)
+                print(
+                    f"Completed subtask #{args.index} '{subtask['text']}'. "
+                    f"Added {xp_to_add} XP! Total XP: {user.total_xp}"
+                )
+            else:
+                print(f"Completed subtask #{args.index} '{subtask['text']}'.")
+
+        elif args.subtask_command == "remove":
+            if not args.index:
+                print("Error: Subtask index is required for 'remove' operation.")
+                sys.exit(1)
+
+            idx = int(args.index) - 1  # Convert to 0-based index
+            if idx < 0 or idx >= len(task.subtasks):
+                print(
+                    f"Error: Subtask index {args.index} is out of range. "
+                    f"Task has {len(task.subtasks)} subtask(s)."
+                )
+                sys.exit(1)
+
+            removed = task.subtasks.pop(idx)
+            manager.save_user(user)
+            print(f"Removed subtask #{args.index} '{removed['text']}' from task.")
+
+        elif args.subtask_command == "list":
+            if not task.subtasks:
+                print(f"Task '{task.title}' has no subtasks.")
+            else:
+                console = Console()
+                table = Table(show_header=True, header_style="bold magenta")
+                table.add_column("#", width=5)
+                table.add_column("Status", width=10)
+                table.add_column("Text")
+
+                for i, st in enumerate(task.subtasks):
+                    idx_str = str(i + 1)
+                    status = "✓ Complete" if st["complete"] else "○ Pending"
+                    status_style = "green" if st["complete"] else "yellow"
+                    table.add_row(idx_str, Text(status, style=status_style), st["text"])
+
+                console.print(f"Subtasks for '{task.title}':")
+                console.print(table)
+
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except IOError as e:
+        print(f"Error saving task: {e}")
+        sys.exit(1)
+
+
+def handle_history(args: Namespace, _manager: DataManager, user: User | None) -> None:
+    """Handles the 'history' command to show task history."""
+    if user is None:
+        print("Error: User not found.")
+        sys.exit(1)
+
+    try:
+        task = user.find_task_by_id(args.id)
+        if not task:
+            print(f"Error: Task with ID prefix '{args.id}' not found.")
+            sys.exit(1)
+
+        if not task.history:
+            print(f"Task '{task.title}' has no history.")
+            return
+
+        console = Console()
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("#", width=5)
+        table.add_column("Timestamp", width=20)
+        table.add_column("Field", width=12)
+        table.add_column("Old Value")
+        table.add_column("New Value")
+
+        for i, entry in enumerate(task.history):
+            idx_str = str(i + 1)
+            # Parse and format timestamp
+            timestamp_str = entry.get("timestamp", "Unknown")
+            try:
+                ts = datetime.fromisoformat(timestamp_str)
+                formatted_ts = ts.strftime("%Y-%m-%d %H:%M:%S")
+            except (ValueError, TypeError):
+                formatted_ts = str(timestamp_str)
+
+            field = entry.get("field", "Unknown")
+            old_val = str(entry.get("old_value", ""))
+            new_val = str(entry.get("new_value", ""))
+
+            table.add_row(idx_str, formatted_ts, field, old_val, new_val)
+
+        console.print(f"History for '{task.title}':")
+        console.print(table)
+
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+
+def handle_undo(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'undo' command to revert the last change to a task."""
+    if user is None:
+        print("Error: User not found.")
+        sys.exit(1)
+
+    try:
+        task = user.find_task_by_id(args.id)
+        if not task:
+            print(f"Error: Task with ID prefix '{args.id}' not found.")
+            sys.exit(1)
+
+        if not task.history:
+            print(f"Task '{task.title}' has no history to undo.")
+            return
+
+        # Get the last history entry
+        last_entry = task.history.pop()
+        field = last_entry.get("field")
+        old_value = last_entry.get("old_value")
+
+        if field is None or old_value is None:
+            print("Error: Invalid history entry.")
+            sys.exit(1)
+
+        # Revert the field to its old value
+        if field == "title":
+            task.title = old_value
+        elif field == "priority":
+            task.priority = Priority(old_value)
+        elif field == "difficulty":
+            task.difficulty = Difficulty(old_value)
+        elif field == "duration":
+            task.duration = Duration(old_value)
+        else:
+            print(f"Error: Unknown field '{field}' in history. Cannot undo.")
+            # Re-add the entry since we couldn't undo
+            task.history.append(last_entry)
+            sys.exit(1)
+
+        manager.save_user(user)
+        new_value = last_entry.get("new_value")
+        print(
+            f"Undone: '{task.title}' {field} reverted from '{new_value}' to '{old_value}'."
+        )
+
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except IOError as e:
+        print(f"Error saving task: {e}")
+        sys.exit(1)
+
+
+def _would_create_cycle(task_id: str, new_dep_id: str, all_tasks: list[Task]) -> bool:
+    """Check if adding new_dep_id as a dependency of task_id would create a cycle.
+
+    Returns True if adding the dependency would create a circular dependency.
+    """
+    # Build a quick lookup
+    task_map = {t.id: t for t in all_tasks}
+
+    # BFS/DFS from new_dep_id to see if we can reach task_id
+    visited: set[str] = set()
+    stack = [new_dep_id]
+
+    while stack:
+        current_id = stack.pop()
+        if current_id in visited:
+            continue
+        visited.add(current_id)
+
+        current_task = task_map.get(current_id)
+        if current_task:
+            for dep_id in current_task.dependencies:
+                if dep_id == task_id:
+                    return True  # We found task_id in the dependency chain
+                stack.append(dep_id)
+
+    return False
+
 
 def _wrap_handler(
     handler_func: Callable[[argparse.Namespace, DataManager, User | None], T],
@@ -1256,14 +1646,18 @@ def setup_parser() -> argparse.ArgumentParser:
     parser_list.set_defaults(func=_wrap_handler(handle_list))
 
     # --- View Command ---
-    parser_view = subparsers.add_parser("view", help="View tasks (details, calendar, graph).")
+    parser_view = subparsers.add_parser(
+        "view", help="View tasks (details, calendar, graph)."
+    )
     parser_view.add_argument(
         "--id",
         required=False,
         help="The full or unique partial ID of the task to view (legacy mode).",
     )
 
-    view_subparsers = parser_view.add_subparsers(dest="view_mode", help="View mode", required=False)
+    view_subparsers = parser_view.add_subparsers(
+        dest="view_mode", help="View mode", required=False
+    )
     view_subparsers.add_parser("calendar", help="Show tasks in calendar/agenda view")
     view_subparsers.add_parser("graph", help="Show dependency graph")
 
@@ -1431,15 +1825,64 @@ def setup_parser() -> argparse.ArgumentParser:
     parser_xp.set_defaults(func=_wrap_handler(handle_xp))
 
     # --- Vacation Command ---
-    parser_vacation = subparsers.add_parser(
-        "vacation", help="Manage vacation mode."
-    )
+    parser_vacation = subparsers.add_parser("vacation", help="Manage vacation mode.")
     parser_vacation.add_argument(
         "status",
         choices=["on", "off", "status"],
         help="Turn vacation mode on/off or check status.",
     )
     parser_vacation.set_defaults(func=_wrap_handler(handle_vacation))
+
+    # --- Depends Command ---
+    parser_depends = subparsers.add_parser("depends", help="Manage task dependencies.")
+    parser_depends.add_argument(
+        "depends_command",
+        choices=["add", "remove", "list"],
+        help="Dependency operation: add, remove, or list.",
+    )
+    parser_depends.add_argument(
+        "--id", required=True, help="The task ID to manage dependencies for."
+    )
+    parser_depends.add_argument(
+        "dependency_id",
+        nargs="?",
+        help="The ID of the dependency task (for add/remove).",
+    )
+    parser_depends.set_defaults(func=_wrap_handler(handle_depends))
+
+    # --- Subtask Command ---
+    parser_subtask = subparsers.add_parser("subtask", help="Manage task subtasks.")
+    parser_subtask.add_argument(
+        "subtask_command",
+        choices=["add", "complete", "remove", "list"],
+        help="Subtask operation: add, complete, remove, or list.",
+    )
+    parser_subtask.add_argument(
+        "--id", required=True, help="The task ID to manage subtasks for."
+    )
+    parser_subtask.add_argument(
+        "--text",
+        help="The subtask text (for 'add').",
+    )
+    parser_subtask.add_argument(
+        "--index",
+        help="The subtask index, starting from 1 (for 'complete' or 'remove').",
+    )
+    parser_subtask.set_defaults(func=_wrap_handler(handle_subtask))
+
+    # --- History Command ---
+    parser_history = subparsers.add_parser("history", help="Show task change history.")
+    parser_history.add_argument(
+        "--id", required=True, help="The task ID to show history for."
+    )
+    parser_history.set_defaults(func=_wrap_handler(handle_history))
+
+    # --- Undo Command ---
+    parser_undo = subparsers.add_parser("undo", help="Undo the last change to a task.")
+    parser_undo.add_argument(
+        "--id", required=True, help="The task ID to undo the last change for."
+    )
+    parser_undo.set_defaults(func=_wrap_handler(handle_undo))
 
     return parser
 
@@ -1470,6 +1913,10 @@ def main() -> None:
         "run-penalties",
         "xp",
         "vacation",
+        "depends",
+        "subtask",
+        "history",
+        "undo",
     ]:
         try:
             user = manager.load_user(DEFAULT_USERNAME)
