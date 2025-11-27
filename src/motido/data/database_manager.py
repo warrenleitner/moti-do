@@ -72,7 +72,8 @@ class DatabaseDataManager(DataManager):
                 CREATE TABLE IF NOT EXISTS users (
                     username TEXT PRIMARY KEY,
                     total_xp INTEGER NOT NULL DEFAULT 0,
-                    last_processed_date TEXT NOT NULL DEFAULT (date('now'))
+                    last_processed_date TEXT NOT NULL DEFAULT (date('now')),
+                    vacation_mode INTEGER NOT NULL DEFAULT 0
                 )
             """
             )
@@ -124,6 +125,12 @@ class DatabaseDataManager(DataManager):
                 except sqlite3.OperationalError:
                     # Column likely already exists
                     pass
+
+            # Migration: Add vacation_mode to users if missing
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN vacation_mode INTEGER NOT NULL DEFAULT 0")
+            except sqlite3.OperationalError:
+                pass  # Column likely already exists
 
             conn.commit()  # Commit table creation
             print("Database tables checked/created successfully.")
@@ -364,6 +371,7 @@ class DatabaseDataManager(DataManager):
                     total_xp=total_xp,
                     tasks=tasks,
                     last_processed_date=last_processed,
+                    vacation_mode=bool(user_row["vacation_mode"]) if "vacation_mode" in user_row.keys() else False,
                 )
                 print(f"User '{username}' loaded successfully with {len(tasks)} tasks.")
                 return user
@@ -378,8 +386,13 @@ class DatabaseDataManager(DataManager):
             cursor = conn.cursor()
             # Use INSERT OR IGNORE to avoid errors if user already exists
             cursor.execute(
-                "INSERT OR IGNORE INTO users (username, total_xp, last_processed_date) VALUES (?, ?, ?)",
-                (user.username, user.total_xp, user.last_processed_date.isoformat()),
+                "INSERT OR IGNORE INTO users (username, total_xp, last_processed_date, vacation_mode) VALUES (?, ?, ?, ?)",
+                (
+                    user.username,
+                    user.total_xp,
+                    user.last_processed_date.isoformat(),
+                    1 if user.vacation_mode else 0,
+                ),
             )
             # No commit needed due to autocommit (isolation_level=None)
         except sqlite3.Error as e:
@@ -396,12 +409,13 @@ class DatabaseDataManager(DataManager):
                 # Ensure the user exists in the users table
                 self._ensure_user_exists(conn, user)
 
-                # Update user's total_xp and last_processed_date
+                # Update user's total_xp, last_processed_date, and vacation_mode
                 cursor.execute(
-                    "UPDATE users SET total_xp = ?, last_processed_date = ? WHERE username = ?",
+                    "UPDATE users SET total_xp = ?, last_processed_date = ?, vacation_mode = ? WHERE username = ?",
                     (
                         user.total_xp,
                         user.last_processed_date.isoformat(),
+                        1 if user.vacation_mode else 0,
                         user.username,
                     ),
                 )

@@ -137,6 +137,7 @@ def test_save_user_update_existing(
         "total_xp": 0,
         "tasks": expected_tasks_data,
         "last_processed_date": updated_user.last_processed_date.isoformat(),
+        "vacation_mode": False,
     }
     expected_final_data = {  # type: ignore[assignment]
         updated_user.username: expected_user_data

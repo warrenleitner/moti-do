@@ -159,7 +159,8 @@ def test_create_tables(
                 CREATE TABLE IF NOT EXISTS users (
                     username TEXT PRIMARY KEY,
                     total_xp INTEGER NOT NULL DEFAULT 0,
-                    last_processed_date TEXT NOT NULL DEFAULT (date('now'))
+                    last_processed_date TEXT NOT NULL DEFAULT (date('now')),
+                    vacation_mode INTEGER NOT NULL DEFAULT 0
                 )
             """
         ),
@@ -198,6 +199,7 @@ def test_create_tables(
         call("ALTER TABLE tasks ADD COLUMN recurrence_type TEXT"),
         call("ALTER TABLE tasks ADD COLUMN streak_current INTEGER NOT NULL DEFAULT 0"),
         call("ALTER TABLE tasks ADD COLUMN streak_best INTEGER NOT NULL DEFAULT 0"),
+        call("ALTER TABLE users ADD COLUMN vacation_mode INTEGER NOT NULL DEFAULT 0"),
     ]
     cursor.execute.assert_has_calls(expected_calls)
     connection.commit.assert_called_once()
@@ -442,8 +444,8 @@ def test_ensure_user_exists(
     manager._ensure_user_exists(connection, user)
 
     cursor.execute.assert_called_once_with(
-        "INSERT OR IGNORE INTO users (username, total_xp, last_processed_date) VALUES (?, ?, ?)",
-        ("new_user", 0, "2025-11-16"),
+        "INSERT OR IGNORE INTO users (username, total_xp, last_processed_date, vacation_mode) VALUES (?, ?, ?, ?)",
+        ("new_user", 0, "2025-11-16", 0),
     )
 
 

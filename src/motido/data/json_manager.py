@@ -207,6 +207,7 @@ class JsonDataManager(DataManager):
                     total_xp=total_xp,
                     tasks=tasks,
                     last_processed_date=last_processed,
+                    vacation_mode=user_data.get("vacation_mode", False),
                 )
                 print(f"User '{username}' loaded successfully.")
                 return user
@@ -271,6 +272,7 @@ class JsonDataManager(DataManager):
             "total_xp": user.total_xp,
             "tasks": tasks_data,
             "last_processed_date": user.last_processed_date.isoformat(),
+            "vacation_mode": user.vacation_mode,
         }
 
         # Update the specific user's data in the overall structure

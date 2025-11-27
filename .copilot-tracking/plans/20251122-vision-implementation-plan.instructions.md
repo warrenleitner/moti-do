@@ -50,10 +50,10 @@ Implement missing features from the `basic_idea.md` vision document, focusing on
 
 ### [ ] Phase 3: CLI Enhancements
 
-- [ ] Task 3.1: Vacation Mode
+- [x] Task 3.1: Vacation Mode
   - Details: .copilot-tracking/details/20251122-vision-implementation-details.md (Lines 140-155)
 
-- [ ] Task 3.2: Advanced Views (Calendar/Graph)
+- [x] Task 3.2: Advanced Views (Calendar/Graph)
   - Details: .copilot-tracking/details/20251122-vision-implementation-details.md (Lines 157-180)
 
 ## Dependencies

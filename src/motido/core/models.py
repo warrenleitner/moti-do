@@ -191,6 +191,7 @@ class User:
     total_xp: int = 0
     tasks: List[Task] = field(default_factory=list)
     last_processed_date: date = field(default_factory=date.today)
+    vacation_mode: bool = False
 
     def find_task_by_id(self, task_id_prefix: str) -> Task | None:
         """

@@ -446,6 +446,7 @@ def test_apply_penalties_basic(
 
     # Create mock user and manager
     mock_user = MagicMock()
+    mock_user.vacation_mode = False
     mock_manager = MagicMock()
 
     # Create tasks created yesterday
@@ -501,12 +502,13 @@ def test_apply_penalties_multiple_days(
 
     # Create mock user and manager
     mock_user = MagicMock()
+    mock_user.vacation_mode = False
     mock_manager = MagicMock()
 
-    # Task created 4 days ago (should get 3 days of penalties)
+    # Create task created before the penalty period
     task = Task(
-        title="Old task",
-        creation_date=datetime.combine(today - timedelta(days=4), datetime.min.time()),
+        title="Task 1",
+        creation_date=datetime.combine(three_days_ago, datetime.min.time()),
         is_complete=False,
     )
 
@@ -521,6 +523,7 @@ def test_apply_penalties_multiple_days(
     mock_set.assert_called_once_with(today)
 
 
+@patch("motido.core.scoring.calculate_score")
 @patch("motido.core.scoring.set_last_penalty_check_date")
 @patch("motido.core.scoring.get_last_penalty_check_date")
 @patch("motido.core.scoring.add_xp")
@@ -528,6 +531,7 @@ def test_apply_penalties_completed_task(
     mock_add_xp: MagicMock,
     mock_get: MagicMock,
     mock_set: MagicMock,
+    mock_calculate_score: MagicMock,
 ) -> None:
     """Test that completed tasks don't receive penalties."""
     # Sample config
@@ -542,6 +546,7 @@ def test_apply_penalties_completed_task(
 
     # Create mock user and manager
     mock_user = MagicMock()
+    mock_user.vacation_mode = False
     mock_manager = MagicMock()
 
     # Task created 2 days ago but marked as complete
@@ -582,6 +587,7 @@ def test_apply_penalties_disabled(
 
     # Create mock user and manager
     mock_user = MagicMock()
+    mock_user.vacation_mode = False
     mock_manager = MagicMock()
 
     # Create an incomplete task
@@ -1289,3 +1295,40 @@ def test_withdraw_xp_invalid_amount() -> None:
 
     with pytest.raises(ValueError, match="Withdrawal amount must be positive"):
         withdraw_xp(user, mock_manager, 0)
+
+
+def test_apply_penalties_vacation_mode() -> None:
+    """Test that penalties are skipped when vacation mode is enabled."""
+    # Setup
+    user = User(username=DEFAULT_USERNAME, total_xp=100, vacation_mode=True)
+    manager = MagicMock()
+    effective_date = date(2025, 11, 20)
+    config = get_default_scoring_config()
+    
+    # Create an overdue task that would normally incur a penalty
+    task = Task(
+        title="Overdue Task",
+        creation_date=datetime(2025, 11, 1),
+        due_date=datetime(2025, 11, 15),
+        priority=Priority.HIGH,
+        difficulty=Difficulty.HIGH,
+        duration=Duration.LONG,
+    )
+    all_tasks = [task]
+
+    # Mock get_last_penalty_check_date to return yesterday
+    with patch("motido.core.scoring.get_last_penalty_check_date") as mock_get_date:
+        mock_get_date.return_value = date(2025, 11, 19)
+        
+        # Mock set_last_penalty_check_date
+        with patch("motido.core.scoring.set_last_penalty_check_date") as mock_set_date:
+            # Execute
+            apply_penalties(user, manager, effective_date, config, all_tasks)
+
+            # Verify
+            # XP should not change
+            assert user.total_xp == 100
+            manager.save_user.assert_not_called()
+            
+            # Last check date SHOULD be updated
+            mock_set_date.assert_called_once_with(effective_date)

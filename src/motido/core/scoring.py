@@ -760,6 +760,13 @@ def apply_penalties(
     if not config["daily_penalty"]["apply_penalty"]:
         return
 
+    # Check if user is in vacation mode
+    if getattr(user, "vacation_mode", False):
+        print("Vacation mode enabled. Skipping penalties.")
+        # Still update the last check date so we don't accumulate penalties while away
+        set_last_penalty_check_date(effective_date)
+        return
+
     # Get the last penalty check date
     last_check = get_last_penalty_check_date()
 

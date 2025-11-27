@@ -348,15 +348,31 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> None:
     """Handles the 'view' command."""
-    if not args.id:  # pragma: no cover
-        print("Error: Please provide a task ID prefix using --id.")
-        sys.exit(1)
-
-    print_verbose(args, f"Viewing task with ID prefix: '{args.id}'...")
-
     if not user:
         print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
         sys.exit(1)
+
+    # Check for subcommands
+    if hasattr(args, "view_mode") and args.view_mode == "calendar":
+        from motido.cli.views import render_calendar
+
+        console = Console()
+        render_calendar(user.tasks, console)
+        return
+    if hasattr(args, "view_mode") and args.view_mode == "graph":
+        from motido.cli.views import render_dependency_graph
+
+        console = Console()
+        render_dependency_graph(user.tasks, console)
+        return
+
+    if not args.id:
+        print(
+            "Error: Please provide a task ID prefix using --id, or use a subcommand (calendar, graph)."
+        )
+        sys.exit(1)
+
+    print_verbose(args, f"Viewing task with ID prefix: '{args.id}'...")
 
     try:
         task = user.find_task_by_id(args.id)
@@ -990,7 +1006,7 @@ def handle_delete(args: Namespace, manager: DataManager, user: User | None) -> N
         # and raises ValueError for ambiguity (delegated from find_task_by_id)
         task_deleted = user.remove_task(args.id)
         if task_deleted:
-            try:  # pragma: no cover
+            try: # pragma: no cover
                 manager.save_user(user)  # Save first
                 print(f"Task '{args.id}' deleted successfully.")  # Then print success
             except IOError as e:
@@ -1115,6 +1131,26 @@ def handle_xp(args: Namespace, manager: DataManager, user: User | None) -> None:
     else:
         print(f"Error: Unknown xp command '{args.xp_command}'")
         sys.exit(1)
+
+def handle_vacation(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'vacation' command."""
+    if user is None:
+        print("Error: User not found.")
+        sys.exit(1)
+
+    if args.status == "on":
+        user.vacation_mode = True
+        print("Vacation mode enabled. Penalties will be paused.")
+    elif args.status == "off":
+        user.vacation_mode = False
+        print("Vacation mode disabled. Welcome back!")
+    elif args.status == "status":
+        status = "ON" if user.vacation_mode else "OFF"
+        print(f"Vacation mode is currently {status}.")
+
+    if args.status in ["on", "off"]:
+        manager.save_user(user)
+
 def _wrap_handler(
     handler_func: Callable[[argparse.Namespace, DataManager, User | None], T],
 ) -> Callable[[argparse.Namespace, DataManager, User | None], T]:
@@ -1220,12 +1256,17 @@ def setup_parser() -> argparse.ArgumentParser:
     parser_list.set_defaults(func=_wrap_handler(handle_list))
 
     # --- View Command ---
-    parser_view = subparsers.add_parser("view", help="View details of a specific task.")
+    parser_view = subparsers.add_parser("view", help="View tasks (details, calendar, graph).")
     parser_view.add_argument(
         "--id",
-        required=True,
-        help="The full or unique partial ID of the task to view.",
+        required=False,
+        help="The full or unique partial ID of the task to view (legacy mode).",
     )
+
+    view_subparsers = parser_view.add_subparsers(dest="view_mode", help="View mode", required=False)
+    view_subparsers.add_parser("calendar", help="Show tasks in calendar/agenda view")
+    view_subparsers.add_parser("graph", help="Show dependency graph")
+
     parser_view.set_defaults(func=_wrap_handler(handle_view))
 
     # --- Edit Command ---
@@ -1389,6 +1430,17 @@ def setup_parser() -> argparse.ArgumentParser:
     )
     parser_xp.set_defaults(func=_wrap_handler(handle_xp))
 
+    # --- Vacation Command ---
+    parser_vacation = subparsers.add_parser(
+        "vacation", help="Manage vacation mode."
+    )
+    parser_vacation.add_argument(
+        "status",
+        choices=["on", "off", "status"],
+        help="Turn vacation mode on/off or check status.",
+    )
+    parser_vacation.set_defaults(func=_wrap_handler(handle_vacation))
+
     return parser
 
 
@@ -1417,6 +1469,7 @@ def main() -> None:
         "complete",
         "run-penalties",
         "xp",
+        "vacation",
     ]:
         try:
             user = manager.load_user(DEFAULT_USERNAME)
