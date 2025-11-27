@@ -22,7 +22,14 @@ from motido.data.abstraction import DEFAULT_USERNAME, DataManager
 def create_mock_args(**kwargs: Any) -> argparse.Namespace:
     """Create a mock argparse Namespace."""
     # Ensure defaults for view command
-    defaults: Dict[str, Any] = {"id": None, "view_mode": None, "verbose": False}
+    defaults: Dict[str, Any] = {
+        "id": None,
+        "view_mode": None,
+        "verbose": False,
+        "status": "all",
+        "project": None,
+        "tag": None,
+    }
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
 
@@ -317,3 +324,215 @@ def test_handle_view_legacy_start_date(capsys: Any) -> None:
     assert "Start Date:" in captured.out
     # Should verify the date is printed
     assert today.strftime("%Y-%m-%d") in captured.out
+
+
+# --- View Filtering Tests ---
+
+
+@pytest.fixture
+def user_with_filtered_tasks() -> User:
+    """Create a user with tasks for filter testing."""
+    user = User(username=DEFAULT_USERNAME)
+
+    today = datetime.now()
+    yesterday = today - timedelta(days=1)
+    tomorrow = today + timedelta(days=1)
+
+    # Active task (not complete, started)
+    task1 = Task(
+        id="active-1",
+        title="Active Task",
+        creation_date=yesterday,
+        start_date=yesterday,
+        is_complete=False,
+        project="Project A",
+        tags=["urgent", "work"],
+    )
+    # Completed task
+    task2 = Task(
+        id="completed-1",
+        title="Completed Task",
+        creation_date=yesterday,
+        is_complete=True,
+        project="Project B",
+        tags=["done"],
+    )
+    # Future task (start date in future)
+    task3 = Task(
+        id="future-1",
+        title="Future Task",
+        creation_date=today,
+        start_date=tomorrow,
+        is_complete=False,
+        project="Project A",
+        tags=["planning"],
+    )
+    # Active task without project
+    task4 = Task(
+        id="active-2",
+        title="No Project Task",
+        creation_date=yesterday,
+        is_complete=False,
+        tags=["urgent"],
+    )
+
+    user.add_task(task1)
+    user.add_task(task2)
+    user.add_task(task3)
+    user.add_task(task4)
+
+    return user
+
+
+def test_filter_by_status_active(user_with_filtered_tasks: User, capsys: Any) -> None:
+    """Test filtering view by active status."""
+    mock_manager = MagicMock(spec=DataManager)
+    args = create_mock_args(view_mode="calendar", status="active")
+
+    handle_view(args, mock_manager, user_with_filtered_tasks)
+
+    captured = capsys.readouterr()
+    assert "Active Task" in captured.out
+    assert "No Project Task" in captured.out
+    assert "Completed Task" not in captured.out
+    assert "Future Task" not in captured.out
+
+
+def test_filter_by_status_completed(
+    user_with_filtered_tasks: User, capsys: Any
+) -> None:
+    """Test filtering view by completed status."""
+    mock_manager = MagicMock(spec=DataManager)
+    args = create_mock_args(view_mode="calendar", status="completed")
+
+    handle_view(args, mock_manager, user_with_filtered_tasks)
+
+    captured = capsys.readouterr()
+    assert "Completed Task" in captured.out
+    assert "Active Task" not in captured.out
+    assert "Future Task" not in captured.out
+
+
+def test_filter_by_status_future(user_with_filtered_tasks: User, capsys: Any) -> None:
+    """Test filtering view by future status."""
+    mock_manager = MagicMock(spec=DataManager)
+    args = create_mock_args(view_mode="calendar", status="future")
+
+    handle_view(args, mock_manager, user_with_filtered_tasks)
+
+    captured = capsys.readouterr()
+    assert "Future Task" in captured.out
+    assert "Active Task" not in captured.out
+    assert "Completed Task" not in captured.out
+
+
+def test_filter_by_project(user_with_filtered_tasks: User, capsys: Any) -> None:
+    """Test filtering view by project name."""
+    mock_manager = MagicMock(spec=DataManager)
+    args = create_mock_args(view_mode="calendar", project="Project A")
+
+    handle_view(args, mock_manager, user_with_filtered_tasks)
+
+    captured = capsys.readouterr()
+    assert "Active Task" in captured.out
+    assert "Future Task" in captured.out
+    assert "Completed Task" not in captured.out
+    assert "No Project Task" not in captured.out
+
+
+def test_filter_by_project_case_insensitive(
+    user_with_filtered_tasks: User, capsys: Any
+) -> None:
+    """Test filtering by project is case-insensitive."""
+    mock_manager = MagicMock(spec=DataManager)
+    args = create_mock_args(view_mode="calendar", project="project a")
+
+    handle_view(args, mock_manager, user_with_filtered_tasks)
+
+    captured = capsys.readouterr()
+    assert "Active Task" in captured.out
+    assert "Future Task" in captured.out
+
+
+def test_filter_by_tag(user_with_filtered_tasks: User, capsys: Any) -> None:
+    """Test filtering view by tag name."""
+    mock_manager = MagicMock(spec=DataManager)
+    args = create_mock_args(view_mode="calendar", tag="urgent")
+
+    handle_view(args, mock_manager, user_with_filtered_tasks)
+
+    captured = capsys.readouterr()
+    assert "Active Task" in captured.out
+    assert "No Project Task" in captured.out
+    assert "Completed Task" not in captured.out
+    assert "Future Task" not in captured.out
+
+
+def test_filter_by_tag_case_insensitive(
+    user_with_filtered_tasks: User, capsys: Any
+) -> None:
+    """Test filtering by tag is case-insensitive."""
+    mock_manager = MagicMock(spec=DataManager)
+    args = create_mock_args(view_mode="calendar", tag="URGENT")
+
+    handle_view(args, mock_manager, user_with_filtered_tasks)
+
+    captured = capsys.readouterr()
+    assert "Active Task" in captured.out
+    assert "No Project Task" in captured.out
+
+
+def test_filter_combined_status_and_project(
+    user_with_filtered_tasks: User, capsys: Any
+) -> None:
+    """Test combining status and project filters."""
+    mock_manager = MagicMock(spec=DataManager)
+    args = create_mock_args(view_mode="calendar", status="active", project="Project A")
+
+    handle_view(args, mock_manager, user_with_filtered_tasks)
+
+    captured = capsys.readouterr()
+    assert "Active Task" in captured.out
+    assert "Future Task" not in captured.out  # Future, not active
+    assert "Completed Task" not in captured.out
+    assert "No Project Task" not in captured.out  # No project
+
+
+def test_filter_combined_all(user_with_filtered_tasks: User, capsys: Any) -> None:
+    """Test combining all three filters."""
+    mock_manager = MagicMock(spec=DataManager)
+    args = create_mock_args(
+        view_mode="calendar", status="active", project="Project A", tag="work"
+    )
+
+    handle_view(args, mock_manager, user_with_filtered_tasks)
+
+    captured = capsys.readouterr()
+    assert "Active Task" in captured.out
+    assert "Future Task" not in captured.out
+    assert "No Project Task" not in captured.out
+
+
+def test_filter_graph_view(user_with_filtered_tasks: User, capsys: Any) -> None:
+    """Test that filtering works with graph view too."""
+    mock_manager = MagicMock(spec=DataManager)
+    args = create_mock_args(view_mode="graph", status="completed")
+
+    handle_view(args, mock_manager, user_with_filtered_tasks)
+
+    captured = capsys.readouterr()
+    # Graph should only show completed task
+    assert "Completed Task" in captured.out
+
+
+def test_filter_no_matches(user_with_filtered_tasks: User, capsys: Any) -> None:
+    """Test filtering that results in no matches."""
+    mock_manager = MagicMock(spec=DataManager)
+    args = create_mock_args(view_mode="calendar", project="Nonexistent Project")
+
+    handle_view(args, mock_manager, user_with_filtered_tasks)
+
+    captured = capsys.readouterr()
+    # Should still render calendar but with no tasks
+    assert "Calendar" in captured.out
+    assert "Active Task" not in captured.out

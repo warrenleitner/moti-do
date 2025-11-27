@@ -346,11 +346,72 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
 
 
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+def _filter_tasks(
+    tasks: list[Task], status: str, project: str | None, tag: str | None
+) -> list[Task]:
+    """Filter tasks based on status, project, and tag criteria.
+
+    Args:
+        tasks: List of tasks to filter.
+        status: Filter by status: 'active', 'future', 'completed', or 'all'.
+        project: Filter by project name (case-insensitive contains match).
+        tag: Filter by tag name (case-insensitive contains match).
+
+    Returns:
+        Filtered list of tasks.
+    """
+    today = date.today()
+    filtered = tasks
+
+    # Filter by status
+    if status == "active":
+        # Active: not complete, and either no start_date or start_date <= today
+        filtered = [
+            t
+            for t in filtered
+            if not t.is_complete
+            and (t.start_date is None or t.start_date.date() <= today)
+        ]
+    elif status == "future":
+        # Future: not complete, has start_date in the future
+        filtered = [
+            t
+            for t in filtered
+            if not t.is_complete
+            and t.start_date is not None
+            and t.start_date.date() > today
+        ]
+    elif status == "completed":
+        filtered = [t for t in filtered if t.is_complete]
+    # else 'all' - no status filter
+
+    # Filter by project
+    if project:
+        project_lower = project.lower()
+        filtered = [
+            t for t in filtered if t.project and project_lower in t.project.lower()
+        ]
+
+    # Filter by tag
+    if tag:
+        tag_lower = tag.lower()
+        filtered = [
+            t for t in filtered if any(tag_lower in t_tag.lower() for t_tag in t.tags)
+        ]
+
+    return filtered
+
+
 def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> None:
     """Handles the 'view' command."""
     if not user:
         print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
         sys.exit(1)
+
+    # Get filter options
+    status = getattr(args, "status", "all")
+    project = getattr(args, "project", None)
+    tag = getattr(args, "tag", None)
 
     # Check for subcommands (lazy imports to avoid circular dependencies)
     if hasattr(args, "view_mode") and args.view_mode == "calendar":
@@ -359,8 +420,9 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
             render_calendar,
         )
 
+        filtered_tasks = _filter_tasks(user.tasks, status, project, tag)
         console = Console()
-        render_calendar(user.tasks, console)
+        render_calendar(filtered_tasks, console)
         return
     if hasattr(args, "view_mode") and args.view_mode == "graph":
         # pylint: disable-next=import-outside-toplevel
@@ -368,8 +430,9 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
             render_dependency_graph,
         )
 
+        filtered_tasks = _filter_tasks(user.tasks, status, project, tag)
         console = Console()
-        render_dependency_graph(user.tasks, console)
+        render_dependency_graph(filtered_tasks, console)
         return
 
     if not args.id:
@@ -615,6 +678,11 @@ def handle_complete(args: Namespace, manager: DataManager, user: User | None) ->
 
             # Mark the task as complete
             task.is_complete = True
+
+            # Update streak for habit tasks
+            if task.is_habit:
+                task.streak_current += 1
+                task.streak_best = max(task.streak_best, task.streak_current)
 
             # Save the updated user data
             try:
@@ -1117,20 +1185,35 @@ def handle_run_penalties(
 
 
 def handle_advance(args: Namespace, manager: DataManager, user: User | None) -> None:
-    """Handle the 'advance' command to move forward one day."""
+    """Handle the 'advance' command to move forward one or more days."""
     if not user:
         print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
         sys.exit(1)
-
-    print_verbose(args, f"Advancing from {user.last_processed_date}...")
 
     # Store initial values
     initial_date = user.last_processed_date
     initial_xp = user.total_xp
 
-    # Advance date by 1 day
-    new_date = user.last_processed_date + timedelta(days=1)
-    user.last_processed_date = new_date
+    # Determine target date
+    if args.to:
+        try:
+            target_date = parse_date(args.to).date()
+        except ValueError as e:
+            print(f"Error: Invalid date format: {e}")
+            sys.exit(1)
+
+        if target_date <= user.last_processed_date:
+            print(
+                f"Error: Target date {target_date} must be after "
+                f"current date {user.last_processed_date}"
+            )
+            sys.exit(1)
+    else:
+        target_date = user.last_processed_date + timedelta(days=1)
+
+    print_verbose(
+        args, f"Advancing from {user.last_processed_date} to {target_date}..."
+    )
 
     try:
         # Load scoring config
@@ -1140,16 +1223,33 @@ def handle_advance(args: Namespace, manager: DataManager, user: User | None) -> 
             print(f"Error: Could not load scoring config: {e}")
             sys.exit(1)
 
-        # Process penalties for the new date
-        xp_change = process_day(user, manager, new_date, scoring_config)
+        total_xp_change = 0
+        days_processed = 0
+
+        # Process each day up to target
+        while user.last_processed_date < target_date:
+            new_date = user.last_processed_date + timedelta(days=1)
+            user.last_processed_date = new_date
+
+            # Process penalties for the new date
+            xp_change = process_day(user, manager, new_date, scoring_config)
+            total_xp_change += xp_change
+            days_processed += 1
 
         # Save updated user
         manager.save_user(user)
 
         # Display results
-        print(f"Date: {initial_date} → {new_date}")
-        if xp_change < 0:
-            print(f"XP: {initial_xp} → {user.total_xp} ({xp_change:+d})")
+        if days_processed == 1:
+            print(f"Date: {initial_date} → {user.last_processed_date}")
+        else:
+            print(
+                f"Date: {initial_date} → {user.last_processed_date} "
+                f"({days_processed} days)"
+            )
+
+        if total_xp_change < 0:
+            print(f"XP: {initial_xp} → {user.total_xp} ({total_xp_change:+d})")
         else:
             print(f"XP: {initial_xp} → {user.total_xp} (no penalty)")
 
@@ -1654,6 +1754,20 @@ def setup_parser() -> argparse.ArgumentParser:
         required=False,
         help="The full or unique partial ID of the task to view (legacy mode).",
     )
+    parser_view.add_argument(
+        "--status",
+        choices=["active", "future", "completed", "all"],
+        default="all",
+        help="Filter by task status: active, future, completed, or all (default).",
+    )
+    parser_view.add_argument(
+        "--project",
+        help="Filter by project name.",
+    )
+    parser_view.add_argument(
+        "--tag",
+        help="Filter by tag name.",
+    )
 
     view_subparsers = parser_view.add_subparsers(
         dest="view_mode", help="View mode", required=False
@@ -1809,7 +1923,14 @@ def setup_parser() -> argparse.ArgumentParser:
 
     # --- Advance Command ---
     parser_advance = subparsers.add_parser(
-        "advance", help="Advance virtual date by one day."
+        "advance", help="Advance virtual date by one day (or multiple days with --to)."
+    )
+    parser_advance.add_argument(
+        "--to",
+        type=str,
+        default=None,
+        metavar="DATE",
+        help="Target date to advance to (YYYY-MM-DD format). Processes each day.",
     )
     parser_advance.set_defaults(func=_wrap_handler(handle_advance))
 
