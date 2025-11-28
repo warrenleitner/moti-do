@@ -1,5 +1,6 @@
 """Tests for the DatabaseDataManager class."""
 
+import json
 import os
 import sqlite3
 from datetime import date, datetime
@@ -189,6 +190,7 @@ def test_create_tables(
                     recurrence_type TEXT,
                     streak_current INTEGER NOT NULL DEFAULT 0,
                     streak_best INTEGER NOT NULL DEFAULT 0,
+                    parent_habit_id TEXT,
                     FOREIGN KEY (user_username) REFERENCES users (username)
                         ON DELETE CASCADE ON UPDATE CASCADE
                 )
@@ -199,6 +201,7 @@ def test_create_tables(
         call("ALTER TABLE tasks ADD COLUMN recurrence_type TEXT"),
         call("ALTER TABLE tasks ADD COLUMN streak_current INTEGER NOT NULL DEFAULT 0"),
         call("ALTER TABLE tasks ADD COLUMN streak_best INTEGER NOT NULL DEFAULT 0"),
+        call("ALTER TABLE tasks ADD COLUMN parent_habit_id TEXT"),
         call("ALTER TABLE users ADD COLUMN vacation_mode INTEGER NOT NULL DEFAULT 0"),
     ]
     cursor.execute.assert_has_calls(expected_calls)
@@ -374,7 +377,9 @@ def test_load_user_not_found(
 
     assert loaded_user is None
     cursor.execute.assert_called_once_with(
-        "SELECT username FROM users WHERE username = ?", (username,)
+        "SELECT username, total_xp, last_processed_date, vacation_mode, "
+        "defined_tags, defined_projects FROM users WHERE username = ?",
+        (username,),
     )
     cursor.fetchall.assert_not_called()
 
@@ -398,12 +403,16 @@ def test_load_user_no_tasks(
     assert loaded_user.tasks == []
 
     expected_calls = [
-        call("SELECT username FROM users WHERE username = ?", (username,)),
+        call(
+            "SELECT username, total_xp, last_processed_date, vacation_mode, "
+            "defined_tags, defined_projects FROM users WHERE username = ?",
+            (username,),
+        ),
         call(
             "SELECT id, title, text_description, priority, difficulty, duration, "
             "is_complete, creation_date, due_date, start_date, icon, tags, "
             "project, subtasks, dependencies, history, is_habit, recurrence_rule, "
-            "recurrence_type, streak_current, streak_best FROM tasks "
+            "recurrence_type, streak_current, streak_best, parent_habit_id FROM tasks "
             "WHERE user_username = ?",
             (username,),
         ),
@@ -444,8 +453,10 @@ def test_ensure_user_exists(
     manager._ensure_user_exists(connection, user)
 
     cursor.execute.assert_called_once_with(
-        "INSERT OR IGNORE INTO users (username, total_xp, last_processed_date, vacation_mode) VALUES (?, ?, ?, ?)",
-        ("new_user", 0, "2025-11-16", 0),
+        "INSERT OR IGNORE INTO users "
+        "(username, total_xp, last_processed_date, vacation_mode, defined_tags, defined_projects) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        ("new_user", 0, "2025-11-16", 0, None, None),
     )
 
 
@@ -519,15 +530,16 @@ def test_save_user(
     assert "due_date" in sql
     assert "start_date" in sql
     assert (
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         in sql
-    )  # 22 parameters for all task fields
+    )  # 23 parameters for all task fields including parent_habit_id
 
     # Check that the task parameters include all field values
     assert len(params) == 2  # Two tasks
-    # Each task tuple has 17 elements:
+    # Each task tuple has 23 elements:
     # (id, title, text_description, priority, difficulty, duration, is_complete, creation_date,
-    #  due_date, start_date, icon, tags, project, subtasks, dependencies, history, username)
+    #  due_date, start_date, icon, tags, project, subtasks, dependencies, history, username,
+    #  is_habit, recurrence_rule, recurrence_type, streak_current, streak_best, parent_habit_id)
     assert params[0][0] == task1.id
     assert params[0][1] == task1.title
     assert params[0][2] == task1.text_description  # None by default
@@ -711,3 +723,117 @@ def test_close_method_without_connection(manager: DatabaseDataManager) -> None:
     manager._close()
 
     # No assertions needed for this test case - just checking it doesn't fail
+
+
+def test_load_user_with_defined_tags(
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
+) -> None:
+    """Test loading a user with defined tags."""
+    _, _, cursor = mock_conn_fixture
+    username = DEFAULT_USERNAME
+
+    tags_json = json.dumps(
+        [
+            {"id": "tag-1", "name": "urgent", "color": "#FF0000"},
+            {"id": "tag-2", "name": "work", "color": "#0000FF"},
+        ]
+    )
+
+    cursor.fetchone.return_value = {
+        "username": username,
+        "total_xp": 100,
+        "last_processed_date": "2025-01-01",
+        "vacation_mode": 0,
+        "defined_tags": tags_json,
+        "defined_projects": None,
+    }
+    cursor.fetchall.return_value = []
+
+    loaded_user = manager.load_user(username)
+
+    assert loaded_user is not None
+    assert len(loaded_user.defined_tags) == 2
+    assert loaded_user.defined_tags[0].name == "urgent"
+    assert loaded_user.defined_tags[0].color == "#FF0000"
+    assert loaded_user.defined_tags[1].name == "work"
+
+
+def test_load_user_with_defined_projects(
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
+) -> None:
+    """Test loading a user with defined projects."""
+    _, _, cursor = mock_conn_fixture
+    username = DEFAULT_USERNAME
+
+    projects_json = json.dumps(
+        [
+            {"id": "proj-1", "name": "Career", "color": "#6C5CE7"},
+        ]
+    )
+
+    cursor.fetchone.return_value = {
+        "username": username,
+        "total_xp": 100,
+        "last_processed_date": "2025-01-01",
+        "vacation_mode": 0,
+        "defined_tags": None,
+        "defined_projects": projects_json,
+    }
+    cursor.fetchall.return_value = []
+
+    loaded_user = manager.load_user(username)
+
+    assert loaded_user is not None
+    assert len(loaded_user.defined_projects) == 1
+    assert loaded_user.defined_projects[0].name == "Career"
+    assert loaded_user.defined_projects[0].color == "#6C5CE7"
+
+
+def test_load_user_with_invalid_tags_json(
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
+) -> None:
+    """Test loading a user with invalid JSON in defined_tags."""
+    _, _, cursor = mock_conn_fixture
+    username = DEFAULT_USERNAME
+
+    cursor.fetchone.return_value = {
+        "username": username,
+        "total_xp": 100,
+        "last_processed_date": "2025-01-01",
+        "vacation_mode": 0,
+        "defined_tags": "invalid json",
+        "defined_projects": None,
+    }
+    cursor.fetchall.return_value = []
+
+    loaded_user = manager.load_user(username)
+
+    assert loaded_user is not None
+    assert len(loaded_user.defined_tags) == 0
+
+
+def test_load_user_with_invalid_projects_json(
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
+) -> None:
+    """Test loading a user with invalid JSON in defined_projects."""
+    _, _, cursor = mock_conn_fixture
+    username = DEFAULT_USERNAME
+
+    cursor.fetchone.return_value = {
+        "username": username,
+        "total_xp": 100,
+        "last_processed_date": "2025-01-01",
+        "vacation_mode": 0,
+        "defined_tags": None,
+        "defined_projects": "invalid json",
+    }
+    cursor.fetchall.return_value = []
+
+    loaded_user = manager.load_user(username)
+
+    assert loaded_user is not None
+    assert len(loaded_user.defined_projects) == 0

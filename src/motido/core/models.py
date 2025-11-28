@@ -19,6 +19,29 @@ XPSource = Literal[
     "manual_adjustment",
 ]
 
+# Default colors for tags and projects
+DEFAULT_TAG_COLORS = [
+    "#FF6B6B",  # Red
+    "#4ECDC4",  # Teal
+    "#45B7D1",  # Light Blue
+    "#96CEB4",  # Sage Green
+    "#FFEAA7",  # Yellow
+    "#DDA0DD",  # Plum
+    "#98D8C8",  # Mint
+    "#F7DC6F",  # Gold
+]
+
+DEFAULT_PROJECT_COLORS = [
+    "#6C5CE7",  # Purple
+    "#A29BFE",  # Light Purple
+    "#74B9FF",  # Sky Blue
+    "#0984E3",  # Blue
+    "#00CEC9",  # Cyan
+    "#55A3FF",  # Azure
+    "#E17055",  # Coral
+    "#FDCB6E",  # Amber
+]
+
 
 class Priority(str, Enum):
     """Priority levels for tasks from least to most important."""
@@ -184,6 +207,24 @@ class Badge:
 
 
 @dataclass
+class Tag:
+    """Represents a tag with color for categorizing tasks."""
+
+    name: str
+    color: str = "#808080"  # Default gray
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+
+
+@dataclass
+class Project:
+    """Represents a project with color for organizing tasks."""
+
+    name: str
+    color: str = "#4A90D9"  # Default blue
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+
+
+@dataclass
 class Task:  # pylint: disable=too-many-instance-attributes
     """Represents a single task."""
 
@@ -215,6 +256,9 @@ class Task:  # pylint: disable=too-many-instance-attributes
     recurrence_type: RecurrenceType | None = None
     streak_current: int = 0
     streak_best: int = 0
+    parent_habit_id: str | None = (
+        None  # Links to original habit for auto-generated instances
+    )
 
     def __str__(self) -> str:
         """String representation for simple display."""
@@ -229,7 +273,7 @@ class Task:  # pylint: disable=too-many-instance-attributes
 
 
 @dataclass
-class User:
+class User:  # pylint: disable=too-many-instance-attributes
     """Represents a user and their associated tasks."""
 
     username: str
@@ -239,6 +283,10 @@ class User:
     vacation_mode: bool = False
     xp_transactions: List[XPTransaction] = field(default_factory=list)
     badges: List[Badge] = field(default_factory=list)
+    defined_tags: List[Tag] = field(default_factory=list)  # Global tag registry
+    defined_projects: List[Project] = field(
+        default_factory=list
+    )  # Global project registry
 
     def find_task_by_id(self, task_id_prefix: str) -> Task | None:
         """
@@ -281,3 +329,73 @@ class User:
         initial_length = len(self.tasks)
         self.tasks = [task for task in self.tasks if task.id != task_id]
         return len(self.tasks) < initial_length
+
+    def find_tag_by_name(self, tag_name: str) -> Tag | None:
+        """
+        Finds a defined tag by its name (case-insensitive).
+
+        Args:
+            tag_name: The name of the tag to find.
+
+        Returns:
+            The Tag object if found, None otherwise.
+        """
+        for tag in self.defined_tags:
+            if tag.name.lower() == tag_name.lower():
+                return tag
+        return None
+
+    def find_project_by_name(self, project_name: str) -> Project | None:
+        """
+        Finds a defined project by its name (case-insensitive).
+
+        Args:
+            project_name: The name of the project to find.
+
+        Returns:
+            The Project object if found, None otherwise.
+        """
+        for project in self.defined_projects:
+            if project.name.lower() == project_name.lower():
+                return project
+        return None
+
+    def get_or_create_tag(self, tag_name: str) -> Tag:
+        """
+        Gets an existing tag or creates a new one with an auto-assigned color.
+
+        Args:
+            tag_name: The name of the tag.
+
+        Returns:
+            The existing or newly created Tag object.
+        """
+        existing = self.find_tag_by_name(tag_name)
+        if existing:
+            return existing
+        # Auto-assign a color based on the number of existing tags
+        color_index = len(self.defined_tags) % len(DEFAULT_TAG_COLORS)
+        new_tag = Tag(name=tag_name, color=DEFAULT_TAG_COLORS[color_index])
+        self.defined_tags.append(new_tag)
+        return new_tag
+
+    def get_or_create_project(self, project_name: str) -> Project:
+        """
+        Gets an existing project or creates a new one with an auto-assigned color.
+
+        Args:
+            project_name: The name of the project.
+
+        Returns:
+            The existing or newly created Project object.
+        """
+        existing = self.find_project_by_name(project_name)
+        if existing:
+            return existing
+        # Auto-assign a color based on the number of existing projects
+        color_index = len(self.defined_projects) % len(DEFAULT_PROJECT_COLORS)
+        new_project = Project(
+            name=project_name, color=DEFAULT_PROJECT_COLORS[color_index]
+        )
+        self.defined_projects.append(new_project)
+        return new_project

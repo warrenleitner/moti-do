@@ -498,3 +498,41 @@ def test_load_user_io_error_on_read(mocker: Any) -> None:
     # Check that the "user not found" message is also
     # printed because _read_data returned {}
     mock_print.assert_any_call("User 'testuser' not found in JSON data.")
+
+
+def test_deserialize_tag(manager: JsonDataManager) -> None:
+    """Test deserializing a tag dictionary."""
+    tag_dict = {"id": "tag-123", "name": "urgent", "color": "#FF0000"}
+    tag = manager._deserialize_tag(tag_dict)
+
+    assert tag.id == "tag-123"
+    assert tag.name == "urgent"
+    assert tag.color == "#FF0000"
+
+
+def test_deserialize_tag_with_defaults(manager: JsonDataManager) -> None:
+    """Test deserializing a tag with default values."""
+    tag_dict: Dict[str, Any] = {}
+    tag = manager._deserialize_tag(tag_dict)
+
+    assert tag.name == "Unknown"
+    assert tag.color == "#808080"
+
+
+def test_deserialize_project(manager: JsonDataManager) -> None:
+    """Test deserializing a project dictionary."""
+    project_dict = {"id": "proj-123", "name": "Work", "color": "#6C5CE7"}
+    project = manager._deserialize_project(project_dict)
+
+    assert project.id == "proj-123"
+    assert project.name == "Work"
+    assert project.color == "#6C5CE7"
+
+
+def test_deserialize_project_with_defaults(manager: JsonDataManager) -> None:
+    """Test deserializing a project with default values."""
+    project_dict: Dict[str, Any] = {}
+    project = manager._deserialize_project(project_dict)
+
+    assert project.name == "Unknown"
+    assert project.color == "#4A90D9"

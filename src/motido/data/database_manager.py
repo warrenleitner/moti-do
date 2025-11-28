@@ -13,7 +13,9 @@ from motido.core.models import (
     Difficulty,
     Duration,
     Priority,
+    Project,
     RecurrenceType,
+    Tag,
     Task,
     User,
 )
@@ -103,6 +105,7 @@ class DatabaseDataManager(DataManager):
                     recurrence_type TEXT,
                     streak_current INTEGER NOT NULL DEFAULT 0,
                     streak_best INTEGER NOT NULL DEFAULT 0,
+                    parent_habit_id TEXT,
                     FOREIGN KEY (user_username) REFERENCES users (username)
                         ON DELETE CASCADE ON UPDATE CASCADE
                 )
@@ -117,6 +120,7 @@ class DatabaseDataManager(DataManager):
                 ("recurrence_type", "TEXT"),
                 ("streak_current", "INTEGER NOT NULL DEFAULT 0"),
                 ("streak_best", "INTEGER NOT NULL DEFAULT 0"),
+                ("parent_habit_id", "TEXT"),
             ]
 
             for col_name, col_def in new_columns:
@@ -133,6 +137,17 @@ class DatabaseDataManager(DataManager):
                 )
             except sqlite3.OperationalError:
                 pass  # Column likely already exists
+
+            # Migration: Add defined_tags and defined_projects to users if missing
+            user_columns = [
+                ("defined_tags", "TEXT"),  # JSON array of tag objects
+                ("defined_projects", "TEXT"),  # JSON array of project objects
+            ]
+            for col_name, col_def in user_columns:  # pragma: no cover
+                try:
+                    cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}")
+                except sqlite3.OperationalError:
+                    pass  # Column likely already exists
 
             conn.commit()  # Commit table creation
             print("Database tables checked/created successfully.")
@@ -160,9 +175,11 @@ class DatabaseDataManager(DataManager):
             with self._get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Check if user exists
+                # Check if user exists and get user data
                 cursor.execute(
-                    "SELECT username FROM users WHERE username = ?", (username,)
+                    "SELECT username, total_xp, last_processed_date, vacation_mode, "
+                    "defined_tags, defined_projects FROM users WHERE username = ?",
+                    (username,),
                 )
                 user_row = cursor.fetchone()
 
@@ -192,7 +209,7 @@ class DatabaseDataManager(DataManager):
                     "SELECT id, title, text_description, priority, difficulty, duration, "
                     "is_complete, creation_date, due_date, start_date, icon, tags, "
                     "project, subtasks, dependencies, history, is_habit, recurrence_rule, "
-                    "recurrence_type, streak_current, streak_best FROM tasks "
+                    "recurrence_type, streak_current, streak_best, parent_habit_id FROM tasks "
                     "WHERE user_username = ?",
                     (username,),
                 )
@@ -365,8 +382,48 @@ class DatabaseDataManager(DataManager):
                         streak_best=(
                             row["streak_best"] if "streak_best" in row.keys() else 0
                         ),
+                        parent_habit_id=(
+                            row["parent_habit_id"]
+                            if "parent_habit_id" in row.keys()
+                            else None
+                        ),
                     )
                     tasks.append(task)
+
+                # Deserialize defined tags
+                defined_tags: list[Tag] = []
+                if "defined_tags" in user_row.keys() and user_row["defined_tags"]:
+                    try:
+                        tags_data = json.loads(user_row["defined_tags"])
+                        defined_tags = [
+                            Tag(
+                                id=t.get("id", ""),
+                                name=t.get("name", "Unknown"),
+                                color=t.get("color", "#808080"),
+                            )
+                            for t in tags_data
+                        ]
+                    except json.JSONDecodeError:
+                        pass  # Use empty list
+
+                # Deserialize defined projects
+                defined_projects: list[Project] = []
+                if (
+                    "defined_projects" in user_row.keys()
+                    and user_row["defined_projects"]
+                ):
+                    try:
+                        projects_data = json.loads(user_row["defined_projects"])
+                        defined_projects = [
+                            Project(
+                                id=p.get("id", ""),
+                                name=p.get("name", "Unknown"),
+                                color=p.get("color", "#4A90D9"),
+                            )
+                            for p in projects_data
+                        ]
+                    except json.JSONDecodeError:
+                        pass  # Use empty list
 
                 user = User(
                     username=username,
@@ -378,6 +435,8 @@ class DatabaseDataManager(DataManager):
                         if "vacation_mode" in user_row.keys()
                         else False
                     ),
+                    defined_tags=defined_tags,
+                    defined_projects=defined_projects,
                 )
                 print(f"User '{username}' loaded successfully with {len(tasks)} tasks.")
                 return user
@@ -390,11 +449,32 @@ class DatabaseDataManager(DataManager):
         """Ensures the user exists in the users table, inserting if necessary."""
         try:
             cursor = conn.cursor()
+            # Serialize defined_tags and defined_projects as JSON
+            defined_tags_json = (
+                json.dumps(
+                    [
+                        {"id": t.id, "name": t.name, "color": t.color}
+                        for t in user.defined_tags
+                    ]
+                )
+                if user.defined_tags
+                else None
+            )
+            defined_projects_json = (
+                json.dumps(
+                    [
+                        {"id": p.id, "name": p.name, "color": p.color}
+                        for p in user.defined_projects
+                    ]
+                )
+                if user.defined_projects
+                else None
+            )
             # Use INSERT OR IGNORE to avoid errors if user already exists
             sql = (
                 "INSERT OR IGNORE INTO users "
-                "(username, total_xp, last_processed_date, vacation_mode) "
-                "VALUES (?, ?, ?, ?)"
+                "(username, total_xp, last_processed_date, vacation_mode, defined_tags, defined_projects) "
+                "VALUES (?, ?, ?, ?, ?, ?)"
             )
             cursor.execute(
                 sql,
@@ -403,6 +483,8 @@ class DatabaseDataManager(DataManager):
                     user.total_xp,
                     user.last_processed_date.isoformat(),
                     1 if user.vacation_mode else 0,
+                    defined_tags_json,
+                    defined_projects_json,
                 ),
             )
             # No commit needed due to autocommit (isolation_level=None)
@@ -420,13 +502,38 @@ class DatabaseDataManager(DataManager):
                 # Ensure the user exists in the users table
                 self._ensure_user_exists(conn, user)
 
-                # Update user's total_xp, last_processed_date, and vacation_mode
+                # Serialize defined_tags and defined_projects as JSON
+                defined_tags_json = (
+                    json.dumps(
+                        [
+                            {"id": t.id, "name": t.name, "color": t.color}
+                            for t in user.defined_tags
+                        ]
+                    )
+                    if user.defined_tags
+                    else None
+                )
+                defined_projects_json = (
+                    json.dumps(
+                        [
+                            {"id": p.id, "name": p.name, "color": p.color}
+                            for p in user.defined_projects
+                        ]
+                    )
+                    if user.defined_projects
+                    else None
+                )
+
+                # Update user's total_xp, last_processed_date, vacation_mode, and registries
                 cursor.execute(
-                    "UPDATE users SET total_xp = ?, last_processed_date = ?, vacation_mode = ? WHERE username = ?",
+                    "UPDATE users SET total_xp = ?, last_processed_date = ?, vacation_mode = ?, "
+                    "defined_tags = ?, defined_projects = ? WHERE username = ?",
                     (
                         user.total_xp,
                         user.last_processed_date.isoformat(),
                         1 if user.vacation_mode else 0,
+                        defined_tags_json,
+                        defined_projects_json,
                         user.username,
                     ),
                 )
@@ -477,6 +584,7 @@ class DatabaseDataManager(DataManager):
                         task.recurrence_type.value if task.recurrence_type else None,
                         task.streak_current,
                         task.streak_best,
+                        task.parent_habit_id,
                     )
                     for task in user.tasks
                 ]
@@ -487,8 +595,9 @@ class DatabaseDataManager(DataManager):
                         "INSERT INTO tasks (id, title, text_description, priority, difficulty, "
                         "duration, is_complete, creation_date, due_date, start_date, "
                         "icon, tags, project, subtasks, dependencies, history, user_username, "
-                        "is_habit, recurrence_rule, recurrence_type, streak_current, streak_best) "
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        "is_habit, recurrence_rule, recurrence_type, streak_current, streak_best, "
+                        "parent_habit_id) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         tasks_to_insert,
                     )
                     print(

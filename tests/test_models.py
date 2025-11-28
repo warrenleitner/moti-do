@@ -10,7 +10,9 @@ from motido.core.models import (  # Added Duration
     Difficulty,
     Duration,
     Priority,
+    Project,
     RecurrenceType,
+    Tag,
     Task,
     User,
 )
@@ -411,3 +413,132 @@ def test_task_initialization_as_habit() -> None:
     assert task.recurrence_type == RecurrenceType.STRICT
     assert task.streak_current == 0
     assert task.streak_best == 0
+
+
+# --- Tag Tests ---
+
+
+def test_tag_initialization() -> None:
+    """Test that a Tag object is initialized correctly."""
+    tag = Tag(name="urgent")
+    assert tag.name == "urgent"
+    assert tag.color == "#808080"  # Default gray
+    assert len(tag.id) == 36  # UUID length
+
+
+def test_tag_with_custom_color() -> None:
+    """Test Tag with custom color."""
+    tag = Tag(name="important", color="#FF0000")
+    assert tag.name == "important"
+    assert tag.color == "#FF0000"
+
+
+# --- Project Tests ---
+
+
+def test_project_initialization() -> None:
+    """Test that a Project object is initialized correctly."""
+    project = Project(name="Work")
+    assert project.name == "Work"
+    assert project.color == "#4A90D9"  # Default blue
+    assert len(project.id) == 36  # UUID length
+
+
+def test_project_with_custom_color() -> None:
+    """Test Project with custom color."""
+    project = Project(name="Personal", color="#00FF00")
+    assert project.name == "Personal"
+    assert project.color == "#00FF00"
+
+
+# --- User Tag/Project Registry Tests ---
+
+
+def test_user_find_tag_by_name(empty_user: User) -> None:
+    """Test finding a tag by name."""
+    tag = Tag(name="urgent", color="#FF0000")
+    empty_user.defined_tags.append(tag)
+
+    found = empty_user.find_tag_by_name("urgent")
+    assert found is not None
+    assert found.name == "urgent"
+    assert found.color == "#FF0000"
+
+
+def test_user_find_tag_by_name_case_insensitive(empty_user: User) -> None:
+    """Test finding a tag by name is case-insensitive."""
+    tag = Tag(name="URGENT", color="#FF0000")
+    empty_user.defined_tags.append(tag)
+
+    found = empty_user.find_tag_by_name("urgent")
+    assert found is not None
+    assert found.name == "URGENT"
+
+
+def test_user_find_tag_by_name_not_found(empty_user: User) -> None:
+    """Test finding a tag that doesn't exist returns None."""
+    found = empty_user.find_tag_by_name("nonexistent")
+    assert found is None
+
+
+def test_user_find_project_by_name(empty_user: User) -> None:
+    """Test finding a project by name."""
+    project = Project(name="Work", color="#0000FF")
+    empty_user.defined_projects.append(project)
+
+    found = empty_user.find_project_by_name("Work")
+    assert found is not None
+    assert found.name == "Work"
+    assert found.color == "#0000FF"
+
+
+def test_user_find_project_by_name_case_insensitive(empty_user: User) -> None:
+    """Test finding a project by name is case-insensitive."""
+    project = Project(name="PERSONAL", color="#00FF00")
+    empty_user.defined_projects.append(project)
+
+    found = empty_user.find_project_by_name("personal")
+    assert found is not None
+    assert found.name == "PERSONAL"
+
+
+def test_user_find_project_by_name_not_found(empty_user: User) -> None:
+    """Test finding a project that doesn't exist returns None."""
+    found = empty_user.find_project_by_name("nonexistent")
+    assert found is None
+
+
+def test_user_get_or_create_tag_new(empty_user: User) -> None:
+    """Test get_or_create_tag creates a new tag with auto-assigned color."""
+    tag = empty_user.get_or_create_tag("urgent")
+    assert tag.name == "urgent"
+    assert tag.color == "#FF6B6B"  # First default color
+    assert len(empty_user.defined_tags) == 1
+
+
+def test_user_get_or_create_tag_existing(empty_user: User) -> None:
+    """Test get_or_create_tag returns existing tag."""
+    existing = Tag(name="urgent", color="#CUSTOM")
+    empty_user.defined_tags.append(existing)
+
+    tag = empty_user.get_or_create_tag("urgent")
+    assert tag.color == "#CUSTOM"  # Keeps original color
+    assert len(empty_user.defined_tags) == 1  # No new tag added
+
+
+def test_user_get_or_create_project_new(empty_user: User) -> None:
+    """Test get_or_create_project creates a new project with auto-assigned color."""
+    project = empty_user.get_or_create_project("Work")
+    assert project.name == "Work"
+    assert project.color == "#6C5CE7"  # First default color
+    assert len(empty_user.defined_projects) == 1
+
+
+def test_user_get_or_create_project_existing(empty_user: User) -> None:
+    """Test get_or_create_project returns existing project."""
+    existing = Project(name="Work", color="#CUSTOM")
+    empty_user.defined_projects.append(existing)
+
+    project = empty_user.get_or_create_project("Work")
+    assert project.color == "#CUSTOM"  # Keeps original color
+    assert len(empty_user.defined_projects) == 1  # No new project added

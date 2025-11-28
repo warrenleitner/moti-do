@@ -2,15 +2,15 @@
 
 # pylint: disable=consider-using-with
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 from rich.console import Console
 
 from motido.cli.main import Namespace, handle_view
-from motido.cli.views import render_dependency_graph
-from motido.core.models import Task, User
+from motido.cli.views import render_dependency_graph, render_kanban
+from motido.core.models import Priority, Task, User
 from motido.data.abstraction import DEFAULT_USERNAME, DataManager
 
 
@@ -68,3 +68,97 @@ def test_handle_view_legacy_missing_fields(capsys: Any) -> None:
     )
     # Actually rich table formatting might add spaces.
     assert "Not set" in captured.out
+
+
+def test_render_kanban_basic() -> None:
+    """Test render_kanban with various task states."""
+    console = Console(file=open("/dev/null", "w", encoding="utf-8"))
+    today = datetime.now()
+    yesterday = today - timedelta(days=1)
+    tomorrow = today + timedelta(days=1)
+
+    # Task in backlog (future start date)
+    backlog_task = Task(
+        title="Backlog",
+        id="backlog",
+        creation_date=today,
+        start_date=tomorrow,
+        priority=Priority.LOW,
+    )
+
+    # Task in to do (no dates, not complete)
+    todo_task = Task(
+        title="To Do",
+        id="todo",
+        creation_date=today,
+        priority=Priority.MEDIUM,
+    )
+
+    # Task in progress (start date passed)
+    in_progress_task = Task(
+        title="In Progress",
+        id="inprog",
+        creation_date=yesterday,
+        start_date=yesterday,
+        priority=Priority.HIGH,
+    )
+
+    # Blocked task (dependency incomplete)
+    blocked_task = Task(
+        title="Blocked",
+        id="blocked",
+        creation_date=today,
+        dependencies=["todo"],
+        priority=Priority.HIGH,
+    )
+
+    # Done task
+    done_task = Task(
+        title="Done",
+        id="done",
+        creation_date=yesterday,
+        is_complete=True,
+        priority=Priority.LOW,
+    )
+
+    tasks = [backlog_task, todo_task, in_progress_task, blocked_task, done_task]
+    render_kanban(tasks, console)
+
+
+def test_render_kanban_empty() -> None:
+    """Test render_kanban with no tasks."""
+    console = Console(file=open("/dev/null", "w", encoding="utf-8"))
+    render_kanban([], console)
+
+
+def test_render_kanban_with_due_date() -> None:
+    """Test render_kanban shows due date in task label."""
+    console = Console(file=open("/dev/null", "w", encoding="utf-8"))
+    tomorrow = datetime.now() + timedelta(days=1)
+
+    task = Task(
+        title="With Due",
+        id="withdue",
+        creation_date=datetime.now(),
+        due_date=tomorrow,
+        priority=Priority.HIGH,
+    )
+
+    render_kanban([task], console)
+
+
+def test_render_kanban_backlog_due_date_future() -> None:
+    """Test that task with future due date but no start date goes to backlog."""
+    console = Console(file=open("/dev/null", "w", encoding="utf-8"))
+    future = datetime.now() + timedelta(days=7)
+
+    task = Task(
+        title="Future Due",
+        id="futuredue",
+        creation_date=datetime.now(),
+        due_date=future,  # No start date but future due
+        priority=Priority.MEDIUM,
+    )
+
+    # This should go to Backlog
+    render_kanban([task], console)

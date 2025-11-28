@@ -2,8 +2,12 @@
 
 from datetime import datetime, timedelta
 
-from motido.core.models import RecurrenceType, Task
-from motido.core.recurrence import _normalize_rule, calculate_next_occurrence
+from motido.core.models import Priority, RecurrenceType, Task
+from motido.core.recurrence import (
+    _normalize_rule,
+    calculate_next_occurrence,
+    create_next_habit_instance,
+)
 
 
 def test_normalize_rule_simple() -> None:
@@ -142,3 +146,122 @@ def test_parse_every_rule_invalid_unit() -> None:
     from motido.core.recurrence import _parse_every_rule
 
     assert _parse_every_rule("every 3 foobars") is None
+
+
+# --- Tests for create_next_habit_instance ---
+
+
+def test_create_next_habit_instance_basic() -> None:
+    """Test basic habit instance creation."""
+    start_date = datetime(2023, 1, 1, 12, 0, 0)
+    task = Task(
+        id="parent-id",
+        title="Daily Task",
+        creation_date=start_date,
+        due_date=start_date,
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.STRICT,
+        priority=Priority.HIGH,
+        tags=["health", "fitness"],
+        project="wellness",
+        streak_current=5,
+        streak_best=10,
+    )
+
+    new_instance = create_next_habit_instance(task, start_date)
+
+    assert new_instance is not None
+    assert new_instance.id != task.id  # New unique ID
+    assert new_instance.title == task.title
+    assert new_instance.priority == task.priority
+    assert new_instance.tags == task.tags  # Tags copied
+    assert new_instance.project == task.project
+    assert new_instance.is_habit is True
+    assert new_instance.recurrence_rule == task.recurrence_rule
+    assert new_instance.recurrence_type == task.recurrence_type
+    assert new_instance.streak_current == 5  # Streak preserved
+    assert new_instance.streak_best == 10
+    assert new_instance.parent_habit_id == task.id  # Links to parent
+    assert new_instance.is_complete is False
+    assert new_instance.due_date is not None
+    assert new_instance.due_date.date() == (start_date + timedelta(days=1)).date()
+
+
+def test_create_next_habit_instance_not_habit() -> None:
+    """Test that non-habit tasks return None."""
+    task = Task(
+        title="Regular Task",
+        creation_date=datetime.now(),
+        is_habit=False,
+    )
+
+    new_instance = create_next_habit_instance(task)
+    assert new_instance is None
+
+
+def test_create_next_habit_instance_no_rule() -> None:
+    """Test that habits without recurrence rule return None."""
+    task = Task(
+        title="Habit without rule",
+        creation_date=datetime.now(),
+        is_habit=True,
+        recurrence_rule=None,
+    )
+
+    new_instance = create_next_habit_instance(task)
+    assert new_instance is None
+
+
+def test_create_next_habit_instance_default_completion_date() -> None:
+    """Test that completion_date defaults to now."""
+    start_date = datetime(2023, 1, 1, 12, 0, 0)
+    task = Task(
+        id="parent-id",
+        title="Daily Task",
+        creation_date=start_date,
+        due_date=start_date,
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+
+    # Call without completion_date - should use now()
+    new_instance = create_next_habit_instance(task)
+    assert new_instance is not None
+    # Due date should be tomorrow from now
+    assert new_instance.due_date is not None
+
+
+def test_create_next_habit_instance_subtasks_reset() -> None:
+    """Test that subtasks are not carried forward."""
+    task = Task(
+        id="parent-id",
+        title="Task with subtasks",
+        creation_date=datetime.now(),
+        due_date=datetime.now(),
+        is_habit=True,
+        recurrence_rule="daily",
+        subtasks=[{"text": "Subtask 1", "complete": True}],
+    )
+
+    new_instance = create_next_habit_instance(task)
+    assert new_instance is not None
+    assert new_instance.subtasks == []  # Fresh subtasks
+
+
+def test_create_next_habit_instance_dependencies_reset() -> None:
+    """Test that dependencies are not carried forward."""
+    task = Task(
+        id="parent-id",
+        title="Task with deps",
+        creation_date=datetime.now(),
+        due_date=datetime.now(),
+        is_habit=True,
+        recurrence_rule="daily",
+        dependencies=["other-task-id"],
+    )
+
+    new_instance = create_next_habit_instance(task)
+    assert new_instance is not None
+    assert new_instance.dependencies == []  # Dependencies reset

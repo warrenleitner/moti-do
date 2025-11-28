@@ -87,6 +87,18 @@ def test_handle_view_graph(sample_user_with_tasks: User) -> None:
         assert call_args[0][0] == sample_user_with_tasks.tasks
 
 
+def test_handle_view_kanban(sample_user_with_tasks: User) -> None:
+    """Test viewing kanban board."""
+    args = create_mock_args(view_mode="kanban")
+    mock_manager = MagicMock(spec=DataManager)
+
+    with patch("motido.cli.views.render_kanban") as mock_render:
+        handle_view(args, mock_manager, sample_user_with_tasks)
+        mock_render.assert_called_once()
+        call_args = mock_render.call_args
+        assert call_args[0][0] == sample_user_with_tasks.tasks
+
+
 def test_handle_view_legacy_id(sample_user_with_tasks: User, capsys: Any) -> None:
     """Test legacy view with --id."""
     args = create_mock_args(id="t1")

@@ -22,10 +22,13 @@ from motido.core.models import (  # Added Duration
     Difficulty,
     Duration,
     Priority,
+    Project,
     RecurrenceType,
+    Tag,
     Task,
     User,
 )
+from motido.core.recurrence import create_next_habit_instance
 from motido.core.scoring import (
     add_xp,
     apply_penalties,
@@ -435,6 +438,29 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
         render_dependency_graph(filtered_tasks, console)
         return
 
+    if hasattr(args, "view_mode") and args.view_mode == "kanban":
+        # pylint: disable-next=import-outside-toplevel
+        from motido.cli.views import (
+            render_kanban,
+        )
+
+        filtered_tasks = _filter_tasks(user.tasks, status, project, tag)
+        console = Console()
+        render_kanban(filtered_tasks, console)
+        return
+
+    if hasattr(args, "view_mode") and args.view_mode == "heatmap":
+        # pylint: disable-next=import-outside-toplevel
+        from motido.cli.views import (
+            render_heatmap,
+        )
+
+        habit_id = getattr(args, "habit_id", None)
+        weeks = getattr(args, "weeks", 12)
+        console = Console()
+        render_heatmap(user.tasks, habit_id, console, weeks)
+        return
+
     if not args.id:
         print(
             "Error: Please provide a task ID prefix using --id, or use a subcommand (calendar, graph)."
@@ -700,6 +726,22 @@ def handle_complete(args: Namespace, manager: DataManager, user: User | None) ->
                         f"Marked task '{task.title}' (ID: {task.id[:8]}) as complete."
                     )
 
+                # Auto-generate next habit instance if applicable
+                if task.is_habit and task.recurrence_rule:
+                    next_instance = create_next_habit_instance(task, datetime.now())
+                    if next_instance:
+                        user.tasks.append(next_instance)
+                        manager.save_user(user)
+                        due_str = (
+                            next_instance.due_date.strftime("%Y-%m-%d")
+                            if next_instance.due_date
+                            else "unscheduled"
+                        )
+                        print(
+                            f"  → Next occurrence created: due {due_str} "
+                            f"(ID: {next_instance.id[:8]})"
+                        )
+
             except (IOError, OSError) as e:
                 print(f"Error saving task update: {e}")
                 sys.exit(1)
@@ -944,6 +986,176 @@ def handle_project(args: Namespace, manager: DataManager, user: User | None) -> 
         sys.exit(1)
     except IOError as e:
         print(f"Error saving task: {e}")
+        sys.exit(1)
+    except Exception as e:  # pragma: no cover  # pylint: disable=broad-exception-caught
+        print(f"Unexpected error: {e}")
+        sys.exit(1)
+
+
+def handle_tags(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'tags' command to manage the global tag registry."""
+    console = Console()
+
+    if not user:
+        print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
+        sys.exit(1)
+
+    try:
+        if args.tags_command == "list":
+            if not user.defined_tags:
+                print("No tags defined yet. Use 'tags define <name>' to create one.")
+                return
+
+            table = Table(title="Defined Tags")
+            table.add_column("Name", style="cyan")
+            table.add_column("Color", style="white")
+            table.add_column("ID", style="dim")
+
+            for tag in user.defined_tags:
+                # Show color as a colored block
+                color_text = Text("██ ", style=tag.color)
+                color_text.append(tag.color, style="dim")
+                table.add_row(tag.name, color_text, tag.id[:8])
+
+            console.print(table)
+
+        elif args.tags_command == "define":
+            tag_name = args.name.strip()
+            existing = user.find_tag_by_name(tag_name)
+            if existing:
+                print(f"Tag '{tag_name}' already exists with color {existing.color}.")
+                return
+
+            # Create new tag with optional color
+            if args.color:
+                new_tag = Tag(name=tag_name, color=args.color)
+            else:
+                new_tag = user.get_or_create_tag(tag_name)
+
+            if args.color:  # If color was specified, add manually
+                user.defined_tags.append(new_tag)
+
+            manager.save_user(user)
+            print(f"Defined tag '{tag_name}' with color {new_tag.color}.")
+
+        elif args.tags_command == "color":
+            tag_name = args.name.strip()
+            found_tag = user.find_tag_by_name(tag_name)
+            if not found_tag:
+                print(
+                    f"Tag '{tag_name}' not found. Use 'tags define {tag_name}' first."
+                )
+                sys.exit(1)
+
+            old_color = found_tag.color
+            found_tag.color = args.new_color
+            manager.save_user(user)
+            print(
+                f"Changed color for tag '{tag_name}' from {old_color} to {found_tag.color}."
+            )
+
+        elif args.tags_command == "remove":
+            tag_name = args.name.strip()
+            found_tag = user.find_tag_by_name(tag_name)
+            if not found_tag:
+                print(f"Tag '{tag_name}' not found.")
+                sys.exit(1)
+
+            user.defined_tags = [t for t in user.defined_tags if t.id != found_tag.id]
+            manager.save_user(user)
+            print(f"Removed tag '{tag_name}' from registry.")
+
+    except IOError as e:
+        print(f"Error saving data: {e}")
+        sys.exit(1)
+    except Exception as e:  # pragma: no cover  # pylint: disable=broad-exception-caught
+        print(f"Unexpected error: {e}")
+        sys.exit(1)
+
+
+def handle_projects(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'projects' command to manage the global project registry."""
+    console = Console()
+
+    if not user:
+        print(f"User '{DEFAULT_USERNAME}' not found or no data available.")
+        sys.exit(1)
+
+    try:
+        if args.projects_command == "list":
+            if not user.defined_projects:
+                print(
+                    "No projects defined yet. Use 'projects define <name>' to create one."
+                )
+                return
+
+            table = Table(title="Defined Projects")
+            table.add_column("Name", style="cyan")
+            table.add_column("Color", style="white")
+            table.add_column("ID", style="dim")
+
+            for proj in user.defined_projects:
+                # Show color as a colored block
+                color_text = Text("██ ", style=proj.color)
+                color_text.append(proj.color, style="dim")
+                table.add_row(proj.name, color_text, proj.id[:8])
+
+            console.print(table)
+
+        elif args.projects_command == "define":
+            project_name = args.name.strip()
+            existing = user.find_project_by_name(project_name)
+            if existing:
+                print(
+                    f"Project '{project_name}' already exists with color {existing.color}."
+                )
+                return
+
+            # Create new project with optional color
+            if args.color:
+                new_project = Project(name=project_name, color=args.color)
+            else:
+                new_project = user.get_or_create_project(project_name)
+
+            if args.color:  # If color was specified, add manually
+                user.defined_projects.append(new_project)
+
+            manager.save_user(user)
+            print(f"Defined project '{project_name}' with color {new_project.color}.")
+
+        elif args.projects_command == "color":
+            project_name = args.name.strip()
+            project = user.find_project_by_name(project_name)
+            if not project:
+                print(
+                    f"Project '{project_name}' not found. "
+                    f"Use 'projects define {project_name}' first."
+                )
+                sys.exit(1)
+
+            old_color = project.color
+            project.color = args.new_color
+            manager.save_user(user)
+            print(
+                f"Changed color for project '{project_name}' "
+                f"from {old_color} to {project.color}."
+            )
+
+        elif args.projects_command == "remove":
+            project_name = args.name.strip()
+            project = user.find_project_by_name(project_name)
+            if not project:
+                print(f"Project '{project_name}' not found.")
+                sys.exit(1)
+
+            user.defined_projects = [
+                p for p in user.defined_projects if p.id != project.id
+            ]
+            manager.save_user(user)
+            print(f"Removed project '{project_name}' from registry.")
+
+    except IOError as e:
+        print(f"Error saving data: {e}")
         sys.exit(1)
     except Exception as e:  # pragma: no cover  # pylint: disable=broad-exception-caught
         print(f"Unexpected error: {e}")
@@ -1793,6 +2005,155 @@ def _would_create_cycle(task_id: str, new_dep_id: str, all_tasks: list[Task]) ->
     return False
 
 
+# pylint: disable=too-many-branches,too-many-statements
+def handle_batch_edit(args: Namespace, manager: DataManager, user: User | None) -> None:
+    """Handles the 'batch-edit' command to edit multiple tasks at once."""
+    if user is None:
+        print("Error: User not found.")
+        sys.exit(1)
+
+    console = Console()
+
+    # Get filter options
+    status = getattr(args, "status", "active")
+    project = getattr(args, "project", None)
+    tag = getattr(args, "tag", None)
+
+    # Filter tasks
+    filtered = _filter_tasks(user.tasks, status, project, tag)
+
+    if not filtered:
+        print("No tasks match the filter criteria.")
+        return
+
+    # Check what we're setting
+    set_priority = getattr(args, "set_priority", None)
+    set_difficulty = getattr(args, "set_difficulty", None)
+    set_project = getattr(args, "set_project", None)
+    set_tag = getattr(args, "add_tag", None)
+
+    if not any([set_priority, set_difficulty, set_project, set_tag]):
+        print(
+            "Error: No edit operation specified. Use --set-priority, "
+            "--set-difficulty, --set-project, or --add-tag."
+        )
+        sys.exit(1)
+
+    # Confirm before editing
+    if not getattr(args, "yes", False):
+        console.print(f"\n[bold]Found {len(filtered)} task(s) matching filter:[/bold]")
+        for task in filtered[:5]:  # Show first 5
+            console.print(f"  • {task.title[:40]} ({task.id[:8]})")
+        if len(filtered) > 5:
+            console.print(f"  ... and {len(filtered) - 5} more")
+        console.print()
+
+        confirm = input("Proceed with batch edit? [y/N]: ").strip().lower()
+        if confirm != "y":
+            print("Batch edit cancelled.")
+            return
+
+    # Apply edits
+    edited_count = 0
+    for task in filtered:
+        changed = False
+
+        if set_priority:
+            task.priority = Priority(set_priority)
+            changed = True
+
+        if set_difficulty:
+            task.difficulty = Difficulty(set_difficulty)
+            changed = True
+
+        if set_project:
+            task.project = set_project
+            changed = True
+
+        if set_tag and set_tag not in task.tags:
+            task.tags.append(set_tag)
+            changed = True
+
+        if changed:
+            edited_count += 1
+
+    try:
+        manager.save_user(user)
+        print(f"Successfully edited {edited_count} task(s).")
+    except IOError as e:
+        print(f"Error saving changes: {e}")
+        sys.exit(1)
+
+
+def handle_batch_complete(
+    args: Namespace, manager: DataManager, user: User | None
+) -> None:
+    """Handles the 'batch-complete' command to complete multiple tasks at once."""
+    if user is None:
+        print("Error: User not found.")
+        sys.exit(1)
+
+    console = Console()
+
+    # Get filter options
+    status = getattr(args, "status", "active")
+    project = getattr(args, "project", None)
+    tag = getattr(args, "tag", None)
+
+    # Filter tasks (only show incomplete ones)
+    filtered = _filter_tasks(user.tasks, status, project, tag)
+    # Only process incomplete tasks
+    filtered = [t for t in filtered if not t.is_complete]
+
+    if not filtered:
+        print("No incomplete tasks match the filter criteria.")
+        return
+
+    # Confirm before completing
+    if not getattr(args, "yes", False):
+        console.print(
+            f"\n[bold]Found {len(filtered)} incomplete task(s) to complete:[/bold]"
+        )
+        for task in filtered[:5]:  # Show first 5
+            console.print(f"  • {task.title[:40]} ({task.id[:8]})")
+        if len(filtered) > 5:
+            console.print(f"  ... and {len(filtered) - 5} more")
+        console.print()
+
+        confirm = input("Complete all these tasks? [y/N]: ").strip().lower()
+        if confirm != "y":
+            print("Batch complete cancelled.")
+            return
+
+    # Load scoring config for XP calculations
+    try:
+        scoring_config = load_scoring_config()
+    except ValueError:
+        scoring_config = None
+
+    # Complete each task and calculate XP
+    total_xp = 0
+    for task in filtered:
+        task.is_complete = True
+        if scoring_config:
+            xp = int(calculate_score(task, None, scoring_config, date.today()))
+            total_xp += xp
+            user.total_xp += xp
+
+    try:
+        manager.save_user(user)
+        if scoring_config:
+            print(
+                f"Completed {len(filtered)} task(s). Earned {total_xp:,} XP. "
+                f"Total XP: {user.total_xp:,}"
+            )
+        else:
+            print(f"Completed {len(filtered)} task(s).")
+    except IOError as e:
+        print(f"Error saving changes: {e}")
+        sys.exit(1)
+
+
 def _wrap_handler(
     handler_func: Callable[[argparse.Namespace, DataManager, User | None], T],
 ) -> Callable[[argparse.Namespace, DataManager, User | None], T]:
@@ -1926,6 +2287,21 @@ def setup_parser() -> argparse.ArgumentParser:
     )
     view_subparsers.add_parser("calendar", help="Show tasks in calendar/agenda view")
     view_subparsers.add_parser("graph", help="Show dependency graph")
+    view_subparsers.add_parser("kanban", help="Show tasks in Kanban board view")
+    heatmap_parser = view_subparsers.add_parser(
+        "heatmap", help="Show habit completion heatmap"
+    )
+    heatmap_parser.add_argument(
+        "--habit",
+        dest="habit_id",
+        help="Show heatmap for specific habit ID (optional, shows all habits if omitted)",
+    )
+    heatmap_parser.add_argument(
+        "--weeks",
+        type=int,
+        default=12,
+        help="Number of weeks to display (default: 12)",
+    )
 
     parser_view.set_defaults(func=_wrap_handler(handle_view))
 
@@ -2109,6 +2485,84 @@ def setup_parser() -> argparse.ArgumentParser:
     parser_stats = subparsers.add_parser("stats", help="Show productivity statistics.")
     parser_stats.set_defaults(func=_wrap_handler(handle_stats))
 
+    # --- Tags Registry Command ---
+    parser_tags = subparsers.add_parser(
+        "tags", help="Manage the global tag registry with colors."
+    )
+    tags_subparsers = parser_tags.add_subparsers(dest="tags_command", required=True)
+
+    # Tags list
+    tags_subparsers.add_parser("list", help="List all defined tags with colors.")
+
+    # Tags define
+    parser_tags_define = tags_subparsers.add_parser(
+        "define", help="Define a new tag with optional color."
+    )
+    parser_tags_define.add_argument("name", help="The name of the tag to define.")
+    parser_tags_define.add_argument(
+        "--color",
+        help="Hex color code (e.g., #FF6B6B). Auto-assigned if not specified.",
+    )
+
+    # Tags color
+    parser_tags_color = tags_subparsers.add_parser(
+        "color", help="Change the color of an existing tag."
+    )
+    parser_tags_color.add_argument("name", help="The name of the tag to update.")
+    parser_tags_color.add_argument("new_color", help="The new hex color code.")
+
+    # Tags remove
+    parser_tags_remove = tags_subparsers.add_parser(
+        "remove", help="Remove a tag from the registry."
+    )
+    parser_tags_remove.add_argument("name", help="The name of the tag to remove.")
+
+    parser_tags.set_defaults(func=_wrap_handler(handle_tags))
+
+    # --- Projects Registry Command ---
+    parser_projects = subparsers.add_parser(
+        "projects", help="Manage the global project registry with colors."
+    )
+    projects_subparsers = parser_projects.add_subparsers(
+        dest="projects_command", required=True
+    )
+
+    # Projects list
+    projects_subparsers.add_parser(
+        "list", help="List all defined projects with colors."
+    )
+
+    # Projects define
+    parser_projects_define = projects_subparsers.add_parser(
+        "define", help="Define a new project with optional color."
+    )
+    parser_projects_define.add_argument(
+        "name", help="The name of the project to define."
+    )
+    parser_projects_define.add_argument(
+        "--color",
+        help="Hex color code (e.g., #6C5CE7). Auto-assigned if not specified.",
+    )
+
+    # Projects color
+    parser_projects_color = projects_subparsers.add_parser(
+        "color", help="Change the color of an existing project."
+    )
+    parser_projects_color.add_argument(
+        "name", help="The name of the project to update."
+    )
+    parser_projects_color.add_argument("new_color", help="The new hex color code.")
+
+    # Projects remove
+    parser_projects_remove = projects_subparsers.add_parser(
+        "remove", help="Remove a project from the registry."
+    )
+    parser_projects_remove.add_argument(
+        "name", help="The name of the project to remove."
+    )
+
+    parser_projects.set_defaults(func=_wrap_handler(handle_projects))
+
     # --- Vacation Command ---
     parser_vacation = subparsers.add_parser("vacation", help="Manage vacation mode.")
     parser_vacation.add_argument(
@@ -2169,6 +2623,63 @@ def setup_parser() -> argparse.ArgumentParser:
     )
     parser_undo.set_defaults(func=_wrap_handler(handle_undo))
 
+    # --- Batch Edit Command ---
+    parser_batch_edit = subparsers.add_parser(
+        "batch-edit", help="Edit multiple tasks at once based on filter criteria."
+    )
+    parser_batch_edit.add_argument(
+        "--status",
+        choices=["active", "future", "completed", "all"],
+        default="active",
+        help="Filter by status (default: active).",
+    )
+    parser_batch_edit.add_argument(
+        "--project", help="Filter by project name (case-insensitive)."
+    )
+    parser_batch_edit.add_argument(
+        "--tag", help="Filter by tag name (case-insensitive)."
+    )
+    parser_batch_edit.add_argument(
+        "--set-priority",
+        choices=[p.value for p in Priority],
+        help="Set priority for matching tasks.",
+    )
+    parser_batch_edit.add_argument(
+        "--set-difficulty",
+        choices=[d.value for d in Difficulty],
+        help="Set difficulty for matching tasks.",
+    )
+    parser_batch_edit.add_argument(
+        "--set-project", help="Set project for matching tasks."
+    )
+    parser_batch_edit.add_argument("--add-tag", help="Add a tag to matching tasks.")
+    parser_batch_edit.add_argument(
+        "-y", "--yes", action="store_true", help="Skip confirmation prompt."
+    )
+    parser_batch_edit.set_defaults(func=_wrap_handler(handle_batch_edit))
+
+    # --- Batch Complete Command ---
+    parser_batch_complete = subparsers.add_parser(
+        "batch-complete",
+        help="Complete multiple tasks at once based on filter criteria.",
+    )
+    parser_batch_complete.add_argument(
+        "--status",
+        choices=["active", "future", "all"],
+        default="active",
+        help="Filter by status (default: active).",
+    )
+    parser_batch_complete.add_argument(
+        "--project", help="Filter by project name (case-insensitive)."
+    )
+    parser_batch_complete.add_argument(
+        "--tag", help="Filter by tag name (case-insensitive)."
+    )
+    parser_batch_complete.add_argument(
+        "-y", "--yes", action="store_true", help="Skip confirmation prompt."
+    )
+    parser_batch_complete.set_defaults(func=_wrap_handler(handle_batch_complete))
+
     return parser
 
 
@@ -2210,6 +2721,10 @@ def main() -> None:
         "set-start",
         "tag",
         "project",
+        "tags",
+        "projects",
+        "batch-edit",
+        "batch-complete",
     ]:
         try:
             user = manager.load_user(DEFAULT_USERNAME)

@@ -2,6 +2,7 @@
 Logic for calculating task recurrences.
 """
 
+import uuid
 from datetime import datetime
 from typing import Optional, cast
 
@@ -49,6 +50,58 @@ def calculate_next_occurrence(
     except (ValueError, TypeError) as e:
         print(f"Error calculating recurrence for task {task.id[:8]}: {e}")
         return None
+
+
+def create_next_habit_instance(
+    task: Task, completion_date: Optional[datetime] = None
+) -> Optional[Task]:
+    """
+    Creates the next occurrence of a habit task.
+
+    Args:
+        task: The completed habit task to generate next instance from.
+        completion_date: When the task was completed. Defaults to now.
+
+    Returns:
+        A new Task instance for the next occurrence, or None if not applicable.
+    """
+    if not task.is_habit:
+        return None
+
+    if completion_date is None:
+        completion_date = datetime.now()
+
+    next_due = calculate_next_occurrence(task, completion_date)
+    if not next_due:
+        return None
+
+    # Create new task copying relevant fields from parent
+    new_task = Task(
+        id=str(uuid.uuid4()),
+        title=task.title,
+        creation_date=datetime.now(),
+        priority=task.priority,
+        difficulty=task.difficulty,
+        duration=task.duration,
+        due_date=next_due,
+        start_date=None,  # New instance starts fresh
+        text_description=task.text_description,
+        icon=task.icon,
+        tags=task.tags.copy(),
+        project=task.project,
+        is_habit=True,
+        recurrence_rule=task.recurrence_rule,
+        recurrence_type=task.recurrence_type,
+        streak_current=task.streak_current,  # Carry forward the streak
+        streak_best=task.streak_best,
+        subtasks=[],  # Fresh subtasks - can be enhanced with SubtaskRecurrenceMode
+        dependencies=[],  # Dependencies don't carry forward
+        history=[],  # New history for new instance
+        is_complete=False,
+        parent_habit_id=task.id,  # Link to parent
+    )
+
+    return new_task
 
 
 def _normalize_rule(rule: str) -> str:

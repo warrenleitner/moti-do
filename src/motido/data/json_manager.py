@@ -14,7 +14,9 @@ from motido.core.models import (
     Difficulty,
     Duration,
     Priority,
+    Project,
     RecurrenceType,
+    Tag,
     Task,
     User,
     XPTransaction,
@@ -178,6 +180,7 @@ class JsonDataManager(DataManager):
             recurrence_type=recurrence_type,
             streak_current=task_dict.get("streak_current", 0),
             streak_best=task_dict.get("streak_best", 0),
+            parent_habit_id=task_dict.get("parent_habit_id"),
         )
 
     def _deserialize_xp_transaction(self, trans_dict: Dict[str, Any]) -> XPTransaction:
@@ -208,6 +211,22 @@ class JsonDataManager(DataManager):
             earned_date=earned_date,
         )
 
+    def _deserialize_tag(self, tag_dict: Dict[str, Any]) -> Tag:
+        """Deserialize a tag dictionary."""
+        return Tag(
+            id=tag_dict.get("id", str(uuid.uuid4())),
+            name=tag_dict.get("name", "Unknown"),
+            color=tag_dict.get("color", "#808080"),
+        )
+
+    def _deserialize_project(self, project_dict: Dict[str, Any]) -> Project:
+        """Deserialize a project dictionary."""
+        return Project(
+            id=project_dict.get("id", str(uuid.uuid4())),
+            name=project_dict.get("name", "Unknown"),
+            color=project_dict.get("color", "#4A90D9"),
+        )
+
     def load_user(self, username: str = DEFAULT_USERNAME) -> User | None:
         """Loads a specific user's data from the JSON file."""
         # Placeholder for future sync: Check for remote changes before loading
@@ -235,6 +254,18 @@ class JsonDataManager(DataManager):
                     for badge_dict in user_data.get("badges", [])
                 ]
 
+                # Deserialize defined tags
+                defined_tags = [
+                    self._deserialize_tag(tag_dict)
+                    for tag_dict in user_data.get("defined_tags", [])
+                ]
+
+                # Deserialize defined projects
+                defined_projects = [
+                    self._deserialize_project(proj_dict)
+                    for proj_dict in user_data.get("defined_projects", [])
+                ]
+
                 # Create User object
                 total_xp = user_data.get("total_xp", 0)
 
@@ -253,6 +284,8 @@ class JsonDataManager(DataManager):
                     vacation_mode=user_data.get("vacation_mode", False),
                     xp_transactions=xp_transactions,
                     badges=badges,
+                    defined_tags=defined_tags,
+                    defined_projects=defined_projects,
                 )
                 print(f"User '{username}' loaded successfully.")
                 return user
@@ -308,6 +341,7 @@ class JsonDataManager(DataManager):
                 ),
                 "streak_current": task.streak_current,
                 "streak_best": task.streak_best,
+                "parent_habit_id": task.parent_habit_id,
             }
             for task in user.tasks
         ]
@@ -342,6 +376,22 @@ class JsonDataManager(DataManager):
                     ),
                 }
                 for badge in getattr(user, "badges", [])
+            ],
+            "defined_tags": [
+                {
+                    "id": tag.id,
+                    "name": tag.name,
+                    "color": tag.color,
+                }
+                for tag in getattr(user, "defined_tags", [])
+            ],
+            "defined_projects": [
+                {
+                    "id": proj.id,
+                    "name": proj.name,
+                    "color": proj.color,
+                }
+                for proj in getattr(user, "defined_projects", [])
             ],
         }
 
