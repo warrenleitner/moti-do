@@ -254,6 +254,7 @@ class Task:  # pylint: disable=too-many-instance-attributes
     is_habit: bool = field(default=False)
     recurrence_rule: str | None = None  # e.g., "daily", "weekly", "every 3 days"
     recurrence_type: RecurrenceType | None = None
+    habit_start_delta: int | None = None  # Days before due date to show habit
     streak_current: int = 0
     streak_best: int = 0
     parent_habit_id: str | None = (

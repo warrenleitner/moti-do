@@ -11,13 +11,97 @@ from rich.tree import Tree
 from motido.core.models import Task
 
 
-def render_dependency_graph(tasks: List[Task], console: Console) -> None:
+def _find_related_tasks(
+    task_id: str,
+    task_map: Dict[str, Task],
+    dependents: Dict[str, List[str]],
+    direction: str,
+) -> Set[str]:
+    """Find all tasks related to a given task based on direction.
+
+    Args:
+        task_id: The focal task ID
+        task_map: Map of task IDs to Task objects
+        dependents: Map of task ID to list of dependent task IDs
+        direction: "all", "upstream", or "downstream"
+
+    Returns:
+        Set of task IDs that are related to the focal task
+    """
+    related: Set[str] = {task_id}
+
+    # Build upstream map (task -> its prerequisites)
+    upstream: Dict[str, List[str]] = {t.id: [] for t in task_map.values()}
+    for task in task_map.values():
+        for dep_id in task.dependencies:
+            if dep_id in task_map:
+                upstream[task.id].append(dep_id)
+
+    def get_upstream(tid: str, visited: Set[str]) -> None:
+        """Recursively find all upstream (prerequisite) tasks."""
+        if tid in visited:
+            return
+        visited.add(tid)
+        related.add(tid)
+        for prereq_id in upstream.get(tid, []):
+            get_upstream(prereq_id, visited)
+
+    def get_downstream(tid: str, visited: Set[str]) -> None:
+        """Recursively find all downstream (dependent) tasks."""
+        if tid in visited:
+            return
+        visited.add(tid)
+        related.add(tid)
+        for dep_id in dependents.get(tid, []):
+            get_downstream(dep_id, visited)
+
+    visited_up: Set[str] = set()
+    visited_down: Set[str] = set()
+
+    if direction in ("all", "upstream"):
+        get_upstream(task_id, visited_up)
+
+    if direction in ("all", "downstream"):
+        get_downstream(task_id, visited_down)
+
+    return related
+
+
+# pylint: disable=too-many-locals, too-many-branches
+def render_dependency_graph(
+    tasks: List[Task],
+    console: Console,
+    task_id: str | None = None,
+    direction: str = "all",
+) -> None:
     """
     Renders a dependency graph using Rich Tree.
     Roots are tasks that have no dependencies (can be started).
     Children are tasks that depend on the parent.
+
+    Args:
+        tasks: List of tasks to display
+        console: Rich Console for output
+        task_id: Optional task ID to filter graph around (prefix match)
+        direction: "all" (both directions), "upstream" (prerequisites only),
+                  "downstream" (dependents only). Default: "all"
     """
     task_map = {t.id: t for t in tasks}
+
+    # If task_id specified, find the full ID (prefix match)
+    focal_task_id = None
+    if task_id:
+        matching = [t for t in tasks if t.id.startswith(task_id)]
+        if not matching:
+            console.print(f"[red]No task found with ID prefix: {task_id}[/red]")
+            return
+        if len(matching) > 1:
+            console.print(
+                f"[yellow]Multiple tasks match prefix '{task_id}'. "
+                f"Using first match: {matching[0].id[:8]}[/yellow]"
+            )
+        focal_task_id = matching[0].id
+
     # Build adjacency list: parent_id -> list of child_ids (tasks that depend on parent)
     # task.dependencies contains IDs of tasks that this task depends on.
     # So if A depends on B (A.dependencies = [B.id]), then B is a prerequisite for A.
@@ -28,6 +112,20 @@ def render_dependency_graph(tasks: List[Task], console: Console) -> None:
         for dep_id in task.dependencies:
             if dep_id in dependents:
                 dependents[dep_id].append(task.id)
+
+    # Filter tasks if focal task specified
+    if focal_task_id:
+        related_ids = _find_related_tasks(
+            focal_task_id, task_map, dependents, direction
+        )
+        tasks = [t for t in tasks if t.id in related_ids]
+        task_map = {t.id: t for t in tasks}
+        # Rebuild dependents for filtered set
+        dependents = {t.id: [] for t in tasks}
+        for task in tasks:
+            for dep_id in task.dependencies:
+                if dep_id in dependents:
+                    dependents[dep_id].append(task.id)
 
     # Find roots: Tasks that have no dependencies (or dependencies not in the current list)
     # Wait, if we want to show the flow "Prerequisite -> Dependent",
@@ -45,7 +143,19 @@ def render_dependency_graph(tasks: List[Task], console: Console) -> None:
         )
         return
 
-    tree = Tree("Dependency Graph (Flow: Prerequisite -> Dependent)")
+    # Build title with filter info
+    title = "Dependency Graph (Flow: Prerequisite -> Dependent)"
+    if focal_task_id:
+        focal_task = task_map.get(focal_task_id)
+        focal_name = focal_task.title if focal_task else focal_task_id[:8]
+        direction_label = {
+            "all": "All related",
+            "upstream": "Prerequisites of",
+            "downstream": "Dependents of",
+        }.get(direction, direction)
+        title = f"Dependency Graph: {direction_label} '{focal_name}'"
+
+    tree = Tree(title)
 
     processed: set[str] = set()
 
@@ -53,18 +163,25 @@ def render_dependency_graph(tasks: List[Task], console: Console) -> None:
         label = Text(f"{root.title} ({root.priority.emoji()})")
         if root.is_complete:
             label.stylize("strike dim")
+        # Highlight the focal task
+        if focal_task_id and root.id == focal_task_id:
+            label.stylize("bold yellow")
         root_node = tree.add(label)
-        _add_children(root_node, root.id, processed, dependents, task_map)
+        _add_children(
+            root_node, root.id, processed, dependents, task_map, focal_task_id
+        )
 
     console.print(tree)
 
 
+# pylint: disable=too-many-arguments, too-many-positional-arguments
 def _add_children(
     node: Tree,
     task_id: str,
     processed: set[str],
     dependents: Dict[str, List[str]],
     task_map: Dict[str, Task],
+    focal_task_id: str | None = None,
 ) -> None:
     if task_id in processed:
         return
@@ -79,9 +196,14 @@ def _add_children(
             label = Text(f"{child_task.title} ({child_task.priority.emoji()})")
             if child_task.is_complete:
                 label.stylize("strike dim")
+            # Highlight the focal task
+            if focal_task_id and child_id == focal_task_id:
+                label.stylize("bold yellow")
 
             child_node = node.add(label)
-            _add_children(child_node, child_id, processed, dependents, task_map)
+            _add_children(
+                child_node, child_id, processed, dependents, task_map, focal_task_id
+            )
 
 
 def _format_task_for_calendar(task: Task, target_date: date | None = None) -> str:

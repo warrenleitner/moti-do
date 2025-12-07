@@ -387,6 +387,8 @@ def test_handle_create_success_existing_user(mocker: Any) -> None:
         is_habit=False,
         recurrence_rule=None,
         recurrence_type=None,
+        habit_start_delta=None,
+        icon=None,
     )
     # Verify that creation_date is a datetime object
     creation_date_arg = mock_task_class.call_args.kwargs["creation_date"]
@@ -425,6 +427,8 @@ def test_handle_create_success_existing_user_not_verbose(mocker: Any) -> None:
         is_habit=False,
         recurrence_rule=None,
         recurrence_type=None,
+        habit_start_delta=None,
+        icon=None,
     )
     # Verify that creation_date is a datetime object
     creation_date_arg = mock_task_class.call_args.kwargs["creation_date"]
@@ -468,6 +472,8 @@ def test_handle_create_success_new_user(mocker: Any) -> None:
         is_habit=False,
         recurrence_rule=None,
         recurrence_type=None,
+        habit_start_delta=None,
+        icon=None,
     )
     # Verify that creation_date is a datetime object
     creation_date_arg = mock_task_class.call_args.kwargs["creation_date"]
@@ -511,6 +517,8 @@ def test_handle_create_success_new_user_not_verbose(mocker: Any) -> None:
         is_habit=False,
         recurrence_rule=None,
         recurrence_type=None,
+        habit_start_delta=None,
+        icon=None,
     )
     # Verify that creation_date is a datetime object
     creation_date_arg = mock_task_class.call_args.kwargs["creation_date"]
@@ -577,6 +585,8 @@ def test_handle_create_save_error(mocker: Any) -> None:
         is_habit=False,
         recurrence_rule=None,
         recurrence_type=None,
+        habit_start_delta=None,
+        icon=None,
     )
     mock_print.assert_any_call(f"Error saving task: {error_message}")
     assert excinfo.value.code == 1
@@ -636,6 +646,8 @@ def test_handle_create_with_difficulty(mocker: Any) -> None:
         is_habit=False,
         recurrence_rule=None,
         recurrence_type=None,
+        habit_start_delta=None,
+        icon=None,
     )
     mock_user.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user)
@@ -668,6 +680,8 @@ def test_handle_create_with_duration(mocker: Any) -> None:
         is_habit=False,
         recurrence_rule=None,
         recurrence_type=None,
+        habit_start_delta=None,
+        icon=None,
     )
     mock_user.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user)
@@ -703,6 +717,8 @@ def test_handle_create_with_priority_and_difficulty(mocker: Any) -> None:
         is_habit=False,
         recurrence_rule=None,
         recurrence_type=None,
+        habit_start_delta=None,
+        icon=None,
     )
     mock_user.add_task.assert_called_once_with(mock_task)
     mock_manager.save_user.assert_called_once_with(mock_user)

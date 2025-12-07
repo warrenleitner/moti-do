@@ -3,7 +3,7 @@ Logic for calculating task recurrences.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, cast
 
 from dateutil.rrule import rrulestr
@@ -75,6 +75,11 @@ def create_next_habit_instance(
     if not next_due:
         return None
 
+    # Calculate start_date based on habit_start_delta if set
+    start_date = None
+    if task.habit_start_delta is not None and task.habit_start_delta > 0:
+        start_date = next_due - timedelta(days=task.habit_start_delta)
+
     # Create new task copying relevant fields from parent
     new_task = Task(
         id=str(uuid.uuid4()),
@@ -84,7 +89,7 @@ def create_next_habit_instance(
         difficulty=task.difficulty,
         duration=task.duration,
         due_date=next_due,
-        start_date=None,  # New instance starts fresh
+        start_date=start_date,
         text_description=task.text_description,
         icon=task.icon,
         tags=task.tags.copy(),
@@ -92,6 +97,7 @@ def create_next_habit_instance(
         is_habit=True,
         recurrence_rule=task.recurrence_rule,
         recurrence_type=task.recurrence_type,
+        habit_start_delta=task.habit_start_delta,  # Carry forward the delta
         streak_current=task.streak_current,  # Carry forward the streak
         streak_best=task.streak_best,
         subtasks=[],  # Fresh subtasks - can be enhanced with SubtaskRecurrenceMode

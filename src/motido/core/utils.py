@@ -255,3 +255,161 @@ def _process_recurrences(user: Any, effective_date: Any) -> None:
 
     for t in new_tasks:
         user.add_task(t)
+
+
+# Icon auto-generation mappings
+# Maps keywords to emoji icons
+ICON_MAPPINGS: dict[str, str] = {
+    # Exercise & Health
+    "exercise": "🏃",
+    "workout": "💪",
+    "gym": "🏋️",
+    "run": "🏃",
+    "running": "🏃",
+    "yoga": "🧘",
+    "meditate": "🧘",
+    "meditation": "🧘",
+    "sleep": "😴",
+    "water": "💧",
+    "vitamin": "💊",
+    "medicine": "💊",
+    "walk": "🚶",
+    "stretch": "🤸",
+    "swim": "🏊",
+    # Work & Productivity
+    "meeting": "📅",
+    "call": "📞",
+    "phone": "📞",
+    "email": "📧",
+    "mail": "📧",
+    "write": "✍️",
+    "writing": "✍️",
+    "review": "👀",
+    "report": "📊",
+    "presentation": "📽️",
+    "deadline": "⏰",
+    "interview": "🎤",
+    "standup": "🧍",
+    "sync": "🔄",
+    # Learning & Education
+    "read": "📚",
+    "reading": "📚",
+    "book": "📖",
+    "study": "📖",
+    "learn": "🎓",
+    "course": "🎓",
+    "practice": "📝",
+    "homework": "📝",
+    "exam": "📝",
+    "test": "📝",
+    "research": "🔬",
+    # Home & Personal
+    "clean": "🧹",
+    "cleaning": "🧹",
+    "cook": "🍳",
+    "cooking": "🍳",
+    "grocery": "🛒",
+    "groceries": "🛒",
+    "shopping": "🛒",
+    "laundry": "👕",
+    "dishes": "🍽️",
+    "trash": "🗑️",
+    "organize": "📦",
+    # Finance
+    "bills": "💸",
+    "bill": "💸",
+    "pay": "💳",
+    "payment": "💳",
+    "budget": "💰",
+    "bank": "🏦",
+    "tax": "📑",
+    "invoice": "🧾",
+    # Health & Appointments
+    "doctor": "🏥",
+    "dentist": "🦷",
+    "appointment": "📋",
+    "checkup": "🩺",
+    # Social & Events
+    "birthday": "🎂",
+    "gift": "🎁",
+    "party": "🎉",
+    "date": "❤️",
+    "dinner": "🍽️",
+    "lunch": "🍴",
+    "breakfast": "🥐",
+    "coffee": "☕",
+    # Tech & Development
+    "code": "💻",
+    "coding": "💻",
+    "program": "💻",
+    "deploy": "🚀",
+    "release": "🚀",
+    "fix": "🔧",
+    "bug": "🐛",
+    "debug": "🐛",
+    "testing": "🧪",
+    "backup": "💾",
+    "update": "🔄",
+    # Travel
+    "travel": "✈️",
+    "flight": "✈️",
+    "trip": "🧳",
+    "vacation": "🏖️",
+    "hotel": "🏨",
+    "pack": "🧳",
+    # Creative
+    "design": "🎨",
+    "draw": "✏️",
+    "drawing": "✏️",
+    "paint": "🖌️",
+    "photo": "📷",
+    "video": "📹",
+    "music": "🎵",
+    "podcast": "🎙️",
+    # Pets
+    "dog": "🐕",
+    "cat": "🐈",
+    "pet": "🐾",
+    "vet": "🏥",
+    # Plants & Garden
+    "water plants": "🌱",
+    "garden": "🌻",
+    "plant": "🌱",
+    # Misc
+    "plan": "📋",
+    "goal": "🎯",
+    "journal": "📓",
+    "reflect": "💭",
+    "gratitude": "🙏",
+    "morning": "🌅",
+    "evening": "🌙",
+    "night": "🌙",
+}
+
+
+def auto_generate_icon(title: str) -> str | None:
+    """
+    Generate an icon (emoji) based on task title keywords.
+
+    Searches for keywords in the title and returns the first matching icon.
+    Case-insensitive matching.
+
+    Args:
+        title: The task title to analyze
+
+    Returns:
+        An emoji string if a keyword is found, None otherwise
+    """
+    title_lower = title.lower()
+
+    # First check for multi-word phrases (like "water plants")
+    for keyword, icon in ICON_MAPPINGS.items():
+        if " " in keyword and keyword in title_lower:
+            return icon
+
+    # Then check for single word keywords
+    for keyword, icon in ICON_MAPPINGS.items():
+        if " " not in keyword and keyword in title_lower:
+            return icon
+
+    return None

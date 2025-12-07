@@ -868,3 +868,90 @@ def apply_penalties(
 
     # Update the last penalty check date
     set_last_penalty_check_date(effective_date)
+
+
+def check_badges(user: Any, manager: Any, config: Dict[str, Any]) -> list:
+    """
+    Check if the user has earned any new badges based on current stats.
+
+    Args:
+        user: The User object to check badges for
+        manager: The DataManager instance to persist changes
+        config: The scoring configuration containing badge definitions
+
+    Returns:
+        List of newly earned Badge objects
+    """
+    # pylint: disable=import-outside-toplevel
+    from datetime import datetime as dt
+
+    from motido.core.models import Badge
+
+    # Get badge definitions from config
+    badge_defs = config.get("badges", [])
+    if not badge_defs:
+        return []
+
+    # Calculate current stats
+    completed_tasks = [t for t in user.tasks if t.is_complete]
+    tasks_completed_count = len(completed_tasks)
+
+    habits_completed_count = len([t for t in completed_tasks if t.is_habit])
+
+    # Find best streak across all habits
+    best_streak = 0
+    for task in user.tasks:
+        if task.is_habit:
+            best_streak = max(best_streak, task.streak_best, task.streak_current)
+
+    total_xp = user.total_xp
+
+    # Get currently earned badge IDs
+    earned_badge_ids = {b.id for b in user.badges if b.is_earned()}
+
+    # Check each badge definition
+    newly_earned = []
+    for badge_def in badge_defs:
+        badge_id = badge_def.get("id")
+        if not badge_id or badge_id in earned_badge_ids:
+            continue  # Already earned or invalid
+
+        criteria = badge_def.get("criteria", {})
+        earned = False
+
+        # Check tasks_completed criteria
+        if "tasks_completed" in criteria:
+            if tasks_completed_count >= criteria["tasks_completed"]:
+                earned = True
+
+        # Check habits_completed criteria
+        if "habits_completed" in criteria:
+            if habits_completed_count >= criteria["habits_completed"]:
+                earned = True
+
+        # Check streak_days criteria
+        if "streak_days" in criteria:
+            if best_streak >= criteria["streak_days"]:
+                earned = True
+
+        # Check total_xp criteria
+        if "total_xp" in criteria:
+            if total_xp >= criteria["total_xp"]:
+                earned = True
+
+        if earned:
+            new_badge = Badge(
+                id=badge_id,
+                name=badge_def.get("name", badge_id),
+                description=badge_def.get("description", ""),
+                glyph=badge_def.get("glyph", "🏅"),
+                earned_date=dt.now(),
+            )
+            user.badges.append(new_badge)
+            newly_earned.append(new_badge)
+
+    # Save if any new badges were earned
+    if newly_earned:
+        manager.save_user(user)
+
+    return newly_earned

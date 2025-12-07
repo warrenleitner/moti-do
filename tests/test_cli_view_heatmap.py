@@ -1,7 +1,7 @@
 """Tests for the heatmap view functionality."""
 
 from argparse import Namespace
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from io import StringIO
 from typing import Any
 from unittest.mock import MagicMock
@@ -10,7 +10,7 @@ import pytest
 from rich.console import Console
 
 from motido.cli.main import handle_view
-from motido.cli.views import render_heatmap
+from motido.cli.views import _render_heatmap_row, render_heatmap
 from motido.core.models import Task, User
 from motido.data.abstraction import DataManager
 
@@ -190,3 +190,36 @@ def test_handle_view_heatmap_no_user(capsys: Any) -> None:
 
     captured = capsys.readouterr()
     assert "not found" in captured.out
+
+
+# --- _render_heatmap_row function tests ---
+
+
+def test_render_heatmap_row_future_dates() -> None:
+    """Test _render_heatmap_row handles future dates correctly."""
+    # Use a fixed "today" to ensure we hit the future date branch
+    # Set "today" to a Monday (weekday=0)
+    # Then rendering Sunday (day_idx=6) of the same week will be in the future
+    fixed_today = date(2025, 12, 1)  # This is a Monday
+
+    # Start from the same week as our fixed today
+    start_date = fixed_today
+
+    # Use an empty completion set
+    completion_dates: set[date] = set()
+
+    # Render a row for Sunday (day_idx=6)
+    # Since fixed_today is Monday, Sunday of this week is Dec 7 which is > Dec 1
+    row = _render_heatmap_row(
+        day_idx=6,  # Sunday
+        day_name="Sun",
+        start_date=start_date,
+        weeks=1,  # Just render 1 week
+        today=fixed_today,
+        completion_dates=completion_dates,
+    )
+
+    # The row should contain the day name and the future date indicator (·)
+    row_str = str(row)
+    assert "Sun" in row_str
+    assert "·" in row_str  # Future date shows as dim dot

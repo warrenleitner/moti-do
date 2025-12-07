@@ -33,10 +33,11 @@ from motido.core.scoring import (
     add_xp,
     apply_penalties,
     calculate_score,
+    check_badges,
     load_scoring_config,
     withdraw_xp,
 )
-from motido.core.utils import parse_date, process_day
+from motido.core.utils import auto_generate_icon, parse_date, process_day
 from motido.data.abstraction import DataManager  # For type hinting
 from motido.data.abstraction import DEFAULT_USERNAME
 from motido.data.backend_factory import get_data_manager
@@ -72,6 +73,7 @@ def handle_init(args: Namespace) -> None:
         sys.exit(1)
 
 
+# pylint: disable=too-many-branches,too-many-statements
 def handle_create(args: Namespace, manager: DataManager, user: User | None) -> None:
     """Handles the 'create' command."""
     if (not args.title) or args.title == "":
@@ -133,6 +135,17 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
             )
             sys.exit(1)
 
+    # Auto-generate icon if not disabled
+    icon = None
+    if not getattr(args, "no_auto_icon", False):
+        icon = auto_generate_icon(args.title)
+
+    # Get habit_start_delta (only for habits)
+    habit_start_delta = getattr(args, "start_delta", None)
+    if habit_start_delta is not None and not args.habit:
+        print("Warning: --start-delta is only applicable to habits (--habit).")
+        habit_start_delta = None
+
     # Create a new task with the current timestamp as creation_date
     new_task = Task(
         title=args.title,
@@ -143,6 +156,8 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
         is_habit=args.habit,
         recurrence_rule=args.recurrence,
         recurrence_type=recurrence_type,
+        habit_start_delta=habit_start_delta,
+        icon=icon,
     )
     user.add_task(new_task)
     try:
@@ -190,6 +205,18 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
 
         # PERF: Calculating score for all tasks on every list call can be slow for large datasets
         # in a DB. Consider caching or DB indexing.
+
+        # Filter out blocked tasks unless --include-blocked is set
+        include_blocked = getattr(args, "include_blocked", False)
+        blocked_count = 0
+        if not include_blocked:
+            filtered_tasks_with_scores = []
+            for task, score in tasks_with_scores:
+                if _is_task_blocked(task, user.tasks):
+                    blocked_count += 1
+                else:
+                    filtered_tasks_with_scores.append((task, score))
+            tasks_with_scores = filtered_tasks_with_scores
 
         # Sort tasks
         if hasattr(args, "sort_by") and args.sort_by:
@@ -259,9 +286,17 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
 
         for task, score in tasks_with_scores:
             # Add task details to the table with priority, difficulty, and duration emoji
-            status_text = "[✓]" if task.is_complete else "[ ]"
-            # Apply style to make completed tasks visually distinct
+            is_blocked = include_blocked and _is_task_blocked(task, user.tasks)
+            if task.is_complete:
+                status_text = "[✓]"
+            elif is_blocked:
+                status_text = "[B]"  # Blocked indicator
+            else:
+                status_text = "[ ]"
+            # Apply style to make completed/blocked tasks visually distinct
             description_style = "dim" if task.is_complete else None
+            if is_blocked:
+                description_style = "red"
 
             priority_text = f"{task.priority.emoji()} {task.priority.value}"
             difficulty_text = f"{task.difficulty.emoji()} {task.difficulty.value}"
@@ -337,10 +372,70 @@ def handle_list(args: Namespace, _manager: DataManager, user: User | None) -> No
 
             table.add_row(*row_data)
 
+            # Handle subtask display modes
+            subtask_mode = getattr(args, "subtask_mode", "hidden")
+            if subtask_mode != "hidden" and task.subtasks:
+                for idx, subtask in enumerate(task.subtasks):
+                    subtask_status = "[✓]" if subtask.get("complete") else "[ ]"
+                    subtask_text = subtask.get("text", "")
+                    subtask_style = "dim" if subtask.get("complete") else "cyan"
+
+                    if subtask_mode == "inline":
+                        # Indented subtask row
+                        subtask_row: list[str | Text] = [
+                            Text(f"  {subtask_status}", style=subtask_style),
+                            Text(f"  └─{idx + 1}", style="dim"),
+                            Text("-", style="dim"),  # Priority
+                            Text("-", style="dim"),  # Difficulty
+                            Text("-", style="dim"),  # Duration
+                            Text("-", style="dim"),  # Score
+                        ]
+                    else:  # expanded
+                        # Full-width subtask row
+                        subtask_row = [
+                            Text(subtask_status, style=subtask_style),
+                            Text(f"  └─{idx + 1}", style="dim"),
+                            Text("-", style="dim"),  # Priority
+                            Text("-", style="dim"),  # Difficulty
+                            Text("-", style="dim"),  # Duration
+                            Text("-", style="dim"),  # Score
+                        ]
+
+                    # Add optional columns with placeholder
+                    if has_due_dates:
+                        subtask_row.append(Text("-", style="dim"))
+                    if has_start_dates:
+                        subtask_row.append(Text("-", style="dim"))
+                    if has_tags:
+                        subtask_row.append(Text("-", style="dim"))
+                    if has_projects:
+                        subtask_row.append(Text("-", style="dim"))
+
+                    # Add subtask title
+                    if subtask_mode == "inline":
+                        subtask_row.append(
+                            Text(f"  └─ {subtask_text}", style=subtask_style)
+                        )
+                    else:
+                        subtask_row.append(
+                            Text(f"└─ {subtask_text}", style=subtask_style)
+                        )
+
+                    table.add_row(*subtask_row)
+
         console.print(table)
         # --- End rich table display ---
 
-        print(f"Total tasks: {len(user.tasks)}")
+        # Show task count with blocked info
+        shown_count = len(tasks_with_scores)
+        total_count = len(user.tasks)
+        if blocked_count > 0:
+            print(f"Shown tasks: {shown_count} (Total: {total_count}, ")
+            print(
+                f"  {blocked_count} blocked tasks hidden - use --include-blocked to show)"
+            )
+        else:
+            print(f"Total tasks: {total_count}")
     elif user:
         print("No tasks found.")
     else:
@@ -405,6 +500,30 @@ def _filter_tasks(
     return filtered
 
 
+def _is_task_blocked(task: Task, all_tasks: list[Task]) -> bool:
+    """Check if a task is blocked by incomplete dependencies.
+
+    Args:
+        task: The task to check.
+        all_tasks: All tasks to look up dependencies.
+
+    Returns:
+        True if the task has any incomplete dependencies, False otherwise.
+    """
+    if not task.dependencies:
+        return False
+
+    # Create a lookup dict for efficiency
+    task_lookup = {t.id: t for t in all_tasks}
+
+    for dep_id in task.dependencies:
+        dep_task = task_lookup.get(dep_id)
+        if dep_task and not dep_task.is_complete:
+            return True
+
+    return False
+
+
 def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> None:
     """Handles the 'view' command."""
     if not user:
@@ -435,7 +554,9 @@ def handle_view(args: Namespace, _manager: DataManager, user: User | None) -> No
 
         filtered_tasks = _filter_tasks(user.tasks, status, project, tag)
         console = Console()
-        render_dependency_graph(filtered_tasks, console)
+        task_id = getattr(args, "graph_task_id", None)
+        direction = getattr(args, "graph_direction", "all")
+        render_dependency_graph(filtered_tasks, console, task_id, direction)
         return
 
     if hasattr(args, "view_mode") and args.view_mode == "kanban":
@@ -725,6 +846,17 @@ def handle_complete(args: Namespace, manager: DataManager, user: User | None) ->
                     print(
                         f"Marked task '{task.title}' (ID: {task.id[:8]}) as complete."
                     )
+
+                # Check for newly earned badges
+                try:
+                    newly_earned = check_badges(user, manager, scoring_config)
+                    for badge in newly_earned:
+                        print(
+                            f"  {badge.glyph} Badge Earned: {badge.name}! "
+                            f"- {badge.description}"
+                        )
+                except Exception as e:  # pylint: disable=broad-exception-caught
+                    print_verbose(args, f"Warning: Could not check badges: {e}")
 
                 # Auto-generate next habit instance if applicable
                 if task.is_habit and task.recurrence_rule:
@@ -1201,11 +1333,13 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
         print("Error: --id is required for editing.")
         sys.exit(1)
 
+    start_delta = getattr(args, "start_delta", None)
     if (
         not args.title
         and not args.priority
         and not args.difficulty
         and not args.duration
+        and start_delta is None
     ):
         print("No changes specified. Nothing to update.")
         return  # Exit the function gracefully, do not proceed
@@ -1284,6 +1418,21 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
                 )
                 sys.exit(1)
 
+        # Update habit_start_delta if provided
+        start_delta_updated = False
+        old_start_delta = None
+        if start_delta is not None:
+            if not task_to_edit.is_habit:
+                print("Warning: --start-delta is only applicable to habits.")
+            else:
+                old_start_delta = task_to_edit.habit_start_delta
+                task_to_edit.habit_start_delta = start_delta
+                _record_history(
+                    task_to_edit, "habit_start_delta", old_start_delta, start_delta
+                )
+                start_delta_updated = True
+                changes_made = True
+
         if changes_made:
             manager.save_user(user)
             _print_task_updates(
@@ -1297,6 +1446,8 @@ def handle_edit(args: Namespace, manager: DataManager, user: User | None) -> Non
                 duration_updated,
                 old_duration,
             )
+            if start_delta_updated:
+                print(f"  Start delta: {old_start_delta} days -> {start_delta} days")
 
     except ValueError as e:  # Catches find_task_by_id ambiguity or invalid enum value
         print(f"Error: {e}")
@@ -1637,6 +1788,89 @@ def handle_stats(_args: Namespace, _manager: DataManager, user: User | None) -> 
             console.print("[bold]Top Habit Streaks:[/bold]")
             for h in top_habits:
                 console.print(f"  🔥 {h.streak_current} days - {h.title}")
+
+
+def handle_badges(_args: Namespace, _manager: DataManager, user: User | None) -> None:
+    """Handles the 'badges' command to display earned and available badges."""
+    if user is None:
+        print("Error: User not found.")
+        sys.exit(1)
+
+    console = Console()
+
+    # Load scoring config to get badge definitions
+    try:
+        scoring_config = load_scoring_config()
+    except ValueError as e:
+        print(f"Error loading scoring config: {e}")
+        sys.exit(1)
+
+    badge_defs = scoring_config.get("badges", [])
+    if not badge_defs:
+        print("No badges defined in scoring configuration.")
+        return
+
+    # Get earned badges
+    earned_badges = {b.id: b for b in user.badges if b.is_earned()}
+
+    # Calculate current progress stats for display
+    completed_tasks = len([t for t in user.tasks if t.is_complete])
+    habits_completed = len([t for t in user.tasks if t.is_complete and t.is_habit])
+    best_streak = max(
+        (t.streak_best for t in user.tasks if t.is_habit),
+        default=0,
+    )
+    total_xp = user.total_xp
+
+    # Create table
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("Badge", width=25)
+    table.add_column("Description", width=35)
+    table.add_column("Status", width=15, justify="center")
+    table.add_column("Earned", width=12, justify="center")
+
+    earned_count = 0
+    for badge_def in badge_defs:
+        badge_id = badge_def.get("id")
+        name = badge_def.get("name", badge_id)
+        glyph = badge_def.get("glyph", "🏅")
+        description = badge_def.get("description", "")
+
+        if badge_id in earned_badges:
+            earned_count += 1
+            badge = earned_badges[badge_id]
+            earned_date = (
+                badge.earned_date.strftime("%Y-%m-%d") if badge.earned_date else "-"
+            )
+            status = Text("✓ Earned", style="green bold")
+            badge_name = Text(f"{glyph} {name}", style="green")
+        else:
+            earned_date = "-"
+            # Show progress for unearned badges
+            criteria = badge_def.get("criteria", {})
+            progress = ""
+            if "tasks_completed" in criteria:
+                target = criteria["tasks_completed"]
+                progress = f"{completed_tasks}/{target} tasks"
+            elif "habits_completed" in criteria:
+                target = criteria["habits_completed"]
+                progress = f"{habits_completed}/{target} habits"
+            elif "streak_days" in criteria:
+                target = criteria["streak_days"]
+                progress = f"{best_streak}/{target} days"
+            elif "total_xp" in criteria:
+                target = criteria["total_xp"]
+                progress = f"{total_xp}/{target} XP"
+            status = Text(progress, style="dim")
+            badge_name = Text(f"{glyph} {name}", style="dim")
+
+        table.add_row(badge_name, description, status, earned_date)
+
+    console.print("[bold cyan]═══ Badges ═══[/bold cyan]")
+    console.print()
+    console.print(table)
+    console.print()
+    console.print(f"Earned: {earned_count}/{len(badge_defs)} badges")
 
 
 def handle_vacation(args: Namespace, manager: DataManager, user: User | None) -> None:
@@ -2240,6 +2474,16 @@ def setup_parser() -> argparse.ArgumentParser:
         choices=[t.value for t in RecurrenceType],
         help="Type of recurrence logic.",
     )
+    parser_create.add_argument(
+        "--start-delta",
+        type=int,
+        help="Days before due date to show habit (for habits only).",
+    )
+    parser_create.add_argument(
+        "--no-auto-icon",
+        action="store_true",
+        help="Disable automatic icon generation based on title.",
+    )
     parser_create.set_defaults(func=_wrap_handler(handle_create))
 
     # --- List Command ---
@@ -2255,6 +2499,18 @@ def setup_parser() -> argparse.ArgumentParser:
         default="asc",
         help="Sort order: ascending (asc) or descending (desc). "
         "Default is asc, except for score which defaults to desc.",
+    )
+    parser_list.add_argument(
+        "--include-blocked",
+        action="store_true",
+        help="Include tasks blocked by incomplete dependencies (hidden by default).",
+    )
+    parser_list.add_argument(
+        "--subtask-mode",
+        choices=["hidden", "inline", "expanded"],
+        default="hidden",
+        help="How to display subtasks: hidden (default), inline (indented), "
+        "expanded (as separate rows).",
     )
     parser_list.set_defaults(func=_wrap_handler(handle_list))
 
@@ -2286,7 +2542,20 @@ def setup_parser() -> argparse.ArgumentParser:
         dest="view_mode", help="View mode", required=False
     )
     view_subparsers.add_parser("calendar", help="Show tasks in calendar/agenda view")
-    view_subparsers.add_parser("graph", help="Show dependency graph")
+    graph_parser = view_subparsers.add_parser("graph", help="Show dependency graph")
+    graph_parser.add_argument(
+        "--task-id",
+        dest="graph_task_id",
+        help="Show graph for specific task ID (optional, shows full graph if omitted)",
+    )
+    graph_parser.add_argument(
+        "--direction",
+        dest="graph_direction",
+        choices=["all", "upstream", "downstream"],
+        default="all",
+        help="Direction to show: all (both directions), upstream (prerequisites), "
+        "downstream (dependents). Default: all",
+    )
     view_subparsers.add_parser("kanban", help="Show tasks in Kanban board view")
     heatmap_parser = view_subparsers.add_parser(
         "heatmap", help="Show habit completion heatmap"
@@ -2338,6 +2607,11 @@ def setup_parser() -> argparse.ArgumentParser:
         "--duration",
         choices=[d.value for d in Duration],
         help="The new duration for the task.",
+    )
+    parser_edit.add_argument(
+        "--start-delta",
+        type=int,
+        help="Days before due date to show habit (for habits only).",
     )
     parser_edit.set_defaults(func=_wrap_handler(handle_edit))
 
@@ -2484,6 +2758,12 @@ def setup_parser() -> argparse.ArgumentParser:
     # --- Stats Command ---
     parser_stats = subparsers.add_parser("stats", help="Show productivity statistics.")
     parser_stats.set_defaults(func=_wrap_handler(handle_stats))
+
+    # --- Badges Command ---
+    parser_badges = subparsers.add_parser(
+        "badges", help="Display earned and available badges."
+    )
+    parser_badges.set_defaults(func=_wrap_handler(handle_badges))
 
     # --- Tags Registry Command ---
     parser_tags = subparsers.add_parser(

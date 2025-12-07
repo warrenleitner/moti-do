@@ -16,11 +16,11 @@ Based on the Vision Audit, this document outlines the phased implementation plan
 | Habit statistics CLI | ✅ Complete | `motido habits` command |
 | XP log CLI | ✅ Complete | `motido xp log` subcommand |
 | Stats CLI | ✅ Complete | `motido stats` command |
-| Habit auto-generation | 🔲 Pending | Next up |
-| Kanban view | 🔲 Pending | |
-| Tag/Project colors | 🔲 Pending | |
-| Batch operations | 🔲 Pending | |
-| Heatmap view | 🔲 Pending | |
+| Habit auto-generation | ✅ Complete | Creates next instance on habit completion |
+| Kanban view | ✅ Complete | `motido view kanban` with 5 columns |
+| Tag/Project colors | ✅ Complete | `Tag` and `Project` dataclasses with color support; `motido tags` and `motido projects` commands |
+| Heatmap view | ✅ Complete | `motido view heatmap [--habit ID] [--weeks N]` for habit completion visualization |
+| Batch operations | ✅ Complete | `motido batch-edit` and `motido batch-complete` commands with filters |
 
 ---
 
