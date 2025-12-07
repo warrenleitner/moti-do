@@ -279,6 +279,7 @@ class JsonDataManager(DataManager):
                 user = User(
                     username=user_data.get("username", username),
                     total_xp=total_xp,
+                    password_hash=user_data.get("password_hash"),
                     tasks=tasks,
                     last_processed_date=last_processed,
                     vacation_mode=user_data.get("vacation_mode", False),
@@ -349,6 +350,7 @@ class JsonDataManager(DataManager):
         user_data = {
             "username": user.username,
             "total_xp": user.total_xp,
+            "password_hash": user.password_hash,
             "tasks": tasks_data,
             "last_processed_date": user.last_processed_date.isoformat(),
             "vacation_mode": user.vacation_mode,

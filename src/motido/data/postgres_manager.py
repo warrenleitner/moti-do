@@ -81,6 +81,7 @@ class PostgresDataManager(DataManager):
                     CREATE TABLE IF NOT EXISTS users (
                         username TEXT PRIMARY KEY,
                         total_xp INTEGER NOT NULL DEFAULT 0,
+                        password_hash TEXT,
                         last_processed_date DATE NOT NULL DEFAULT CURRENT_DATE,
                         vacation_mode BOOLEAN NOT NULL DEFAULT FALSE,
                         defined_tags JSONB,
@@ -156,7 +157,7 @@ class PostgresDataManager(DataManager):
                     # Get user data
                     cursor.execute(
                         """
-                        SELECT username, total_xp, last_processed_date, vacation_mode,
+                        SELECT username, total_xp, password_hash, last_processed_date, vacation_mode,
                                defined_tags, defined_projects
                         FROM users WHERE username = %s
                         """,
@@ -220,6 +221,7 @@ class PostgresDataManager(DataManager):
                     user = User(
                         username=username,
                         total_xp=total_xp,
+                        password_hash=user_row.get("password_hash"),
                         tasks=tasks,
                         last_processed_date=last_processed,
                         vacation_mode=vacation_mode,
@@ -333,11 +335,12 @@ class PostgresDataManager(DataManager):
 
                     cursor.execute(
                         """
-                        INSERT INTO users (username, total_xp, last_processed_date,
+                        INSERT INTO users (username, total_xp, password_hash, last_processed_date,
                                           vacation_mode, defined_tags, defined_projects)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (username) DO UPDATE SET
                             total_xp = EXCLUDED.total_xp,
+                            password_hash = EXCLUDED.password_hash,
                             last_processed_date = EXCLUDED.last_processed_date,
                             vacation_mode = EXCLUDED.vacation_mode,
                             defined_tags = EXCLUDED.defined_tags,
@@ -346,6 +349,7 @@ class PostgresDataManager(DataManager):
                         (
                             user.username,
                             user.total_xp,
+                            user.password_hash,
                             user.last_processed_date.isoformat(),
                             user.vacation_mode,
                             defined_tags_json,

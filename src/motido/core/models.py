@@ -279,6 +279,7 @@ class User:  # pylint: disable=too-many-instance-attributes
 
     username: str
     total_xp: int = 0
+    password_hash: str | None = None
     tasks: List[Task] = field(default_factory=list)
     last_processed_date: date = field(default_factory=date.today)
     vacation_mode: bool = False
