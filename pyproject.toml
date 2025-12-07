@@ -19,8 +19,12 @@ classifiers = [
 python = ">=3.9"
 rich = ">=13.9.4"
 python-dateutil = "^2.8.2"
-# Add runtime dependencies here if needed, e.g.,
-# requests = "^2.20"
+fastapi = ">=0.115.0"
+uvicorn = {extras = ["standard"], version = ">=0.32.0"}
+pyjwt = ">=2.9.0"
+python-multipart = ">=0.0.12"
+passlib = {extras = ["bcrypt"], version = ">=1.7.4"}
+pydantic = ">=2.10.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.3.5"
@@ -36,6 +40,7 @@ types-python-dateutil = "^2.9.0"
 
 [tool.poetry.scripts]
 motido = "motido.cli.main:main"
+motido-api = "motido.api.main:run_server"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

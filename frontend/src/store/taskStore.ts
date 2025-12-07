@@ -1,10 +1,11 @@
 /**
- * Zustand store for task state management.
+ * Zustand store for task state management with API integration.
  */
 
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import type { Task, Priority } from '../types';
+import { taskApi } from '../services/api';
 
 interface TaskFilters {
   status: 'all' | 'active' | 'completed';
@@ -31,7 +32,7 @@ interface TaskState {
   filters: TaskFilters;
   sort: TaskSort;
 
-  // Actions
+  // Local actions (immediate state updates)
   setTasks: (tasks: Task[]) => void;
   addTask: (task: Task) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
@@ -46,6 +47,14 @@ interface TaskState {
   // Loading state
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+
+  // API actions (async with API calls)
+  fetchTasks: () => Promise<void>;
+  createTask: (task: Partial<Task>) => Promise<Task>;
+  saveTask: (id: string, updates: Partial<Task>) => Promise<Task>;
+  deleteTask: (id: string) => Promise<void>;
+  completeTask: (id: string) => Promise<Task>;
+  uncompleteTask: (id: string) => Promise<Task>;
 }
 
 const defaultFilters: TaskFilters = {
@@ -61,7 +70,7 @@ const defaultSort: TaskSort = {
 export const useTaskStore = create<TaskState>()(
   devtools(
     persist(
-      (set) => ({
+      (set, get) => ({
         // Initial state
         tasks: [],
         selectedTaskId: null,
@@ -70,7 +79,7 @@ export const useTaskStore = create<TaskState>()(
         filters: defaultFilters,
         sort: defaultSort,
 
-        // Task actions
+        // Local task actions (for optimistic updates)
         setTasks: (tasks) => set({ tasks, isLoading: false, error: null }),
 
         addTask: (task) =>
@@ -104,6 +113,158 @@ export const useTaskStore = create<TaskState>()(
         // Loading state
         setLoading: (loading) => set({ isLoading: loading }),
         setError: (error) => set({ error, isLoading: false }),
+
+        // API actions
+        fetchTasks: async () => {
+          set({ isLoading: true, error: null });
+          try {
+            const tasks = await taskApi.getTasks();
+            set({ tasks, isLoading: false });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to fetch tasks';
+            set({ error: message, isLoading: false });
+            throw error;
+          }
+        },
+
+        createTask: async (taskData) => {
+          set({ isLoading: true, error: null });
+          try {
+            const newTask = await taskApi.createTask(taskData);
+            set((state) => ({
+              tasks: [...state.tasks, newTask],
+              isLoading: false,
+            }));
+            return newTask;
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to create task';
+            set({ error: message, isLoading: false });
+            throw error;
+          }
+        },
+
+        saveTask: async (id, updates) => {
+          // Optimistic update
+          const { tasks } = get();
+          const originalTask = tasks.find((t) => t.id === id);
+
+          set((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.id === id ? { ...t, ...updates } : t
+            ),
+          }));
+
+          try {
+            const updatedTask = await taskApi.updateTask(id, updates);
+            set((state) => ({
+              tasks: state.tasks.map((t) =>
+                t.id === id ? updatedTask : t
+              ),
+            }));
+            return updatedTask;
+          } catch (error) {
+            // Revert on error
+            if (originalTask) {
+              set((state) => ({
+                tasks: state.tasks.map((t) =>
+                  t.id === id ? originalTask : t
+                ),
+              }));
+            }
+            const message = error instanceof Error ? error.message : 'Failed to update task';
+            set({ error: message });
+            throw error;
+          }
+        },
+
+        deleteTask: async (id) => {
+          // Optimistic update
+          const { tasks, selectedTaskId } = get();
+          const originalTasks = [...tasks];
+
+          set({
+            tasks: tasks.filter((t) => t.id !== id),
+            selectedTaskId: selectedTaskId === id ? null : selectedTaskId,
+          });
+
+          try {
+            await taskApi.deleteTask(id);
+          } catch (error) {
+            // Revert on error
+            set({ tasks: originalTasks });
+            const message = error instanceof Error ? error.message : 'Failed to delete task';
+            set({ error: message });
+            throw error;
+          }
+        },
+
+        completeTask: async (id) => {
+          // Optimistic update
+          const { tasks } = get();
+          const originalTask = tasks.find((t) => t.id === id);
+
+          set((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.id === id ? { ...t, is_complete: true } : t
+            ),
+          }));
+
+          try {
+            const completedTask = await taskApi.completeTask(id);
+            set((state) => ({
+              tasks: state.tasks.map((t) =>
+                t.id === id ? completedTask : t
+              ),
+            }));
+            return completedTask;
+          } catch (error) {
+            // Revert on error
+            if (originalTask) {
+              set((state) => ({
+                tasks: state.tasks.map((t) =>
+                  t.id === id ? originalTask : t
+                ),
+              }));
+            }
+            const message = error instanceof Error ? error.message : 'Failed to complete task';
+            set({ error: message });
+            throw error;
+          }
+        },
+
+        uncompleteTask: async (id) => {
+          // Optimistic update
+          const { tasks } = get();
+          const originalTask = tasks.find((t) => t.id === id);
+
+          set((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.id === id ? { ...t, is_complete: false } : t
+            ),
+          }));
+
+          try {
+            const uncompletedTask = await taskApi.uncompleteTask(id);
+            set((state) => ({
+              tasks: state.tasks.map((t) =>
+                t.id === id ? uncompletedTask : t
+              ),
+            }));
+            return uncompletedTask;
+          } catch (error) {
+            // Revert on error
+            if (originalTask) {
+              set((state) => ({
+                tasks: state.tasks.map((t) =>
+                  t.id === id ? originalTask : t
+                ),
+              }));
+            }
+            const message = error instanceof Error ? error.message : 'Failed to uncomplete task';
+            set({ error: message });
+            throw error;
+          }
+        },
       }),
       {
         name: 'motido-task-store',
