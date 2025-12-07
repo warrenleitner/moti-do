@@ -30,6 +30,7 @@ pydantic = ">=2.10.0"
 pytest = ">=8.3.5"
 pytest-mock = ">=3.0"
 pytest-cov = ">=6.1.1" # For coverage reporting
+pytest-asyncio = ">=0.21.0" # For async test support
 black = ">=25.1.0"    # Code formatter
 isort = ">=6.0.1"    # Import sorter
 pylint = ">=3.2.5"    # Linter
