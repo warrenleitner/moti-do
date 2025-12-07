@@ -1,0 +1,30 @@
+# Ignore files not needed for serverless functions
+# Note: Frontend build happens before these exclusions apply
+
+# Development and test files
+tests/
+*.test.py
+*.spec.py
+pytest.ini
+.pytest_cache/
+
+# Documentation
+docs/
+
+# Development configs
+.vscode/
+.idea/
+.env.local
+.env.development
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.mypy_cache/
+
+# Git
+.git/
+
+# Local data
+src/motido/data/motido_data/
