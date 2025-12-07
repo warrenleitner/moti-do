@@ -363,9 +363,7 @@ class TestHandleViewGraphFilter:
         assert call_args[0][2] == "task123"  # task_id
         assert call_args[0][3] == "all"  # direction
 
-    def test_handle_view_graph_with_direction(
-        self, mocker: MockerFixture, capsys: Any
-    ) -> None:
+    def test_handle_view_graph_with_direction(self, mocker: MockerFixture) -> None:
         """Test handle_view passes direction to render_dependency_graph."""
         mock_manager = mocker.MagicMock()
         mock_render = mocker.patch("motido.cli.views.render_dependency_graph")
@@ -393,9 +391,7 @@ class TestHandleViewGraphFilter:
         call_args = mock_render.call_args
         assert call_args[0][3] == "upstream"
 
-    def test_handle_view_graph_defaults(
-        self, mocker: MockerFixture, capsys: Any
-    ) -> None:
+    def test_handle_view_graph_defaults(self, mocker: MockerFixture) -> None:
         """Test handle_view uses defaults when options not specified."""
         mock_manager = mocker.MagicMock()
         mock_render = mocker.patch("motido.cli.views.render_dependency_graph")
