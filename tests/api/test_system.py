@@ -5,8 +5,9 @@ Tests for the system API endpoints (health, status, advance, vacation).
 
 from datetime import date, timedelta
 
-import pytest
 from fastapi.testclient import TestClient
+
+from motido.core.models import User
 
 
 class TestHealthEndpoint:
@@ -51,7 +52,7 @@ class TestSystemStatusEndpoint:
         date.fromisoformat(data["current_date"])
 
     def test_system_status_pending_days_calculation(
-        self, client: TestClient, test_user
+        self, client: TestClient, test_user: User
     ) -> None:
         """Test that pending days is calculated correctly."""
         # Set last processed to 3 days ago
@@ -65,7 +66,7 @@ class TestSystemStatusEndpoint:
 class TestAdvanceDateEndpoint:
     """Tests for POST /api/system/advance endpoint."""
 
-    def test_advance_to_today(self, client: TestClient, test_user) -> None:
+    def test_advance_to_today(self, client: TestClient, test_user: User) -> None:
         """Test advancing to today's date."""
         test_user.last_processed_date = date.today() - timedelta(days=2)
 
@@ -75,7 +76,7 @@ class TestAdvanceDateEndpoint:
         assert data["last_processed_date"] == str(date.today())
         assert data["pending_days"] == 0
 
-    def test_advance_by_days(self, client: TestClient, test_user) -> None:
+    def test_advance_by_days(self, client: TestClient, test_user: User) -> None:
         """Test advancing by specific number of days."""
         start_date = date.today() - timedelta(days=5)
         test_user.last_processed_date = start_date
@@ -86,7 +87,9 @@ class TestAdvanceDateEndpoint:
         expected_date = start_date + timedelta(days=2)
         assert data["last_processed_date"] == str(expected_date)
 
-    def test_advance_to_specific_date(self, client: TestClient, test_user) -> None:
+    def test_advance_to_specific_date(
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test advancing to a specific date."""
         test_user.last_processed_date = date.today() - timedelta(days=5)
         target = date.today() - timedelta(days=2)
@@ -96,7 +99,9 @@ class TestAdvanceDateEndpoint:
         data = response.json()
         assert data["last_processed_date"] == str(target)
 
-    def test_advance_cannot_go_past_today(self, client: TestClient, test_user) -> None:
+    def test_advance_cannot_go_past_today(
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test that advance cannot go past today."""
         test_user.last_processed_date = date.today() - timedelta(days=1)
         future = date.today() + timedelta(days=5)
@@ -107,7 +112,9 @@ class TestAdvanceDateEndpoint:
         # Should be capped at today
         assert data["last_processed_date"] == str(date.today())
 
-    def test_advance_with_vacation_mode(self, client: TestClient, test_user) -> None:
+    def test_advance_with_vacation_mode(
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test that vacation mode is included in response."""
         test_user.vacation_mode = True
         test_user.last_processed_date = date.today() - timedelta(days=1)
@@ -121,7 +128,7 @@ class TestAdvanceDateEndpoint:
 class TestVacationModeEndpoint:
     """Tests for POST /api/system/vacation endpoint."""
 
-    def test_enable_vacation_mode(self, client: TestClient, test_user) -> None:
+    def test_enable_vacation_mode(self, client: TestClient, test_user: User) -> None:
         """Test enabling vacation mode."""
         test_user.vacation_mode = False
 
@@ -130,7 +137,7 @@ class TestVacationModeEndpoint:
         data = response.json()
         assert data["vacation_mode"] is True
 
-    def test_disable_vacation_mode(self, client: TestClient, test_user) -> None:
+    def test_disable_vacation_mode(self, client: TestClient, test_user: User) -> None:
         """Test disabling vacation mode."""
         test_user.vacation_mode = True
 
@@ -139,7 +146,9 @@ class TestVacationModeEndpoint:
         data = response.json()
         assert data["vacation_mode"] is False
 
-    def test_vacation_mode_persists(self, client: TestClient, test_user) -> None:
+    def test_vacation_mode_persists(  # pylint: disable=unused-argument
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test that vacation mode change persists."""
         response = client.post("/api/system/vacation", params={"enable": True})
         assert response.status_code == 200

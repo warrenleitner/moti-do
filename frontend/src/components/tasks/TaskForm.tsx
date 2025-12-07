@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -44,17 +44,11 @@ const defaultTask: Partial<Task> = {
 };
 
 export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps) {
-  const [formData, setFormData] = useState<Partial<Task>>(defaultTask);
+  // Initialize form data based on task prop
+  const getInitialFormData = () => (task ? { ...task } : { ...defaultTask });
+  const [formData, setFormData] = useState<Partial<Task>>(getInitialFormData);
   const [newTag, setNewTag] = useState('');
   const [newSubtask, setNewSubtask] = useState('');
-
-  useEffect(() => {
-    if (task) {
-      setFormData({ ...task });
-    } else {
-      setFormData({ ...defaultTask });
-    }
-  }, [task, open]);
 
   const handleChange = (field: keyof Task, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -105,7 +99,13 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="sm"
+        fullWidth
+        key={task?.id || 'new'}
+      >
         <DialogTitle>{isEditing ? 'Edit Task' : 'Create New Task'}</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>

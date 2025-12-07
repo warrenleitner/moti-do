@@ -3,8 +3,9 @@
 Tests for the task API endpoints.
 """
 
-import pytest
 from fastapi.testclient import TestClient
+
+from motido.core.models import User
 
 
 class TestTaskList:
@@ -122,7 +123,7 @@ class TestTaskCreate:
 class TestTaskGet:
     """Tests for GET /api/tasks/{task_id} endpoint."""
 
-    def test_get_task_by_id(self, client: TestClient, test_user) -> None:
+    def test_get_task_by_id(self, client: TestClient, test_user: User) -> None:
         """Test getting a task by ID."""
         task_id = test_user.tasks[0].id
         response = client.get(f"/api/tasks/{task_id}")
@@ -131,7 +132,7 @@ class TestTaskGet:
         assert data["id"] == task_id
         assert data["title"] == "Test Task 1"
 
-    def test_get_task_by_partial_id(self, client: TestClient, test_user) -> None:
+    def test_get_task_by_partial_id(self, client: TestClient, test_user: User) -> None:
         """Test getting a task by partial ID."""
         task_id = test_user.tasks[0].id[:8]
         response = client.get(f"/api/tasks/{task_id}")
@@ -147,7 +148,7 @@ class TestTaskGet:
 class TestTaskUpdate:
     """Tests for PUT /api/tasks/{task_id} endpoint."""
 
-    def test_update_task_title(self, client: TestClient, test_user) -> None:
+    def test_update_task_title(self, client: TestClient, test_user: User) -> None:
         """Test updating a task's title."""
         task_id = test_user.tasks[0].id
         response = client.put(f"/api/tasks/{task_id}", json={"title": "Updated Title"})
@@ -155,7 +156,7 @@ class TestTaskUpdate:
         data = response.json()
         assert data["title"] == "Updated Title"
 
-    def test_update_task_priority(self, client: TestClient, test_user) -> None:
+    def test_update_task_priority(self, client: TestClient, test_user: User) -> None:
         """Test updating a task's priority."""
         task_id = test_user.tasks[0].id
         response = client.put(f"/api/tasks/{task_id}", json={"priority": "Defcon One"})
@@ -163,7 +164,7 @@ class TestTaskUpdate:
         data = response.json()
         assert data["priority"] == "Defcon One"
 
-    def test_update_task_tags(self, client: TestClient, test_user) -> None:
+    def test_update_task_tags(self, client: TestClient, test_user: User) -> None:
         """Test updating a task's tags."""
         task_id = test_user.tasks[0].id
         response = client.put(f"/api/tasks/{task_id}", json={"tags": ["new-tag"]})
@@ -180,7 +181,7 @@ class TestTaskUpdate:
 class TestTaskDelete:
     """Tests for DELETE /api/tasks/{task_id} endpoint."""
 
-    def test_delete_task(self, client: TestClient, test_user) -> None:
+    def test_delete_task(self, client: TestClient, test_user: User) -> None:
         """Test deleting a task."""
         task_id = test_user.tasks[0].id
         response = client.delete(f"/api/tasks/{task_id}")
@@ -199,7 +200,7 @@ class TestTaskDelete:
 class TestTaskComplete:
     """Tests for POST /api/tasks/{task_id}/complete endpoint."""
 
-    def test_complete_task(self, client: TestClient, test_user) -> None:
+    def test_complete_task(self, client: TestClient, test_user: User) -> None:
         """Test completing a task."""
         task_id = test_user.tasks[0].id  # This is incomplete
         response = client.post(f"/api/tasks/{task_id}/complete")
@@ -208,7 +209,7 @@ class TestTaskComplete:
         assert data["is_complete"] is True
 
     def test_complete_already_complete_task(
-        self, client: TestClient, test_user
+        self, client: TestClient, test_user: User
     ) -> None:
         """Test completing an already complete task."""
         task_id = test_user.tasks[1].id  # This is already complete
@@ -216,7 +217,9 @@ class TestTaskComplete:
         assert response.status_code == 400
         assert "already complete" in response.json()["detail"].lower()
 
-    def test_complete_habit_updates_streak(self, client: TestClient, test_user) -> None:
+    def test_complete_habit_updates_streak(
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test that completing a habit updates the streak."""
         habit = next(t for t in test_user.tasks if t.is_habit)
         original_streak = habit.streak_current
@@ -234,7 +237,7 @@ class TestTaskComplete:
 class TestTaskUncomplete:
     """Tests for POST /api/tasks/{task_id}/uncomplete endpoint."""
 
-    def test_uncomplete_task(self, client: TestClient, test_user) -> None:
+    def test_uncomplete_task(self, client: TestClient, test_user: User) -> None:
         """Test uncompleting a task."""
         task_id = test_user.tasks[1].id  # This is complete
         response = client.post(f"/api/tasks/{task_id}/uncomplete")
@@ -242,7 +245,9 @@ class TestTaskUncomplete:
         data = response.json()
         assert data["is_complete"] is False
 
-    def test_uncomplete_incomplete_task(self, client: TestClient, test_user) -> None:
+    def test_uncomplete_incomplete_task(
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test uncompleting an incomplete task."""
         task_id = test_user.tasks[0].id  # This is incomplete
         response = client.post(f"/api/tasks/{task_id}/uncomplete")
@@ -252,7 +257,7 @@ class TestTaskUncomplete:
 class TestSubtasks:
     """Tests for subtask endpoints."""
 
-    def test_add_subtask(self, client: TestClient, test_user) -> None:
+    def test_add_subtask(self, client: TestClient, test_user: User) -> None:
         """Test adding a subtask."""
         task_id = test_user.tasks[0].id
         response = client.post(
@@ -262,7 +267,7 @@ class TestSubtasks:
         data = response.json()
         assert any(s["text"] == "New Subtask" for s in data["subtasks"])
 
-    def test_update_subtask(self, client: TestClient, test_user) -> None:
+    def test_update_subtask(self, client: TestClient, test_user: User) -> None:
         """Test updating a subtask."""
         # First add a subtask
         task_id = test_user.tasks[0].id
@@ -278,7 +283,7 @@ class TestSubtasks:
         assert data["subtasks"][0]["text"] == "Updated Subtask"
         assert data["subtasks"][0]["complete"] is True
 
-    def test_delete_subtask(self, client: TestClient, test_user) -> None:
+    def test_delete_subtask(self, client: TestClient, test_user: User) -> None:
         """Test deleting a subtask."""
         # First add a subtask
         task_id = test_user.tasks[0].id
@@ -288,7 +293,9 @@ class TestSubtasks:
         response = client.delete(f"/api/tasks/{task_id}/subtasks/0")
         assert response.status_code == 200
 
-    def test_subtask_index_out_of_range(self, client: TestClient, test_user) -> None:
+    def test_subtask_index_out_of_range(
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test accessing subtask with invalid index."""
         task_id = test_user.tasks[0].id
         response = client.put(
@@ -301,7 +308,7 @@ class TestSubtasks:
 class TestDependencies:
     """Tests for dependency endpoints."""
 
-    def test_add_dependency(self, client: TestClient, test_user) -> None:
+    def test_add_dependency(self, client: TestClient, test_user: User) -> None:
         """Test adding a dependency."""
         task_id = test_user.tasks[0].id
         dep_id = test_user.tasks[1].id
@@ -310,7 +317,7 @@ class TestDependencies:
         data = response.json()
         assert dep_id in data["dependencies"]
 
-    def test_remove_dependency(self, client: TestClient, test_user) -> None:
+    def test_remove_dependency(self, client: TestClient, test_user: User) -> None:
         """Test removing a dependency."""
         # First add a dependency
         task_id = test_user.tasks[0].id
@@ -323,12 +330,16 @@ class TestDependencies:
         data = response.json()
         assert dep_id not in data["dependencies"]
 
-    def test_add_dependency_task_not_found(self, client: TestClient, test_user) -> None:
+    def test_add_dependency_task_not_found(  # pylint: disable=unused-argument
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test adding dependency when task not found."""
         response = client.post("/api/tasks/nonexistent/dependencies/also-nonexistent")
         assert response.status_code == 404
 
-    def test_add_dependency_dep_not_found(self, client: TestClient, test_user) -> None:
+    def test_add_dependency_dep_not_found(
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test adding dependency when dependency task not found."""
         task_id = test_user.tasks[0].id
         response = client.post(f"/api/tasks/{task_id}/dependencies/nonexistent")

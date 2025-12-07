@@ -1,4 +1,5 @@
 # motido/api/main.py
+# pylint: disable=redefined-outer-name,import-outside-toplevel
 """
 Main FastAPI application for Moti-Do.
 """
@@ -85,8 +86,7 @@ async def advance_date(
         target_date = current
 
     # Don't advance past today
-    if target_date > current:
-        target_date = current
+    target_date = min(target_date, current)
 
     # Process each day
     from motido.core.scoring import apply_penalties, load_scoring_config

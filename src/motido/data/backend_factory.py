@@ -1,4 +1,5 @@
 # data/backend_factory.py
+# pylint: disable=import-outside-toplevel
 """
 Factory function to create the appropriate DataManager instance
 based on the application's configuration.

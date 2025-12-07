@@ -5,10 +5,9 @@ Tests for the view API endpoints (calendar, heatmap, kanban, habits).
 
 from datetime import datetime, timedelta
 
-import pytest
 from fastapi.testclient import TestClient
 
-from motido.core.models import Difficulty, Duration, Priority, Task
+from motido.core.models import Priority, Task, User
 
 
 class TestCalendarEndpoint:
@@ -21,7 +20,7 @@ class TestCalendarEndpoint:
         assert response.json() == []
 
     def test_get_calendar_returns_tasks_with_due_dates(
-        self, client: TestClient, test_user
+        self, client: TestClient, test_user: User
     ) -> None:
         """Test that calendar returns tasks with due dates."""
         # Add a task with due date
@@ -39,7 +38,9 @@ class TestCalendarEndpoint:
         assert len(data) >= 1
         assert any(e["title"] == "Task with due date" for e in data)
 
-    def test_get_calendar_date_filter(self, client: TestClient, test_user) -> None:
+    def test_get_calendar_date_filter(
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test filtering calendar by date range."""
         # Add tasks with different due dates
         past_task = Task(
@@ -68,7 +69,9 @@ class TestCalendarEndpoint:
         assert any(e["title"] == "Future task" for e in data)
         assert not any(e["title"] == "Past task" for e in data)
 
-    def test_calendar_event_has_color(self, client: TestClient, test_user) -> None:
+    def test_calendar_event_has_color(
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test that calendar events have color based on priority."""
         task = Task(
             title="High priority",
@@ -84,7 +87,9 @@ class TestCalendarEndpoint:
         assert event is not None
         assert "color" in event
 
-    def test_calendar_completed_task_gray(self, client: TestClient, test_user) -> None:
+    def test_calendar_completed_task_gray(
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test that completed tasks show as gray."""
         task = Task(
             title="Completed task",
@@ -139,7 +144,9 @@ class TestHeatmapEndpoint:
             assert "completed_count" in day
             assert "total_count" in day
 
-    def test_heatmap_counts_completions(self, client: TestClient, test_user) -> None:
+    def test_heatmap_counts_completions(
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test that heatmap counts task completions correctly."""
         today = datetime.now()
         task = Task(
@@ -158,7 +165,7 @@ class TestHeatmapEndpoint:
         if today_data:
             assert today_data["completed_count"] >= 1
 
-    def test_heatmap_filter_by_habit(self, client: TestClient, test_user) -> None:
+    def test_heatmap_filter_by_habit(self, client: TestClient, test_user: User) -> None:
         """Test filtering heatmap by specific habit."""
         habit = next(t for t in test_user.tasks if t.is_habit)
         response = client.get("/api/views/heatmap", params={"habit_id": habit.id})
@@ -197,7 +204,9 @@ class TestKanbanEndpoint:
         assert "blocked" in column_ids
         assert "done" in column_ids
 
-    def test_kanban_excludes_habits(self, client: TestClient, test_user) -> None:
+    def test_kanban_excludes_habits(  # pylint: disable=unused-argument
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test that kanban excludes habit tasks."""
         response = client.get("/api/views/kanban")
         data = response.json()
@@ -207,7 +216,9 @@ class TestKanbanEndpoint:
         # No task should be a habit
         assert not any(t.get("is_habit") for t in all_tasks)
 
-    def test_kanban_completed_in_done(self, client: TestClient, test_user) -> None:
+    def test_kanban_completed_in_done(  # pylint: disable=unused-argument
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test that completed tasks are in done column."""
         response = client.get("/api/views/kanban")
         data = response.json()
@@ -240,7 +251,7 @@ class TestKanbanEndpoint:
         for task in all_tasks:
             assert "work" in task.get("tags", [])
 
-    def test_kanban_blocked_tasks(self, client: TestClient, test_user) -> None:
+    def test_kanban_blocked_tasks(self, client: TestClient, test_user: User) -> None:
         """Test that tasks with incomplete dependencies are in blocked column."""
         # Create a task that depends on an incomplete task
         task1 = test_user.tasks[0]  # This is incomplete
@@ -277,7 +288,7 @@ class TestHabitsEndpoint:
             assert task["is_habit"] is True
 
     def test_get_habits_excludes_instances_by_default(
-        self, client: TestClient, test_user
+        self, client: TestClient, test_user: User
     ) -> None:
         """Test that habit instances are excluded by default."""
         # Add a habit instance
@@ -296,7 +307,9 @@ class TestHabitsEndpoint:
         # Should not include the instance
         assert not any(t["title"] == "Habit Instance" for t in data)
 
-    def test_get_habits_include_instances(self, client: TestClient, test_user) -> None:
+    def test_get_habits_include_instances(
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test including habit instances."""
         parent_habit = next(t for t in test_user.tasks if t.is_habit)
         instance = Task(

@@ -334,7 +334,7 @@ class TestRenderDependencyGraphWithFilter:
 class TestHandleViewGraphFilter:
     """Tests for handle_view with graph filtering options."""
 
-    def test_handle_view_graph_with_task_id(
+    def test_handle_view_graph_with_task_id(  # pylint: disable=unused-argument
         self, mocker: MockerFixture, capsys: Any
     ) -> None:
         """Test handle_view passes task_id to render_dependency_graph."""

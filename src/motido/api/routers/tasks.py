@@ -1,4 +1,5 @@
 # motido/api/routers/tasks.py
+# pylint: disable=import-outside-toplevel,too-many-arguments,too-many-positional-arguments,too-many-branches
 """
 Task management API endpoints.
 """

@@ -72,10 +72,10 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     return encoded_jwt
 
 
-def verify_token(token: str) -> dict | None:
+def verify_token(token: str) -> dict[str, str] | None:
     """Verify a JWT token and return its payload."""
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload: dict[str, str] = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except jwt.PyJWTError:
         return None
@@ -151,9 +151,11 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    result: bool = pwd_context.verify(plain_password, hashed_password)
+    return result
 
 
 def hash_password(password: str) -> str:
     """Hash a password."""
-    return pwd_context.hash(password)
+    result: str = pwd_context.hash(password)
+    return result

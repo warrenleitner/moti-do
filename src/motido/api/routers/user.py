@@ -1,4 +1,5 @@
 # motido/api/routers/user.py
+# pylint: disable=import-outside-toplevel
 """
 User profile, XP, and badges API endpoints.
 """

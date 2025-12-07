@@ -1,10 +1,11 @@
 # tests/api/conftest.py
+# pylint: disable=redefined-outer-name
 """
 Pytest fixtures for API testing.
 """
 
+from collections.abc import Generator
 from datetime import datetime
-from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -91,7 +92,9 @@ def test_user() -> User:
 
 
 @pytest.fixture
-def client(mock_manager: MockDataManager, test_user: User) -> TestClient:
+def client(
+    mock_manager: MockDataManager, test_user: User
+) -> Generator[TestClient, None, None]:
     """Create a test client with mocked dependencies."""
     mock_manager.set_user(test_user)
 
@@ -111,7 +114,7 @@ def client(mock_manager: MockDataManager, test_user: User) -> TestClient:
 
 
 @pytest.fixture
-def empty_client(mock_manager: MockDataManager) -> TestClient:
+def empty_client(mock_manager: MockDataManager) -> Generator[TestClient, None, None]:
     """Create a test client with an empty user."""
     empty_user = User(username="empty_user")
     mock_manager.set_user(empty_user)
