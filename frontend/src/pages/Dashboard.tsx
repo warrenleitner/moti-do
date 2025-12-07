@@ -1,17 +1,21 @@
-import { Box, Card, CardContent, Typography, LinearProgress, Chip, Stack, Grid } from '@mui/material';
+import { Box, Card, CardContent, Typography, LinearProgress, Chip, Stack, Grid, Alert } from '@mui/material';
 import {
   EmojiEvents as XPIcon,
   CheckCircle as CompletedIcon,
   TrendingUp as StreakIcon,
   Star as BadgeIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useUserStore, useTaskStore } from '../store';
+import { useUserStats, useSystemStatus } from '../store/userStore';
 
 export default function Dashboard() {
   const { user } = useUserStore();
   const { tasks } = useTaskStore();
+  const stats = useUserStats();
+  const systemStatus = useSystemStatus();
 
-  // Calculate stats
+  // Calculate stats from tasks (fallback if API stats not available)
   const completedToday = tasks.filter(
     (t) =>
       t.is_complete &&
@@ -19,22 +23,39 @@ export default function Dashboard() {
       new Date(t.completion_date).toDateString() === new Date().toDateString()
   ).length;
 
-  const activeTasks = tasks.filter((t) => !t.is_complete).length;
-  const habits = tasks.filter((t) => t.is_habit && !t.is_complete);
+  const activeTasks = stats?.pending_tasks ?? tasks.filter((t) => !t.is_complete).length;
+  const habitsCount = stats?.habits_count ?? tasks.filter((t) => t.is_habit && !t.is_complete).length;
   const dueToday = tasks.filter((t) => {
     if (!t.due_date || t.is_complete) return false;
     return new Date(t.due_date).toDateString() === new Date().toDateString();
   }).length;
 
-  // XP progress to next level
-  const currentLevelXP = user ? user.xp % 100 : 0;
-  const xpProgress = currentLevelXP;
+  // XP progress to next level (100 XP per level)
+  const totalXP = stats?.total_xp ?? user?.xp ?? 0;
+  const currentLevel = stats?.level ?? user?.level ?? 1;
+  const xpProgress = totalXP % 100;
+  const badgesEarned = stats?.badges_earned ?? user?.badges.length ?? 0;
 
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
         Welcome back{user ? `, ${user.username}` : ''}!
       </Typography>
+
+      {/* Pending days warning */}
+      {systemStatus && systemStatus.pending_days > 0 && (
+        <Alert severity="warning" icon={<WarningIcon />} sx={{ mb: 3 }}>
+          You have {systemStatus.pending_days} day{systemStatus.pending_days > 1 ? 's' : ''} to process.
+          Visit Settings to advance the date and apply any pending penalties.
+        </Alert>
+      )}
+
+      {/* Vacation mode notice */}
+      {systemStatus?.vacation_mode && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Vacation mode is active. No penalties will be applied until you disable it in Settings.
+        </Alert>
+      )}
 
       {/* Stats Grid */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -49,7 +70,7 @@ export default function Dashboard() {
                 </Typography>
               </Box>
               <Typography variant="h4" fontWeight="bold">
-                {user?.xp ?? 0} XP
+                {totalXP} XP
               </Typography>
               <Box sx={{ mt: 1 }}>
                 <LinearProgress
@@ -58,7 +79,7 @@ export default function Dashboard() {
                   sx={{ height: 8, borderRadius: 4 }}
                 />
                 <Typography variant="caption" color="text.secondary">
-                  {xpProgress}/100 to Level {(user?.level ?? 0) + 1}
+                  {xpProgress}/100 to Level {currentLevel + 1}
                 </Typography>
               </Box>
             </CardContent>
@@ -99,7 +120,7 @@ export default function Dashboard() {
                 {activeTasks}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {habits.length} habits pending
+                {habitsCount} habits pending
               </Typography>
             </CardContent>
           </Card>
@@ -116,10 +137,10 @@ export default function Dashboard() {
                 </Typography>
               </Box>
               <Typography variant="h4" fontWeight="bold">
-                {user?.badges.length ?? 0}
+                {badgesEarned}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Level {user?.level ?? 1}
+                Level {currentLevel}
               </Typography>
             </CardContent>
           </Card>

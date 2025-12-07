@@ -4,10 +4,14 @@ import { Add } from '@mui/icons-material';
 import { TaskList, TaskForm } from '../components/tasks';
 import { ConfirmDialog } from '../components/common';
 import { useTaskStore } from '../store';
+import { useUserStore } from '../store/userStore';
 import type { Task } from '../types';
 
 export default function TasksPage() {
-  const { updateTask, removeTask, addTask } = useTaskStore();
+  // Use API actions from the store
+  const { createTask, saveTask, deleteTask, completeTask, uncompleteTask, isLoading } = useTaskStore();
+  const { fetchStats } = useUserStore();
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -28,50 +32,41 @@ export default function TasksPage() {
     setFormOpen(true);
   };
 
-  const handleSave = (taskData: Partial<Task>) => {
-    if (editingTask) {
-      // Update existing task
-      updateTask(editingTask.id, taskData);
-      setSnackbar({ open: true, message: 'Task updated successfully', severity: 'success' });
-    } else {
-      // Create new task
-      const newTask: Task = {
-        id: crypto.randomUUID(),
-        title: taskData.title || 'Untitled',
-        creation_date: new Date().toISOString(),
-        priority: taskData.priority || 'medium',
-        difficulty: taskData.difficulty || 'medium',
-        duration: taskData.duration || 'medium',
-        is_complete: false,
-        is_habit: taskData.is_habit || false,
-        tags: taskData.tags || [],
-        subtasks: taskData.subtasks || [],
-        dependencies: [],
-        streak_current: 0,
-        streak_best: 0,
-        history: [],
-        ...taskData,
-      };
-      addTask(newTask);
-      setSnackbar({ open: true, message: 'Task created successfully', severity: 'success' });
+  const handleSave = async (taskData: Partial<Task>) => {
+    try {
+      if (editingTask) {
+        // Update existing task via API
+        await saveTask(editingTask.id, taskData);
+        setSnackbar({ open: true, message: 'Task updated successfully', severity: 'success' });
+      } else {
+        // Create new task via API
+        await createTask(taskData);
+        setSnackbar({ open: true, message: 'Task created successfully', severity: 'success' });
+      }
+      setFormOpen(false);
+      setEditingTask(null);
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to save task', severity: 'error' });
     }
-    setFormOpen(false);
-    setEditingTask(null);
   };
 
-  const handleComplete = (taskId: string) => {
+  const handleComplete = async (taskId: string) => {
     const { tasks } = useTaskStore.getState();
     const task = tasks.find((t) => t.id === taskId);
-    if (task) {
-      updateTask(taskId, {
-        is_complete: !task.is_complete,
-        completion_date: !task.is_complete ? new Date().toISOString() : undefined,
-      });
-      setSnackbar({
-        open: true,
-        message: task.is_complete ? 'Task marked as incomplete' : 'Task completed!',
-        severity: 'success',
-      });
+    if (!task) return;
+
+    try {
+      if (task.is_complete) {
+        await uncompleteTask(taskId);
+        setSnackbar({ open: true, message: 'Task marked as incomplete', severity: 'success' });
+      } else {
+        await completeTask(taskId);
+        // Refresh user stats to update XP display
+        await fetchStats();
+        setSnackbar({ open: true, message: 'Task completed! XP earned.', severity: 'success' });
+      }
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to update task', severity: 'error' });
     }
   };
 
@@ -80,25 +75,34 @@ export default function TasksPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (taskToDelete) {
-      removeTask(taskToDelete);
-      setSnackbar({ open: true, message: 'Task deleted', severity: 'success' });
+      try {
+        await deleteTask(taskToDelete);
+        setSnackbar({ open: true, message: 'Task deleted', severity: 'success' });
+      } catch {
+        setSnackbar({ open: true, message: 'Failed to delete task', severity: 'error' });
+      }
     }
     setDeleteDialogOpen(false);
     setTaskToDelete(null);
   };
 
-  const handleSubtaskToggle = (taskId: string, subtaskIndex: number) => {
+  const handleSubtaskToggle = async (taskId: string, subtaskIndex: number) => {
     const { tasks } = useTaskStore.getState();
     const task = tasks.find((t) => t.id === taskId);
-    if (task) {
-      const updatedSubtasks = [...task.subtasks];
-      updatedSubtasks[subtaskIndex] = {
-        ...updatedSubtasks[subtaskIndex],
-        complete: !updatedSubtasks[subtaskIndex].complete,
-      };
-      updateTask(taskId, { subtasks: updatedSubtasks });
+    if (!task) return;
+
+    const updatedSubtasks = [...task.subtasks];
+    updatedSubtasks[subtaskIndex] = {
+      ...updatedSubtasks[subtaskIndex],
+      complete: !updatedSubtasks[subtaskIndex].complete,
+    };
+
+    try {
+      await saveTask(taskId, { subtasks: updatedSubtasks });
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to update subtask', severity: 'error' });
     }
   };
 
@@ -107,7 +111,7 @@ export default function TasksPage() {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Tasks</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew}>
+        <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew} disabled={isLoading}>
           New Task
         </Button>
       </Box>

@@ -20,15 +20,16 @@ Object.defineProperty(window, 'localStorage', {
 });
 
 // Import MSW server conditionally
-let server: { listen: (options?: unknown) => void; resetHandlers: () => void; close: () => void } | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let server: any = null;
 
 try {
   // Dynamic import to handle cases where msw might not be needed
   const { server: mswServer } = await import('./mocks/server');
   server = mswServer;
-} catch (e) {
+} catch {
   // MSW not available, tests will run without mocking
-  console.warn('MSW server not available:', e);
+  console.warn('MSW server not available');
 }
 
 // Setup MSW before all tests if available

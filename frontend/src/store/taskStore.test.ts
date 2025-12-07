@@ -2,9 +2,9 @@
  * Tests for the task store.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { useTaskStore, useFilteredTasks, useSelectedTask } from './taskStore';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { mockTasks } from '../test/mocks/handlers';
 
 // Reset store before each test

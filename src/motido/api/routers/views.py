@@ -9,8 +9,8 @@ from datetime import date, datetime, timedelta
 from fastapi import APIRouter
 
 from motido.api.deps import CurrentUser
-from motido.api.schemas import CalendarEvent, HeatmapDay, KanbanColumn, TaskResponse
 from motido.api.routers.tasks import task_to_response
+from motido.api.schemas import CalendarEvent, HeatmapDay, KanbanColumn, TaskResponse
 
 router = APIRouter(prefix="/views", tags=["views"])
 
@@ -46,7 +46,11 @@ async def get_calendar_events(
         if task.due_date is None:
             continue
 
-        task_date = task.due_date.date() if isinstance(task.due_date, datetime) else task.due_date
+        task_date = (
+            task.due_date.date()
+            if isinstance(task.due_date, datetime)
+            else task.due_date
+        )
 
         # Filter by date range
         if task_date < start_date or task_date > end_date:
@@ -136,8 +140,8 @@ async def get_kanban_data(
     """
     Get kanban board data organized by status.
     """
-    # Define columns
-    columns = {
+    # Define columns with explicit types
+    columns: dict[str, dict[str, str | list[TaskResponse]]] = {
         "backlog": {"title": "Backlog", "tasks": []},
         "todo": {"title": "To Do", "tasks": []},
         "in_progress": {"title": "In Progress", "tasks": []},
@@ -177,13 +181,15 @@ async def get_kanban_data(
             else:
                 column = "todo"
 
-        columns[column]["tasks"].append(task_to_response(task))
+        task_list = columns[column]["tasks"]
+        if isinstance(task_list, list):
+            task_list.append(task_to_response(task))
 
     return [
         KanbanColumn(
             id=col_id,
-            title=col_data["title"],
-            tasks=col_data["tasks"],
+            title=str(col_data["title"]),
+            tasks=col_data["tasks"] if isinstance(col_data["tasks"], list) else [],
         )
         for col_id, col_data in columns.items()
     ]
