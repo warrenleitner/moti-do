@@ -1,33 +1,120 @@
-import { Box, Typography, Card, CardContent, Alert } from '@mui/material';
+import { useState } from 'react';
+import { Box, Typography, Snackbar, Alert } from '@mui/material';
+import { TaskCalendar } from '../components/calendar';
+import { TaskForm } from '../components/tasks';
+import { useTaskStore } from '../store';
+import type { Task } from '../types';
 
 export default function CalendarPage() {
+  const { tasks, updateTask, addTask } = useTaskStore();
+  const [formOpen, setFormOpen] = useState(false);
+  const [newTaskDate, setNewTaskDate] = useState<Date | null>(null);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+
+  const handleCreateTask = (date: Date) => {
+    setNewTaskDate(date);
+    setFormOpen(true);
+  };
+
+  const handleSelectTask = (_task: Task) => {
+    // Task selection is handled by the calendar's built-in dialog
+  };
+
+  const handleSave = (taskData: Partial<Task>) => {
+    const newTask: Task = {
+      id: crypto.randomUUID(),
+      title: taskData.title || 'Untitled',
+      creation_date: new Date().toISOString(),
+      priority: taskData.priority || 'medium',
+      difficulty: taskData.difficulty || 'medium',
+      duration: taskData.duration || 'short',
+      is_complete: false,
+      is_habit: false,
+      tags: taskData.tags || [],
+      subtasks: [],
+      dependencies: [],
+      streak_current: 0,
+      streak_best: 0,
+      history: [],
+      due_date: newTaskDate?.toISOString(),
+      ...taskData,
+    };
+    addTask(newTask);
+    setSnackbar({ open: true, message: 'Task created successfully', severity: 'success' });
+    setFormOpen(false);
+    setNewTaskDate(null);
+  };
+
+  const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
+    updateTask(taskId, updates);
+    setSnackbar({
+      open: true,
+      message: updates.is_complete ? 'Task completed!' : 'Task updated',
+      severity: 'success',
+    });
+  };
+
+  // Create a default task with the selected date pre-filled
+  const defaultTask: Task = {
+    id: '',
+    title: '',
+    creation_date: new Date().toISOString(),
+    priority: 'medium',
+    difficulty: 'medium',
+    duration: 'short',
+    is_complete: false,
+    is_habit: false,
+    tags: [],
+    subtasks: [],
+    dependencies: [],
+    streak_current: 0,
+    streak_best: 0,
+    history: [],
+    due_date: newTaskDate?.toISOString(),
+  };
+
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
         Calendar
       </Typography>
 
-      <Alert severity="info" sx={{ mb: 3 }}>
-        Calendar view will be implemented in Phase B.6. This is a placeholder page.
-      </Alert>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        View and manage tasks by their due dates. Click on a date to create a new task. Drag tasks to reschedule.
+      </Typography>
 
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Coming Soon
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            This page will include:
-          </Typography>
-          <ul>
-            <li>Month, week, and day views</li>
-            <li>Tasks displayed by due date</li>
-            <li>Drag and drop to reschedule</li>
-            <li>Quick task creation from calendar</li>
-            <li>Color coding by priority/project</li>
-          </ul>
-        </CardContent>
-      </Card>
+      <TaskCalendar
+        tasks={tasks}
+        onUpdateTask={handleUpdateTask}
+        onSelectTask={handleSelectTask}
+        onCreateTask={handleCreateTask}
+      />
+
+      {/* Task form dialog for creating new tasks */}
+      <TaskForm
+        open={formOpen}
+        task={defaultTask}
+        onSave={handleSave}
+        onClose={() => {
+          setFormOpen(false);
+          setNewTaskDate(null);
+        }}
+      />
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+      >
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

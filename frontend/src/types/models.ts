@@ -48,10 +48,19 @@ export interface HistoryEntry {
   details?: string;
 }
 
+export const TaskStatus = {
+  BACKLOG: "backlog",
+  TODO: "todo",
+  IN_PROGRESS: "in_progress",
+  BLOCKED: "blocked",
+} as const;
+export type TaskStatus = typeof TaskStatus[keyof typeof TaskStatus];
+
 export interface Task {
   id: string;
   title: string;
   text_description?: string;
+  description?: string; // Alias for text_description
   creation_date: string; // ISO datetime string
   completion_date?: string;
   start_date?: string;
@@ -73,6 +82,7 @@ export interface Task {
   streak_current: number;
   streak_best: number;
   history: HistoryEntry[];
+  status?: TaskStatus; // For Kanban board
 }
 
 export interface XPTransaction {
