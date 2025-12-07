@@ -2,7 +2,7 @@
  * Hook for initializing the app by fetching data from the API.
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTaskStore } from '../store/taskStore';
 import { useUserStore } from '../store/userStore';
 
@@ -21,11 +21,16 @@ export function useAppInitialization(): InitializationState {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const initializingRef = useRef(false);
 
   const fetchTasks = useTaskStore((state) => state.fetchTasks);
   const initializeUser = useUserStore((state) => state.initializeUser);
 
-  const initialize = useCallback(async () => {
+  const initialize = async () => {
+    // Prevent concurrent initialization
+    if (initializingRef.current) return;
+    initializingRef.current = true;
+
     setIsLoading(true);
     setError(null);
 
@@ -43,16 +48,23 @@ export function useAppInitialization(): InitializationState {
       console.error('App initialization failed:', err);
     } finally {
       setIsLoading(false);
+      initializingRef.current = false;
     }
-  }, [fetchTasks, initializeUser]);
+  };
 
   useEffect(() => {
-    initialize();
-  }, [initialize]);
+    // Only initialize once
+    if (!initializingRef.current) {
+      initialize();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const retry = useCallback(() => {
+    initializingRef.current = false;
     initialize();
-  }, [initialize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     isInitialized,

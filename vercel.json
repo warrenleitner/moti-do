@@ -1,7 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "cd frontend && npm install && npm run build",
+  "installCommand": "cd frontend && npm install",
+  "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
   "framework": null,
   "rewrites": [
@@ -13,12 +14,9 @@
   "functions": {
     "api/index.py": {
       "runtime": "@vercel/python@4.5.0",
-      "maxDuration": 30
+      "maxDuration": 30,
+      "excludeFiles": "{tests/**,docs/**,frontend/**,*.md,poetry.lock,.git/**,**/__pycache__/**,**/*.pyc}"
     }
-  },
-  "env": {
-    "MOTIDO_DEV_MODE": "false",
-    "PYTHONPATH": "src"
   },
   "headers": [
     {
