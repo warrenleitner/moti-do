@@ -18,10 +18,6 @@
       "excludeFiles": "{tests/**,docs/**,frontend/**,*.md,poetry.lock,.git/**,**/__pycache__/**,**/*.pyc}"
     }
   },
-  "env": {
-    "MOTIDO_DEV_MODE": "false",
-    "PYTHONPATH": "src"
-  },
   "headers": [
     {
       "source": "/api/(.*)",
