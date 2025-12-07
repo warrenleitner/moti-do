@@ -127,7 +127,9 @@ async def toggle_vacation_mode(
 
 
 # Entry point for running with uvicorn
-def run_server(host: str = "127.0.0.1", port: int = 8000, reload: bool = True) -> None:
+def run_server(
+    host: str = "127.0.0.1", port: int = 8000, reload: bool = True
+) -> None:  # pragma: no cover
     """Run the API server."""
     import uvicorn
 
@@ -139,5 +141,5 @@ def run_server(host: str = "127.0.0.1", port: int = 8000, reload: bool = True) -
     )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     run_server()
