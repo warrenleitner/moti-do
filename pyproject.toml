@@ -88,6 +88,10 @@ testpaths = [
 pythonpath = [
   "src"
 ]
+markers = [
+    "asyncio: marks tests as async (deselect with '-m \"not asyncio\"')",
+]
+asyncio_mode = "auto"
 
 [tool.coverage.run]
 branch = true
@@ -96,8 +100,6 @@ omit = [
     "src/motido/__main__.py", # Example: omit main entry point if trivial
     "tests/*",                # Exclude test files themselves from coverage
     "**/__init__.py",         # Typically omit init files
-    "src/motido/data/postgres_manager.py",  # Vercel Postgres - requires real DB to test
-    "src/motido/api/deps.py",  # Auth deps - partial testing, most requires JWT setup
 ]
 
 [tool.coverage.report]
