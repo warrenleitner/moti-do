@@ -1,0 +1,27 @@
+{
+    "default_user": {
+        "username": "default_user",
+        "tasks": [
+            {
+                "id": "4a73fb92-4e04-4494-a85d-512adf580400",
+                "description": "Task 1 BUT EDITED"
+            },
+            {
+                "id": "593aea98-3de1-4810-a399-d0ae61a94de1",
+                "description": "Task 2"
+            },
+            {
+                "id": "5b9961a2-478d-437b-8747-cdb68c6c10f4",
+                "description": "Task 3"
+            },
+            {
+                "id": "e0d61caa-9b5c-4f56-9e7d-162cd916ad67",
+                "description": "Task 4"
+            },
+            {
+                "id": "0f32cb05-73f9-450a-98e8-6f0a964499df",
+                "description": "Task 5"
+            }
+        ]
+    }
+}

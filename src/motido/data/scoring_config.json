@@ -1,0 +1,153 @@
+{
+  "base_score": 10,
+  "field_presence_bonus": {
+    "text_description": 5
+  },
+  "difficulty_multiplier": {
+    "NOT_SET": 1.0,
+    "TRIVIAL": 1.1,
+    "LOW": 1.5,
+    "MEDIUM": 2.0,
+    "HIGH": 3.0,
+    "HERCULEAN": 5.0
+  },
+  "duration_multiplier": {
+    "NOT_SET": 1.0,
+    "MINISCULE": 1.05,
+    "SHORT": 1.2,
+    "MEDIUM": 1.5,
+    "LONG": 2.0,
+    "ODYSSEYAN": 3.0
+  },
+  "age_factor": {
+    "unit": "days",
+    "multiplier_per_unit": 0.01
+  },
+  "daily_penalty": {
+    "apply_penalty": true,
+    "penalty_points": 5
+  },
+  "due_date_proximity": {
+    "enabled": true,
+    "overdue_multiplier_per_day": 0.5,
+    "approaching_threshold_days": 14,
+    "approaching_multiplier_per_day": 0.1
+  },
+  "start_date_aging": {
+    "enabled": true,
+    "bonus_points_per_day": 0.5
+  },
+  "dependency_chain": {
+    "enabled": true,
+    "dependent_score_percentage": 0.1
+  },
+  "tag_multipliers": {},
+  "project_multipliers": {},
+  "priority_multiplier": {
+    "NOT_SET": 1.0,
+    "LOW": 1.2,
+    "MEDIUM": 1.5,
+    "HIGH": 2.0,
+    "DEFCON_ONE": 3.0
+  },
+  "badges": [
+    {
+      "id": "first_steps",
+      "name": "First Steps",
+      "glyph": "🌟",
+      "description": "Complete your first task",
+      "criteria": {"tasks_completed": 1}
+    },
+    {
+      "id": "getting_started",
+      "name": "Getting Started",
+      "glyph": "🚀",
+      "description": "Complete 5 tasks",
+      "criteria": {"tasks_completed": 5}
+    },
+    {
+      "id": "productive",
+      "name": "Productive",
+      "glyph": "📈",
+      "description": "Complete 25 tasks",
+      "criteria": {"tasks_completed": 25}
+    },
+    {
+      "id": "centurion",
+      "name": "Centurion",
+      "glyph": "💯",
+      "description": "Complete 100 tasks",
+      "criteria": {"tasks_completed": 100}
+    },
+    {
+      "id": "task_master",
+      "name": "Task Master",
+      "glyph": "👑",
+      "description": "Complete 500 tasks",
+      "criteria": {"tasks_completed": 500}
+    },
+    {
+      "id": "streak_week",
+      "name": "Week Warrior",
+      "glyph": "🔥",
+      "description": "Achieve a 7-day habit streak",
+      "criteria": {"streak_days": 7}
+    },
+    {
+      "id": "streak_month",
+      "name": "Monthly Master",
+      "glyph": "🏆",
+      "description": "Achieve a 30-day habit streak",
+      "criteria": {"streak_days": 30}
+    },
+    {
+      "id": "streak_quarter",
+      "name": "Quarterly Champion",
+      "glyph": "💎",
+      "description": "Achieve a 90-day habit streak",
+      "criteria": {"streak_days": 90}
+    },
+    {
+      "id": "xp_starter",
+      "name": "XP Starter",
+      "glyph": "⭐",
+      "description": "Earn 100 XP",
+      "criteria": {"total_xp": 100}
+    },
+    {
+      "id": "xp_seeker",
+      "name": "XP Seeker",
+      "glyph": "🌟",
+      "description": "Earn 1,000 XP",
+      "criteria": {"total_xp": 1000}
+    },
+    {
+      "id": "xp_master",
+      "name": "XP Master",
+      "glyph": "✨",
+      "description": "Earn 10,000 XP",
+      "criteria": {"total_xp": 10000}
+    },
+    {
+      "id": "habit_starter",
+      "name": "Habit Starter",
+      "glyph": "🎯",
+      "description": "Complete your first habit",
+      "criteria": {"habits_completed": 1}
+    },
+    {
+      "id": "habit_builder",
+      "name": "Habit Builder",
+      "glyph": "🏗️",
+      "description": "Complete 10 habit instances",
+      "criteria": {"habits_completed": 10}
+    },
+    {
+      "id": "habit_master",
+      "name": "Habit Master",
+      "glyph": "🧘",
+      "description": "Complete 50 habit instances",
+      "criteria": {"habits_completed": 50}
+    }
+  ]
+}
