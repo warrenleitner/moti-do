@@ -3,11 +3,12 @@
 Tests for the view API endpoints (calendar, heatmap, kanban, habits).
 """
 
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
 from fastapi.testclient import TestClient
 
-from motido.core.models import Task, Priority, Difficulty, Duration
+from motido.core.models import Difficulty, Duration, Priority, Task
 
 
 class TestCalendarEndpoint:

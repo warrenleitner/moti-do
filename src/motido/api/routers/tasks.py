@@ -7,13 +7,6 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status
 
-from motido.core.models import (
-    Difficulty,
-    Duration,
-    Priority,
-    RecurrenceType,
-    Task,
-)
 from motido.api.deps import CurrentUser, ManagerDep
 from motido.api.schemas import (
     SubtaskCreate,
@@ -21,6 +14,13 @@ from motido.api.schemas import (
     TaskCreate,
     TaskResponse,
     TaskUpdate,
+)
+from motido.core.models import (
+    Difficulty,
+    Duration,
+    Priority,
+    RecurrenceType,
+    Task,
 )
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -301,8 +301,9 @@ async def complete_task(
         task.streak_best = max(task.streak_best, task.streak_current)
 
     # Award XP (simplified - uses base XP from scoring)
-    from motido.core.scoring import calculate_score, load_scoring_config, check_badges
     from datetime import date as date_type
+
+    from motido.core.scoring import calculate_score, check_badges, load_scoring_config
 
     config = load_scoring_config()
     all_tasks = {t.id: t for t in user.tasks}

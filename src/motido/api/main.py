@@ -8,8 +8,8 @@ from datetime import date, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from motido.api.routers import tasks, user, views
 from motido.api.deps import CurrentUser, ManagerDep
+from motido.api.routers import tasks, user, views
 from motido.api.schemas import AdvanceRequest, SystemStatus
 
 # Create FastAPI app

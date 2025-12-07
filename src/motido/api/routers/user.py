@@ -7,7 +7,6 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status
 
-from motido.core.models import XPTransaction
 from motido.api.deps import CurrentUser, ManagerDep
 from motido.api.schemas import (
     BadgeSchema,
@@ -20,6 +19,7 @@ from motido.api.schemas import (
     XPTransactionSchema,
     XPWithdrawRequest,
 )
+from motido.core.models import XPTransaction
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -162,9 +162,7 @@ async def get_badges(user: CurrentUser) -> list[BadgeSchema]:
 @router.get("/tags", response_model=list[TagResponse])
 async def get_tags(user: CurrentUser) -> list[TagResponse]:
     """Get all defined tags."""
-    return [
-        TagResponse(id=t.id, name=t.name, color=t.color) for t in user.defined_tags
-    ]
+    return [TagResponse(id=t.id, name=t.name, color=t.color) for t in user.defined_tags]
 
 
 @router.post("/tags", response_model=TagResponse, status_code=status.HTTP_201_CREATED)

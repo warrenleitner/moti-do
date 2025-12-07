@@ -253,7 +253,9 @@ class TestRenderDependencyGraphWithFilter:
         output = StringIO()
         console = Console(file=output, force_terminal=True, width=200)
 
-        render_dependency_graph(tasks, console, task_id="task_b", direction="downstream")
+        render_dependency_graph(
+            tasks, console, task_id="task_b", direction="downstream"
+        )
 
         result = output.getvalue()
         assert "Dependents of" in result

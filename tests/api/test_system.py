@@ -3,8 +3,9 @@
 Tests for the system API endpoints (health, status, advance, vacation).
 """
 
-import pytest
 from datetime import date, timedelta
+
+import pytest
 from fastapi.testclient import TestClient
 
 

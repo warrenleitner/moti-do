@@ -9,7 +9,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # === Enums as string literals for API ===
 # These match the core model enums but are simpler for JSON
 

@@ -207,7 +207,9 @@ class TestTaskComplete:
         data = response.json()
         assert data["is_complete"] is True
 
-    def test_complete_already_complete_task(self, client: TestClient, test_user) -> None:
+    def test_complete_already_complete_task(
+        self, client: TestClient, test_user
+    ) -> None:
         """Test completing an already complete task."""
         task_id = test_user.tasks[1].id  # This is already complete
         response = client.post(f"/api/tasks/{task_id}/complete")

@@ -3,14 +3,15 @@
 Pytest fixtures for API testing.
 """
 
-import pytest
 from datetime import datetime
-from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
 
+import pytest
+from fastapi.testclient import TestClient
+
+from motido.api.deps import get_current_user, get_manager
 from motido.api.main import app
-from motido.api.deps import get_manager, get_current_user
-from motido.core.models import User, Task, Priority, Difficulty, Duration, Tag, Project
+from motido.core.models import Difficulty, Duration, Priority, Project, Tag, Task, User
 from motido.data.abstraction import DataManager
 
 

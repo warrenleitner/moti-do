@@ -58,9 +58,7 @@ ManagerDep = Annotated[DataManager, Depends(get_manager)]
 UserDep = Annotated[User, Depends(get_user)]
 
 
-def create_access_token(
-    data: dict, expires_delta: timedelta | None = None
-) -> str:
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """Create a JWT access token."""
     to_encode = data.copy()
     if expires_delta:
