@@ -1,0 +1,42 @@
+# Ignore files not needed for deployment
+
+# Development and test files
+tests/
+*.test.py
+*.spec.py
+pytest.ini
+.pytest_cache/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Development configs
+.vscode/
+.idea/
+.env.local
+.env.development
+
+# Poetry files (using requirements.txt for Vercel)
+poetry.lock
+
+# Frontend source (built files are in frontend/dist)
+frontend/node_modules/
+frontend/src/
+frontend/*.config.*
+frontend/tsconfig*
+frontend/.eslintrc*
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.mypy_cache/
+
+# Git
+.git/
+.gitignore
+
+# Local data
+src/motido/data/motido_data/

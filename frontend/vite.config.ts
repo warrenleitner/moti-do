@@ -5,6 +5,34 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // MUI components
+          'vendor-mui': ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
+          // Calendar
+          'vendor-calendar': [
+            '@fullcalendar/core',
+            '@fullcalendar/react',
+            '@fullcalendar/daygrid',
+            '@fullcalendar/timegrid',
+            '@fullcalendar/interaction',
+          ],
+          // Graph/Flow
+          'vendor-flow': ['@xyflow/react'],
+          // Drag and drop
+          'vendor-dnd': ['@hello-pangea/dnd'],
+          // Data fetching & state
+          'vendor-data': ['axios', 'zustand', '@tanstack/react-query'],
+          // Date utilities
+          'vendor-date': ['date-fns', '@mui/x-date-pickers'],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
