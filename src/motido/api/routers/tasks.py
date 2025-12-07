@@ -302,10 +302,11 @@ async def complete_task(
 
     # Award XP (simplified - uses base XP from scoring)
     from motido.core.scoring import calculate_score, load_scoring_config, check_badges
-    from motido.data.backend_factory import get_data_manager
+    from datetime import date as date_type
 
     config = load_scoring_config()
-    xp_earned = int(calculate_score(task, config))
+    all_tasks = {t.id: t for t in user.tasks}
+    xp_earned = int(calculate_score(task, all_tasks, config, date_type.today()))
     user.total_xp += xp_earned
 
     # Log XP transaction
@@ -321,8 +322,7 @@ async def complete_task(
     user.xp_transactions.append(transaction)
 
     # Check for badges
-    data_manager = get_data_manager()
-    check_badges(user, data_manager, config)
+    check_badges(user, manager, config)
 
     manager.save_user(user)
     return task_to_response(task)

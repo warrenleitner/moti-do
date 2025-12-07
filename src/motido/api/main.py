@@ -99,7 +99,7 @@ async def advance_date(
 
         if not user.vacation_mode:
             # Apply penalties for overdue tasks
-            apply_penalties(user, manager, processing_date, config)
+            apply_penalties(user, manager, processing_date, config, user.tasks)
 
         user.last_processed_date = processing_date
 

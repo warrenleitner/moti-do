@@ -35,3 +35,4 @@ When implementing features or modifications for Moti-Do, you MUST:
 8. Consider how changes affect existing tests and update them as needed
 9. Use Poetry for managing dependencies (pyproject.toml)
 10. Verify compliance with `poetry run poe check` before submitting
+- Awesome. Just remember for this and all future extensions we always need to maintain the same almost ridiculous quality and testing standard at all times and all phases.
