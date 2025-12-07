@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { Box, Container, CircularProgress, Typography, Button, Alert } from '@mui/material';
 import MainLayout from './components/layout/MainLayout';
+import { InstallPrompt } from './components/common/InstallPrompt';
 import Dashboard from './pages/Dashboard';
 import TasksPage from './pages/TasksPage';
 import HabitsPage from './pages/HabitsPage';
@@ -79,6 +80,7 @@ function App() {
           </Routes>
         </Container>
       </MainLayout>
+      <InstallPrompt />
     </Box>
   );
 }

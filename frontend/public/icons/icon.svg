@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#1976d2"/>
+
+  <!-- Checkmark -->
+  <path
+    d="M208 340L144 276l-32 32 96 96 192-192-32-32z"
+    fill="#ffffff"
+  />
+
+  <!-- Star (XP indicator) -->
+  <path
+    d="M380 120l12 24 27 4-20 19 5 27-24-13-24 13 5-27-20-19 27-4z"
+    fill="#ffc107"
+  />
+</svg>
