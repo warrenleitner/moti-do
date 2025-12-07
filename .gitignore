@@ -33,3 +33,8 @@ __pycache__
 *.egg-info
 .coverage
 *.py,cover
+
+# Environment variables
+.env
+.env.local
+.env.*.local

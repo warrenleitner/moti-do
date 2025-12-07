@@ -6,7 +6,11 @@ import axios, { type AxiosInstance } from 'axios';
 import type { Task } from '../types';
 
 // API base URL - configurable via environment variable
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// In production, use relative URL (/api) for same-origin requests
+// In development, use localhost:8000
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? '/api' : 'http://localhost:8000/api');
 
 // Create axios instance with default configuration
 const apiClient: AxiosInstance = axios.create({
