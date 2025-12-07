@@ -230,6 +230,20 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class UserRegisterRequest(BaseModel):
+    """Schema for user registration."""
+
+    username: str
+    password: str = Field(min_length=8)
+
+
+class PasswordChangeRequest(BaseModel):
+    """Schema for password change."""
+
+    current_password: str
+    new_password: str = Field(min_length=8)
+
+
 # === View Schemas ===
 class CalendarEvent(BaseModel):
     """Schema for calendar event data."""

@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from motido.api.deps import CurrentUser, ManagerDep
-from motido.api.routers import tasks, user, views
+from motido.api.routers import auth, tasks, user, views
 from motido.api.schemas import AdvanceRequest, SystemStatus
 
 # Create FastAPI app
@@ -39,6 +39,7 @@ app.add_middleware(
 
 
 # Include routers with /api prefix
+app.include_router(auth.router, prefix="/api")
 app.include_router(tasks.router, prefix="/api")
 app.include_router(user.router, prefix="/api")
 app.include_router(views.router, prefix="/api")
