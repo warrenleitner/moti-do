@@ -75,7 +75,7 @@ exclude = ["venv", ".*/build"] # Exclude virtual environment and build directori
 # Example: load-plugins = pylint_django
 # Disable specific messages if necessary, e.g.,
 disable = "no-else-return,duplicate-code" #,missing-docstring,invalid-name
-fail-under = 8.0 # Set a minimum score threshold
+fail-under = 10.0 # Set a minimum score threshold (matches CI requirement)
 
 [tool.pylint.format]
 max-line-length = 120

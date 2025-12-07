@@ -19,6 +19,8 @@ jobs:
   python-lint:
     name: Python Lint & Format Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -30,7 +32,7 @@ jobs:
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: latest
+          version: 1.8.5
           virtualenvs-create: true
           virtualenvs-in-project: true
 
@@ -39,7 +41,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
 
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
@@ -60,18 +62,20 @@ jobs:
   python-typecheck:
     name: Python Type Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: latest
+          version: 1.8.5
           virtualenvs-create: true
           virtualenvs-in-project: true
 
@@ -80,7 +84,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
 
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
@@ -95,18 +99,20 @@ jobs:
   python-test:
     name: Python Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: latest
+          version: 1.8.5
           virtualenvs-create: true
           virtualenvs-in-project: true
 
@@ -115,7 +121,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
 
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
@@ -139,18 +145,20 @@ jobs:
   python-security:
     name: Python Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: latest
+          version: 1.8.5
           virtualenvs-create: true
           virtualenvs-in-project: true
 
@@ -159,7 +167,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
 
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
@@ -178,6 +186,8 @@ jobs:
   frontend-lint:
     name: Frontend Lint & Type Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: frontend
@@ -203,6 +213,8 @@ jobs:
   frontend-test:
     name: Frontend Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: frontend
@@ -234,6 +246,8 @@ jobs:
   frontend-build:
     name: Frontend Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: frontend
@@ -267,10 +281,14 @@ jobs:
       - frontend-test
       - frontend-build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: always()
     steps:
       - name: Check all jobs passed
         run: |
+          # Security job is allowed to fail (continue-on-error: true)
+          # Check only required jobs for success
           if [[ "${{ needs.python-lint.result }}" != "success" ]] || \
              [[ "${{ needs.python-typecheck.result }}" != "success" ]] || \
              [[ "${{ needs.python-test.result }}" != "success" ]] || \
@@ -280,4 +298,10 @@ jobs:
             echo "One or more required jobs failed"
             exit 1
           fi
-          echo "All required CI checks passed!"
+
+          # Report security status (informational only)
+          if [[ "${{ needs.python-security.result }}" != "success" ]]; then
+            echo "⚠️ Security scan had warnings or failures (non-blocking)"
+          fi
+
+          echo "✅ All required CI checks passed!"
