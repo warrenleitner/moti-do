@@ -2,7 +2,7 @@
  * Hook for initializing the app by fetching data from the API.
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTaskStore } from '../store/taskStore';
 import { useUserStore } from '../store/userStore';
 
@@ -54,16 +54,17 @@ export function useAppInitialization(): InitializationState {
 
   useEffect(() => {
     // Only initialize once
-    if (!isInitialized && !initializingRef.current) {
+    if (!initializingRef.current) {
       initialize();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const retry = () => {
+  const retry = useCallback(() => {
     initializingRef.current = false;
     initialize();
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     isInitialized,
