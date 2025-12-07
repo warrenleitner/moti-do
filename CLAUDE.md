@@ -35,4 +35,40 @@ When implementing features or modifications for Moti-Do, you MUST:
 8. Consider how changes affect existing tests and update them as needed
 9. Use Poetry for managing dependencies (pyproject.toml)
 10. Verify compliance with `poetry run poe check` before submitting
-- Awesome. Just remember for this and all future extensions we always need to maintain the same almost ridiculous quality and testing standard at all times and all phases.
+
+## CI/CD Requirements - MANDATORY
+**Before completing ANY feature or fix, you MUST verify all CI checks pass locally:**
+
+### Python Backend (run from project root)
+```bash
+poetry run poe format      # Format code with Black + isort
+poetry run poe lint        # Pylint must score 10.0/10.0
+poetry run poe typecheck   # Mypy strict mode, no errors
+poetry run poe coverage    # Pytest with 100% coverage required
+poetry run poe check       # Run all above checks
+```
+
+### Frontend (run from frontend/ directory)
+```bash
+cd frontend
+npm run lint               # ESLint must pass
+npx tsc --noEmit           # TypeScript must compile without errors
+npm run test               # Vitest tests must pass
+npm run build              # Build must succeed
+```
+
+### Verification Checklist
+Before marking any task complete, confirm:
+- [ ] `poetry run poe check` passes (Python: format, lint, typecheck, coverage)
+- [ ] `npm run lint` passes (Frontend)
+- [ ] `npx tsc --noEmit` passes (Frontend)
+- [ ] `npm run test` passes (Frontend)
+- [ ] `npm run build` succeeds (Frontend)
+
+**These checks are enforced by GitHub Actions CI on every PR. Do NOT submit code that fails these checks.**
+
+## Quality Standards
+- Python: 100% test coverage, Pylint 10.0, zero Mypy errors
+- Frontend: Zero ESLint errors, zero TypeScript errors, all Vitest tests pass
+- Always run the full check suite before considering work complete
+- This "almost ridiculous" quality standard applies at all times and all phases

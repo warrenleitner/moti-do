@@ -30,6 +30,7 @@ pydantic = ">=2.10.0"
 pytest = ">=8.3.5"
 pytest-mock = ">=3.0"
 pytest-cov = ">=6.1.1" # For coverage reporting
+pytest-asyncio = ">=0.21.0" # For async test support
 black = ">=25.1.0"    # Code formatter
 isort = ">=6.0.1"    # Import sorter
 pylint = ">=3.2.5"    # Linter
@@ -74,7 +75,7 @@ exclude = ["venv", ".*/build"] # Exclude virtual environment and build directori
 # Example: load-plugins = pylint_django
 # Disable specific messages if necessary, e.g.,
 disable = "no-else-return,duplicate-code" #,missing-docstring,invalid-name
-fail-under = 8.0 # Set a minimum score threshold
+fail-under = 10.0 # Set a minimum score threshold (matches CI requirement)
 
 [tool.pylint.format]
 max-line-length = 120
@@ -88,6 +89,10 @@ testpaths = [
 pythonpath = [
   "src"
 ]
+markers = [
+    "asyncio: marks tests as async (deselect with '-m \"not asyncio\"')",
+]
+asyncio_mode = "auto"
 
 [tool.coverage.run]
 branch = true
@@ -99,7 +104,7 @@ omit = [
 ]
 
 [tool.coverage.report]
-fail_under = 80 # Set a minimum coverage threshold
+fail_under = 100 # Set a minimum coverage threshold
 show_missing = true
 skip_covered = true # Don't report on 100% covered files
 exclude_lines = [
@@ -133,7 +138,7 @@ format = [
 lint = "pylint src tests --fail-under=10"
 typecheck = "mypy src tests"
 test = "pytest"
-coverage = "pytest --cov=motido --cov-report=term-missing --cov-fail-under=100"
+coverage = "pytest --cov=motido --cov-report=term-missing"
 security = "safety scan"
 
 # Main check task still references the directly defined tasks
@@ -141,7 +146,6 @@ check = [
     "format",
     "typecheck",
     "lint",
-#    "test",
     "coverage",
 ] 
 

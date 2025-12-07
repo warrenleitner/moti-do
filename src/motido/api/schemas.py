@@ -1,4 +1,5 @@
 # motido/api/schemas.py
+# pylint: disable=too-few-public-methods
 """
 Pydantic schemas for API request/response validation.
 These mirror the core models but are optimized for JSON serialization.
@@ -114,8 +115,6 @@ class TagBase(BaseModel):
 class TagCreate(TagBase):
     """Schema for creating a tag."""
 
-    pass
-
 
 class TagResponse(TagBase):
     """Schema for tag response."""
@@ -138,8 +137,6 @@ class ProjectBase(BaseModel):
 
 class ProjectCreate(ProjectBase):
     """Schema for creating a project."""
-
-    pass
 
 
 class ProjectResponse(ProjectBase):

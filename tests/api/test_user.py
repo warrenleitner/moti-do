@@ -3,8 +3,9 @@
 Tests for the user API endpoints.
 """
 
-import pytest
 from fastapi.testclient import TestClient
+
+from motido.core.models import User
 
 
 class TestUserProfile:
@@ -71,7 +72,9 @@ class TestXPEndpoints:
         response = client.get("/api/user/xp", params={"limit": 10})
         assert response.status_code == 200
 
-    def test_withdraw_xp_success(self, client: TestClient, test_user) -> None:
+    def test_withdraw_xp_success(  # pylint: disable=unused-argument
+        self, client: TestClient, test_user: User
+    ) -> None:
         """Test withdrawing XP successfully."""
         response = client.post(
             "/api/user/xp/withdraw",
@@ -101,7 +104,7 @@ class TestXPEndpoints:
         assert response.status_code == 422  # Validation error
 
 
-class TestBadges:
+class TestBadges:  # pylint: disable=too-few-public-methods
     """Tests for badge endpoints."""
 
     def test_get_badges(self, client: TestClient) -> None:
@@ -141,7 +144,7 @@ class TestTags:
         assert response.status_code == 400
         assert "already exists" in response.json()["detail"].lower()
 
-    def test_update_tag(self, client: TestClient, test_user) -> None:
+    def test_update_tag(self, client: TestClient, test_user: User) -> None:
         """Test updating a tag."""
         tag_id = test_user.defined_tags[0].id
         response = client.put(
@@ -160,7 +163,7 @@ class TestTags:
         )
         assert response.status_code == 404
 
-    def test_delete_tag(self, client: TestClient, test_user) -> None:
+    def test_delete_tag(self, client: TestClient, test_user: User) -> None:
         """Test deleting a tag."""
         tag_id = test_user.defined_tags[0].id
         response = client.delete(f"/api/user/tags/{tag_id}")
@@ -200,7 +203,7 @@ class TestProjects:
         )
         assert response.status_code == 400
 
-    def test_update_project(self, client: TestClient, test_user) -> None:
+    def test_update_project(self, client: TestClient, test_user: User) -> None:
         """Test updating a project."""
         project_id = test_user.defined_projects[0].id
         response = client.put(
@@ -211,7 +214,7 @@ class TestProjects:
         data = response.json()
         assert data["name"] == "Updated Project"
 
-    def test_delete_project(self, client: TestClient, test_user) -> None:
+    def test_delete_project(self, client: TestClient, test_user: User) -> None:
         """Test deleting a project."""
         project_id = test_user.defined_projects[0].id
         response = client.delete(f"/api/user/projects/{project_id}")

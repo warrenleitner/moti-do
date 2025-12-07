@@ -283,7 +283,7 @@ export const useFilteredTasks = () => {
   const { tasks, filters, sort } = useTaskStore();
 
   // Apply filters
-  let filtered = tasks.filter((task) => {
+  const filtered = tasks.filter((task) => {
     // Status filter
     if (filters.status === 'active' && task.is_complete) return false;
     if (filters.status === 'completed' && !task.is_complete) return false;

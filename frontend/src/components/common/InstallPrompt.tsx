@@ -29,20 +29,21 @@ declare global {
   }
 }
 
+// Check if app is already installed (run once during initialization)
+const checkIsInstalled = () => {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+  const isIOSStandalone = (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return isStandalone || isIOSStandalone;
+};
+
 export function InstallPrompt() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(checkIsInstalled);
 
   // Check if app is already installed
   useEffect(() => {
-    // Check if running in standalone mode (already installed)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    // Also check for iOS standalone
-    const isIOSStandalone = (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
-
-    if (isStandalone || isIOSStandalone) {
-      setIsInstalled(true);
+    if (isInstalled) {
       return;
     }
 
@@ -78,7 +79,7 @@ export function InstallPrompt() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, []);
+  }, [isInstalled]);
 
   const handleInstall = useCallback(async () => {
     if (!installPrompt) return;

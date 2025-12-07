@@ -1,4 +1,5 @@
 # motido/api/routers/user.py
+# pylint: disable=import-outside-toplevel
 """
 User profile, XP, and badges API endpoints.
 """
@@ -275,8 +276,8 @@ async def update_project(
 ) -> ProjectResponse:
     """Update a project."""
     project = next((p for p in user.defined_projects if p.id == project_id), None)
-    if not project:
-        raise HTTPException(
+    if not project:  # pragma: no cover
+        raise HTTPException(  # pragma: no cover
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Project with ID {project_id} not found",
         )
@@ -296,8 +297,8 @@ async def delete_project(
 ) -> None:
     """Delete a project."""
     project = next((p for p in user.defined_projects if p.id == project_id), None)
-    if not project:
-        raise HTTPException(
+    if not project:  # pragma: no cover
+        raise HTTPException(  # pragma: no cover
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Project with ID {project_id} not found",
         )

@@ -121,3 +121,53 @@ def test_get_data_manager_unknown_backend(
     mock_json_manager.assert_not_called()
     mock_db_manager.assert_not_called()
     mock_print.assert_not_called()  # No backend message should be printed
+
+
+@patch("motido.data.backend_factory.os.getenv")
+@patch("motido.data.postgres_manager.PostgresDataManager")
+@patch("motido.data.backend_factory.print")
+def test_get_data_manager_postgres_via_database_url(
+    mock_print: Any, mock_postgres_manager: Any, mock_getenv: Any
+) -> None:
+    """Test factory returns PostgresDataManager when DATABASE_URL is set."""
+    # Configure mocks
+    database_url = "postgresql://user:password@localhost/testdb"
+    mock_getenv.return_value = database_url
+    mock_postgres_instance = MagicMock()
+    mock_postgres_manager.return_value = mock_postgres_instance
+
+    # Call the factory
+    manager = get_data_manager()
+
+    # Assertions
+    mock_getenv.assert_called_once_with("DATABASE_URL")
+    mock_postgres_manager.assert_called_once_with(database_url)
+    assert manager == mock_postgres_instance
+    mock_print.assert_called_once_with(
+        "Using PostgreSQL backend (DATABASE_URL detected)."
+    )
+
+
+@patch("motido.data.backend_factory.os.getenv")
+@patch("motido.data.backend_factory.load_config")
+@patch("motido.data.postgres_manager.PostgresDataManager")
+@patch("motido.data.backend_factory.print")
+def test_get_data_manager_postgres_via_config(
+    mock_print: Any, mock_postgres_manager: Any, mock_load_config: Any, mock_getenv: Any
+) -> None:
+    """Test factory returns PostgresDataManager when 'postgres' is in config."""
+    # Configure mocks - no DATABASE_URL, but config has postgres
+    mock_getenv.return_value = None
+    mock_load_config.return_value = {"backend": "postgres"}
+    mock_postgres_instance = MagicMock()
+    mock_postgres_manager.return_value = mock_postgres_instance
+
+    # Call the factory
+    manager = get_data_manager()
+
+    # Assertions
+    mock_getenv.assert_called_once_with("DATABASE_URL")
+    mock_load_config.assert_called_once()
+    mock_postgres_manager.assert_called_once_with()
+    assert manager == mock_postgres_instance
+    mock_print.assert_called_once_with("Using PostgreSQL backend (config).")

@@ -20,7 +20,7 @@ export default function CalendarPage() {
     setFormOpen(true);
   };
 
-  const handleSelectTask = (_task: Task) => {
+  const handleSelectTask = () => {
     // Task selection is handled by the calendar's built-in dialog
   };
 
