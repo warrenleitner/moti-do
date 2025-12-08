@@ -185,6 +185,52 @@ export const authApi = {
   },
 };
 
+// === Data Import/Export API endpoints ===
+export const dataApi = {
+  // Export all user data as JSON backup
+  exportData: async (): Promise<Blob> => {
+    const response = await apiClient.get('/user/export', {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // Import user data from JSON backup file
+  importData: async (file: File): Promise<{
+    message: string;
+    summary: {
+      username: string;
+      total_xp: number;
+      tasks_count: number;
+      xp_transactions_count: number;
+      badges_count: number;
+      tags_count: number;
+      projects_count: number;
+    };
+  }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiClient.post<{
+      message: string;
+      summary: {
+        username: string;
+        total_xp: number;
+        tasks_count: number;
+        xp_transactions_count: number;
+        badges_count: number;
+        tags_count: number;
+        projects_count: number;
+      };
+    }>('/user/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+};
+
 // === Task API endpoints ===
 export const taskApi = {
   // Get all tasks with optional filters
