@@ -22,12 +22,12 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
 
 # Password hashing
-# Configure bcrypt with explicit backend for serverless compatibility
+# Use PBKDF2-SHA256 for serverless compatibility (pure Python, no C extensions)
+# PBKDF2 is built into Python's hashlib - no external dependencies required
 pwd_context = CryptContext(
-    schemes=["bcrypt"],
+    schemes=["pbkdf2_sha256"],
     deprecated="auto",
-    bcrypt__default_rounds=12,
-    bcrypt__default_ident="2b",
+    pbkdf2_sha256__default_rounds=260000,  # OWASP recommended (2023)
 )
 
 # OAuth2 scheme
