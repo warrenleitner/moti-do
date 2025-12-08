@@ -2,24 +2,22 @@
 Authentication endpoints for login and registration.
 """
 
-import os
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from motido.api.deps import (
+    CurrentUser,
     ManagerDep,
     create_access_token,
     hash_password,
     verify_password,
-    CurrentUser,
 )
 from motido.api.schemas import (
-    LoginRequest,
+    PasswordChangeRequest,
     TokenResponse,
     UserRegisterRequest,
-    PasswordChangeRequest,
 )
 from motido.core.models import User
 from motido.data.abstraction import DEFAULT_USERNAME
@@ -29,8 +27,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
+    manager: ManagerDep,
     form_data: OAuth2PasswordRequestForm = Depends(),
-    manager: ManagerDep = None,
 ) -> TokenResponse:
     """
     Login endpoint - validates username/password and returns JWT token.
@@ -76,7 +74,7 @@ async def login(
 @router.post("/register", response_model=TokenResponse)
 async def register(
     request: UserRegisterRequest,
-    manager: ManagerDep = None,
+    manager: ManagerDep,
 ) -> TokenResponse:
     """
     Registration endpoint for single-user setup.

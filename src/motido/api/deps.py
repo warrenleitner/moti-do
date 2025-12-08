@@ -107,10 +107,12 @@ async def get_current_user(
 ) -> User:
     """
     Get the current authenticated user (required).
-    For development, allows unauthenticated access with default user.
+    Production mode (default): Authentication required.
+    Dev mode: Set MOTIDO_DEV_MODE=true to bypass auth.
     """
     # In development mode, allow access without authentication
-    if os.getenv("MOTIDO_DEV_MODE", "true").lower() == "true":
+    # IMPORTANT: Defaults to false for security
+    if os.getenv("MOTIDO_DEV_MODE", "false").lower() == "true":
         user = manager.load_user(DEFAULT_USERNAME)
         if user is None:
             user = User(username=DEFAULT_USERNAME)

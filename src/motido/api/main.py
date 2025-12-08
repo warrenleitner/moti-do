@@ -4,12 +4,14 @@
 Main FastAPI application for Moti-Do.
 """
 
+import os
 from datetime import date, timedelta
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from motido.api.deps import CurrentUser, ManagerDep
+from motido.api.middleware.rate_limit import RateLimitMiddleware
 from motido.api.routers import auth, tasks, user, views
 from motido.api.schemas import AdvanceRequest, SystemStatus
 
@@ -23,19 +25,34 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
-# Configure CORS for frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:3000",  # Alternative dev server
+# Configure CORS - restrictive in production, permissive in development
+is_production = os.getenv("VERCEL_ENV") == "production"
+
+if is_production:
+    # Production: Only allow your Vercel domain
+    allowed_origins = [
+        "https://moti-do-v2.vercel.app",  # Add your actual Vercel domain
+        # Add any custom domains here
+    ]
+else:
+    # Development: Allow local development
+    allowed_origins = [
+        "http://localhost:5173",
+        "http://localhost:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:3000",
-    ],
+    ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Add rate limiting for login endpoint (5 attempts per 5 minutes)
+app.add_middleware(RateLimitMiddleware, max_requests=5, window_seconds=300)
 
 
 # Include routers with /api prefix
