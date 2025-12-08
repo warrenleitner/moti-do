@@ -5,6 +5,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTaskStore } from '../store/taskStore';
 import { useUserStore } from '../store/userStore';
+import { authApi } from '../services/api';
 
 interface InitializationState {
   isInitialized: boolean;
@@ -27,6 +28,13 @@ export function useAppInitialization(): InitializationState {
   const initializeUser = useUserStore((state) => state.initializeUser);
 
   const initialize = async () => {
+    // Don't initialize if not authenticated - let routing handle redirect to login
+    if (!authApi.isAuthenticated()) {
+      setIsInitialized(false);
+      setIsLoading(false);
+      return;
+    }
+
     // Prevent concurrent initialization
     if (initializingRef.current) return;
     initializingRef.current = true;
