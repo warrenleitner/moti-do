@@ -26,9 +26,11 @@ import {
   AccountTree as GraphIcon,
   Settings as SettingsIcon,
   EmojiEvents as XPIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '../../store';
+import { authApi } from '../../services/api';
 
 const DRAWER_WIDTH = 240;
 
@@ -69,6 +71,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
     if (isMobile) {
       setMobileOpen(false);
     }
+  };
+
+  const handleLogout = () => {
+    authApi.logout();
   };
 
   const drawerContent = (
@@ -116,9 +122,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
               {user.level}
             </Avatar>
-            <Typography variant="body2" fontWeight="medium">
+            <Typography variant="body2" fontWeight="medium" sx={{ flexGrow: 1 }}>
               Level {user.level}
             </Typography>
+            <IconButton onClick={handleLogout} size="small" title="Logout">
+              <LogoutIcon fontSize="small" />
+            </IconButton>
           </Box>
           <Chip
             icon={<XPIcon sx={{ fontSize: 16 }} />}

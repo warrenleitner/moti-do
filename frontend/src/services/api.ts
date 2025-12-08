@@ -127,6 +127,64 @@ export interface SystemStatus {
   pending_days: number;
 }
 
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+}
+
+// === Authentication API endpoints ===
+export const authApi = {
+  // Login with username and password
+  login: async (username: string, password: string): Promise<TokenResponse> => {
+    // Use FormData for OAuth2PasswordRequestForm
+    const formData = new FormData();
+    formData.append('username', username);
+    formData.append('password', password);
+
+    const response = await apiClient.post<TokenResponse>('/auth/login', formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+
+    // Store token in localStorage
+    localStorage.setItem('auth_token', response.data.access_token);
+    return response.data;
+  },
+
+  // Register new user
+  register: async (username: string, password: string): Promise<TokenResponse> => {
+    const response = await apiClient.post<TokenResponse>('/auth/register', {
+      username,
+      password,
+    });
+
+    // Store token in localStorage
+    localStorage.setItem('auth_token', response.data.access_token);
+    return response.data;
+  },
+
+  // Change password for authenticated user
+  changePassword: async (currentPassword: string, newPassword: string): Promise<{ message: string }> => {
+    const response = await apiClient.post<{ message: string }>('/auth/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+    return response.data;
+  },
+
+  // Logout (clear token)
+  logout: () => {
+    localStorage.removeItem('auth_token');
+    window.location.href = '/login';
+  },
+
+  // Check if user is authenticated
+  isAuthenticated: (): boolean => {
+    return !!localStorage.getItem('auth_token');
+  },
+};
+
 // === Task API endpoints ===
 export const taskApi = {
   // Get all tasks with optional filters
