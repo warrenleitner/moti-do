@@ -7,7 +7,7 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 pyjwt>=2.9.0
 python-multipart>=0.0.12
-passlib[bcrypt]>=1.7.4
+passlib>=1.7.4
 pydantic>=2.10.0
 
 # PostgreSQL support for Vercel Postgres
