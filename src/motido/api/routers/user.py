@@ -4,9 +4,10 @@
 User profile, XP, and badges API endpoints.
 """
 
+import json
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 
 from motido.api.deps import CurrentUser, ManagerDep
 from motido.api.schemas import (
@@ -305,3 +306,207 @@ async def delete_project(
 
     user.defined_projects.remove(project)
     manager.save_user(user)
+
+
+# === Data Export/Import endpoints ===
+
+
+@router.get("/export")
+async def export_user_data(user: CurrentUser) -> Response:
+    """
+    Export complete user data as JSON for backup.
+
+    Returns all user data including tasks, XP transactions, badges, tags, and projects
+    in the same format as JsonDataManager for full data portability.
+    """
+    # Serialize tasks (match JsonDataManager format exactly)
+    tasks_data = [
+        {
+            "id": task.id,
+            "title": task.title,
+            "text_description": task.text_description,
+            "priority": task.priority.value,
+            "difficulty": task.difficulty.value,
+            "duration": task.duration.value,
+            "is_complete": task.is_complete,
+            "creation_date": (
+                task.creation_date.strftime("%Y-%m-%d %H:%M:%S")
+                if task.creation_date
+                else None
+            ),
+            "due_date": (
+                task.due_date.strftime("%Y-%m-%d %H:%M:%S") if task.due_date else None
+            ),
+            "start_date": (
+                task.start_date.strftime("%Y-%m-%d %H:%M:%S")
+                if task.start_date
+                else None
+            ),
+            "icon": task.icon,
+            "tags": task.tags,
+            "project": task.project,
+            "subtasks": task.subtasks,
+            "dependencies": task.dependencies,
+            "history": task.history,
+            "is_habit": task.is_habit,
+            "recurrence_rule": task.recurrence_rule,
+            "recurrence_type": (
+                task.recurrence_type.value if task.recurrence_type else None
+            ),
+            "streak_current": task.streak_current,
+            "streak_best": task.streak_best,
+            "parent_habit_id": task.parent_habit_id,
+        }
+        for task in user.tasks
+    ]
+
+    # Prepare complete user data
+    user_data = {
+        "username": user.username,
+        "total_xp": user.total_xp,
+        "password_hash": user.password_hash,
+        "tasks": tasks_data,
+        "last_processed_date": user.last_processed_date.isoformat(),
+        "vacation_mode": user.vacation_mode,
+        "xp_transactions": [
+            {
+                "id": trans.id,
+                "amount": trans.amount,
+                "source": trans.source,
+                "timestamp": trans.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                "task_id": trans.task_id,
+                "description": trans.description,
+            }
+            for trans in getattr(user, "xp_transactions", [])
+        ],
+        "badges": [
+            {
+                "id": badge.id,
+                "name": badge.name,
+                "description": badge.description,
+                "glyph": badge.glyph,
+                "earned_date": (
+                    badge.earned_date.strftime("%Y-%m-%d %H:%M:%S")
+                    if badge.earned_date
+                    else None
+                ),
+            }
+            for badge in getattr(user, "badges", [])
+        ],
+        "defined_tags": [
+            {
+                "id": tag.id,
+                "name": tag.name,
+                "color": tag.color,
+            }
+            for tag in getattr(user, "defined_tags", [])
+        ],
+        "defined_projects": [
+            {
+                "id": proj.id,
+                "name": proj.name,
+                "color": proj.color,
+            }
+            for proj in getattr(user, "defined_projects", [])
+        ],
+    }
+
+    # Wrap in the same format as JsonDataManager (username as key)
+    export_data = {user.username: user_data}
+
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    filename = f"motido-backup-{timestamp}.json"
+
+    # Return as downloadable JSON file
+    return Response(
+        content=json.dumps(export_data, indent=2),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
+@router.post("/import")
+async def import_user_data(
+    user: CurrentUser,
+    manager: ManagerDep,
+    file: UploadFile = File(...),
+) -> dict:
+    """
+    Import user data from JSON backup file.
+
+    Replaces all current user data with data from the backup file.
+    Preserves the current password_hash for security unless explicitly included in import.
+
+    Returns a summary of imported data.
+    """
+    # Validate file type
+    if not file.filename or not file.filename.endswith(".json"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be a JSON file (.json)",
+        )
+
+    try:
+        # Read and parse JSON file
+        contents = await file.read()
+        import_data = json.loads(contents.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid JSON file: {e}",
+        ) from e
+
+    # Validate structure - expect {username: user_data} format
+    if not isinstance(import_data, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file structure: expected dictionary with username as key",
+        )
+
+    # Get user data (should be keyed by username)
+    user_data = import_data.get(user.username)
+    if not user_data:
+        # Check if there's only one user in the file and use that
+        if len(import_data) == 1:
+            user_data = list(import_data.values())[0]
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"No data found for user '{user.username}' in import file",
+            )
+
+    # Deserialize user data using JsonDataManager's method
+    try:
+        from motido.data.json_manager import JsonDataManager
+
+        json_mgr = JsonDataManager()
+        imported_user = json_mgr.deserialize_user_data(user_data, user.username)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid user data format: {e}",
+        ) from e
+
+    # Preserve current password_hash if not in import (security)
+    if not imported_user.password_hash:
+        imported_user.password_hash = user.password_hash
+
+    # Save the imported user data (replaces all current data)
+    manager.save_user(imported_user)
+
+    # Return summary of imported data
+    return {
+        "message": "Data imported successfully",
+        "summary": {
+            "username": imported_user.username,
+            "total_xp": imported_user.total_xp,
+            "tasks_count": len(imported_user.tasks),
+            "xp_transactions_count": len(getattr(imported_user, "xp_transactions", [])),
+            "badges_count": len(getattr(imported_user, "badges", [])),
+            "tags_count": len(getattr(imported_user, "defined_tags", [])),
+            "projects_count": len(getattr(imported_user, "defined_projects", [])),
+        },
+    }

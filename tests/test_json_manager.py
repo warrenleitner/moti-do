@@ -308,19 +308,16 @@ def test_load_user_deserialization_error(
     }
     mock_read = mocker.patch.object(manager, "_read_data", return_value=corrupted_data)
 
-    # Use try/except to handle the KeyError
-    try:
-        manager.load_user(DEFAULT_USERNAME)
-        assert False, "Expected KeyError was not raised"
-    except KeyError:
-        # Expected behavior - KeyError for missing 'id'
-        pass
+    # load_user should return None when deserialization fails
+    loaded_user = manager.load_user(DEFAULT_USERNAME)
+    assert loaded_user is None
 
     mock_read.assert_called_once()
 
-    # Check output message
+    # Verify error messages were printed
     captured = capsys.readouterr()
     assert "Loading user 'default_user' from JSON..." in captured.out
+    assert "Error deserializing user data" in captured.out
 
 
 def test_load_user_default_username(

@@ -227,6 +227,80 @@ class JsonDataManager(DataManager):
             color=project_dict.get("color", "#4A90D9"),
         )
 
+    def deserialize_user_data(
+        self, user_data: Dict[str, Any], username: str = DEFAULT_USERNAME
+    ) -> User:
+        """
+        Deserialize user data dictionary into a User object.
+
+        This is a public method that can be used for importing user data.
+
+        Args:
+            user_data: Dictionary containing user data
+            username: Username to use if not present in user_data
+
+        Returns:
+            User object with deserialized data
+
+        Raises:
+            ValueError: If user_data is invalid or missing required fields
+        """
+        try:
+            # Deserialize tasks
+            tasks = [
+                self._deserialize_task(task_dict)
+                for task_dict in user_data.get("tasks", [])
+            ]
+
+            # Deserialize XP transactions
+            xp_transactions = [
+                self._deserialize_xp_transaction(trans_dict)
+                for trans_dict in user_data.get("xp_transactions", [])
+            ]
+
+            # Deserialize badges
+            badges = [
+                self._deserialize_badge(badge_dict)
+                for badge_dict in user_data.get("badges", [])
+            ]
+
+            # Deserialize defined tags
+            defined_tags = [
+                self._deserialize_tag(tag_dict)
+                for tag_dict in user_data.get("defined_tags", [])
+            ]
+
+            # Deserialize defined projects
+            defined_projects = [
+                self._deserialize_project(proj_dict)
+                for proj_dict in user_data.get("defined_projects", [])
+            ]
+
+            # Create User object
+            total_xp = user_data.get("total_xp", 0)
+
+            # Parse last_processed_date if present
+            last_processed_str = user_data.get("last_processed_date")
+            if last_processed_str:
+                last_processed = date.fromisoformat(last_processed_str)
+            else:
+                last_processed = date.today()
+
+            return User(
+                username=user_data.get("username", username),
+                total_xp=total_xp,
+                password_hash=user_data.get("password_hash"),
+                tasks=tasks,
+                last_processed_date=last_processed,
+                vacation_mode=user_data.get("vacation_mode", False),
+                xp_transactions=xp_transactions,
+                badges=badges,
+                defined_tags=defined_tags,
+                defined_projects=defined_projects,
+            )
+        except (TypeError, KeyError, ValueError) as e:
+            raise ValueError(f"Invalid user data format: {e}") from e
+
     def load_user(self, username: str = DEFAULT_USERNAME) -> User | None:
         """Loads a specific user's data from the JSON file."""
         # Placeholder for future sync: Check for remote changes before loading
@@ -236,61 +310,10 @@ class JsonDataManager(DataManager):
 
         if user_data:
             try:
-                # Deserialize tasks
-                tasks = [
-                    self._deserialize_task(task_dict)
-                    for task_dict in user_data.get("tasks", [])
-                ]
-
-                # Deserialize XP transactions
-                xp_transactions = [
-                    self._deserialize_xp_transaction(trans_dict)
-                    for trans_dict in user_data.get("xp_transactions", [])
-                ]
-
-                # Deserialize badges
-                badges = [
-                    self._deserialize_badge(badge_dict)
-                    for badge_dict in user_data.get("badges", [])
-                ]
-
-                # Deserialize defined tags
-                defined_tags = [
-                    self._deserialize_tag(tag_dict)
-                    for tag_dict in user_data.get("defined_tags", [])
-                ]
-
-                # Deserialize defined projects
-                defined_projects = [
-                    self._deserialize_project(proj_dict)
-                    for proj_dict in user_data.get("defined_projects", [])
-                ]
-
-                # Create User object
-                total_xp = user_data.get("total_xp", 0)
-
-                # Parse last_processed_date if present
-                last_processed_str = user_data.get("last_processed_date")
-                if last_processed_str:
-                    last_processed = date.fromisoformat(last_processed_str)
-                else:
-                    last_processed = date.today()
-
-                user = User(
-                    username=user_data.get("username", username),
-                    total_xp=total_xp,
-                    password_hash=user_data.get("password_hash"),
-                    tasks=tasks,
-                    last_processed_date=last_processed,
-                    vacation_mode=user_data.get("vacation_mode", False),
-                    xp_transactions=xp_transactions,
-                    badges=badges,
-                    defined_tags=defined_tags,
-                    defined_projects=defined_projects,
-                )
+                user = self.deserialize_user_data(user_data, username)
                 print(f"User '{username}' loaded successfully.")
                 return user
-            except TypeError as e:  # pragma: no cover
+            except ValueError as e:  # pragma: no cover
                 print(f"Error deserializing user data for '{username}': {e}")
                 return None  # Or handle corrupted data more gracefully
         else:
