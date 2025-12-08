@@ -28,7 +28,7 @@ app = FastAPI(
 # Configure CORS - restrictive in production, permissive in development
 is_production = os.getenv("VERCEL_ENV") == "production"
 
-if is_production:
+if is_production:  # pragma: no cover
     # Production: Only allow your Vercel domain
     allowed_origins = [
         "https://moti-do-v2.vercel.app",  # Add your actual Vercel domain

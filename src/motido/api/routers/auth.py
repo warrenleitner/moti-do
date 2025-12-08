@@ -102,14 +102,7 @@ async def register(
             detail="User already registered. Please login instead.",
         )
 
-    # Validate password strength (minimum 8 characters)
-    if len(request.password) < 8:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 8 characters long",
-        )
-
-    # Hash and store password
+    # Hash and store password (Pydantic already validated min_length=8)
     user.password_hash = hash_password(request.password)
     manager.save_user(user)
 
@@ -140,14 +133,7 @@ async def change_password(
             detail="Current password is incorrect",
         )
 
-    # Validate new password
-    if len(request.new_password) < 8:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be at least 8 characters long",
-        )
-
-    # Update password
+    # Update password (Pydantic already validated min_length=8)
     user.password_hash = hash_password(request.new_password)
     manager.save_user(user)
 

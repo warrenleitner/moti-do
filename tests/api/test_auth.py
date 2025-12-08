@@ -194,6 +194,24 @@ class TestLogin:
 
         assert response.status_code == 422  # Pydantic validation error
 
+    def test_login_rate_limit(self, client: TestClient, test_user: User) -> None:
+        """Test rate limiting on login endpoint."""
+        # Make 5 failed login attempts (max allowed)
+        for _ in range(5):
+            client.post(
+                "/api/auth/login",
+                data={"username": DEFAULT_USERNAME, "password": "wrongpassword"},
+            )
+
+        # 6th attempt should be rate limited
+        response = client.post(
+            "/api/auth/login",
+            data={"username": DEFAULT_USERNAME, "password": "wrongpassword"},
+        )
+
+        assert response.status_code == 429
+        assert "Too many login attempts" in response.json()["detail"]
+
 
 class TestChangePassword:
     """Tests for /api/auth/change-password endpoint."""
