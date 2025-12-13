@@ -4,6 +4,7 @@ import { TaskCalendar } from '../components/calendar';
 import { TaskForm } from '../components/tasks';
 import { useTaskStore } from '../store';
 import type { Task } from '../types';
+import { Priority, Difficulty, Duration } from '../types';
 
 export default function CalendarPage() {
   const { tasks, updateTask, addTask } = useTaskStore();
@@ -29,9 +30,9 @@ export default function CalendarPage() {
       id: crypto.randomUUID(),
       title: taskData.title || 'Untitled',
       creation_date: new Date().toISOString(),
-      priority: taskData.priority || 'medium',
-      difficulty: taskData.difficulty || 'medium',
-      duration: taskData.duration || 'short',
+      priority: taskData.priority || Priority.MEDIUM,
+      difficulty: taskData.difficulty || Difficulty.MEDIUM,
+      duration: taskData.duration || Duration.SHORT,
       is_complete: false,
       is_habit: false,
       tags: taskData.tags || [],
@@ -63,9 +64,9 @@ export default function CalendarPage() {
     id: '',
     title: '',
     creation_date: new Date().toISOString(),
-    priority: 'medium',
-    difficulty: 'medium',
-    duration: 'short',
+    priority: Priority.MEDIUM,
+    difficulty: Difficulty.MEDIUM,
+    duration: Duration.SHORT,
     is_complete: false,
     is_habit: false,
     tags: [],

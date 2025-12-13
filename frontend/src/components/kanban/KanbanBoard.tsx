@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Chip } from '@mui/material';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
 import type { Task } from '../../types';
+import { Priority } from '../../types';
 import KanbanColumn, { type KanbanStatus } from './KanbanColumn';
 
 interface KanbanBoardProps {
@@ -80,10 +81,16 @@ export default function KanbanBoard({ tasks, onUpdateTask, onEditTask }: KanbanB
     });
 
     // Sort by priority within each column
-    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3, trivial: 4 };
+    const priorityOrder: Record<Priority, number> = {
+      [Priority.DEFCON_ONE]: 0,
+      [Priority.HIGH]: 1,
+      [Priority.MEDIUM]: 2,
+      [Priority.LOW]: 3,
+      [Priority.TRIVIAL]: 4,
+    };
     Object.keys(grouped).forEach((status) => {
       grouped[status as KanbanStatus].sort(
-        (a, b) => (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2)
+        (a, b) => (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2)
       );
     });
 

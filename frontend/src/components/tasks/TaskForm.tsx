@@ -23,7 +23,17 @@ import { Add, Delete } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import type { Task, Priority, Difficulty, Duration, Subtask } from '../../types';
+import type { Task, Subtask } from '../../types';
+import {
+  Priority,
+  Difficulty,
+  Duration,
+  PriorityEmoji,
+  DifficultyEmoji,
+  DurationEmoji,
+  DifficultyLabel,
+  DurationLabel,
+} from '../../types';
 
 interface TaskFormProps {
   open: boolean;
@@ -35,9 +45,9 @@ interface TaskFormProps {
 const defaultTask: Partial<Task> = {
   title: '',
   text_description: '',
-  priority: 'medium',
-  difficulty: 'medium',
-  duration: 'medium',
+  priority: Priority.MEDIUM,
+  difficulty: Difficulty.MEDIUM,
+  duration: Duration.MEDIUM,
   is_habit: false,
   tags: [],
   subtasks: [],
@@ -134,45 +144,45 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
               <FormControl fullWidth>
                 <InputLabel>Priority</InputLabel>
                 <Select
-                  value={formData.priority || 'medium'}
+                  value={formData.priority || Priority.MEDIUM}
                   label="Priority"
-                  onChange={(e) => handleChange('priority', e.target.value as Priority)}
+                  onChange={(e) => handleChange('priority', e.target.value as typeof Priority[keyof typeof Priority])}
                 >
-                  <MenuItem value="trivial">⬜ Trivial</MenuItem>
-                  <MenuItem value="low">🟦 Low</MenuItem>
-                  <MenuItem value="medium">🟨 Medium</MenuItem>
-                  <MenuItem value="high">🟧 High</MenuItem>
-                  <MenuItem value="critical">🟥 Critical</MenuItem>
+                  <MenuItem value={Priority.TRIVIAL}>{PriorityEmoji[Priority.TRIVIAL]} Trivial</MenuItem>
+                  <MenuItem value={Priority.LOW}>{PriorityEmoji[Priority.LOW]} Low</MenuItem>
+                  <MenuItem value={Priority.MEDIUM}>{PriorityEmoji[Priority.MEDIUM]} Medium</MenuItem>
+                  <MenuItem value={Priority.HIGH}>{PriorityEmoji[Priority.HIGH]} High</MenuItem>
+                  <MenuItem value={Priority.DEFCON_ONE}>{PriorityEmoji[Priority.DEFCON_ONE]} Defcon One</MenuItem>
                 </Select>
               </FormControl>
 
               <FormControl fullWidth>
                 <InputLabel>Difficulty</InputLabel>
                 <Select
-                  value={formData.difficulty || 'medium'}
+                  value={formData.difficulty || Difficulty.MEDIUM}
                   label="Difficulty"
-                  onChange={(e) => handleChange('difficulty', e.target.value as Difficulty)}
+                  onChange={(e) => handleChange('difficulty', e.target.value as typeof Difficulty[keyof typeof Difficulty])}
                 >
-                  <MenuItem value="trivial">Trivial</MenuItem>
-                  <MenuItem value="easy">Easy</MenuItem>
-                  <MenuItem value="medium">Medium</MenuItem>
-                  <MenuItem value="hard">Hard</MenuItem>
-                  <MenuItem value="extreme">Extreme</MenuItem>
+                  <MenuItem value={Difficulty.TRIVIAL}>{DifficultyEmoji[Difficulty.TRIVIAL]} {DifficultyLabel[Difficulty.TRIVIAL]}</MenuItem>
+                  <MenuItem value={Difficulty.LOW}>{DifficultyEmoji[Difficulty.LOW]} {DifficultyLabel[Difficulty.LOW]}</MenuItem>
+                  <MenuItem value={Difficulty.MEDIUM}>{DifficultyEmoji[Difficulty.MEDIUM]} {DifficultyLabel[Difficulty.MEDIUM]}</MenuItem>
+                  <MenuItem value={Difficulty.HIGH}>{DifficultyEmoji[Difficulty.HIGH]} {DifficultyLabel[Difficulty.HIGH]}</MenuItem>
+                  <MenuItem value={Difficulty.HERCULEAN}>{DifficultyEmoji[Difficulty.HERCULEAN]} {DifficultyLabel[Difficulty.HERCULEAN]}</MenuItem>
                 </Select>
               </FormControl>
 
               <FormControl fullWidth>
                 <InputLabel>Duration</InputLabel>
                 <Select
-                  value={formData.duration || 'medium'}
+                  value={formData.duration || Duration.MEDIUM}
                   label="Duration"
-                  onChange={(e) => handleChange('duration', e.target.value as Duration)}
+                  onChange={(e) => handleChange('duration', e.target.value as typeof Duration[keyof typeof Duration])}
                 >
-                  <MenuItem value="minute">&lt; 5 min</MenuItem>
-                  <MenuItem value="short">5-15 min</MenuItem>
-                  <MenuItem value="medium">15-60 min</MenuItem>
-                  <MenuItem value="long">1-4 hours</MenuItem>
-                  <MenuItem value="marathon">4+ hours</MenuItem>
+                  <MenuItem value={Duration.MINISCULE}>{DurationEmoji[Duration.MINISCULE]} {DurationLabel[Duration.MINISCULE]}</MenuItem>
+                  <MenuItem value={Duration.SHORT}>{DurationEmoji[Duration.SHORT]} {DurationLabel[Duration.SHORT]}</MenuItem>
+                  <MenuItem value={Duration.MEDIUM}>{DurationEmoji[Duration.MEDIUM]} {DurationLabel[Duration.MEDIUM]}</MenuItem>
+                  <MenuItem value={Duration.LONG}>{DurationEmoji[Duration.LONG]} {DurationLabel[Duration.LONG]}</MenuItem>
+                  <MenuItem value={Duration.ODYSSEYAN}>{DurationEmoji[Duration.ODYSSEYAN]} {DurationLabel[Duration.ODYSSEYAN]}</MenuItem>
                 </Select>
               </FormControl>
             </Stack>

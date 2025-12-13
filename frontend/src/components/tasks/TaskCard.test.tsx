@@ -7,13 +7,14 @@ import { render, screen } from '../../test/utils';
 import userEvent from '@testing-library/user-event';
 import TaskCard from './TaskCard';
 import type { Task } from '../../types';
+import { Priority, Difficulty, Duration } from '../../types';
 
 const mockTask: Task = {
   id: 'test-task-1',
   title: 'Test Task',
-  priority: 'high',
-  difficulty: 'medium',
-  duration: 'short',
+  priority: Priority.HIGH,
+  difficulty: Difficulty.MEDIUM,
+  duration: Duration.SHORT,
   is_complete: false,
   is_habit: false,
   tags: ['work', 'important'],
@@ -33,9 +34,9 @@ const mockTask: Task = {
 const mockHabit: Task = {
   id: 'test-habit-1',
   title: 'Daily Exercise',
-  priority: 'medium',
-  difficulty: 'easy',
-  duration: 'medium',
+  priority: Priority.MEDIUM,
+  difficulty: Difficulty.LOW,
+  duration: Duration.MEDIUM,
   is_complete: false,
   is_habit: true,
   recurrence_rule: 'daily',

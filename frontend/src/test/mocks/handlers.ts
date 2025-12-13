@@ -4,15 +4,16 @@
 
 import { http, HttpResponse } from 'msw';
 import type { Task } from '../../types';
+import { Priority, Difficulty, Duration } from '../../types';
 
 // Mock data
 export const mockTasks: Task[] = [
   {
     id: 'task-1',
     title: 'Test Task 1',
-    priority: 'high',
-    difficulty: 'medium',
-    duration: 'short',
+    priority: Priority.HIGH,
+    difficulty: Difficulty.MEDIUM,
+    duration: Duration.SHORT,
     is_complete: false,
     is_habit: false,
     tags: ['work'],
@@ -26,9 +27,9 @@ export const mockTasks: Task[] = [
   {
     id: 'task-2',
     title: 'Test Task 2',
-    priority: 'low',
-    difficulty: 'trivial',
-    duration: 'minute',
+    priority: Priority.LOW,
+    difficulty: Difficulty.TRIVIAL,
+    duration: Duration.MINISCULE,
     is_complete: true,
     is_habit: false,
     tags: ['personal'],
@@ -43,9 +44,9 @@ export const mockTasks: Task[] = [
   {
     id: 'habit-1',
     title: 'Daily Habit',
-    priority: 'medium',
-    difficulty: 'easy',
-    duration: 'short',
+    priority: Priority.MEDIUM,
+    difficulty: Difficulty.LOW,
+    duration: Duration.SHORT,
     is_complete: false,
     is_habit: true,
     recurrence_rule: 'daily',
@@ -98,9 +99,9 @@ export const handlers = [
     const newTask: Task = {
       id: `task-${Date.now()}`,
       title: data.title || 'New Task',
-      priority: data.priority || 'medium',
-      difficulty: data.difficulty || 'medium',
-      duration: data.duration || 'short',
+      priority: data.priority || Priority.MEDIUM,
+      difficulty: data.difficulty || Difficulty.MEDIUM,
+      duration: data.duration || Duration.SHORT,
       is_complete: false,
       is_habit: data.is_habit || false,
       tags: data.tags || [],

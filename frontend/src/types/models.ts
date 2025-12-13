@@ -3,37 +3,38 @@
  */
 
 // Use const objects instead of enums (required by erasableSyntaxOnly)
+// Values must match Python backend enum values exactly
 export const Priority = {
-  TRIVIAL: "trivial",
-  LOW: "low",
-  MEDIUM: "medium",
-  HIGH: "high",
-  CRITICAL: "critical",
+  TRIVIAL: "Trivial",
+  LOW: "Low",
+  MEDIUM: "Medium",
+  HIGH: "High",
+  DEFCON_ONE: "Defcon One",
 } as const;
 export type Priority = typeof Priority[keyof typeof Priority];
 
 export const Difficulty = {
-  TRIVIAL: "trivial",
-  EASY: "easy",
-  MEDIUM: "medium",
-  HARD: "hard",
-  EXTREME: "extreme",
+  TRIVIAL: "Trivial",
+  LOW: "Low",
+  MEDIUM: "Medium",
+  HIGH: "High",
+  HERCULEAN: "Herculean",
 } as const;
 export type Difficulty = typeof Difficulty[keyof typeof Difficulty];
 
 export const Duration = {
-  MINUTE: "minute",
-  SHORT: "short",
-  MEDIUM: "medium",
-  LONG: "long",
-  MARATHON: "marathon",
+  MINISCULE: "Miniscule",
+  SHORT: "Short",
+  MEDIUM: "Medium",
+  LONG: "Long",
+  ODYSSEYAN: "Odysseyan",
 } as const;
 export type Duration = typeof Duration[keyof typeof Duration];
 
 export const RecurrenceType = {
-  STRICT: "strict",
-  FROM_COMPLETION: "from_completion",
-  FROM_DUE_DATE: "from_due_date",
+  STRICT: "Strict",
+  FROM_COMPLETION: "From Completion",
+  FROM_DUE_DATE: "From Due Date",
 } as const;
 export type RecurrenceType = typeof RecurrenceType[keyof typeof RecurrenceType];
 
@@ -126,29 +127,47 @@ export interface User {
   vacation_mode_end?: string;
 }
 
-// Priority emoji mapping
+// Priority emoji mapping (matches backend Priority.emoji())
 export const PriorityEmoji: Record<Priority, string> = {
-  [Priority.TRIVIAL]: "⬜",
-  [Priority.LOW]: "🟦",
-  [Priority.MEDIUM]: "🟨",
-  [Priority.HIGH]: "🟧",
-  [Priority.CRITICAL]: "🟥",
+  [Priority.TRIVIAL]: "🔹",
+  [Priority.LOW]: "🟢",
+  [Priority.MEDIUM]: "🟡",
+  [Priority.HIGH]: "🟠",
+  [Priority.DEFCON_ONE]: "🔴",
+};
+
+// Difficulty emoji mapping (matches backend Difficulty.emoji())
+export const DifficultyEmoji: Record<Difficulty, string> = {
+  [Difficulty.TRIVIAL]: "🍭",
+  [Difficulty.LOW]: "🪶",
+  [Difficulty.MEDIUM]: "🧱",
+  [Difficulty.HIGH]: "🧗",
+  [Difficulty.HERCULEAN]: "🦾",
 };
 
 // Difficulty labels
 export const DifficultyLabel: Record<Difficulty, string> = {
   [Difficulty.TRIVIAL]: "Trivial",
-  [Difficulty.EASY]: "Easy",
+  [Difficulty.LOW]: "Low",
   [Difficulty.MEDIUM]: "Medium",
-  [Difficulty.HARD]: "Hard",
-  [Difficulty.EXTREME]: "Extreme",
+  [Difficulty.HIGH]: "High",
+  [Difficulty.HERCULEAN]: "Herculean",
+};
+
+// Duration emoji mapping (matches backend Duration.emoji())
+export const DurationEmoji: Record<Duration, string> = {
+  [Duration.MINISCULE]: "💨",
+  [Duration.SHORT]: "⏳",
+  [Duration.MEDIUM]: "🕰️",
+  [Duration.LONG]: "⏱️",
+  [Duration.ODYSSEYAN]: "♾️",
 };
 
 // Duration labels
 export const DurationLabel: Record<Duration, string> = {
-  [Duration.MINUTE]: "< 5 min",
-  [Duration.SHORT]: "5-15 min",
-  [Duration.MEDIUM]: "15-60 min",
-  [Duration.LONG]: "1-4 hours",
-  [Duration.MARATHON]: "4+ hours",
+  [Duration.MINISCULE]: "Miniscule",
+  [Duration.SHORT]: "Short",
+  [Duration.MEDIUM]: "Medium",
+  [Duration.LONG]: "Long",
+  [Duration.ODYSSEYAN]: "Odysseyan",
 };

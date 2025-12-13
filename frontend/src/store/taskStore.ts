@@ -4,7 +4,8 @@
 
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import type { Task, Priority } from '../types';
+import type { Task } from '../types';
+import { Priority } from '../types';
 import { taskApi } from '../services/api';
 
 interface TaskFilters {
@@ -322,11 +323,11 @@ export const useFilteredTasks = () => {
 
   // Apply sorting
   const priorityOrder: Record<Priority, number> = {
-    trivial: 0,
-    low: 1,
-    medium: 2,
-    high: 3,
-    critical: 4,
+    [Priority.TRIVIAL]: 0,
+    [Priority.LOW]: 1,
+    [Priority.MEDIUM]: 2,
+    [Priority.HIGH]: 3,
+    [Priority.DEFCON_ONE]: 4,
   };
 
   filtered.sort((a, b) => {
