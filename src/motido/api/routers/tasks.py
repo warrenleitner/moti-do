@@ -4,7 +4,9 @@
 Task management API endpoints.
 """
 
+from datetime import date as date_type
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -23,12 +25,23 @@ from motido.core.models import (
     RecurrenceType,
     Task,
 )
+from motido.core.scoring import calculate_score, load_scoring_config
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
-def task_to_response(task: Task) -> TaskResponse:
-    """Convert a Task model to a TaskResponse schema."""
+def task_to_response(
+    task: Task,
+    all_tasks: dict[str, Task] | None = None,
+    config: dict[str, Any] | None = None,
+    effective_date: date_type | None = None,
+) -> TaskResponse:
+    """Convert a Task model to a TaskResponse schema with calculated score."""
+    # Calculate score if we have the necessary context
+    score = 0
+    if all_tasks is not None and config is not None and effective_date is not None:
+        score = calculate_score(task, all_tasks, config, effective_date)
+
     return TaskResponse(
         id=task.id,
         title=task.title,
@@ -53,6 +66,7 @@ def task_to_response(task: Task) -> TaskResponse:
         streak_current=task.streak_current,
         streak_best=task.streak_best,
         parent_habit_id=task.parent_habit_id,
+        score=score,
     )
 
 
@@ -128,7 +142,12 @@ async def list_tasks(
     if not include_completed:  # pragma: no cover
         tasks = [t for t in tasks if not t.is_complete]  # pragma: no cover
 
-    return [task_to_response(t) for t in tasks]
+    # Load scoring context for score calculation
+    config = load_scoring_config()
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return [task_to_response(t, all_tasks, config, effective_date) for t in tasks]
 
 
 @router.post("", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
@@ -176,7 +195,12 @@ async def create_task(
     user.add_task(task)
     manager.save_user(user)
 
-    return task_to_response(task)
+    # Load scoring context for score calculation
+    config = load_scoring_config()
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return task_to_response(task, all_tasks, config, effective_date)
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
@@ -193,7 +217,13 @@ async def get_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Task with ID {task_id} not found",
         )
-    return task_to_response(task)
+
+    # Load scoring context for score calculation
+    config = load_scoring_config()
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return task_to_response(task, all_tasks, config, effective_date)
 
 
 @router.put("/{task_id}", response_model=TaskResponse)
@@ -252,7 +282,13 @@ async def update_task(
         task.is_complete = task_data.is_complete  # pragma: no cover
 
     manager.save_user(user)
-    return task_to_response(task)
+
+    # Load scoring context for score calculation
+    config = load_scoring_config()
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return task_to_response(task, all_tasks, config, effective_date)
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -306,13 +342,12 @@ async def complete_task(
         task.streak_best = max(task.streak_best, task.streak_current)
 
     # Award XP (simplified - uses base XP from scoring)
-    from datetime import date as date_type
-
-    from motido.core.scoring import calculate_score, check_badges, load_scoring_config
+    from motido.core.scoring import check_badges
 
     config = load_scoring_config()
     all_tasks = {t.id: t for t in user.tasks}
-    xp_earned = int(calculate_score(task, all_tasks, config, date_type.today()))
+    effective_date = date_type.today()
+    xp_earned = int(calculate_score(task, all_tasks, config, effective_date))
     user.total_xp += xp_earned
 
     # Log XP transaction
@@ -331,7 +366,7 @@ async def complete_task(
     check_badges(user, manager, config)
 
     manager.save_user(user)
-    return task_to_response(task)
+    return task_to_response(task, all_tasks, config, effective_date)
 
 
 @router.post("/{task_id}/uncomplete", response_model=TaskResponse)
@@ -363,7 +398,13 @@ async def uncomplete_task(
         task.streak_current -= 1  # pragma: no cover
 
     manager.save_user(user)
-    return task_to_response(task)
+
+    # Load scoring context for score calculation
+    config = load_scoring_config()
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return task_to_response(task, all_tasks, config, effective_date)
 
 
 # === Subtask endpoints ===
@@ -388,7 +429,13 @@ async def add_subtask(
 
     task.subtasks.append({"text": subtask_data.text, "complete": False})
     manager.save_user(user)
-    return task_to_response(task)
+
+    # Load scoring context for score calculation
+    config = load_scoring_config()
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return task_to_response(task, all_tasks, config, effective_date)
 
 
 @router.put("/{task_id}/subtasks/{subtask_index}", response_model=TaskResponse)
@@ -420,7 +467,13 @@ async def update_subtask(
         "complete": subtask_data.complete,
     }
     manager.save_user(user)
-    return task_to_response(task)
+
+    # Load scoring context for score calculation
+    config = load_scoring_config()
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return task_to_response(task, all_tasks, config, effective_date)
 
 
 @router.delete("/{task_id}/subtasks/{subtask_index}", response_model=TaskResponse)
@@ -448,7 +501,13 @@ async def delete_subtask(
 
     task.subtasks.pop(subtask_index)
     manager.save_user(user)
-    return task_to_response(task)
+
+    # Load scoring context for score calculation
+    config = load_scoring_config()
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return task_to_response(task, all_tasks, config, effective_date)
 
 
 # === Dependency endpoints ===
@@ -482,7 +541,12 @@ async def add_dependency(
         task.dependencies.append(dep_task.id)
         manager.save_user(user)
 
-    return task_to_response(task)
+    # Load scoring context for score calculation
+    config = load_scoring_config()
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return task_to_response(task, all_tasks, config, effective_date)
 
 
 @router.delete("/{task_id}/dependencies/{dep_id}", response_model=TaskResponse)
@@ -507,4 +571,9 @@ async def remove_dependency(
         task.dependencies.remove(dep_task.id)
         manager.save_user(user)
 
-    return task_to_response(task)
+    # Load scoring context for score calculation
+    config = load_scoring_config()
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return task_to_response(task, all_tasks, config, effective_date)

@@ -67,6 +67,7 @@ export default function TaskList({
               setSort({ ...sort, field: e.target.value as typeof sort.field })
             }
           >
+            <MenuItem value="score">Score (XP)</MenuItem>
             <MenuItem value="priority">Priority</MenuItem>
             <MenuItem value="due_date">Due Date</MenuItem>
             <MenuItem value="creation_date">Created</MenuItem>

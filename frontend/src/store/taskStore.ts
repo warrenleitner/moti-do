@@ -349,6 +349,9 @@ export const useFilteredTasks = () => {
       case 'title':
         comparison = a.title.localeCompare(b.title);
         break;
+      case 'score':
+        comparison = a.score - b.score;
+        break;
       default:
         comparison = 0;
     }
