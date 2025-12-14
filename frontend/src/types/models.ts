@@ -23,7 +23,7 @@ export const Difficulty = {
 export type Difficulty = typeof Difficulty[keyof typeof Difficulty];
 
 export const Duration = {
-  MINISCULE: "Miniscule",
+  MINUSCULE: "Minuscule",
   SHORT: "Short",
   MEDIUM: "Medium",
   LONG: "Long",
@@ -156,7 +156,7 @@ export const DifficultyLabel: Record<Difficulty, string> = {
 
 // Duration emoji mapping (matches backend Duration.emoji())
 export const DurationEmoji: Record<Duration, string> = {
-  [Duration.MINISCULE]: "💨",
+  [Duration.MINUSCULE]: "💨",
   [Duration.SHORT]: "⏳",
   [Duration.MEDIUM]: "🕰️",
   [Duration.LONG]: "⏱️",
@@ -165,7 +165,7 @@ export const DurationEmoji: Record<Duration, string> = {
 
 // Duration labels
 export const DurationLabel: Record<Duration, string> = {
-  [Duration.MINISCULE]: "Miniscule",
+  [Duration.MINUSCULE]: "Minuscule",
   [Duration.SHORT]: "Short",
   [Duration.MEDIUM]: "Medium",
   [Duration.LONG]: "Long",

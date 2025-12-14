@@ -110,11 +110,11 @@ def test_parse_duration_safely_valid_duration() -> None:
 def test_parse_duration_safely_invalid_duration(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Test that parse_duration_safely returns MINISCULE for invalid duration strings."""
+    """Test that parse_duration_safely returns MINUSCULE for invalid duration strings."""
     monkeypatch.setattr("builtins.print", lambda *args: None)
 
     duration = parse_duration_safely("InvalidDuration")
-    assert duration == Duration.MINISCULE
+    assert duration == Duration.MINUSCULE
 
 
 def test_parse_duration_safely_with_task_id(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -125,7 +125,7 @@ def test_parse_duration_safely_with_task_id(monkeypatch: pytest.MonkeyPatch) -> 
     )
 
     duration = parse_duration_safely("InvalidDuration", "test-task-id")
-    assert duration == Duration.MINISCULE
+    assert duration == Duration.MINUSCULE
     assert any("in task test-task-id" in msg for msg in printed_messages)
 
 

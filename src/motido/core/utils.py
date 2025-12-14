@@ -74,7 +74,7 @@ def parse_duration_safely(duration_str: str, task_id: str | None = None) -> Dura
         task_id: Optional task ID for warning message context
 
     Returns:
-        Duration enum value, or Duration.MINISCULE if the string is invalid
+        Duration enum value, or Duration.MINUSCULE if the string is invalid
     """
     try:
         return Duration(duration_str)
@@ -84,7 +84,7 @@ def parse_duration_safely(duration_str: str, task_id: str | None = None) -> Dura
         print(
             f"Warning: Invalid duration '{duration_str}'{task_context}. Using default."
         )
-        return Duration.MINISCULE
+        return Duration.MINUSCULE
 
 
 # pylint: disable=too-many-return-statements

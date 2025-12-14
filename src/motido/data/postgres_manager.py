@@ -115,7 +115,7 @@ class PostgresDataManager(DataManager):
                         text_description TEXT,
                         priority TEXT NOT NULL DEFAULT 'Low',
                         difficulty TEXT NOT NULL DEFAULT 'Trivial',
-                        duration TEXT NOT NULL DEFAULT 'Miniscule',
+                        duration TEXT NOT NULL DEFAULT 'Minuscule',
                         is_complete BOOLEAN NOT NULL DEFAULT FALSE,
                         creation_date TIMESTAMP,
                         due_date TIMESTAMP,
@@ -261,7 +261,7 @@ class PostgresDataManager(DataManager):
             row.get("difficulty", Difficulty.TRIVIAL.value), row.get("id", "unknown")
         )
         duration = parse_duration_safely(
-            row.get("duration", Duration.MINISCULE.value), row.get("id", "unknown")
+            row.get("duration", Duration.MINUSCULE.value), row.get("id", "unknown")
         )
 
         # Parse dates

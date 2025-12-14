@@ -129,7 +129,7 @@ class JsonDataManager(DataManager):
             task_dict.get("difficulty", Difficulty.TRIVIAL.value), task_id
         )
         duration = parse_duration_safely(
-            task_dict.get("duration", Duration.MINISCULE.value), task_id
+            task_dict.get("duration", Duration.MINUSCULE.value), task_id
         )
 
         # Parse dates

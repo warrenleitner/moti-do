@@ -18,7 +18,7 @@ def test_calculate_score_with_single_tag_multiplier() -> None:
         tags=["urgent"],
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
     # Base: 10, Difficulty: 1.1, Duration: 1.05, Age: 1.0, Due date: 1.0, Tag: 1.5
@@ -39,7 +39,7 @@ def test_calculate_score_with_multiple_tag_multipliers() -> None:
         tags=["urgent", "important"],
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
     # Base: 10, Difficulty: 1.1, Duration: 1.05, Age: 1.0, Due date: 1.0
@@ -60,7 +60,7 @@ def test_calculate_score_with_tag_not_in_config() -> None:
         tags=["other"],
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
     # Tag "other" not in config, so tag_mult = 1.0
@@ -80,7 +80,7 @@ def test_calculate_score_with_project_multiplier() -> None:
         project="WorkProject",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
     # Base: 10, Difficulty: 1.1, Duration: 1.05, Age: 1.0, Due date: 1.0, Project: 1.8
@@ -100,7 +100,7 @@ def test_calculate_score_with_project_not_in_config() -> None:
         project="PersonalProject",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
     # Project "PersonalProject" not in config, so project_mult = 1.0
@@ -122,7 +122,7 @@ def test_calculate_score_with_both_tag_and_project_multipliers() -> None:
         project="WorkProject",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
     # Base: 10, Difficulty: 1.1, Duration: 1.05, Age: 1.0, Due date: 1.0
@@ -143,7 +143,7 @@ def test_calculate_score_with_no_tags_or_project() -> None:
         creation_date=datetime(2025, 1, 1),
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
     # No tags or project, so tag/project multipliers = 1.0
@@ -163,7 +163,7 @@ def test_calculate_score_with_mixed_tags() -> None:
         tags=["urgent", "personal", "work"],  # "personal" not in config
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
     # Only "urgent" and "work" contribute
@@ -212,7 +212,7 @@ def test_calculate_score_with_empty_tag_list() -> None:
         tags=[],  # Empty list
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
     # Empty tags, so tag_mult = 1.0

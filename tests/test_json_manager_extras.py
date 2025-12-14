@@ -23,7 +23,7 @@ def test_load_user_invalid_due_date_format(
                     "title": "Test Task",
                     "priority": "Low",
                     "difficulty": "Trivial",
-                    "duration": "Miniscule",
+                    "duration": "Minuscule",
                     "is_complete": False,
                     "creation_date": "2023-01-01 12:00:00",
                     "due_date": "invalid-date-format",  # Invalid format
@@ -69,7 +69,7 @@ def test_load_user_invalid_start_date_format(
                     "title": "Test Task",
                     "priority": "Low",
                     "difficulty": "Trivial",
-                    "duration": "Miniscule",
+                    "duration": "Minuscule",
                     "is_complete": False,
                     "creation_date": "2023-01-01 12:00:00",
                     "due_date": None,
@@ -113,7 +113,7 @@ def test_load_user_invalid_recurrence_type(
                     "title": "Test Task",
                     "priority": "Low",
                     "difficulty": "Trivial",
-                    "duration": "Miniscule",
+                    "duration": "Minuscule",
                     "is_complete": False,
                     "creation_date": "2023-01-01 12:00:00",
                     "recurrence_type": "InvalidType",  # Invalid

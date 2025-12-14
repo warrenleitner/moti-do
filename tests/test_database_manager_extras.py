@@ -104,7 +104,7 @@ def test_load_user_invalid_due_date_format(tmp_path, capsys):  # type: ignore
                 None,  # text_description
                 "Low",
                 "Trivial",
-                "Miniscule",
+                "Minuscule",
                 0,
                 "2023-01-01 12:00:00",
                 "invalid-date-format",  # Invalid due_date format
@@ -167,7 +167,7 @@ def test_load_user_invalid_start_date_format(tmp_path, capsys):  # type: ignore
                 None,  # text_description
                 "Low",
                 "Trivial",
-                "Miniscule",
+                "Minuscule",
                 0,
                 "2023-01-01 12:00:00",
                 None,  # due_date
@@ -230,7 +230,7 @@ def test_load_user_invalid_tags_json(tmp_path, capsys):  # type: ignore
                 None,  # text_description
                 "Low",
                 "Trivial",
-                "Miniscule",
+                "Minuscule",
                 0,
                 "2023-01-01 12:00:00",
                 None,  # due_date
@@ -293,7 +293,7 @@ def test_load_user_invalid_subtasks_json(tmp_path, capsys):  # type: ignore
                 None,  # text_description
                 "Low",
                 "Trivial",
-                "Miniscule",
+                "Minuscule",
                 0,
                 "2023-01-01 12:00:00",
                 None,  # due_date
@@ -356,7 +356,7 @@ def test_load_user_invalid_dependencies_json(tmp_path, capsys):  # type: ignore
                 None,  # text_description
                 "Low",
                 "Trivial",
-                "Miniscule",
+                "Minuscule",
                 0,
                 "2023-01-01 12:00:00",
                 None,  # due_date
@@ -421,7 +421,7 @@ def test_load_user_invalid_history_json(tmp_path, capsys):  # type: ignore
                 None,  # text_description
                 "Low",
                 "Trivial",
-                "Miniscule",
+                "Minuscule",
                 0,
                 "2023-01-01 12:00:00",
                 None,  # due_date
@@ -461,7 +461,7 @@ def test_load_task_invalid_recurrence_type(manager: DatabaseDataManager) -> None
         "text_description": None,
         "priority": "Low",
         "difficulty": "Trivial",
-        "duration": "Miniscule",
+        "duration": "Minuscule",
         "is_complete": 0,
         "creation_date": "2023-01-01T12:00:00",
         "due_date": None,

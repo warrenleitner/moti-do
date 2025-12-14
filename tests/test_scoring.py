@@ -46,7 +46,7 @@ def test_load_scoring_config_valid() -> None:
         },
         "duration_multiplier": {
             "NOT_SET": 1.0,
-            "MINISCULE": 1.05,
+            "MINUSCULE": 1.05,
             "SHORT": 1.2,
             "MEDIUM": 1.5,
             "LONG": 2.0,
@@ -136,7 +136,7 @@ def test_load_scoring_config_missing_required_key() -> None:
     mock_config = {
         "base_score": 10,
         "field_presence_bonus": {"title": 5},
-        "duration_multiplier": {"MINISCULE": 1.05},
+        "duration_multiplier": {"MINUSCULE": 1.05},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
     }
@@ -157,7 +157,7 @@ def test_load_scoring_config_invalid_multiplier() -> None:
         "base_score": 10,
         "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {"MEDIUM": 0.5},  # Invalid: less than 1.0
-        "duration_multiplier": {"MINISCULE": 1.05},
+        "duration_multiplier": {"MINUSCULE": 1.05},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "due_date_proximity": {
@@ -202,7 +202,7 @@ def test_load_scoring_config_invalid_age_factor() -> None:
         "base_score": 10,
         "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {"MEDIUM": 2.0},
-        "duration_multiplier": {"MINISCULE": 1.05},
+        "duration_multiplier": {"MINUSCULE": 1.05},
         "age_factor": {"unit": "months", "multiplier_per_unit": 0.01},  # Invalid unit
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "due_date_proximity": {
@@ -246,7 +246,7 @@ def test_load_scoring_config_invalid_daily_penalty() -> None:
         "base_score": 10,
         "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {"MEDIUM": 2.0},
-        "duration_multiplier": {"MINISCULE": 1.05},
+        "duration_multiplier": {"MINUSCULE": 1.05},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
         "daily_penalty": {"penalty_points": 5},  # Missing apply_penalty
         "due_date_proximity": {
@@ -294,12 +294,12 @@ def sample_config() -> Dict[str, Any]:
 
 def test_calculate_score_base_case(sample_config: Dict[str, Any]) -> None:
     """Test calculating score with default task attributes."""
-    # Default task with trivial difficulty and miniscule duration
+    # Default task with trivial difficulty and minuscule duration
     task = Task(
         title="Test task",
         creation_date=datetime.now(),
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
     # Calculate score with today's date
@@ -1093,10 +1093,10 @@ def test_calculate_score_with_priority_low() -> None:
         creation_date=datetime(2025, 1, 1),
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
-    # Score = 10 * 1.2 (LOW) * 1.1 (TRIVIAL) * 1.05 (MINISCULE) = 13.86 = 14
+    # Score = 10 * 1.2 (LOW) * 1.1 (TRIVIAL) * 1.05 (MINUSCULE) = 13.86 = 14
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
     assert score == 14
 
@@ -1110,10 +1110,10 @@ def test_calculate_score_with_priority_medium() -> None:
         creation_date=datetime(2025, 1, 1),
         priority=Priority.MEDIUM,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
-    # Score = 10 * 1.5 (MEDIUM) * 1.1 (TRIVIAL) * 1.05 (MINISCULE) = 17.325 = 17
+    # Score = 10 * 1.5 (MEDIUM) * 1.1 (TRIVIAL) * 1.05 (MINUSCULE) = 17.325 = 17
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
     assert score == 17
 
@@ -1127,10 +1127,10 @@ def test_calculate_score_with_priority_high() -> None:
         creation_date=datetime(2025, 1, 1),
         priority=Priority.HIGH,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
-    # Score = 10 * 2.0 (HIGH) * 1.1 (TRIVIAL) * 1.05 (MINISCULE) = 23.1 = 23
+    # Score = 10 * 2.0 (HIGH) * 1.1 (TRIVIAL) * 1.05 (MINUSCULE) = 23.1 = 23
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
     assert score == 23
 
@@ -1144,10 +1144,10 @@ def test_calculate_score_with_priority_defcon_one() -> None:
         creation_date=datetime(2025, 1, 1),
         priority=Priority.DEFCON_ONE,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
-    # Score = 10 * 3.0 (DEFCON_ONE) * 1.1 (TRIVIAL) * 1.05 (MINISCULE) = 34.65 = 35
+    # Score = 10 * 3.0 (DEFCON_ONE) * 1.1 (TRIVIAL) * 1.05 (MINUSCULE) = 34.65 = 35
     score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
     assert score == 35
 
@@ -1189,7 +1189,7 @@ def test_calculate_score_habit_streak_bonus(sample_config: Dict[str, Any]) -> No
     score = calculate_score(task, None, sample_config, date.today())
 
     # Base (10) + Streak (10 * 1.0) = 20
-    # Multipliers: 1.1 (Trivial) * 1.05 (Miniscule) * 1.2 (Low) * 1.0 (Age) = 1.386
+    # Multipliers: 1.1 (Trivial) * 1.05 (Minuscule) * 1.2 (Low) * 1.0 (Age) = 1.386
     # 20 * 1.386 = 27.72 -> 28
     expected_score = int(round(20 * 1.1 * 1.05 * 1.2 * 1.0))
     assert score == expected_score

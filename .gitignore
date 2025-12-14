@@ -38,3 +38,8 @@ __pycache__
 .env
 .env.local
 .env.*.local
+
+# User data (should not be committed)
+src/motido/data/motido_data/users.json
+src/motido/data/motido_data/last_penalty_check.txt
+*.db

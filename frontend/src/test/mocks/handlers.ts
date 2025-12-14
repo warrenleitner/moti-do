@@ -29,7 +29,7 @@ export const mockTasks: Task[] = [
     title: 'Test Task 2',
     priority: Priority.LOW,
     difficulty: Difficulty.TRIVIAL,
-    duration: Duration.MINISCULE,
+    duration: Duration.MINUSCULE,
     is_complete: true,
     is_habit: false,
     tags: ['personal'],

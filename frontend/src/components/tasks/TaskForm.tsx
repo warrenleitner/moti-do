@@ -178,7 +178,7 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
                   label="Duration"
                   onChange={(e) => handleChange('duration', e.target.value as typeof Duration[keyof typeof Duration])}
                 >
-                  <MenuItem value={Duration.MINISCULE}>{DurationEmoji[Duration.MINISCULE]} {DurationLabel[Duration.MINISCULE]}</MenuItem>
+                  <MenuItem value={Duration.MINUSCULE}>{DurationEmoji[Duration.MINUSCULE]} {DurationLabel[Duration.MINUSCULE]}</MenuItem>
                   <MenuItem value={Duration.SHORT}>{DurationEmoji[Duration.SHORT]} {DurationLabel[Duration.SHORT]}</MenuItem>
                   <MenuItem value={Duration.MEDIUM}>{DurationEmoji[Duration.MEDIUM]} {DurationLabel[Duration.MEDIUM]}</MenuItem>
                   <MenuItem value={Duration.LONG}>{DurationEmoji[Duration.LONG]} {DurationLabel[Duration.LONG]}</MenuItem>

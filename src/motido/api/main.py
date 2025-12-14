@@ -1,5 +1,5 @@
 # motido/api/main.py
-# pylint: disable=redefined-outer-name,import-outside-toplevel
+# pylint: disable=redefined-outer-name,import-outside-toplevel,wrong-import-position
 """
 Main FastAPI application for Moti-Do.
 """

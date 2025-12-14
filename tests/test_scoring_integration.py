@@ -55,7 +55,7 @@ def test_routine_task_approaching_deadline() -> None:
         creation_date=datetime(2025, 11, 10),
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
         due_date=datetime(2025, 11, 18),  # 2 days away
         text_description="Complete the weekly status report",
         tags=["routine"],
@@ -66,7 +66,7 @@ def test_routine_task_approaching_deadline() -> None:
     # Base: 10 + 5 (text_description) + 10 (Next Up bonus) = 25
     # Priority: 1.2 (LOW)
     # Difficulty: 1.1 (TRIVIAL)
-    # Duration: 1.05 (MINISCULE)
+    # Duration: 1.05 (MINUSCULE)
     # Age: 1.0 + (6 * 0.01) = 1.06
     # Due date: 1.0 + ((14 - 2) * 0.1) = 2.2 (approaching)
     # Tags: 0.8
@@ -167,7 +167,7 @@ def test_minimal_task_no_multipliers() -> None:
         creation_date=datetime(2025, 11, 16),
         priority=Priority.TRIVIAL,  # Use TRIVIAL (lowest priority) for baseline
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
     score = calculate_score(task, None, config, effective_date)
@@ -175,7 +175,7 @@ def test_minimal_task_no_multipliers() -> None:
     # Base: 10
     # Priority: 1.0 (TRIVIAL)
     # Difficulty: 1.1 (TRIVIAL)
-    # Duration: 1.05 (MINISCULE)
+    # Duration: 1.05 (MINUSCULE)
     # Age: 1.0
     # Due date: 1.0
     # Tags: 1.0
