@@ -4,6 +4,7 @@ import { KanbanBoard } from '../components/kanban';
 import { TaskForm } from '../components/tasks';
 import { useTaskStore } from '../store';
 import type { Task } from '../types';
+import { Priority, Difficulty, Duration } from '../types';
 
 export default function KanbanPage() {
   const { tasks, updateTask, addTask } = useTaskStore();
@@ -29,9 +30,9 @@ export default function KanbanPage() {
         id: crypto.randomUUID(),
         title: taskData.title || 'Untitled',
         creation_date: new Date().toISOString(),
-        priority: taskData.priority || 'medium',
-        difficulty: taskData.difficulty || 'medium',
-        duration: taskData.duration || 'short',
+        priority: taskData.priority || Priority.MEDIUM,
+        difficulty: taskData.difficulty || Difficulty.MEDIUM,
+        duration: taskData.duration || Duration.SHORT,
         is_complete: false,
         is_habit: false,
         tags: taskData.tags || [],

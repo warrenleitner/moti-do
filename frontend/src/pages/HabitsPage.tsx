@@ -5,6 +5,7 @@ import { HabitList } from '../components/habits';
 import { TaskForm } from '../components/tasks';
 import { useTaskStore } from '../store';
 import type { Task } from '../types';
+import { Priority, Difficulty, Duration } from '../types';
 
 export default function HabitsPage() {
   const { tasks, updateTask, addTask } = useTaskStore();
@@ -38,9 +39,9 @@ export default function HabitsPage() {
         id: crypto.randomUUID(),
         title: taskData.title || 'Untitled',
         creation_date: new Date().toISOString(),
-        priority: taskData.priority || 'medium',
-        difficulty: taskData.difficulty || 'medium',
-        duration: taskData.duration || 'short',
+        priority: taskData.priority || Priority.MEDIUM,
+        difficulty: taskData.difficulty || Difficulty.MEDIUM,
+        duration: taskData.duration || Duration.SHORT,
         is_complete: false,
         is_habit: true,
         recurrence_rule: taskData.recurrence_rule || 'daily',

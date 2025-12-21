@@ -1,6 +1,6 @@
 import { Box, FormControl, InputLabel, Select, MenuItem, Chip, Stack, Button } from '@mui/material';
 import { FilterList, Clear } from '@mui/icons-material';
-import { Priority } from '../../types';
+import { Priority, PriorityEmoji } from '../../types';
 import SearchInput from './SearchInput';
 
 interface FilterBarProps {
@@ -70,11 +70,11 @@ export default function FilterBar({
             }
           >
             <MenuItem value="">All</MenuItem>
-            <MenuItem value="critical">Critical</MenuItem>
-            <MenuItem value="high">High</MenuItem>
-            <MenuItem value="medium">Medium</MenuItem>
-            <MenuItem value="low">Low</MenuItem>
-            <MenuItem value="trivial">Trivial</MenuItem>
+            <MenuItem value={Priority.DEFCON_ONE}>{PriorityEmoji[Priority.DEFCON_ONE]} Defcon One</MenuItem>
+            <MenuItem value={Priority.HIGH}>{PriorityEmoji[Priority.HIGH]} High</MenuItem>
+            <MenuItem value={Priority.MEDIUM}>{PriorityEmoji[Priority.MEDIUM]} Medium</MenuItem>
+            <MenuItem value={Priority.LOW}>{PriorityEmoji[Priority.LOW]} Low</MenuItem>
+            <MenuItem value={Priority.TRIVIAL}>{PriorityEmoji[Priority.TRIVIAL]} Trivial</MenuItem>
           </Select>
         </FormControl>
 

@@ -46,7 +46,7 @@ class TaskBase(BaseModel):
     text_description: str | None = None
     priority: str = "Low"
     difficulty: str = "Trivial"
-    duration: str = "Miniscule"
+    duration: str = "Minuscule"
     due_date: datetime | None = None
     start_date: datetime | None = None
     icon: str | None = None

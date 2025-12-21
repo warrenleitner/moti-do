@@ -173,7 +173,7 @@ def test_create_tables(
                     text_description TEXT,
                     priority TEXT NOT NULL DEFAULT 'Low',
                     difficulty TEXT NOT NULL DEFAULT 'Trivial',
-                    duration TEXT NOT NULL DEFAULT 'Miniscule',
+                    duration TEXT NOT NULL DEFAULT 'Minuscule',
                     is_complete INTEGER NOT NULL DEFAULT 0,
                     creation_date TEXT,
                     due_date TEXT,

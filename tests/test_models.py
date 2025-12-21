@@ -40,7 +40,7 @@ def test_task_initialization() -> None:
     # Check default difficulty
     assert task.difficulty == Difficulty.TRIVIAL
     # Check default duration
-    assert task.duration == Duration.MINISCULE
+    assert task.duration == Duration.MINUSCULE
     # Check default is_complete status
     assert task.is_complete is False
 
@@ -55,7 +55,7 @@ def test_task_initialization_with_priority() -> None:
     # Ensure default difficulty is still set
     assert task.difficulty == Difficulty.TRIVIAL
     # Ensure default duration is still set
-    assert task.duration == Duration.MINISCULE
+    assert task.duration == Duration.MINUSCULE
 
 
 def test_task_initialization_with_difficulty() -> None:
@@ -68,7 +68,7 @@ def test_task_initialization_with_difficulty() -> None:
     # Ensure default priority is still set
     assert task.priority == Priority.LOW
     # Ensure default duration is still set
-    assert task.duration == Duration.MINISCULE
+    assert task.duration == Duration.MINUSCULE
 
 
 def test_task_initialization_with_priority_and_difficulty() -> None:
@@ -86,7 +86,7 @@ def test_task_initialization_with_priority_and_difficulty() -> None:
     assert task.priority == priority
     assert task.difficulty == difficulty
     # Ensure default duration is still set
-    assert task.duration == Duration.MINISCULE
+    assert task.duration == Duration.MINUSCULE
 
 
 def test_task_initialization_with_duration() -> None:
@@ -158,7 +158,7 @@ def test_task_initialization_with_is_complete() -> None:
     # Ensure other defaults are still set
     assert task.priority == Priority.LOW
     assert task.difficulty == Difficulty.TRIVIAL
-    assert task.duration == Duration.MINISCULE
+    assert task.duration == Duration.MINUSCULE
 
 
 def test_priority_emoji() -> None:
@@ -208,7 +208,7 @@ def test_difficulty_display_style() -> None:
 
 def test_duration_enum_values() -> None:
     """Test the string values of the Duration enum."""
-    assert Duration.MINISCULE.value == "Miniscule"
+    assert Duration.MINUSCULE.value == "Minuscule"
     assert Duration.SHORT.value == "Short"
     assert Duration.MEDIUM.value == "Medium"
     assert Duration.LONG.value == "Long"
@@ -217,7 +217,7 @@ def test_duration_enum_values() -> None:
 
 def test_duration_emoji() -> None:
     """Test that each duration level returns the correct emoji."""
-    assert Duration.MINISCULE.emoji() == "💨"  # Wind blowing
+    assert Duration.MINUSCULE.emoji() == "💨"  # Wind blowing
     assert Duration.SHORT.emoji() == "⏳"  # Hourglass not done
     assert Duration.MEDIUM.emoji() == "🕰️"  # Mantelpiece clock
     assert Duration.LONG.emoji() == "⏱️"  # Stopwatch
@@ -226,7 +226,7 @@ def test_duration_emoji() -> None:
 
 def test_duration_display_style() -> None:
     """Test that each duration level returns the correct display style for rich."""
-    assert Duration.MINISCULE.display_style() == "teal"
+    assert Duration.MINUSCULE.display_style() == "teal"
     assert Duration.SHORT.display_style() == "green"
     assert Duration.MEDIUM.display_style() == "yellow"
     assert Duration.LONG.display_style() == "orange1"
@@ -251,7 +251,7 @@ def sample_tasks() -> List[Task]:
             id="abc12345-mock-uuid-1",
             priority=Priority.LOW,
             difficulty=Difficulty.TRIVIAL,
-            duration=Duration.MINISCULE,
+            duration=Duration.MINUSCULE,
             is_complete=False,
         ),
         Task(

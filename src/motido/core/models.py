@@ -126,7 +126,7 @@ class Difficulty(str, Enum):
 class Duration(str, Enum):
     """Duration levels for tasks from shortest to longest."""
 
-    MINISCULE = "Miniscule"
+    MINUSCULE = "Minuscule"
     SHORT = "Short"
     MEDIUM = "Medium"
     LONG = "Long"
@@ -134,7 +134,7 @@ class Duration(str, Enum):
 
     def emoji(self) -> str:
         """Returns emoji representation of the duration level."""
-        if self == Duration.MINISCULE:
+        if self == Duration.MINUSCULE:
             return "💨"  # Wind blowing
         elif self == Duration.SHORT:
             return "⏳"  # Hourglass not done
@@ -149,7 +149,7 @@ class Duration(str, Enum):
 
     def display_style(self) -> str:
         """Returns rich console style string for the duration."""
-        if self == Duration.MINISCULE:
+        if self == Duration.MINUSCULE:
             return "teal"
         elif self == Duration.SHORT:
             return "green"
@@ -236,7 +236,7 @@ class Task:  # pylint: disable=too-many-instance-attributes
     text_description: str | None = None  # Rich text description (optional)
     priority: Priority = field(default=Priority.LOW)
     difficulty: Difficulty = field(default=Difficulty.TRIVIAL)
-    duration: Duration = field(default=Duration.MINISCULE)
+    duration: Duration = field(default=Duration.MINUSCULE)
     is_complete: bool = field(default=False)
     due_date: datetime | None = None
     start_date: datetime | None = None

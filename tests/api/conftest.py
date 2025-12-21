@@ -72,7 +72,7 @@ def test_user() -> User:
         creation_date=datetime.now(),
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
         is_complete=True,
     )
     task3 = Task(

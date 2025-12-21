@@ -20,7 +20,7 @@ def get_default_scoring_config() -> Dict[str, Any]:
         },
         "duration_multiplier": {
             "NOT_SET": 1.0,
-            "MINISCULE": 1.05,
+            "MINUSCULE": 1.05,
             "SHORT": 1.2,
             "MEDIUM": 1.5,
             "LONG": 2.0,
@@ -79,7 +79,7 @@ def get_simple_scoring_config() -> Dict[str, Any]:
         },
         "duration_multiplier": {
             "NOT_SET": 1.0,
-            "MINISCULE": 1.05,
+            "MINUSCULE": 1.05,
             "SHORT": 1.2,
             "MEDIUM": 1.5,
             "LONG": 2.0,

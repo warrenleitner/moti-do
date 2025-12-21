@@ -424,7 +424,7 @@ def test_row_to_task_with_null_fields() -> None:
         "title": "Minimal Task",
         "priority": "Low",
         "difficulty": "Trivial",
-        "duration": "Miniscule",
+        "duration": "Minuscule",
         "is_complete": False,
         "creation_date": datetime.now(),
         "due_date": None,

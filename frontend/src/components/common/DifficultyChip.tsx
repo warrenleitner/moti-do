@@ -1,5 +1,5 @@
 import { Chip } from '@mui/material';
-import { type Difficulty, DifficultyLabel } from '../../types';
+import { type Difficulty, Difficulty as DifficultyValues, DifficultyLabel, DifficultyEmoji } from '../../types';
 
 interface DifficultyChipProps {
   difficulty: Difficulty;
@@ -7,26 +7,18 @@ interface DifficultyChipProps {
 }
 
 const difficultyColors: Record<Difficulty, string> = {
-  trivial: '#9e9e9e',
-  easy: '#4caf50',
-  medium: '#ff9800',
-  hard: '#f44336',
-  extreme: '#9c27b0',
-};
-
-const difficultyIcons: Record<Difficulty, string> = {
-  trivial: '○',
-  easy: '●',
-  medium: '●●',
-  hard: '●●●',
-  extreme: '★',
+  [DifficultyValues.TRIVIAL]: '#00BCD4',
+  [DifficultyValues.LOW]: '#4caf50',
+  [DifficultyValues.MEDIUM]: '#FFEB3B',
+  [DifficultyValues.HIGH]: '#FF9800',
+  [DifficultyValues.HERCULEAN]: '#f44336',
 };
 
 export default function DifficultyChip({
   difficulty,
   size = 'small',
 }: DifficultyChipProps) {
-  const label = `${difficultyIcons[difficulty]} ${DifficultyLabel[difficulty]}`;
+  const label = `${DifficultyEmoji[difficulty]} ${DifficultyLabel[difficulty]}`;
   const color = difficultyColors[difficulty];
 
   return (

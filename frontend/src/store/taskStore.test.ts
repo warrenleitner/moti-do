@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { useTaskStore, useFilteredTasks, useSelectedTask } from './taskStore';
 import { renderHook, act } from '@testing-library/react';
 import { mockTasks } from '../test/mocks/handlers';
+import { Priority, Difficulty, Duration } from '../types';
 
 // Reset store before each test
 beforeEach(() => {
@@ -35,9 +36,9 @@ describe('TaskStore', () => {
       const newTask = {
         id: 'new-task',
         title: 'New Task',
-        priority: 'medium' as const,
-        difficulty: 'medium' as const,
-        duration: 'short' as const,
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
         is_complete: false,
         is_habit: false,
         tags: [],
@@ -120,18 +121,18 @@ describe('TaskStore', () => {
       const { result } = renderHook(() => useTaskStore());
 
       act(() => {
-        result.current.setFilters({ status: 'completed', priority: 'high' });
+        result.current.setFilters({ status: 'completed', priority: Priority.HIGH });
       });
 
       expect(result.current.filters.status).toBe('completed');
-      expect(result.current.filters.priority).toBe('high');
+      expect(result.current.filters.priority).toBe(Priority.HIGH);
     });
 
     it('should reset filters', () => {
       const { result } = renderHook(() => useTaskStore());
 
       act(() => {
-        result.current.setFilters({ status: 'completed', priority: 'high' });
+        result.current.setFilters({ status: 'completed', priority: Priority.HIGH });
         result.current.resetFilters();
       });
 
@@ -307,7 +308,7 @@ describe('useFilteredTasks', () => {
 
     const { result } = renderHook(() => useFilteredTasks());
     // High priority should come first in descending order
-    expect(result.current[0].priority).toBe('high');
+    expect(result.current[0].priority).toBe(Priority.HIGH);
   });
 });
 

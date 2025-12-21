@@ -382,7 +382,7 @@ def test_handle_create_success_existing_user(mocker: Any) -> None:
         title="My new task",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
-        duration=Duration.MINISCULE,  # Default duration
+        duration=Duration.MINUSCULE,  # Default duration
         creation_date=ANY,
         is_habit=False,
         recurrence_rule=None,
@@ -422,7 +422,7 @@ def test_handle_create_success_existing_user_not_verbose(mocker: Any) -> None:
         title="My new task",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
-        duration=Duration.MINISCULE,  # Default duration
+        duration=Duration.MINUSCULE,  # Default duration
         creation_date=ANY,
         is_habit=False,
         recurrence_rule=None,
@@ -467,7 +467,7 @@ def test_handle_create_success_new_user(mocker: Any) -> None:
         title="First task",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
-        duration=Duration.MINISCULE,  # Default duration
+        duration=Duration.MINUSCULE,  # Default duration
         creation_date=ANY,
         is_habit=False,
         recurrence_rule=None,
@@ -512,7 +512,7 @@ def test_handle_create_success_new_user_not_verbose(mocker: Any) -> None:
         title="First task",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
-        duration=Duration.MINISCULE,  # Default duration
+        duration=Duration.MINUSCULE,  # Default duration
         creation_date=ANY,
         is_habit=False,
         recurrence_rule=None,
@@ -580,7 +580,7 @@ def test_handle_create_save_error(mocker: Any) -> None:
         title="Task to fail save",
         priority=Priority.LOW,
         difficulty=Difficulty.TRIVIAL,  # Updated default difficulty
-        duration=Duration.MINISCULE,  # Default duration
+        duration=Duration.MINUSCULE,  # Default duration
         creation_date=ANY,
         is_habit=False,
         recurrence_rule=None,
@@ -641,7 +641,7 @@ def test_handle_create_with_difficulty(mocker: Any) -> None:
         title="Difficult task",
         priority=Priority.LOW,  # Default priority
         difficulty=Difficulty.HIGH,  # Specified difficulty
-        duration=Duration.MINISCULE,  # Default duration
+        duration=Duration.MINUSCULE,  # Default duration
         creation_date=ANY,
         is_habit=False,
         recurrence_rule=None,
@@ -712,7 +712,7 @@ def test_handle_create_with_priority_and_difficulty(mocker: Any) -> None:
         title="High prio, medium diff task",
         priority=Priority.HIGH,
         difficulty=Difficulty.MEDIUM,
-        duration=Duration.MINISCULE,  # Default duration
+        duration=Duration.MINUSCULE,  # Default duration
         creation_date=ANY,
         is_habit=False,
         recurrence_rule=None,
@@ -1330,7 +1330,7 @@ def test_handle_edit_success_difficulty_only(mocker: Any) -> None:
         title="Original task",
         priority=Priority.MEDIUM,
         difficulty=Difficulty.LOW,  # Initial difficulty
-        duration=Duration.MINISCULE,  # Default duration
+        duration=Duration.MINUSCULE,  # Default duration
         creation_date=datetime.now(),
         id="taskeditdiff1",
     )
@@ -1367,7 +1367,7 @@ def test_handle_edit_success_duration_only(mocker: Any) -> None:
         title="Original task",
         priority=Priority.MEDIUM,
         difficulty=Difficulty.LOW,
-        duration=Duration.MINISCULE,  # Initial duration
+        duration=Duration.MINUSCULE,  # Initial duration
         creation_date=datetime.now(),
         id="taskeditdur1",
     )
@@ -1391,7 +1391,7 @@ def test_handle_edit_success_duration_only(mocker: Any) -> None:
         False,  # difficulty_updated
         None,  # old_difficulty
         True,  # duration_updated
-        Duration.MINISCULE,  # old_duration
+        Duration.MINUSCULE,  # old_duration
     )
 
 
@@ -1441,7 +1441,7 @@ def test_print_task_updates_duration(mocker: Any) -> None:
         id="print-updates-test",
     )
 
-    old_duration = Duration.MINISCULE  # Old duration
+    old_duration = Duration.MINUSCULE  # Old duration
 
     # Call the function directly with duration_updated=True
     # pylint: disable=protected-access
@@ -1471,7 +1471,7 @@ def test_handle_edit_success_all_fields(mocker: Any) -> None:
     original_desc = "Original task"
     original_prio = Priority.LOW
     original_diff = Difficulty.TRIVIAL
-    original_dur = Duration.MINISCULE
+    original_dur = Duration.MINUSCULE
     mock_task = Task(
         title=original_desc,
         priority=original_prio,

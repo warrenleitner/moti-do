@@ -19,7 +19,7 @@ def test_handle_create_habit(mocker: MockerFixture) -> None:
         title="Daily Habit",
         priority="Low",
         difficulty="Trivial",
-        duration="Miniscule",
+        duration="Minuscule",
         habit=True,
         recurrence="daily",
         recurrence_type="Strict",

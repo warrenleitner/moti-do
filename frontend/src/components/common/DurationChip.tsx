@@ -1,6 +1,5 @@
 import { Chip } from '@mui/material';
-import { AccessTime } from '@mui/icons-material';
-import { type Duration, DurationLabel } from '../../types';
+import { type Duration, DurationLabel, DurationEmoji } from '../../types';
 
 interface DurationChipProps {
   duration: Duration;
@@ -10,8 +9,7 @@ interface DurationChipProps {
 export default function DurationChip({ duration, size = 'small' }: DurationChipProps) {
   return (
     <Chip
-      icon={<AccessTime sx={{ fontSize: size === 'small' ? 14 : 18 }} />}
-      label={DurationLabel[duration]}
+      label={`${DurationEmoji[duration]} ${DurationLabel[duration]}`}
       size={size}
       variant="outlined"
       sx={{

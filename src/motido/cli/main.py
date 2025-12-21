@@ -105,8 +105,8 @@ def handle_create(args: Namespace, manager: DataManager, user: User | None) -> N
             )
             sys.exit(1)
 
-    # Get the duration from args, default to MINISCULE if not specified
-    duration = Duration.MINISCULE  # Default
+    # Get the duration from args, default to MINUSCULE if not specified
+    duration = Duration.MINUSCULE  # Default
     if args.duration:
         try:
             duration = Duration(args.duration)

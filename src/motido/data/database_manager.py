@@ -88,7 +88,7 @@ class DatabaseDataManager(DataManager):
                     text_description TEXT,
                     priority TEXT NOT NULL DEFAULT 'Low',
                     difficulty TEXT NOT NULL DEFAULT 'Trivial',
-                    duration TEXT NOT NULL DEFAULT 'Miniscule',
+                    duration TEXT NOT NULL DEFAULT 'Minuscule',
                     is_complete INTEGER NOT NULL DEFAULT 0,
                     creation_date TEXT,
                     due_date TEXT,
@@ -236,7 +236,7 @@ class DatabaseDataManager(DataManager):
                     duration_str = (
                         row["duration"]
                         if "duration" in row.keys()
-                        else Duration.MINISCULE.value
+                        else Duration.MINUSCULE.value
                     )
                     duration = parse_duration_safely(duration_str, row["id"])
 

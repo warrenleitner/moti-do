@@ -1,5 +1,5 @@
 import { Chip } from '@mui/material';
-import { type Priority, PriorityEmoji } from '../../types';
+import { type Priority, Priority as PriorityValues, PriorityEmoji } from '../../types';
 
 interface PriorityChipProps {
   priority: Priority;
@@ -8,19 +8,19 @@ interface PriorityChipProps {
 }
 
 const priorityColors: Record<Priority, string> = {
-  trivial: '#9e9e9e',
-  low: '#2196f3',
-  medium: '#ff9800',
-  high: '#f44336',
-  critical: '#d32f2f',
+  [PriorityValues.TRIVIAL]: '#00BCD4',
+  [PriorityValues.LOW]: '#4CAF50',
+  [PriorityValues.MEDIUM]: '#FFEB3B',
+  [PriorityValues.HIGH]: '#FF9800',
+  [PriorityValues.DEFCON_ONE]: '#f44336',
 };
 
 const priorityLabels: Record<Priority, string> = {
-  trivial: 'Trivial',
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
-  critical: 'Critical',
+  [PriorityValues.TRIVIAL]: 'Trivial',
+  [PriorityValues.LOW]: 'Low',
+  [PriorityValues.MEDIUM]: 'Medium',
+  [PriorityValues.HIGH]: 'High',
+  [PriorityValues.DEFCON_ONE]: 'Defcon One',
 };
 
 export default function PriorityChip({

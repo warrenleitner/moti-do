@@ -1,11 +1,16 @@
 # motido/api/main.py
-# pylint: disable=redefined-outer-name,import-outside-toplevel
+# pylint: disable=redefined-outer-name,import-outside-toplevel,wrong-import-position
 """
 Main FastAPI application for Moti-Do.
 """
 
 import os
 from datetime import date, timedelta
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

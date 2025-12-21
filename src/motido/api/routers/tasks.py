@@ -77,7 +77,7 @@ def parse_duration(value: str) -> Duration:
     for d in Duration:
         if d.value.lower() == value.lower():
             return d
-    return Duration.MINISCULE  # pragma: no cover
+    return Duration.MINUSCULE  # pragma: no cover
 
 
 def parse_recurrence_type(value: str | None) -> RecurrenceType | None:

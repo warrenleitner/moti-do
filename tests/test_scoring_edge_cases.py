@@ -725,7 +725,7 @@ def test_calculate_score_with_green_style_range() -> None:
     }
     config["duration_multiplier"] = {
         "NOT_SET": 1.0,
-        "MINISCULE": 1.0,  # Set to 1.0 to maintain base score of 20
+        "MINUSCULE": 1.0,  # Set to 1.0 to maintain base score of 20
     }
     config["age_factor"] = {"unit": "days", "multiplier_per_unit": 0.0}  # No age factor
 
@@ -734,7 +734,7 @@ def test_calculate_score_with_green_style_range() -> None:
         creation_date=datetime.now(),
         id="green-score-task",
         difficulty=Difficulty.TRIVIAL,
-        duration=Duration.MINISCULE,
+        duration=Duration.MINUSCULE,
     )
 
     score = calculate_score(task, None, config, date.today())

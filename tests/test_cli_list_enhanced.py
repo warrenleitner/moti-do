@@ -149,7 +149,7 @@ def test_handle_list_with_all_fields(  # type: ignore[misc]
             "HERCULEAN": 1.0,
         },
         "duration_multiplier": {
-            "MINISCULE": 1.0,
+            "MINUSCULE": 1.0,
             "SHORT": 1.0,
             "MEDIUM": 1.0,
             "LONG": 1.0,
@@ -192,7 +192,7 @@ def test_handle_list_with_partial_fields(  # type: ignore[misc]
             "HERCULEAN": 1.0,
         },
         "duration_multiplier": {
-            "MINISCULE": 1.0,
+            "MINUSCULE": 1.0,
             "SHORT": 1.0,
             "MEDIUM": 1.0,
             "LONG": 1.0,
@@ -232,7 +232,7 @@ def test_handle_list_without_optional_fields(  # type: ignore[misc]
             "HERCULEAN": 1.0,
         },
         "duration_multiplier": {
-            "MINISCULE": 1.0,
+            "MINUSCULE": 1.0,
             "SHORT": 1.0,
             "MEDIUM": 1.0,
             "LONG": 1.0,
