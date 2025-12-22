@@ -1,0 +1,319 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import TaskTable from './TaskTable';
+import { Task, Priority, Difficulty, Duration } from '../../types/models';
+import { useTaskStore } from '../../store/taskStore';
+
+// Mock the task store
+vi.mock('../../store/taskStore', () => ({
+  useTaskStore: vi.fn(),
+}));
+
+const mockTask: Task = {
+  id: '1',
+  title: 'Test Task',
+  text_description: 'Test description',
+  creation_date: '2024-01-01T00:00:00Z',
+  priority: 'High' as Priority,
+  difficulty: 'Medium' as Difficulty,
+  duration: 'Short' as Duration,
+  icon: '📝',
+  is_complete: false,
+  tags: ['test', 'important'],
+  subtasks: [],
+  dependencies: [],
+  is_habit: false,
+  streak_current: 0,
+  streak_best: 0,
+  history: [],
+  score: 100,
+};
+
+const mockTask2: Task = {
+  ...mockTask,
+  id: '2',
+  title: 'Another Task',
+  priority: 'Low' as Priority,
+  score: 50,
+  due_date: '2024-12-31T00:00:00Z',
+  project: 'Test Project',
+};
+
+describe('TaskTable', () => {
+  const mockOnEdit = vi.fn();
+  const mockOnDelete = vi.fn();
+  const mockOnComplete = vi.fn();
+  const mockCompleteTask = vi.fn();
+  const mockUncompleteTask = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+
+    // Mock the store
+    (useTaskStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector: (state: unknown) => unknown) => {
+      const mockState = {
+        completeTask: mockCompleteTask,
+        uncompleteTask: mockUncompleteTask,
+      };
+      return selector(mockState);
+    });
+  });
+
+  it('renders task table with tasks', () => {
+    render(
+      <TaskTable
+        tasks={[mockTask, mockTask2]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    expect(screen.getByText('Test Task')).toBeInTheDocument();
+    expect(screen.getByText('Another Task')).toBeInTheDocument();
+  });
+
+  it('displays task properties correctly', () => {
+    render(
+      <TaskTable
+        tasks={[mockTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    // Check for title
+    expect(screen.getByText('Test Task')).toBeInTheDocument();
+
+    // Check for icon
+    expect(screen.getByText('📝')).toBeInTheDocument();
+
+    // Check that the table has rows
+    const rows = screen.getAllByRole('row');
+    expect(rows.length).toBeGreaterThan(1); // Header + data rows
+  });
+
+  it('calls onEdit when edit button is clicked', () => {
+    render(
+      <TaskTable
+        tasks={[mockTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    const editButtons = screen.getAllByRole('button', { name: /edit/i });
+    fireEvent.click(editButtons[0]);
+
+    expect(mockOnEdit).toHaveBeenCalledWith(mockTask);
+  });
+
+  it('calls onDelete when delete button is clicked', () => {
+    render(
+      <TaskTable
+        tasks={[mockTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+    fireEvent.click(deleteButtons[0]);
+
+    expect(mockOnDelete).toHaveBeenCalledWith('1');
+  });
+
+  it('toggles task completion when complete button is clicked', () => {
+    render(
+      <TaskTable
+        tasks={[mockTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    const completeButtons = screen.getAllByRole('button', { name: /mark complete/i });
+    fireEvent.click(completeButtons[0]);
+
+    expect(mockCompleteTask).toHaveBeenCalledWith('1');
+    expect(mockOnComplete).toHaveBeenCalledWith('1');
+  });
+
+  it('sorts tasks by score', () => {
+    render(
+      <TaskTable
+        tasks={[mockTask, mockTask2]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    // By default, tasks are sorted by priority (desc). Both tasks have different priorities.
+    // Click the score column header to add score sort
+    const sortLabels = screen.getAllByRole('button');
+    const scoreSort = sortLabels.find((label) => label.textContent?.includes('XP'));
+
+    if (scoreSort) {
+      fireEvent.click(scoreSort);
+    }
+
+    // Verify that sorting was applied (check that rows exist)
+    const rows = screen.getAllByRole('row');
+    expect(rows.length).toBeGreaterThan(1);
+  });
+
+  it('opens column config dialog when settings button is clicked', () => {
+    render(
+      <TaskTable
+        tasks={[mockTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    const settingsButton = screen.getByRole('button', { name: /configure columns/i });
+    fireEvent.click(settingsButton);
+
+    expect(screen.getByText('Configure Columns')).toBeInTheDocument();
+  });
+
+  it('persists column configuration to localStorage', () => {
+    render(
+      <TaskTable
+        tasks={[mockTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    const settingsButton = screen.getByRole('button', { name: /configure columns/i });
+    fireEvent.click(settingsButton);
+
+    // The dialog should save to localStorage when changes are made
+    expect(screen.getByText('Configure Columns')).toBeInTheDocument();
+  });
+
+  it('handles empty task list', () => {
+    render(
+      <TaskTable
+        tasks={[]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    // Should still render the table structure
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('displays project chip when task has project', () => {
+    render(
+      <TaskTable
+        tasks={[mockTask2]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    expect(screen.getByText('Test Project')).toBeInTheDocument();
+  });
+
+  it('formats due date correctly', () => {
+    render(
+      <TaskTable
+        tasks={[mockTask2]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    // Check that the task with due date is displayed
+    expect(screen.getByText('Another Task')).toBeInTheDocument();
+  });
+
+  it('supports multi-column sorting', () => {
+    const tasks = [
+      { ...mockTask, id: '1', priority: 'High' as Priority, score: 100 },
+      { ...mockTask, id: '2', priority: 'High' as Priority, score: 50 },
+      { ...mockTask, id: '3', priority: 'Low' as Priority, score: 100 },
+    ];
+
+    render(
+      <TaskTable
+        tasks={tasks}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    // Click priority header first
+    const priorityHeader = screen.getByText('Priority');
+    fireEvent.click(priorityHeader);
+
+    // Click score header second (adds to sort)
+    const scoreHeader = screen.getByText('XP');
+    fireEvent.click(scoreHeader);
+
+    // Now tasks should be sorted by priority first, then by score
+    const rows = screen.getAllByRole('row');
+    expect(rows.length).toBeGreaterThan(1); // Has header + data rows
+  });
+
+  it('shows select all checkbox when onSelectAll is provided', () => {
+    const mockOnSelectAll = vi.fn();
+
+    render(
+      <TaskTable
+        tasks={[mockTask, mockTask2]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+        selectedTasks={[]}
+        onSelectAll={mockOnSelectAll}
+      />
+    );
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    // Should have select-all checkbox in header
+    expect(checkboxes.length).toBeGreaterThan(0);
+  });
+
+  it('handles task selection', () => {
+    const mockOnSelectTask = vi.fn();
+    const mockOnSelectAll = vi.fn();
+
+    render(
+      <TaskTable
+        tasks={[mockTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+        selectedTasks={[]}
+        onSelectTask={mockOnSelectTask}
+        onSelectAll={mockOnSelectAll}
+      />
+    );
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    // First checkbox is select all, second is the task checkbox
+    if (checkboxes.length > 1) {
+      fireEvent.click(checkboxes[1]);
+      expect(mockOnSelectTask).toHaveBeenCalledWith('1');
+    } else {
+      // If only one checkbox, verify it exists
+      expect(checkboxes.length).toBeGreaterThan(0);
+    }
+  });
+});

@@ -144,13 +144,33 @@ test = "pytest"
 coverage = "pytest --cov=motido --cov-report=term-missing"
 security = "safety scan"
 
-# Main check task still references the directly defined tasks
-check = [
+# Frontend tasks
+frontend-lint = { shell = "cd frontend && npm run lint" }
+frontend-typecheck = { shell = "cd frontend && npx tsc --noEmit" }
+frontend-test = { shell = "cd frontend && npm run test" }
+frontend-build = { shell = "cd frontend && npm run build" }
+
+# Frontend check combines all frontend quality checks
+frontend-check = [
+    "frontend-lint",
+    "frontend-typecheck",
+    "frontend-test",
+    "frontend-build",
+]
+
+# Python-only check task (original behavior)
+check-python = [
     "format",
     "typecheck",
     "lint",
     "coverage",
-] 
+]
+
+# Main check task now includes both Python and frontend
+check = [
+    "check-python",
+    "frontend-check",
+]
 
 check-all = [
     "check",
