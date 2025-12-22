@@ -43,3 +43,6 @@ __pycache__
 src/motido/data/motido_data/users.json
 src/motido/data/motido_data/last_penalty_check.txt
 *.db
+regen_password.py
+clickup_import.json
+scripts/convert_clickup_to_motido.py

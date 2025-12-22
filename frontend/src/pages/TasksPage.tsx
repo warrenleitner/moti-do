@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Box, Typography, Button, Snackbar, Alert } from '@mui/material';
-import { Add } from '@mui/icons-material';
+import { Box, Typography, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { Add, ViewList, TableChart } from '@mui/icons-material';
 import { TaskList, TaskForm } from '../components/tasks';
+import TaskTable from '../components/tasks/TaskTable';
 import { ConfirmDialog } from '../components/common';
 import { useTaskStore } from '../store';
+import { useFilteredTasks } from '../store/taskStore';
 import { useUserStore } from '../store/userStore';
 import type { Task } from '../types';
 
@@ -11,7 +13,12 @@ export default function TasksPage() {
   // Use API actions from the store
   const { createTask, saveTask, deleteTask, completeTask, uncompleteTask, isLoading } = useTaskStore();
   const { fetchStats } = useUserStore();
+  const filteredTasks = useFilteredTasks();
 
+  const [viewMode, setViewMode] = useState<'list' | 'table'>(() => {
+    const saved = localStorage.getItem('taskViewMode');
+    return (saved as 'list' | 'table') || 'list';
+  });
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -21,6 +28,13 @@ export default function TasksPage() {
     message: '',
     severity: 'success',
   });
+
+  const handleViewModeChange = (_: React.MouseEvent<HTMLElement>, newMode: 'list' | 'table' | null) => {
+    if (newMode !== null) {
+      setViewMode(newMode);
+      localStorage.setItem('taskViewMode', newMode);
+    }
+  };
 
   const handleCreateNew = () => {
     setEditingTask(null);
@@ -111,19 +125,44 @@ export default function TasksPage() {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Tasks</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew} disabled={isLoading}>
-          New Task
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={handleViewModeChange}
+            size="small"
+            aria-label="view mode"
+          >
+            <ToggleButton value="list" aria-label="list view">
+              <ViewList />
+            </ToggleButton>
+            <ToggleButton value="table" aria-label="table view">
+              <TableChart />
+            </ToggleButton>
+          </ToggleButtonGroup>
+          <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew} disabled={isLoading}>
+            New Task
+          </Button>
+        </Box>
       </Box>
 
-      {/* Task list */}
-      <TaskList
-        onEdit={handleEdit}
-        onDelete={handleDeleteClick}
-        onComplete={handleComplete}
-        onSubtaskToggle={handleSubtaskToggle}
-        onCreateNew={handleCreateNew}
-      />
+      {/* Task list or table based on view mode */}
+      {viewMode === 'list' ? (
+        <TaskList
+          onEdit={handleEdit}
+          onDelete={handleDeleteClick}
+          onComplete={handleComplete}
+          onSubtaskToggle={handleSubtaskToggle}
+          onCreateNew={handleCreateNew}
+        />
+      ) : (
+        <TaskTable
+          tasks={filteredTasks}
+          onEdit={handleEdit}
+          onDelete={handleDeleteClick}
+          onComplete={handleComplete}
+        />
+      )}
 
       {/* Task form dialog */}
       <TaskForm
