@@ -97,6 +97,7 @@ class TaskResponse(TaskBase):
     streak_current: int = 0
     streak_best: int = 0
     parent_habit_id: str | None = None
+    score: int = 0  # Calculated XP value for this task
 
     class Config:
         """Pydantic config."""

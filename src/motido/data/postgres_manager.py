@@ -34,10 +34,10 @@ try:
     from psycopg2.extras import RealDictCursor  # pragma: no cover
 
     POSTGRES_AVAILABLE = True  # pragma: no cover
-except ImportError:
-    POSTGRES_AVAILABLE = False
-    psycopg2 = None  # type: ignore
-    RealDictCursor = None  # type: ignore
+except ImportError:  # pragma: no cover
+    POSTGRES_AVAILABLE = False  # pragma: no cover
+    psycopg2 = None  # pragma: no cover
+    RealDictCursor = None  # pragma: no cover
 
 
 class PostgresDataManager(DataManager):

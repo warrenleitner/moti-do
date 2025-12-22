@@ -41,6 +41,7 @@ export default function KanbanPage() {
         streak_current: 0,
         streak_best: 0,
         history: [],
+        score: 0,
         ...taskData,
       };
       addTask(newTask);

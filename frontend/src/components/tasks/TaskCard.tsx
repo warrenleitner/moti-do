@@ -18,6 +18,7 @@ import {
   Delete,
   Loop,
   Link as LinkIcon,
+  Star,
 } from '@mui/icons-material';
 import { useState } from 'react';
 import type { Task } from '../../types';
@@ -111,6 +112,16 @@ export default function TaskCard({
 
             {/* Metadata row */}
             <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+              <Tooltip title="XP reward for completing this task">
+                <Chip
+                  icon={<Star sx={{ fontSize: 16 }} />}
+                  label={`${task.score} XP`}
+                  size="small"
+                  color="secondary"
+                  variant="outlined"
+                  sx={{ fontWeight: 600 }}
+                />
+              </Tooltip>
               <PriorityChip priority={task.priority} />
               <DifficultyChip difficulty={task.difficulty} />
               <DurationChip duration={task.duration} />

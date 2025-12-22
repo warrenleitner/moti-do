@@ -84,6 +84,7 @@ export interface Task {
   streak_best: number;
   history: HistoryEntry[];
   status?: TaskStatus; // For Kanban board
+  score: number; // Calculated XP value for this task
 }
 
 export interface XPTransaction {

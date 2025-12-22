@@ -42,6 +42,7 @@ export default function CalendarPage() {
       streak_best: 0,
       history: [],
       due_date: newTaskDate?.toISOString(),
+      score: 0,
       ...taskData,
     };
     addTask(newTask);
@@ -76,6 +77,7 @@ export default function CalendarPage() {
     streak_best: 0,
     history: [],
     due_date: newTaskDate?.toISOString(),
+    score: 0,
   };
 
   return (
