@@ -1363,3 +1363,152 @@ def test_apply_penalties_vacation_mode() -> None:
 
             # Last check date SHOULD be updated
             mock_set_date.assert_called_once_with(effective_date)
+
+
+# --- Test Logarithmic Overdue Scaling ---
+
+
+def test_calculate_due_date_multiplier_logarithmic_1_day() -> None:
+    """Test logarithmic overdue multiplier for 1 day overdue."""
+    effective_date = date(2025, 11, 16)
+    task = Task(
+        title="Test task",
+        creation_date=datetime(2025, 11, 1),
+        due_date=datetime(2025, 11, 15),
+    )
+    config: Dict[str, Any] = {
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_scaling": "logarithmic",
+            "overdue_scale_factor": 0.75,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.05,
+        }
+    }
+
+    multiplier = calculate_due_date_multiplier(task, config, effective_date)
+    # 1.0 + (log(1 + 1) * 0.75) = 1.0 + (log(2) * 0.75) = 1.0 + 0.52 = 1.52
+    import math
+
+    expected = 1.0 + (math.log(2) * 0.75)
+    assert abs(multiplier - expected) < 0.01
+
+
+def test_calculate_due_date_multiplier_logarithmic_7_days() -> None:
+    """Test logarithmic overdue multiplier for 7 days overdue."""
+    effective_date = date(2025, 11, 16)
+    task = Task(
+        title="Test task",
+        creation_date=datetime(2025, 11, 1),
+        due_date=datetime(2025, 11, 9),
+    )
+    config: Dict[str, Any] = {
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_scaling": "logarithmic",
+            "overdue_scale_factor": 0.75,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.05,
+        }
+    }
+
+    multiplier = calculate_due_date_multiplier(task, config, effective_date)
+    # 1.0 + (log(7 + 1) * 0.75) = 1.0 + (log(8) * 0.75) = 1.0 + 1.56 = 2.56
+    import math
+
+    expected = 1.0 + (math.log(8) * 0.75)
+    assert abs(multiplier - expected) < 0.01
+
+
+def test_calculate_due_date_multiplier_logarithmic_30_days() -> None:
+    """Test logarithmic overdue multiplier for 30 days overdue."""
+    effective_date = date(2025, 11, 16)
+    task = Task(
+        title="Test task",
+        creation_date=datetime(2025, 10, 1),
+        due_date=datetime(2025, 10, 17),
+    )
+    config: Dict[str, Any] = {
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_scaling": "logarithmic",
+            "overdue_scale_factor": 0.75,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.05,
+        }
+    }
+
+    multiplier = calculate_due_date_multiplier(task, config, effective_date)
+    # 1.0 + (log(30 + 1) * 0.75) = 1.0 + (log(31) * 0.75) = 1.0 + 2.57 = 3.57
+    import math
+
+    expected = 1.0 + (math.log(31) * 0.75)
+    assert abs(multiplier - expected) < 0.01
+
+
+def test_calculate_due_date_multiplier_logarithmic_100_days() -> None:
+    """Test logarithmic overdue multiplier plateaus for very old tasks."""
+    effective_date = date(2025, 11, 16)
+    task = Task(
+        title="Very old task",
+        creation_date=datetime(2025, 7, 1),
+        due_date=datetime(2025, 8, 8),
+    )
+    config: Dict[str, Any] = {
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_scaling": "logarithmic",
+            "overdue_scale_factor": 0.75,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.05,
+        }
+    }
+
+    multiplier = calculate_due_date_multiplier(task, config, effective_date)
+    # 1.0 + (log(100 + 1) * 0.75) = 1.0 + (log(101) * 0.75) = 1.0 + 3.46 = 4.46
+    import math
+
+    expected = 1.0 + (math.log(101) * 0.75)
+    assert abs(multiplier - expected) < 0.01
+
+
+def test_calculate_score_with_logarithmic_overdue() -> None:
+    """Test calculate_score integration with logarithmic overdue multiplier."""
+    effective_date = date(2025, 11, 16)
+    # Task 30 days overdue
+    task = Task(
+        title="Overdue task",
+        creation_date=datetime(2025, 10, 1),
+        due_date=datetime(2025, 10, 17),
+        difficulty=Difficulty.MEDIUM,
+        duration=Duration.MEDIUM,
+    )
+
+    config = {
+        "base_score": 10,
+        "field_presence_bonus": {},
+        "difficulty_multiplier": {"MEDIUM": 2.0},
+        "duration_multiplier": {"MEDIUM": 1.5},
+        "age_factor": {"unit": "days", "multiplier_per_unit": 0.0},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_scaling": "logarithmic",
+            "overdue_scale_factor": 0.75,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.05,
+        },
+        "start_date_aging": {
+            "enabled": False,
+        },
+        "dependency_chain": {
+            "enabled": False,
+        },
+        "tag_multipliers": {},
+        "project_multipliers": {},
+    }
+
+    score = calculate_score(task, None, config, effective_date)
+    # base = 10, difficulty = 2.0, duration = 1.5, age = 1.0
+    # due_date_mult = 1.0 + (log(31) * 0.75) ≈ 3.57
+    # score = 10 * 2.0 * 1.5 * 1.0 * 3.57 = 107.1 ≈ 107
+    assert 105 <= score <= 109  # Allow small rounding variance
