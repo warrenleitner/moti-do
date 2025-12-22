@@ -172,12 +172,14 @@ This project uses [Poe the Poet](https://github.com/nat-n/poethepoet) for task r
 
 Run tasks using `poetry run poe <task_name>`:
 
+*   **Run All Checks (Python + Frontend):** `poetry run poe check` ⭐ **Recommended**
 *   **Format Code:** `poetry run poe format` (Applies Black and isort)
 *   **Lint Code:** `poetry run poe lint`
 *   **Type Check:** `poetry run poe typecheck`
 *   **Run Tests:** `poetry run poe test`
 *   **Check Test Coverage:** `poetry run poe coverage` (Requires 100% coverage)
-*   **Run All Checks:** `poetry run poe check` (Runs format, lint, typecheck, coverage)
+*   **Python-Only Checks:** `poetry run poe check-python` (Runs format, lint, typecheck, coverage)
+*   **Frontend-Only Checks:** `poetry run poe frontend-check` (Runs lint, typecheck, test, build)
 
 ### Frontend Development Commands
 
@@ -207,13 +209,24 @@ npm run preview           # Preview build
 
 Before submitting code, ensure all checks pass:
 
-**Python Backend:**
+**Quick Check (Recommended):**
 ```bash
-poetry run poe check      # Must pass: format, lint, typecheck, coverage
+poetry run poe check      # Runs ALL Python + Frontend checks
 ```
 
-**Frontend:**
+This single command verifies:
+- Python: format, lint (10.0/10.0), typecheck (0 errors), coverage (100%)
+- Frontend: lint (ESLint), typecheck (TypeScript), test (Vitest), build
+
+**Manual Checks (if needed):**
 ```bash
+# Python only
+poetry run poe check-python
+
+# Frontend only (from project root)
+poetry run poe frontend-check
+
+# OR run frontend checks from frontend/ directory
 cd frontend
 npm run lint              # ESLint must pass
 npx tsc --noEmit          # TypeScript must compile

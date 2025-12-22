@@ -33,6 +33,8 @@ __pycache__
 *.egg-info
 .coverage
 *.py,cover
+venv/
+.venv/
 
 # Environment variables
 .env
@@ -46,3 +48,4 @@ src/motido/data/motido_data/last_penalty_check.txt
 regen_password.py
 clickup_import.json
 scripts/convert_clickup_to_motido.py
+.venv

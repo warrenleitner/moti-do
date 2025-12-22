@@ -3,13 +3,26 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Build/Test Commands
+
+### All Checks (Python + Frontend)
+- **Run all checks**: `poetry run poe check` or `bash scripts/check-all.sh`
+  - This runs all Python and frontend checks in one command
+
+### Python Backend
 - Format code: `poetry run poe format`
 - Lint code: `poetry run poe lint`
 - Type check: `poetry run poe typecheck`
 - Run all tests: `poetry run poe test`
 - Run a single test: `poetry run pytest tests/test_file.py::test_function_name -v`
 - Run tests with coverage: `poetry run poe coverage`
-- Run all checks: `poetry run poe check`
+- Python-only checks: `poetry run poe check-python`
+
+### Frontend (from frontend/ directory)
+- Lint: `npm run lint`
+- Type check: `npx tsc --noEmit`
+- Run tests: `npm run test`
+- Build: `npm run build`
+- All frontend checks: `poetry run poe frontend-check` (from project root)
 
 ## Code Style Guidelines
 - Python 3.9+ compatible code with type hints (checked by mypy)
@@ -39,16 +52,31 @@ When implementing features or modifications for Moti-Do, you MUST:
 ## CI/CD Requirements - MANDATORY
 **Before completing ANY feature or fix, you MUST verify all CI checks pass locally:**
 
-### Python Backend (run from project root)
+### Quick Check (Recommended)
+Run everything in one command from the project root:
+```bash
+poetry run poe check
+# OR
+bash scripts/check-all.sh
+```
+
+This single command runs:
+- **Python**: format, lint (10.0/10.0), typecheck (0 errors), coverage (100%)
+- **Frontend**: lint (ESLint), typecheck (TypeScript), test (Vitest), build
+
+### Manual Verification (if needed)
+If you need to run checks individually:
+
+**Python Backend (from project root):**
 ```bash
 poetry run poe format      # Format code with Black + isort
 poetry run poe lint        # Pylint must score 10.0/10.0
 poetry run poe typecheck   # Mypy strict mode, no errors
 poetry run poe coverage    # Pytest with 100% coverage required
-poetry run poe check       # Run all above checks
+poetry run poe check-python  # Run all above Python checks
 ```
 
-### Frontend (run from frontend/ directory)
+**Frontend (from frontend/ directory):**
 ```bash
 cd frontend
 npm run lint               # ESLint must pass
@@ -59,11 +87,7 @@ npm run build              # Build must succeed
 
 ### Verification Checklist
 Before marking any task complete, confirm:
-- [ ] `poetry run poe check` passes (Python: format, lint, typecheck, coverage)
-- [ ] `npm run lint` passes (Frontend)
-- [ ] `npx tsc --noEmit` passes (Frontend)
-- [ ] `npm run test` passes (Frontend)
-- [ ] `npm run build` succeeds (Frontend)
+- [ ] **`poetry run poe check`** passes (includes all Python + Frontend checks)
 
 **These checks are enforced by GitHub Actions CI on every PR. Do NOT submit code that fails these checks.**
 
