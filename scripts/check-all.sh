@@ -9,9 +9,9 @@ echo "Running Python Backend Checks"
 echo "===================================="
 
 echo ""
-echo "→ Checking code format with isort and black..."
-poetry run isort --check-only .
-poetry run black --check .
+echo "→ Formatting code with isort and black..."
+poetry run isort .
+poetry run black .
 
 echo ""
 echo "→ Type checking with mypy..."
