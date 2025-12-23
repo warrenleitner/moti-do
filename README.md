@@ -172,7 +172,8 @@ This project uses [Poe the Poet](https://github.com/nat-n/poethepoet) for task r
 
 Run tasks using `poetry run poe <task_name>`:
 
-*   **Run All Checks (Python + Frontend):** `poetry run poe check` ⭐ **Recommended**
+*   **Sign-Off Workflow:** `bash scripts/check-all.sh` ⭐ **Recommended - Run before committing**
+*   **Alternative Check Command:** `poetry run poe check` (Run All Checks - Python + Frontend)
 *   **Format Code:** `poetry run poe format` (Applies Black and isort)
 *   **Lint Code:** `poetry run poe lint`
 *   **Type Check:** `poetry run poe typecheck`
@@ -209,14 +210,18 @@ npm run preview           # Preview build
 
 Before submitting code, ensure all checks pass:
 
-**Quick Check (Recommended):**
+**Sign-Off Workflow (Recommended):**
 ```bash
-poetry run poe check      # Runs ALL Python + Frontend checks
+bash scripts/check-all.sh      # Official sign-off - run before committing
 ```
+
+This is the **official sign-off workflow** that matches our CI/CD pipeline exactly.
 
 This single command verifies:
 - Python: format, lint (10.0/10.0), typecheck (0 errors), coverage (100%)
 - Frontend: lint (ESLint), typecheck (TypeScript), test (Vitest), build
+
+**Alternative:** `poetry run poe check` (equivalent)
 
 **Manual Checks (if needed):**
 ```bash

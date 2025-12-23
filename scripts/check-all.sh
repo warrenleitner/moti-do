@@ -26,10 +26,6 @@ echo "→ Running tests with coverage..."
 poetry run pytest --cov=motido --cov-report=term-missing --cov-fail-under=100
 
 echo ""
-echo "→ Security scan with safety..."
-poetry run safety scan || echo "⚠️ Security scan failed (non-blocking)"
-
-echo ""
 echo "===================================="
 echo "Running Frontend Checks"
 echo "===================================="

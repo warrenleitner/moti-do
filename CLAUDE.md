@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build/Test Commands
 
-### All Checks (Python + Frontend)
-- **Run all checks**: `poetry run poe check` or `bash scripts/check-all.sh`
-  - This runs all Python and frontend checks in one command
+### All Checks (Python + Frontend) - Sign-Off Workflow
+- **Run all checks**: `bash scripts/check-all.sh` (recommended) or `poetry run poe check`
+  - This is our **sign-off workflow** - run this before considering any work complete
+  - Runs all Python and frontend checks in one command, matching CI/CD pipeline behavior
 
 ### Python Backend
 - Format code: `poetry run poe format`
@@ -47,22 +48,24 @@ When implementing features or modifications for Moti-Do, you MUST:
 7. Aim for high test coverage for new/modified code
 8. Consider how changes affect existing tests and update them as needed
 9. Use Poetry for managing dependencies (pyproject.toml)
-10. Verify compliance with `poetry run poe check` before submitting
+10. Verify compliance with `bash scripts/check-all.sh` before submitting (sign-off workflow)
 
 ## CI/CD Requirements - MANDATORY
 **Before completing ANY feature or fix, you MUST verify all CI checks pass locally:**
 
-### Quick Check (Recommended)
+### Sign-Off Workflow (REQUIRED)
 Run everything in one command from the project root:
 ```bash
-poetry run poe check
-# OR
 bash scripts/check-all.sh
 ```
+
+**This is the official sign-off workflow.** Use this to verify all changes before committing.
 
 This single command runs:
 - **Python**: format, lint (10.0/10.0), typecheck (0 errors), coverage (100%)
 - **Frontend**: lint (ESLint), typecheck (TypeScript), test (Vitest), build
+
+Alternative: `poetry run poe check` (equivalent but check-all.sh matches CI/CD exactly)
 
 ### Manual Verification (if needed)
 If you need to run checks individually:
@@ -87,7 +90,7 @@ npm run build              # Build must succeed
 
 ### Verification Checklist
 Before marking any task complete, confirm:
-- [ ] **`poetry run poe check`** passes (includes all Python + Frontend checks)
+- [ ] **`bash scripts/check-all.sh`** passes (sign-off workflow - includes all Python + Frontend checks)
 
 **These checks are enforced by GitHub Actions CI on every PR. Do NOT submit code that fails these checks.**
 

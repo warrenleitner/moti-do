@@ -8,7 +8,7 @@ These mirror the core models but are optimized for JSON serialization.
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # === Enums as string literals for API ===
 # These match the core model enums but are simpler for JSON
@@ -99,10 +99,7 @@ class TaskResponse(TaskBase):
     parent_habit_id: str | None = None
     score: int = 0  # Calculated XP value for this task
 
-    class Config:
-        """Pydantic config."""
-
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # === Tag Schemas ===
@@ -122,10 +119,7 @@ class TagResponse(TagBase):
 
     id: str
 
-    class Config:
-        """Pydantic config."""
-
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # === Project Schemas ===
@@ -145,10 +139,7 @@ class ProjectResponse(ProjectBase):
 
     id: str
 
-    class Config:
-        """Pydantic config."""
-
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # === XP Transaction Schemas ===
@@ -162,10 +153,7 @@ class XPTransactionSchema(BaseModel):
     task_id: str | None = None
     description: str = ""
 
-    class Config:
-        """Pydantic config."""
-
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class XPWithdrawRequest(BaseModel):
@@ -185,10 +173,7 @@ class BadgeSchema(BaseModel):
     glyph: str
     earned_date: datetime | None = None
 
-    class Config:
-        """Pydantic config."""
-
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # === User Schemas ===
