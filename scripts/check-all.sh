@@ -27,7 +27,7 @@ poetry run pytest --cov=motido --cov-report=term-missing --cov-fail-under=100
 
 echo ""
 echo "→ Security scan with safety..."
-poetry run safety scan || echo "⚠️ Security scan had warnings (non-blocking)"
+poetry run safety scan || echo "⚠️ Security scan failed (non-blocking)"
 
 echo ""
 echo "===================================="
@@ -36,7 +36,7 @@ echo "===================================="
 
 # Use subshell to ensure we return to original directory even on failure
 (
-  cd frontend || exit 1
+  cd frontend || { echo "Error: frontend directory not found"; exit 1; }
 
   echo ""
   echo "→ Installing frontend dependencies with npm ci..."
