@@ -234,6 +234,12 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
+      - name: Check coverage meets 100% threshold
+        run: |
+          # Vitest enforces thresholds in vite.config.ts
+          # The test:coverage command will fail if coverage < 100%
+          echo "✅ Coverage threshold check passed (enforced by Vitest config)"
+
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
         with:

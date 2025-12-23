@@ -47,8 +47,10 @@ echo "===================================="
   npx tsc --noEmit
 
   echo ""
-  echo "→ Running tests with coverage..."
+  echo "→ Running tests with coverage (100% required)..."
   npm run test:coverage
+  # Vitest enforces thresholds configured in vite.config.ts
+  # The test:coverage command will fail if coverage < 100%
 
   echo ""
   echo "→ Building production bundle..."

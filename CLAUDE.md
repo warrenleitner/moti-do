@@ -95,7 +95,34 @@ Before marking any task complete, confirm:
 **These checks are enforced by GitHub Actions CI on every PR. Do NOT submit code that fails these checks.**
 
 ## Quality Standards
-- Python: 100% test coverage, Pylint 10.0, zero Mypy errors
-- Frontend: Zero ESLint errors, zero TypeScript errors, all Vitest tests pass
+- **Python**: 100% test coverage, Pylint 10.0/10.0, zero Mypy errors
+- **Frontend**: 100% test coverage, zero ESLint errors, zero TypeScript errors, all Vitest tests pass
 - Always run the full check suite before considering work complete
 - This "almost ridiculous" quality standard applies at all times and all phases
+
+### Coverage Requirements (100% Enforced)
+Both Python and frontend REQUIRE 100% test coverage. The build will FAIL if coverage drops below 100%.
+
+**When code truly cannot be tested** (rare cases like platform-specific code, deliberate error paths):
+
+**Python** - Add inline pragma comment:
+```python
+# This line cannot be tested because [specific reason]
+if sys.platform == "win32":  # pragma: no cover
+    use_windows_specific_function()
+```
+
+**Frontend (TypeScript/JavaScript)** - Add V8 ignore comment:
+```typescript
+// This cannot be tested because [specific reason]
+/* v8 ignore next 3 */
+if (process.env.NODE_ENV === 'production') {
+  performProductionOnlyAction();
+}
+```
+
+**IMPORTANT**:
+- Coverage ignore comments MUST include an explanation of why the code cannot be tested
+- Use these sparingly - most code CAN and SHOULD be tested
+- Reviewers will scrutinize any coverage exclusions
+- Do NOT use coverage ignores to avoid writing tests for testable code
