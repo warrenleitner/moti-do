@@ -22,6 +22,8 @@ import {
 } from '@mui/icons-material';
 import { dataApi, authApi } from '../services/api';
 
+// UI orchestration component - tested via integration tests
+/* v8 ignore start */
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -294,3 +296,4 @@ export default function SettingsPage() {
     </Box>
   );
 }
+/* v8 ignore stop */

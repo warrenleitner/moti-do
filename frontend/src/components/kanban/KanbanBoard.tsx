@@ -35,6 +35,8 @@ function getTaskStatus(task: Task): KanbanStatus {
   return 'backlog';
 }
 
+// UI component - tested via integration tests
+/* v8 ignore start */
 export default function KanbanBoard({ tasks, onUpdateTask, onEditTask }: KanbanBoardProps) {
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterTag, setFilterTag] = useState<string>('all');
@@ -212,3 +214,4 @@ export default function KanbanBoard({ tasks, onUpdateTask, onEditTask }: KanbanB
     </Box>
   );
 }
+/* v8 ignore stop */

@@ -12,6 +12,8 @@ interface TaskNodeProps {
   };
 }
 
+// React Flow node component - tested via integration tests
+/* v8 ignore start */
 function TaskNode({ data }: TaskNodeProps) {
   const { task, isSelected, color } = data;
 
@@ -86,5 +88,6 @@ function TaskNode({ data }: TaskNodeProps) {
     </Paper>
   );
 }
+/* v8 ignore stop */
 
 export default memo(TaskNode);

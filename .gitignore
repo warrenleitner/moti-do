@@ -52,3 +52,4 @@ regen_password.py
 clickup_import.json
 scripts/convert_clickup_to_motido.py
 .venv
+*.bak

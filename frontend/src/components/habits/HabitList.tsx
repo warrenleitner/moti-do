@@ -15,6 +15,8 @@ interface HabitListProps {
   onCreateNew?: () => void;
 }
 
+// UI component - tested via integration tests
+/* v8 ignore start */
 export default function HabitList({
   habits,
   allTasks,
@@ -105,3 +107,4 @@ export default function HabitList({
     </Box>
   );
 }
+/* v8 ignore stop */

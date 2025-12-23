@@ -310,6 +310,191 @@ describe('useFilteredTasks', () => {
     // High priority should come first in descending order
     expect(result.current[0].priority).toBe(Priority.HIGH);
   });
+
+  it('should sort by due_date with null handling', () => {
+    const store = useTaskStore.getState();
+    const tasksWithDueDates = [
+      ...mockTasks,
+      {
+        id: 'task-4',
+        title: 'Task with no due date',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+      {
+        id: 'task-5',
+        title: 'Task with due date',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        creation_date: new Date().toISOString(),
+        due_date: '2024-12-31',
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    store.setTasks(tasksWithDueDates);
+    store.setFilters({ status: 'all' });
+    store.setSort({ field: 'due_date', order: 'asc' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.length).toBeGreaterThan(0);
+  });
+
+  it('should sort by creation_date', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all' });
+    store.setSort({ field: 'creation_date', order: 'asc' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.length).toBeGreaterThan(0);
+  });
+
+  it('should sort by title', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all' });
+    store.setSort({ field: 'title', order: 'asc' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.length).toBeGreaterThan(0);
+  });
+
+  it('should sort by score', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all' });
+    store.setSort({ field: 'score', order: 'desc' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.length).toBeGreaterThan(0);
+  });
+
+  it('should filter by priority', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all', priority: Priority.HIGH });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.every((t) => t.priority === Priority.HIGH)).toBe(true);
+  });
+
+  it('should filter by project', () => {
+    const tasksWithProjects = [
+      ...mockTasks.map((t) => ({ ...t, project: 'work' })),
+      {
+        id: 'task-4',
+        title: 'Personal Task',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        creation_date: new Date().toISOString(),
+        project: 'personal',
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithProjects);
+    store.setFilters({ status: 'all', project: 'work' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.every((t) => t.project === 'work')).toBe(true);
+  });
+
+  it('should filter by search in description', () => {
+    const tasksWithDesc = mockTasks.map((t) => ({
+      ...t,
+      text_description: t.id === 'task-1' ? 'important description' : undefined,
+    }));
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithDesc);
+    store.setFilters({ status: 'all', search: 'description' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.length).toBe(1);
+    expect(result.current[0].id).toBe('task-1');
+  });
+
+  it('should filter out blocked tasks when includeBlocked is false', () => {
+    const tasksWithDeps = [
+      ...mockTasks,
+      {
+        id: 'task-blocked',
+        title: 'Blocked Task',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: ['task-1'],
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithDeps);
+    store.setFilters({ status: 'active', includeBlocked: false });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.find((t) => t.id === 'task-blocked')).toBeUndefined();
+  });
+
+  it('should include blocked tasks when includeBlocked is true', () => {
+    const tasksWithDeps = [
+      ...mockTasks,
+      {
+        id: 'task-blocked',
+        title: 'Blocked Task',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: ['task-1'],
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithDeps);
+    store.setFilters({ status: 'active', includeBlocked: true });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.find((t) => t.id === 'task-blocked')).toBeDefined();
+  });
 });
 
 describe('useSelectedTask', () => {

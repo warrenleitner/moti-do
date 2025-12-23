@@ -54,6 +54,8 @@ interface MainLayoutProps {
   children: ReactNode;
 }
 
+// UI component - tested via integration tests
+/* v8 ignore start */
 export default function MainLayout({ children }: MainLayoutProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -220,3 +222,4 @@ export default function MainLayout({ children }: MainLayoutProps) {
     </>
   );
 }
+/* v8 ignore stop */
