@@ -49,11 +49,20 @@ describe('DateDisplay', () => {
     expect(container.textContent).toContain('Yesterday');
   });
 
-  it('renders relative date - days in future', () => {
+  it('renders relative date - days in future (within 7 days)', () => {
     const future = new Date();
     future.setDate(future.getDate() + 3);
     const { container } = render(<DateDisplay date={toLocalDateString(future)} />);
     expect(container.textContent).toContain('In 3 days');
+  });
+
+  it('renders absolute date for dates more than 7 days away', () => {
+    const farFuture = new Date();
+    farFuture.setDate(farFuture.getDate() + 10);
+    const { container } = render(<DateDisplay date={toLocalDateString(farFuture)} />);
+    // Should show the date in local format, not relative text
+    expect(container.textContent).not.toContain('In');
+    expect(container.textContent).toMatch(/\d+\/\d+\/\d+/);
   });
 
   it('renders relative date - days overdue', () => {

@@ -53,3 +53,5 @@ clickup_import.json
 scripts/convert_clickup_to_motido.py
 .venv
 *.bak
+frontend/playwright/.auth/user.json
+# Note: frontend/e2e/snapshots/ is NOT ignored - visual regression baselines must be committed

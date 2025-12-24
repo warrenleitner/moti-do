@@ -9,7 +9,7 @@ import {
   LinearProgress,
   Tooltip,
 } from '@mui/material';
-import { Edit, Loop } from '@mui/icons-material';
+import { Edit, Loop, Delete } from '@mui/icons-material';
 import type { Task } from '../../types';
 import { PriorityChip, DateDisplay, StreakBadge } from '../common';
 
@@ -17,11 +17,12 @@ interface HabitCardProps {
   habit: Task;
   onComplete: (id: string) => void;
   onEdit: (habit: Task) => void;
+  onDelete: (id: string) => void;
 }
 
 // UI component - tested via integration tests
 /* v8 ignore start */
-export default function HabitCard({ habit, onComplete, onEdit }: HabitCardProps) {
+export default function HabitCard({ habit, onComplete, onEdit, onDelete }: HabitCardProps) {
   // Calculate streak progress (visual indicator, max at 30 days)
   const streakProgress = Math.min((habit.streak_current / 30) * 100, 100);
 
@@ -116,6 +117,9 @@ export default function HabitCard({ habit, onComplete, onEdit }: HabitCardProps)
         <Box sx={{ flex: 1 }} />
         <IconButton size="small" onClick={() => onEdit(habit)} title="Edit habit">
           <Edit fontSize="small" />
+        </IconButton>
+        <IconButton size="small" onClick={() => onDelete(habit.id)} title="Delete habit" color="error">
+          <Delete fontSize="small" />
         </IconButton>
       </CardActions>
     </Card>

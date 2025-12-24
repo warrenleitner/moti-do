@@ -3,6 +3,7 @@ import { Box, Typography, Button, Snackbar, Alert } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import { HabitList } from '../components/habits';
 import { TaskForm } from '../components/tasks';
+import { ConfirmDialog } from '../components/common';
 import { useTaskStore } from '../store';
 import type { Task } from '../types';
 import { Priority, Difficulty, Duration } from '../types';
@@ -10,9 +11,11 @@ import { Priority, Difficulty, Duration } from '../types';
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
 export default function HabitsPage() {
-  const { tasks, updateTask, addTask } = useTaskStore();
+  const { tasks, updateTask, addTask, removeTask } = useTaskStore();
   const [formOpen, setFormOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Task | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -88,6 +91,20 @@ export default function HabitsPage() {
     }
   };
 
+  const handleDeleteClick = (habitId: string) => {
+    setHabitToDelete(habitId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (habitToDelete) {
+      removeTask(habitToDelete);
+      setSnackbar({ open: true, message: 'Habit deleted successfully', severity: 'success' });
+    }
+    setDeleteDialogOpen(false);
+    setHabitToDelete(null);
+  };
+
   // Create a default habit task for the form
   const defaultHabitTask = editingHabit || {
     is_habit: true,
@@ -110,6 +127,7 @@ export default function HabitsPage() {
         allTasks={tasks}
         onComplete={handleComplete}
         onEdit={handleEdit}
+        onDelete={handleDeleteClick}
         onCreateNew={handleCreateNew}
       />
 
@@ -121,6 +139,19 @@ export default function HabitsPage() {
         onClose={() => {
           setFormOpen(false);
           setEditingHabit(null);
+        }}
+      />
+
+      {/* Confirm delete dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title="Delete Habit"
+        message="Are you sure you want to delete this habit? This action cannot be undone and all streak data will be lost."
+        confirmLabel="Delete"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setDeleteDialogOpen(false);
+          setHabitToDelete(null);
         }}
       />
 

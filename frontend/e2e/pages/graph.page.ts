@@ -1,25 +1,30 @@
 /**
  * Page Object for the Dependency Graph page.
+ * Uses ReactFlow for graph visualization.
  */
-import { type Page, type Locator } from '@playwright/test';
+import { type Page, type Locator, expect } from '@playwright/test';
 
 export class GraphPage {
   readonly page: Page;
   readonly heading: Locator;
+  readonly description: Locator;
   readonly graphContainer: Locator;
   readonly taskDrawer: Locator;
-  readonly zoomInButton: Locator;
-  readonly zoomOutButton: Locator;
-  readonly fitViewButton: Locator;
+  readonly snackbar: Locator;
+
+  readonly emptyStateMessage: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: 'Graph' });
+    this.heading = page.getByRole('heading', { name: 'Dependency Graph' });
+    this.description = page.getByText('Visualize task dependencies');
+    // ReactFlow container
     this.graphContainer = page.locator('.react-flow');
-    this.taskDrawer = page.locator('[data-testid="task-drawer"]');
-    this.zoomInButton = page.getByRole('button', { name: /zoom in/i });
-    this.zoomOutButton = page.getByRole('button', { name: /zoom out/i });
-    this.fitViewButton = page.getByRole('button', { name: /fit view/i });
+    // Empty state when no dependencies exist
+    this.emptyStateMessage = page.getByText('No Dependencies');
+    // MUI Drawer for task details (anchor="right", not hidden)
+    this.taskDrawer = page.locator('.MuiDrawer-root.MuiDrawer-anchorRight:not([aria-hidden="true"])');
+    this.snackbar = page.getByRole('alert');
   }
 
   /**
@@ -27,14 +32,34 @@ export class GraphPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/graph');
-    await this.heading.waitFor();
+    await this.heading.waitFor({ timeout: 10000 });
   }
 
   /**
-   * Wait for the graph to fully load.
+   * Wait for the graph to fully load (shows react-flow container with nodes).
    */
   async waitForGraph(): Promise<void> {
-    await this.graphContainer.waitFor();
+    await this.graphContainer.waitFor({ timeout: 10000 });
+  }
+
+  /**
+   * Wait for the graph page content - either the graph with nodes or the empty state.
+   */
+  async waitForGraphOrEmptyState(): Promise<void> {
+    // Wait for either the graph container or the "No Dependencies" message
+    await Promise.race([
+      this.graphContainer.waitFor({ timeout: 10000 }),
+      this.emptyStateMessage.waitFor({ timeout: 10000 }),
+    ]);
+  }
+
+  /**
+   * Check if the graph shows an empty state.
+   */
+  async isEmptyState(): Promise<boolean> {
+    // When no tasks, graph container may show "No tasks" or be empty
+    const nodes = await this.getNodeCount();
+    return nodes === 0;
   }
 
   /**
@@ -48,7 +73,7 @@ export class GraphPage {
    * Get a specific node by its task title.
    */
   getNodeByTitle(title: string): Locator {
-    return this.page.locator('.react-flow__node', { hasText: title });
+    return this.page.locator('.react-flow__node').filter({ hasText: title });
   }
 
   /**
@@ -59,62 +84,77 @@ export class GraphPage {
   }
 
   /**
-   * Click on a node to select it.
+   * Click on a node to select it and open the drawer.
    */
   async clickNode(title: string): Promise<void> {
-    await this.getNodeByTitle(title).click();
-  }
-
-  /**
-   * Check if a node is selected.
-   */
-  async isNodeSelected(title: string): Promise<boolean> {
     const node = this.getNodeByTitle(title);
-    const className = await node.getAttribute('class');
-    return className?.includes('selected') ?? false;
+    await node.click();
+    // Wait for drawer to open
+    await this.taskDrawer.waitFor({ timeout: 5000 });
   }
 
   /**
-   * Open the task drawer for a node.
+   * Check if the task drawer is open.
    */
-  async openTaskDrawer(title: string): Promise<void> {
-    await this.clickNode(title);
-    await this.taskDrawer.waitFor();
+  async isDrawerOpen(): Promise<boolean> {
+    return await this.taskDrawer.isVisible();
   }
 
   /**
    * Close the task drawer.
    */
-  async closeTaskDrawer(): Promise<void> {
-    await this.page.getByRole('button', { name: /close/i }).click();
+  async closeDrawer(): Promise<void> {
+    // Find the close button in the drawer
+    await this.taskDrawer.getByRole('button', { name: 'Close' }).click();
+    await expect(this.taskDrawer).not.toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Get the task title shown in the drawer.
+   */
+  async getDrawerTaskTitle(): Promise<string | null> {
+    const titleElement = this.taskDrawer.locator('.MuiTypography-root').first();
+    return await titleElement.textContent();
   }
 
   /**
    * Toggle task completion from the drawer.
    */
-  async toggleTaskComplete(): Promise<void> {
-    await this.taskDrawer.getByRole('checkbox').click();
+  async toggleTaskCompleteInDrawer(): Promise<void> {
+    // Use first checkbox (main task completion checkbox, not subtask checkboxes)
+    await this.taskDrawer.getByRole('checkbox').first().click();
   }
 
   /**
-   * Zoom in on the graph.
+   * Check if node is visually marked as selected.
+   */
+  async isNodeSelected(title: string): Promise<boolean> {
+    const node = this.getNodeByTitle(title);
+    const className = await node.getAttribute('class');
+    // ReactFlow adds 'selected' class to selected nodes
+    return className?.includes('selected') ?? false;
+  }
+
+  /**
+   * Use ReactFlow controls to zoom in.
    */
   async zoomIn(): Promise<void> {
-    await this.zoomInButton.click();
+    // ReactFlow controls panel has zoom buttons
+    await this.page.locator('.react-flow__controls-zoomin').click();
   }
 
   /**
-   * Zoom out on the graph.
+   * Use ReactFlow controls to zoom out.
    */
   async zoomOut(): Promise<void> {
-    await this.zoomOutButton.click();
+    await this.page.locator('.react-flow__controls-zoomout').click();
   }
 
   /**
-   * Fit the graph to the viewport.
+   * Use ReactFlow controls to fit view.
    */
   async fitView(): Promise<void> {
-    await this.fitViewButton.click();
+    await this.page.locator('.react-flow__controls-fitview').click();
   }
 
   /**
@@ -129,5 +169,32 @@ export class GraphPage {
    */
   async getEdgeCount(): Promise<number> {
     return await this.getEdges().count();
+  }
+
+  /**
+   * Check if an edge exists between two nodes.
+   * Note: This is approximate - ReactFlow edge IDs may vary.
+   * TODO: Implement proper edge matching when dependency data is seeded (Phase 5.5.2)
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async hasEdgeBetween(sourceTitle: string, targetTitle: string): Promise<boolean> {
+    // This is tricky to verify exactly - for now, just check edge count > 0
+    const edgeCount = await this.getEdgeCount();
+    return edgeCount > 0;
+  }
+
+  /**
+   * Get dependencies section from drawer.
+   */
+  async getDependenciesInDrawer(): Promise<string[]> {
+    const dependenciesSection = this.taskDrawer.getByText('Dependencies').locator('..');
+    const cards = dependenciesSection.locator('.MuiCard-root');
+    const count = await cards.count();
+    const titles: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const title = await cards.nth(i).textContent();
+      if (title) titles.push(title.trim());
+    }
+    return titles;
   }
 }

@@ -8,6 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Run all checks**: `bash scripts/check-all.sh` (recommended) or `poetry run poe check`
   - This is our **sign-off workflow** - run this before considering any work complete
   - Runs all Python and frontend checks in one command, matching CI/CD pipeline behavior
+- **Include E2E tests**: `bash scripts/check-all.sh --e2e`
+  - Runs all unit checks PLUS E2E tests (slower, starts Docker + servers)
+  - Uses LOCAL Docker PostgreSQL (not Supabase) - no cloud resources consumed
 
 ### Python Backend
 - Format code: `poetry run poe format`
@@ -27,12 +30,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### E2E Tests (Playwright)
 - Run all E2E tests: `bash scripts/run-e2e.sh` (from project root)
-- Run E2E tests (from frontend/): `npm run test:e2e`
-- Run E2E with UI mode: `npm run test:e2e:ui`
-- Run E2E in headed browser: `npm run test:e2e:headed`
-- Debug E2E tests: `npm run test:e2e:debug`
+- Run E2E with Playwright UI: `bash scripts/run-e2e.sh --ui`
+- Run E2E in headed browser: `bash scripts/run-e2e.sh --headed`
+- Keep Docker DB running after tests: `bash scripts/run-e2e.sh --keep-db`
+- Use JSON storage instead of Docker: `bash scripts/run-e2e.sh --no-docker`
 
-**Note**: E2E tests require both backend and frontend servers running. The `run-e2e.sh` script handles this automatically.
+**Note**: E2E tests use a **Docker PostgreSQL** container for realistic database testing (port 5433). The script starts Docker, backend, and frontend servers automatically. No cloud resources (Supabase) are consumed.
+
+### Visual Regression Tests
+- Run visual tests: `cd frontend && npx playwright test visual.spec.ts`
+- Update baselines: `cd frontend && npx playwright test visual.spec.ts --update-snapshots`
+- Baselines stored in: `frontend/e2e/snapshots/`
+
+**Important**: Visual baselines MUST be committed to git. When you make intentional UI changes:
+1. Run `--update-snapshots` to regenerate baselines
+2. Review the new screenshots to verify they're correct
+3. Commit the updated baselines with your UI changes
+
+### Performance Tests
+- Run performance tests: `cd frontend && npx playwright test performance.spec.ts`
+- Tests measure: LCP, FCP, CLS, DOM load times, bundle sizes, API response times
+
+**Performance Budgets**:
+- LCP < 2.5-3.5s (depending on page complexity)
+- CLS < 0.1-0.15
+- Page navigation < 4s
 
 ## Code Style Guidelines
 - Python 3.9+ compatible code with type hints (checked by mypy)
@@ -99,15 +121,93 @@ npm run build              # Build must succeed
 
 ### Verification Checklist
 Before marking any task complete, confirm:
-- [ ] **`bash scripts/check-all.sh`** passes (sign-off workflow - includes all Python + Frontend checks)
+- [ ] **`bash scripts/check-all.sh`** passes (sign-off workflow - includes all Python + Frontend unit checks)
+- [ ] E2E tests pass (run `bash scripts/check-all.sh --e2e` for major UI changes)
 
 **These checks are enforced by GitHub Actions CI on every PR. Do NOT submit code that fails these checks.**
+
+### E2E Testing in CI
+E2E tests (Playwright) run automatically in CI after unit tests pass:
+- Uses **Docker PostgreSQL** service container (same as local testing)
+- Runs against real backend + frontend servers
+- Tests full user workflows across all pages
+- Failures block PR merges
+- Test reports are uploaded as artifacts for debugging
 
 ## Quality Standards
 - **Python**: 100% test coverage, Pylint 10.0/10.0, zero Mypy errors
 - **Frontend**: 100% test coverage, zero ESLint errors, zero TypeScript errors, all Vitest tests pass
+- **E2E**: All Playwright tests must pass (runs in CI)
 - Always run the full check suite before considering work complete
 - This "almost ridiculous" quality standard applies at all times and all phases
+
+## Testing Philosophy
+
+### Saving Test Output for Analysis
+When running tests (individual or full suites), **always save output to a file** for efficient analysis:
+
+```bash
+# Save output for later analysis (recommended)
+bash scripts/check-all.sh 2>&1 | tee /tmp/test-output.txt
+
+# Run E2E tests with saved output
+bash scripts/run-e2e.sh --no-docker 2>&1 | tee /tmp/e2e-output.txt
+
+# Run specific Python test with output
+poetry run pytest tests/test_file.py -v 2>&1 | tee /tmp/pytest-output.txt
+
+# Run frontend tests with output
+cd frontend && npm run test 2>&1 | tee /tmp/vitest-output.txt
+```
+
+**Benefits:**
+- Quickly grep for specific errors without re-running tests
+- Compare output between runs
+- Share output for debugging
+- Analyze different aspects without waiting for slow re-runs
+
+**Quick analysis commands:**
+```bash
+# Find all failures
+grep -E "FAIL|Error|✘" /tmp/test-output.txt
+
+# Count passing/failing tests
+grep -c "✓\|passed" /tmp/test-output.txt
+grep -c "✘\|failed" /tmp/test-output.txt
+
+# Find specific error messages
+grep -A5 "AssertionError" /tmp/test-output.txt
+```
+
+### Three Layers of Testing
+Moti-Do uses a comprehensive testing strategy with three layers:
+
+1. **Unit Tests (100% coverage required)**
+   - Python: pytest with coverage enforcement
+   - Frontend: Vitest with React Testing Library
+   - Test business logic, utilities, and component rendering
+   - Fast execution, run on every commit
+
+2. **Integration Tests**
+   - Python: tests/integration/ for scoring and data operations
+   - Test interactions between modules
+
+3. **E2E Tests (Playwright)**
+   - Located in `frontend/e2e/`
+   - Test full user workflows through real browser
+   - Cover authentication, task CRUD, all views (calendar, kanban, habits, graph)
+   - Run in CI after unit tests pass
+
+### When to Write Which Test
+- **Unit tests**: Logic, calculations, component rendering, state management
+- **E2E tests**: User flows, cross-page navigation, API integration
+- **Both**: Critical paths should have unit AND E2E coverage
+
+### Coverage Exceptions
+Some UI code is marked with `/* v8 ignore */` because it's "tested via integration tests" (E2E). This is acceptable when:
+- The code is pure UI orchestration (button clicks, form submissions)
+- E2E tests cover the user workflow
+- The code has no complex logic worth unit testing
 
 ### Coverage Requirements (100% Enforced)
 Both Python and frontend REQUIRE 100% test coverage. The build will FAIL if coverage drops below 100%.

@@ -5,6 +5,8 @@ import { type Page } from '@playwright/test';
 
 /**
  * Test credentials used across E2E tests.
+ * NOTE: In dev mode (MOTIDO_DEV_MODE=true), authentication is bypassed.
+ * These credentials are used when running with actual authentication.
  */
 export const TEST_CREDENTIALS = {
   username: 'default_user',
@@ -13,6 +15,7 @@ export const TEST_CREDENTIALS = {
 
 /**
  * Login helper function.
+ * Uses actual UI selectors from LoginPage component.
  * @param page - Playwright page object
  * @param username - Username to login with
  * @param password - Password to login with
@@ -24,18 +27,20 @@ export async function login(
 ): Promise<void> {
   await page.goto('/login');
 
-  // Ensure we're on login page
-  await page.waitForSelector('text=Moti-Do');
+  // Wait for login page to load
+  await page.getByRole('heading', { name: 'Moti-Do' }).waitFor({ timeout: 10000 });
 
-  // Fill credentials
-  await page.fill('input[value="default_user"]', username);
-  await page.fill('input[type="password"]', password);
+  // Fill credentials using MUI TextField textbox roles
+  await page.getByRole('textbox', { name: 'Username' }).fill(username);
+  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(password);
 
-  // Click login button
-  await page.click('button[type="submit"]');
+  // Click submit button
+  await page.locator('button[type="submit"]').click();
 
-  // Wait for redirect to dashboard
-  await page.waitForURL('/');
+  // Wait for redirect to dashboard (away from login page)
+  await page.waitForURL((url) => !url.pathname.includes('/login'), {
+    timeout: 10000,
+  });
 }
 
 /**
@@ -51,19 +56,27 @@ export async function register(
 ): Promise<void> {
   await page.goto('/login');
 
-  // Switch to register mode
-  await page.click('button:has-text("Register")');
+  // Wait for login page to load
+  await page.getByRole('heading', { name: 'Moti-Do' }).waitFor({ timeout: 10000 });
 
-  // Fill registration form
-  await page.fill('input[value="default_user"]', username);
-  await page.fill('input[type="password"]:first-of-type', password);
-  await page.fill('input[type="password"]:nth-of-type(2)', password);
+  // Switch to register mode using the ToggleButton
+  await page.getByRole('button', { name: 'Register', exact: true }).click();
+
+  // Wait for confirm password field to appear
+  await page.getByRole('textbox', { name: 'Confirm Password' }).waitFor({ timeout: 5000 });
+
+  // Fill registration form using MUI TextField textbox roles
+  await page.getByRole('textbox', { name: 'Username' }).fill(username);
+  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(password);
+  await page.getByRole('textbox', { name: 'Confirm Password' }).fill(password);
 
   // Submit
-  await page.click('button[type="submit"]');
+  await page.locator('button[type="submit"]').click();
 
   // Wait for redirect to dashboard
-  await page.waitForURL('/');
+  await page.waitForURL((url) => !url.pathname.includes('/login'), {
+    timeout: 10000,
+  });
 }
 
 /**
@@ -78,6 +91,9 @@ export async function logout(page: Page): Promise<void> {
 
   // Navigate to login
   await page.goto('/login');
+
+  // Wait for login page
+  await page.getByRole('heading', { name: 'Moti-Do' }).waitFor({ timeout: 10000 });
 }
 
 /**
@@ -99,4 +115,22 @@ export async function setAuthToken(page: Page, token: string): Promise<void> {
   await page.addInitScript((authToken) => {
     window.localStorage.setItem('auth_token', authToken);
   }, token);
+}
+
+/**
+ * Navigate to a page that requires authentication.
+ * Will handle redirect to login if needed.
+ * @param page - Playwright page object
+ * @param path - Path to navigate to
+ */
+export async function navigateAuthenticated(page: Page, path: string): Promise<void> {
+  await page.goto(path);
+
+  // Check if we're redirected to login
+  if (page.url().includes('/login')) {
+    // Need to login first
+    await login(page);
+    // Now navigate to intended page
+    await page.goto(path);
+  }
 }

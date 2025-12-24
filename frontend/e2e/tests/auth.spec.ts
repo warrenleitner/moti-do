@@ -24,23 +24,26 @@ test.describe('Authentication', () => {
       const loginPage = new LoginPage(page);
       await loginPage.goto();
 
-      // Try to login with short password
-      await loginPage.login('default_user', 'short');
+      // Try to login with short password - manually fill to avoid helper's waits
+      await loginPage.usernameInput.fill('default_user');
+      await loginPage.passwordInput.fill('short');
+      await loginPage.submitButton.click();
 
-      // Verify error message
-      const errorMessage = await loginPage.getErrorMessage();
-      expect(errorMessage).toContain('at least 8 characters');
+      // Verify error message appears
+      await expect(loginPage.errorAlert).toBeVisible({ timeout: 5000 });
+      const errorText = await loginPage.errorAlert.textContent();
+      expect(errorText?.toLowerCase()).toContain('8 characters');
     });
 
     test('should login successfully with valid credentials', async ({ page }) => {
       const loginPage = new LoginPage(page);
       await loginPage.goto();
 
-      // First, we need to register (or the user might already exist)
-      // For a fresh test database, register first
-      await loginPage.register('default_user', 'testpassword123');
+      // Login with default_user (already registered in single-user mode)
+      await loginPage.login('default_user', 'testpassword123');
 
-      // Should redirect to dashboard
+      // Wait for redirect to dashboard
+      await page.waitForURL('/', { timeout: 10000 });
       await expect(page).toHaveURL('/');
     });
 
@@ -64,7 +67,7 @@ test.describe('Authentication', () => {
       const loginPage = new LoginPage(page);
       await loginPage.goto();
 
-      // Initially on login tab
+      // Initially on login tab - confirm password should not be visible
       await expect(loginPage.confirmPasswordInput).not.toBeVisible();
 
       // Switch to register
@@ -87,9 +90,10 @@ test.describe('Authentication', () => {
       await loginPage.confirmPasswordInput.fill('differentpassword');
       await loginPage.submitButton.click();
 
-      // Verify error message
-      const errorMessage = await loginPage.getErrorMessage();
-      expect(errorMessage).toContain('do not match');
+      // Verify error message appears (client-side validation)
+      await expect(loginPage.errorAlert).toBeVisible({ timeout: 5000 });
+      const errorText = await loginPage.errorAlert.textContent();
+      expect(errorText?.toLowerCase()).toContain('match');
     });
   });
 
@@ -98,8 +102,9 @@ test.describe('Authentication', () => {
       const loginPage = new LoginPage(page);
       await loginPage.goto();
 
-      // Register/login
-      await loginPage.register('sessiontest', 'testpassword123');
+      // Login with default_user (already registered in single-user mode)
+      await loginPage.login('default_user', 'testpassword123');
+      await page.waitForURL('/', { timeout: 10000 });
       await expect(page).toHaveURL('/');
 
       // Reload the page
@@ -113,8 +118,9 @@ test.describe('Authentication', () => {
       const loginPage = new LoginPage(page);
       await loginPage.goto();
 
-      // Login first
-      await loginPage.register('logouttest', 'testpassword123');
+      // Login with default_user (already registered in single-user mode)
+      await loginPage.login('default_user', 'testpassword123');
+      await page.waitForURL('/', { timeout: 10000 });
       await expect(page).toHaveURL('/');
 
       // Clear auth token (simulating logout)

@@ -6,6 +6,7 @@ import { type Page, type Locator } from '@playwright/test';
 export class LoginPage {
   readonly page: Page;
   readonly heading: Locator;
+  readonly subtitle: Locator;
   readonly loginTab: Locator;
   readonly registerTab: Locator;
   readonly usernameInput: Locator;
@@ -17,13 +18,19 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
+    // Typography with component="h1" creates a heading role
     this.heading = page.getByRole('heading', { name: 'Moti-Do' });
-    this.loginTab = page.getByRole('button', { name: 'Login' }).first();
-    this.registerTab = page.getByRole('button', { name: 'Register' }).first();
-    this.usernameInput = page.getByLabel('Username');
-    this.passwordInput = page.getByLabel('Password', { exact: true });
-    this.confirmPasswordInput = page.getByLabel('Confirm Password');
-    this.submitButton = page.getByRole('button', { name: /Login|Register/ }).last();
+    this.subtitle = page.getByText('Task and Habit Tracker');
+    // ToggleButton elements in the ToggleButtonGroup - use group to scope
+    this.loginTab = page.getByRole('group').getByRole('button', { name: 'Login' });
+    this.registerTab = page.getByRole('group').getByRole('button', { name: 'Register' });
+    // Form fields - use getByRole textbox for MUI TextField components
+    // Note: Password needs exact: true to avoid matching "Confirm Password"
+    this.usernameInput = page.getByRole('textbox', { name: 'Username' });
+    this.passwordInput = page.getByRole('textbox', { name: 'Password', exact: true });
+    this.confirmPasswordInput = page.getByRole('textbox', { name: 'Confirm Password' });
+    // Submit button - the form submit button (type="submit")
+    this.submitButton = page.locator('button[type="submit"]');
     this.errorAlert = page.getByRole('alert');
     this.loadingIndicator = page.getByRole('progressbar');
   }
@@ -33,7 +40,14 @@ export class LoginPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/login');
-    await this.heading.waitFor();
+    await this.heading.waitFor({ timeout: 10000 });
+  }
+
+  /**
+   * Check if we're on the login page.
+   */
+  async isVisible(): Promise<boolean> {
+    return await this.heading.isVisible();
   }
 
   /**
@@ -50,7 +64,7 @@ export class LoginPage {
    */
   async switchToRegister(): Promise<void> {
     await this.registerTab.click();
-    await this.confirmPasswordInput.waitFor();
+    await this.confirmPasswordInput.waitFor({ timeout: 5000 });
   }
 
   /**
@@ -69,6 +83,10 @@ export class LoginPage {
     await this.passwordInput.fill(password);
     await this.confirmPasswordInput.fill(password);
     await this.submitButton.click();
+    // Wait for redirect away from login page
+    await this.page.waitForURL((url) => !url.pathname.includes('/login'), {
+      timeout: 10000,
+    });
   }
 
   /**
@@ -84,9 +102,27 @@ export class LoginPage {
   }
 
   /**
-   * Wait for successful login (redirect to dashboard).
+   * Check if error alert is visible.
+   */
+  async hasError(): Promise<boolean> {
+    return await this.errorAlert.isVisible();
+  }
+
+  /**
+   * Wait for successful login (redirect away from login page).
    */
   async waitForLoginSuccess(): Promise<void> {
-    await this.page.waitForURL('/');
+    // Wait for navigation away from login page
+    await this.page.waitForURL((url) => !url.pathname.includes('/login'), {
+      timeout: 10000,
+    });
+  }
+
+  /**
+   * Check if currently in login mode (not register mode).
+   */
+  async isLoginMode(): Promise<boolean> {
+    // In login mode, confirm password field is not visible
+    return !(await this.confirmPasswordInput.isVisible());
   }
 }

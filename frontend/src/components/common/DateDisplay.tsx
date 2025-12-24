@@ -41,7 +41,6 @@ function formatRelativeDate(dateStr: string): { text: string; color: string; isO
   }
 
   // Default case for dates > 7 days away
-  /* v8 ignore next 4 */
   return {
     text: targetDate.toLocaleDateString(),
     color: 'text.secondary',
