@@ -25,6 +25,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Build: `npm run build`
 - All frontend checks: `poetry run poe frontend-check` (from project root)
 
+### E2E Tests (Playwright)
+- Run all E2E tests: `bash scripts/run-e2e.sh` (from project root)
+- Run E2E tests (from frontend/): `npm run test:e2e`
+- Run E2E with UI mode: `npm run test:e2e:ui`
+- Run E2E in headed browser: `npm run test:e2e:headed`
+- Debug E2E tests: `npm run test:e2e:debug`
+
+**Note**: E2E tests require both backend and frontend servers running. The `run-e2e.sh` script handles this automatically.
+
 ## Code Style Guidelines
 - Python 3.9+ compatible code with type hints (checked by mypy)
 - Line length: 88 characters (Black default)
