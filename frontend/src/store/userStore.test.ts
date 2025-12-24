@@ -1019,5 +1019,67 @@ describe('userStore', () => {
       });
       expect(useUserStore.getState().user).toBeNull();
     });
+
+    it('should handle fetchTags when user is null', async () => {
+      const apiTags = [
+        { id: 'tag-1', name: 'urgent', color: '#ff0000' },
+      ];
+
+      vi.mocked(userApi.getTags).mockResolvedValue(apiTags);
+
+      await act(async () => {
+        await useUserStore.getState().fetchTags();
+      });
+
+      const state = useUserStore.getState();
+      expect(state.user).toBeNull();
+    });
+
+    it('should handle fetchProjects when user is null', async () => {
+      const apiProjects = [
+        { id: 'proj-1', name: 'Website', color: '#00ff00' },
+      ];
+
+      vi.mocked(userApi.getProjects).mockResolvedValue(apiProjects);
+
+      await act(async () => {
+        await useUserStore.getState().fetchProjects();
+      });
+
+      const state = useUserStore.getState();
+      expect(state.user).toBeNull();
+    });
+
+    it('should handle fetchBadges when user is null', async () => {
+      const apiBadges = [
+        {
+          id: 'badge-1',
+          name: 'First Task',
+          description: 'Completed first task',
+          glyph: '🏆',
+          earned_date: '2024-01-01',
+        },
+      ];
+
+      vi.mocked(userApi.getBadges).mockResolvedValue(apiBadges);
+
+      await act(async () => {
+        await useUserStore.getState().fetchBadges();
+      });
+
+      const state = useUserStore.getState();
+      expect(state.user).toBeNull();
+    });
+
+    it('should handle toggleVacation when systemStatus is null', async () => {
+      vi.mocked(systemApi.toggleVacation).mockResolvedValue({ vacation_mode: true });
+
+      await act(async () => {
+        await useUserStore.getState().toggleVacation(true);
+      });
+
+      const state = useUserStore.getState();
+      expect(state.systemStatus).toBeNull();
+    });
   });
 });

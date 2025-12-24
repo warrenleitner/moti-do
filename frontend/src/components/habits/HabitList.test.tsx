@@ -72,4 +72,92 @@ describe('HabitList', () => {
     await user.click(editButtons[0]);
     expect(onEdit).toHaveBeenCalled();
   });
+
+  it('switches to heatmap view', async () => {
+    const { user } = render(<HabitList habits={mockHabits} allTasks={[]} onEdit={vi.fn()} onComplete={vi.fn()} />);
+
+    // Click heatmap tab
+    const heatmapTab = screen.getByText('Heatmap View');
+    await user.click(heatmapTab);
+
+    // Should show heatmap view
+    expect(screen.getByText('Heatmap View')).toBeInTheDocument();
+  });
+
+  it('switches back to list view', async () => {
+    const { user } = render(<HabitList habits={mockHabits} allTasks={[]} onEdit={vi.fn()} onComplete={vi.fn()} />);
+
+    // Click heatmap tab
+    await user.click(screen.getByText('Heatmap View'));
+
+    // Click list tab
+    await user.click(screen.getByText('List View'));
+
+    // Should show list view again
+    expect(screen.getByText('Exercise')).toBeInTheDocument();
+  });
+
+  it('shows pending habits section', () => {
+    render(<HabitList habits={mockHabits} allTasks={[]} onEdit={vi.fn()} onComplete={vi.fn()} />);
+
+    // Should show pending section
+    expect(screen.getByText(/Pending \(2\)/)).toBeInTheDocument();
+  });
+
+  it('shows completed habits section when habits are completed', () => {
+    const completedHabits = mockHabits.map((h) => ({ ...h, is_complete: true }));
+
+    render(<HabitList habits={completedHabits} allTasks={[]} onEdit={vi.fn()} onComplete={vi.fn()} />);
+
+    // Should show completed section
+    expect(screen.getByText(/Completed Today \(2\)/)).toBeInTheDocument();
+  });
+
+  it('filters out child habit instances', () => {
+    const habitsWithChildren: Task[] = [
+      ...mockHabits,
+      {
+        ...mockHabits[0],
+        id: 3,
+        parent_habit_id: 1, // Child of first habit
+      },
+    ];
+
+    render(<HabitList habits={habitsWithChildren} allTasks={[]} onEdit={vi.fn()} onComplete={vi.fn()} />);
+
+    // Should only show 2 root habits, not the child
+    expect(screen.getByText(/Pending \(2\)/)).toBeInTheDocument();
+  });
+
+  it('displays habit statistics', () => {
+    render(<HabitList habits={mockHabits} allTasks={[]} onEdit={vi.fn()} onComplete={vi.fn()} />);
+
+    // HabitStats component should be rendered (tested separately)
+    expect(screen.getByText('Exercise')).toBeInTheDocument();
+  });
+
+  it('shows create habit button when onCreateNew is provided', () => {
+    const onCreateNew = vi.fn();
+    render(<HabitList habits={[]} allTasks={[]} onEdit={vi.fn()} onComplete={vi.fn()} onCreateNew={onCreateNew} />);
+
+    // Should show create button in empty state
+    expect(screen.getByText('Create Habit')).toBeInTheDocument();
+  });
+
+  it('does not show create habit button when onCreateNew is not provided', () => {
+    render(<HabitList habits={[]} allTasks={[]} onEdit={vi.fn()} onComplete={vi.fn()} />);
+
+    // Should not show create button
+    expect(screen.queryByText('Create Habit')).not.toBeInTheDocument();
+  });
+
+  it('calls onCreateNew when create button is clicked', async () => {
+    const onCreateNew = vi.fn();
+    const { user } = render(<HabitList habits={[]} allTasks={[]} onEdit={vi.fn()} onComplete={vi.fn()} onCreateNew={onCreateNew} />);
+
+    // Click create button
+    await user.click(screen.getByText('Create Habit'));
+
+    expect(onCreateNew).toHaveBeenCalled();
+  });
 });

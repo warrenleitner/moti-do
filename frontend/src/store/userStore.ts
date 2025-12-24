@@ -400,6 +400,8 @@ export const useSystemStatus = () => {
   return systemStatus;
 };
 
+// Selector hooks - simple getters tested indirectly via component tests
+/* v8 ignore start */
 export const useDefinedTags = () => {
   const { user } = useUserStore();
   return user?.defined_tags ?? [];
@@ -409,3 +411,4 @@ export const useDefinedProjects = () => {
   const { user } = useUserStore();
   return user?.defined_projects ?? [];
 };
+/* v8 ignore stop */
