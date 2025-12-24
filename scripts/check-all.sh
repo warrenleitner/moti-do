@@ -1,20 +1,20 @@
 #!/bin/bash
-# check-all.sh - Run all CI checks locally
-# This script runs the same checks that run in CI/CD
+# check-all.sh - Run all CI checks locally (sign-off workflow)
+# This script runs the same checks that run in CI/CD, including E2E tests
 #
 # Usage:
-#   ./scripts/check-all.sh          # Run unit tests only (fast)
-#   ./scripts/check-all.sh --e2e    # Include E2E tests (slow, requires servers)
-#   ./scripts/check-all.sh --all    # Run everything including E2E
+#   ./scripts/check-all.sh              # Run ALL tests including E2E (default)
+#   ./scripts/check-all.sh --skip-e2e   # Skip E2E tests (unit tests only)
+#   ./scripts/check-all.sh --unit-only  # Same as --skip-e2e
 
 set -e  # Exit on first error
 
-# Parse arguments
-RUN_E2E=false
+# Parse arguments - E2E is ON by default
+RUN_E2E=true
 for arg in "$@"; do
   case $arg in
-    --e2e|--all)
-      RUN_E2E=true
+    --skip-e2e|--unit-only)
+      RUN_E2E=false
       shift
       ;;
   esac
@@ -74,7 +74,7 @@ echo "===================================="
 )
 
 # ============================================
-# E2E Tests (optional, slow)
+# E2E Tests (included by default)
 # ============================================
 if [ "$RUN_E2E" = true ]; then
   echo ""
@@ -93,7 +93,7 @@ if [ "$RUN_E2E" = true ]; then
 else
   echo ""
   echo "===================================="
-  echo "✅ All unit checks passed!"
-  echo "(Run with --e2e to include E2E tests)"
+  echo "✅ Unit checks passed (E2E skipped)"
+  echo "(Run without --skip-e2e to include E2E tests)"
   echo "===================================="
 fi

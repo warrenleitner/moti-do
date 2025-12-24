@@ -243,15 +243,16 @@ def test_load_scoring_config_missing_overdue_multiplier_per_day_key() -> None:
         "enabled": True,
         "approaching_threshold_days": 14,
         "approaching_multiplier_per_day": 0.1,
-    }  # Missing overdue_multiplier_per_day
+    }  # Missing both overdue_multiplier_per_day and overdue_scale_factor
 
     with patch("json.load", return_value=invalid_config):
         with patch("builtins.open", mock_open()):
             with pytest.raises(ValueError) as excinfo:
                 load_scoring_config()
 
-    assert "'due_date_proximity' must contain 'overdue_multiplier_per_day' key" in str(
-        excinfo.value
+    assert (
+        "'due_date_proximity' must contain either 'overdue_scale_factor' or 'overdue_multiplier_per_day' key"
+        in str(excinfo.value)
     )
 
 

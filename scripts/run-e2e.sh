@@ -4,6 +4,7 @@
 # This script starts a Docker PostgreSQL container, backend, frontend, runs tests, and cleans up.
 #
 # Uses a LOCAL PostgreSQL database via Docker - no cloud resources (Supabase) consumed.
+# ALWAYS starts with a clean database state for reproducible tests.
 #
 # Usage:
 #   ./scripts/run-e2e.sh              # Run all E2E tests
@@ -55,6 +56,18 @@ TEST_DB_PASSWORD=motido_test_password
 TEST_DB_NAME=motido_test
 export DATABASE_URL="postgresql://${TEST_DB_USER}:${TEST_DB_PASSWORD}@localhost:${TEST_DB_PORT}/${TEST_DB_NAME}"
 
+# Detect docker compose command (V2 plugin vs standalone)
+if docker compose version &> /dev/null; then
+    DOCKER_COMPOSE="docker compose"
+elif docker-compose version &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+elif /opt/homebrew/bin/docker-compose version &> /dev/null; then
+    # Homebrew install on macOS (may not be in PATH)
+    DOCKER_COMPOSE="/opt/homebrew/bin/docker-compose"
+else
+    DOCKER_COMPOSE=""
+fi
+
 # Cleanup function
 cleanup() {
     echo -e "\n${YELLOW}Cleaning up...${NC}"
@@ -74,9 +87,9 @@ cleanup() {
     # Stop Docker if we started it and --keep-db wasn't specified
     if [ "$DOCKER_STARTED" = true ] && [ "$KEEP_DB" = false ]; then
         echo "Stopping Docker PostgreSQL container..."
-        docker compose -f docker-compose.test.yml down -v 2>/dev/null || true
+        $DOCKER_COMPOSE -f docker-compose.test.yml down -v 2>/dev/null || true
     elif [ "$KEEP_DB" = true ]; then
-        echo -e "${BLUE}Keeping Docker PostgreSQL running (use 'docker compose -f docker-compose.test.yml down -v' to stop)${NC}"
+        echo -e "${BLUE}Keeping Docker PostgreSQL running (use '$DOCKER_COMPOSE -f docker-compose.test.yml down -v' to stop)${NC}"
     fi
 
     echo -e "${GREEN}Cleanup complete.${NC}"
@@ -101,34 +114,48 @@ if [ "$USE_DOCKER" = true ]; then
         exit 1
     fi
 
-    # Check if test database container is already running
-    if docker ps --format '{{.Names}}' | grep -q '^motido-test-db$'; then
-        echo -e "${YELLOW}Docker PostgreSQL already running on port ${TEST_DB_PORT}${NC}"
-    else
-        echo -e "${GREEN}Starting Docker PostgreSQL container...${NC}"
-        docker compose -f docker-compose.test.yml up -d
-        DOCKER_STARTED=true
+    # Check if Docker Compose is available
+    if [ -z "$DOCKER_COMPOSE" ]; then
+        echo -e "${RED}Docker Compose is not available. Install Docker Compose or use --no-docker flag.${NC}"
+        echo -e "${YELLOW}Try: brew install docker-compose (macOS) or install Docker Desktop${NC}"
+        exit 1
+    fi
 
-        # Wait for PostgreSQL to be ready
-        echo "Waiting for PostgreSQL to be ready..."
-        for i in {1..30}; do
-            if docker exec motido-test-db pg_isready -U $TEST_DB_USER -d $TEST_DB_NAME > /dev/null 2>&1; then
-                echo -e "${GREEN}PostgreSQL ready!${NC}"
-                break
-            fi
-            sleep 1
-        done
+    # ALWAYS reset to clean state - stop any existing container and remove data
+    echo -e "${GREEN}Ensuring clean database state...${NC}"
+    $DOCKER_COMPOSE -f docker-compose.test.yml down -v 2>/dev/null || true
 
-        if ! docker exec motido-test-db pg_isready -U $TEST_DB_USER -d $TEST_DB_NAME > /dev/null 2>&1; then
-            echo -e "${RED}PostgreSQL failed to start!${NC}"
-            exit 1
+    # Remove any orphaned containers
+    docker rm -f motido-test-db 2>/dev/null || true
+
+    echo -e "${GREEN}Starting fresh Docker PostgreSQL container...${NC}"
+    $DOCKER_COMPOSE -f docker-compose.test.yml up -d
+    DOCKER_STARTED=true
+
+    # Wait for PostgreSQL to be ready
+    echo "Waiting for PostgreSQL to be ready..."
+    for i in {1..30}; do
+        if docker exec motido-test-db pg_isready -U $TEST_DB_USER -d $TEST_DB_NAME > /dev/null 2>&1; then
+            echo -e "${GREEN}PostgreSQL ready!${NC}"
+            break
         fi
+        sleep 1
+    done
+
+    if ! docker exec motido-test-db pg_isready -U $TEST_DB_USER -d $TEST_DB_NAME > /dev/null 2>&1; then
+        echo -e "${RED}PostgreSQL failed to start!${NC}"
+        exit 1
     fi
 
     echo -e "${BLUE}Using PostgreSQL: $DATABASE_URL${NC}"
 else
     echo -e "${YELLOW}Skipping Docker, using JSON storage${NC}"
-    unset DATABASE_URL
+    # Clear DATABASE_URL to force JSON backend (export empty string, not unset)
+    export DATABASE_URL=""
+
+    # Reset JSON storage for clean state
+    echo -e "${GREEN}Ensuring clean JSON storage state...${NC}"
+    rm -f "$PROJECT_ROOT/src/motido/data/motido_data/users.json" 2>/dev/null || true
 fi
 
 # Check if servers are already running

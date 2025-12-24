@@ -21,7 +21,7 @@
   },
   "age_factor": {
     "unit": "days",
-    "multiplier_per_unit": 0.01
+    "multiplier_per_unit": 0.005
   },
   "daily_penalty": {
     "apply_penalty": true,
@@ -29,13 +29,14 @@
   },
   "due_date_proximity": {
     "enabled": true,
-    "overdue_multiplier_per_day": 0.5,
+    "overdue_scaling": "logarithmic",
+    "overdue_scale_factor": 0.75,
     "approaching_threshold_days": 14,
-    "approaching_multiplier_per_day": 0.1
+    "approaching_multiplier_per_day": 0.05
   },
   "start_date_aging": {
     "enabled": true,
-    "bonus_points_per_day": 0.5
+    "bonus_points_per_day": 0.2
   },
   "dependency_chain": {
     "enabled": true,

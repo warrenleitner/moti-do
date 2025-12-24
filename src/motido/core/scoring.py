@@ -4,6 +4,7 @@ Provides functionality for task scoring and XP calculation.
 """
 
 import json
+import math
 import os
 from datetime import date, timedelta
 from typing import Any, Dict, Optional
@@ -51,9 +52,10 @@ def load_scoring_config() -> Dict[str, Any]:
         "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "due_date_proximity": {
             "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
+            "overdue_scaling": "logarithmic",
+            "overdue_scale_factor": 0.75,
             "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
+            "approaching_multiplier_per_day": 0.05,
         },
         "start_date_aging": {
             "enabled": True,
@@ -197,20 +199,45 @@ def load_scoring_config() -> Dict[str, Any]:
         if not isinstance(config_data["due_date_proximity"]["enabled"], bool):
             raise ValueError("'due_date_proximity.enabled' must be a boolean.")
 
-        if "overdue_multiplier_per_day" not in config_data["due_date_proximity"]:
+        # Handle both old (linear) and new (logarithmic) config formats
+        if "overdue_scaling" in config_data["due_date_proximity"]:
+            # New logarithmic format
+            if config_data["due_date_proximity"]["overdue_scaling"] not in [
+                "linear",
+                "logarithmic",
+            ]:
+                raise ValueError(
+                    "'due_date_proximity.overdue_scaling' must be 'linear' or 'logarithmic'."
+                )
+            if "overdue_scale_factor" not in config_data["due_date_proximity"]:
+                raise ValueError(
+                    "'due_date_proximity' must contain 'overdue_scale_factor' key when using scaling."
+                )
+            if (
+                not isinstance(
+                    config_data["due_date_proximity"]["overdue_scale_factor"],
+                    (int, float),
+                )
+                or config_data["due_date_proximity"]["overdue_scale_factor"] < 0
+            ):
+                raise ValueError(
+                    "'due_date_proximity.overdue_scale_factor' must be a non-negative number."
+                )
+        elif "overdue_multiplier_per_day" in config_data["due_date_proximity"]:
+            # Old linear format - still support it
+            if (
+                not isinstance(
+                    config_data["due_date_proximity"]["overdue_multiplier_per_day"],
+                    (int, float),
+                )
+                or config_data["due_date_proximity"]["overdue_multiplier_per_day"] < 0
+            ):
+                raise ValueError(
+                    "'due_date_proximity.overdue_multiplier_per_day' must be a non-negative number."
+                )
+        else:
             raise ValueError(
-                "'due_date_proximity' must contain 'overdue_multiplier_per_day' key."
-            )
-
-        if (
-            not isinstance(
-                config_data["due_date_proximity"]["overdue_multiplier_per_day"],
-                (int, float),
-            )
-            or config_data["due_date_proximity"]["overdue_multiplier_per_day"] < 0
-        ):
-            raise ValueError(
-                "'due_date_proximity.overdue_multiplier_per_day' must be a non-negative number."
+                "'due_date_proximity' must contain either 'overdue_scale_factor' or 'overdue_multiplier_per_day' key."
             )
 
         if "approaching_threshold_days" not in config_data["due_date_proximity"]:
@@ -336,7 +363,8 @@ def calculate_due_date_multiplier(
     Calculate the due date proximity multiplier for a task.
 
     Returns a multiplier based on how close the task is to its due date:
-    - Overdue tasks: 1.0 + (days_overdue * overdue_multiplier_per_day)
+    - Overdue tasks (logarithmic): 1.0 + (log(days_overdue + 1) * scale_factor)
+    - Overdue tasks (linear): 1.0 + (days_overdue * overdue_multiplier_per_day)
     - Approaching tasks: 1.0 + max(0, (threshold - days_until_due) * approaching_multiplier_per_day)
     - Future tasks (beyond threshold): 1.0 (no bonus)
     - No due date: 1.0 (no bonus)
@@ -362,18 +390,27 @@ def calculate_due_date_multiplier(
     days_until_due = (due_date - effective_date).days
 
     # Get configuration values
-    overdue_mult_per_day = float(
-        config["due_date_proximity"]["overdue_multiplier_per_day"]
-    )
     threshold_days = int(config["due_date_proximity"]["approaching_threshold_days"])
     approaching_mult_per_day = float(
         config["due_date_proximity"]["approaching_multiplier_per_day"]
     )
 
-    # Overdue tasks: aggressive multiplier
+    # Overdue tasks: use logarithmic or linear scaling
     if days_until_due < 0:
         days_overdue = abs(days_until_due)
-        return 1.0 + (days_overdue * overdue_mult_per_day)
+
+        # Check if using new logarithmic scaling
+        scaling_type = config["due_date_proximity"].get("overdue_scaling", "linear")
+
+        if scaling_type == "logarithmic":
+            scale_factor = float(config["due_date_proximity"]["overdue_scale_factor"])
+            return 1.0 + (math.log(days_overdue + 1) * scale_factor)
+        else:
+            # Linear scaling (backward compatibility)
+            overdue_mult_per_day = float(
+                config["due_date_proximity"]["overdue_multiplier_per_day"]
+            )
+            return 1.0 + (days_overdue * overdue_mult_per_day)
 
     # Approaching due date: gradual increase
     if days_until_due <= threshold_days:
@@ -437,7 +474,7 @@ def calculate_dependency_chain_bonus(
     all_tasks: Dict[str, Task],
     config: Dict[str, Any],
     effective_date: date,
-    visited: Optional[set] = None,
+    visited: Optional[set[str]] = None,
 ) -> float:
     """
     Calculate bonus points from tasks that depend on this task.
@@ -508,7 +545,7 @@ def calculate_score(
     all_tasks: Optional[Dict[str, Task]],
     config: Dict[str, Any],
     effective_date: date,
-    visited: Optional[set] = None,
+    visited: Optional[set[str]] = None,
 ) -> int:
     """
     Calculate the score for a task based on its attributes and the scoring configuration.
@@ -775,7 +812,7 @@ def withdraw_xp(user: Any, manager: Any, points: int) -> bool:
         # Create transaction record
         transaction = XPTransaction(
             amount=-points,  # Negative for withdrawal
-            source="withdrawal",  # type: ignore[arg-type]
+            source="withdrawal",
             timestamp=dt.now(),
             description=f"Manual withdrawal of {points} XP",
         )
@@ -870,7 +907,7 @@ def apply_penalties(
     set_last_penalty_check_date(effective_date)
 
 
-def check_badges(user: Any, manager: Any, config: Dict[str, Any]) -> list:
+def check_badges(user: Any, manager: Any, config: Dict[str, Any]) -> list[Any]:
     """
     Check if the user has earned any new badges based on current stats.
 
