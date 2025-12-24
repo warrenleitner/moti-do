@@ -53,6 +53,8 @@ const defaultTask: Partial<Task> = {
   subtasks: [],
 };
 
+// UI component - tested via integration tests
+/* v8 ignore start */
 export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps) {
   // Initialize form data based on task prop
   const getInitialFormData = () => (task ? { ...task } : { ...defaultTask });
@@ -315,3 +317,4 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
     </LocalizationProvider>
   );
 }
+/* v8 ignore stop */

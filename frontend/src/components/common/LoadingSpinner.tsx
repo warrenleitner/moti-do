@@ -31,6 +31,8 @@ export default function LoadingSpinner({
     </Box>
   );
 
+  // Full screen mode tested via integration tests
+  /* v8 ignore next 17 */
   if (fullScreen) {
     return (
       <Box

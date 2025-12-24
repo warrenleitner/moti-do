@@ -248,12 +248,18 @@ describe('LoginPage', () => {
       await user.click(submitButton);
 
       // Form should be disabled
-      expect(screen.getByLabelText(/username/i)).toBeDisabled();
-      expect(passwordField).toBeDisabled();
-      expect(submitButton).toBeDisabled();
+      await waitFor(() => {
+        expect(screen.getByLabelText(/username/i)).toBeDisabled();
+        expect(passwordField).toBeDisabled();
+        expect(submitButton).toBeDisabled();
+      });
 
-      // Resolve the promise
+      // Resolve the promise and wait for state update
       resolveLogin!({ access_token: 'test-token', token_type: 'bearer' });
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/');
+      });
     });
   });
 

@@ -76,6 +76,18 @@ async def health_check() -> dict:
     return {"status": "healthy", "version": "0.1.0"}
 
 
+@app.get("/api/health/db")
+async def db_health_check(manager: ManagerDep) -> dict:
+    """
+    Database health check endpoint.
+    Verifies that the database is accessible and properly initialized.
+    """
+    # The ManagerDep dependency calls initialize() which creates tables if needed
+    # Try to load a user to verify the database is truly accessible
+    _ = manager.load_user("_health_check_")  # Will return None, but verifies DB works
+    return {"status": "healthy", "database": "connected"}
+
+
 @app.get("/api/system/status", response_model=SystemStatus)
 async def get_system_status(user: CurrentUser) -> SystemStatus:
     """Get system status including date processing state."""

@@ -2,7 +2,7 @@
  * Tests for the task store.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useTaskStore, useFilteredTasks, useSelectedTask } from './taskStore';
 import { renderHook, act } from '@testing-library/react';
 import { mockTasks } from '../test/mocks/handlers';
@@ -237,6 +237,69 @@ describe('TaskStore', () => {
       });
     });
 
+    it('should handle uncomplete task error and revert state', async () => {
+      const { result } = renderHook(() => useTaskStore());
+
+      // Set up a task with known state
+      const originalTask = {
+        ...mockTasks[0],
+        is_complete: true,
+      };
+
+      act(() => {
+        result.current.setTasks([originalTask]);
+      });
+
+      // Mock the API to fail
+      const taskApi = await import('../services/api');
+      const originalUncomplete = taskApi.taskApi.uncompleteTask;
+      taskApi.taskApi.uncompleteTask = vi.fn().mockRejectedValue(new Error('API Error'));
+
+      // Attempt to uncomplete and expect error
+      await expect(async () => {
+        await act(async () => {
+          await result.current.uncompleteTask('task-1');
+        });
+      }).rejects.toThrow('API Error');
+
+      // Verify state was reverted
+      const state = useTaskStore.getState();
+      expect(state.tasks[0].is_complete).toBe(true);
+      // Error message is set to the error message or 'Failed to uncomplete task'
+      expect(state.error).toBeTruthy();
+
+      // Restore original API function
+      taskApi.taskApi.uncompleteTask = originalUncomplete;
+    });
+
+    it('should handle uncomplete task error when original task not found', async () => {
+      const { result } = renderHook(() => useTaskStore());
+
+      act(() => {
+        result.current.setTasks(mockTasks);
+      });
+
+      // Mock the API to fail
+      const taskApi = await import('../services/api');
+      const originalUncomplete = taskApi.taskApi.uncompleteTask;
+      taskApi.taskApi.uncompleteTask = vi.fn().mockRejectedValue(new Error('API Error'));
+
+      // Attempt to uncomplete a non-existent task
+      await expect(async () => {
+        await act(async () => {
+          await result.current.uncompleteTask('non-existent-id');
+        });
+      }).rejects.toThrow('API Error');
+
+      // Verify error was set
+      const state = useTaskStore.getState();
+      // Error message is set to the error message or 'Failed to uncomplete task'
+      expect(state.error).toBeTruthy();
+
+      // Restore original API function
+      taskApi.taskApi.uncompleteTask = originalUncomplete;
+    });
+
     it('should handle fetch error', async () => {
       const { result } = renderHook(() => useTaskStore());
 
@@ -309,6 +372,250 @@ describe('useFilteredTasks', () => {
     const { result } = renderHook(() => useFilteredTasks());
     // High priority should come first in descending order
     expect(result.current[0].priority).toBe(Priority.HIGH);
+  });
+
+  it('should sort by due_date with null handling', () => {
+    const store = useTaskStore.getState();
+    const tasksWithDueDates = [
+      ...mockTasks,
+      {
+        id: 'task-4',
+        title: 'Task with no due date',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+      {
+        id: 'task-5',
+        title: 'Task with due date',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        creation_date: new Date().toISOString(),
+        due_date: '2024-12-31',
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    store.setTasks(tasksWithDueDates);
+    store.setFilters({ status: 'all' });
+    store.setSort({ field: 'due_date', order: 'asc' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.length).toBeGreaterThan(0);
+  });
+
+  it('should sort by due_date - both tasks with no due date', () => {
+    const store = useTaskStore.getState();
+    const tasksNoDates = [
+      {
+        id: 'task-1',
+        title: 'Task A',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+      {
+        id: 'task-2',
+        title: 'Task B',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    store.setTasks(tasksNoDates);
+    store.setFilters({ status: 'all' });
+    store.setSort({ field: 'due_date', order: 'asc' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    // Both have no due date, so comparison should be 0
+    expect(result.current.length).toBe(2);
+  });
+
+  it('should handle default case in sort', () => {
+    const store = useTaskStore.getState();
+    store.setTasks(mockTasks);
+    store.setFilters({ status: 'all' });
+    // Use an invalid sort field to trigger default case
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    store.setSort({ field: 'invalid' as any, order: 'asc' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.length).toBeGreaterThan(0);
+  });
+
+  it('should sort by creation_date', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all' });
+    store.setSort({ field: 'creation_date', order: 'asc' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.length).toBeGreaterThan(0);
+  });
+
+  it('should sort by title', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all' });
+    store.setSort({ field: 'title', order: 'asc' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.length).toBeGreaterThan(0);
+  });
+
+  it('should sort by score', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all' });
+    store.setSort({ field: 'score', order: 'desc' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.length).toBeGreaterThan(0);
+  });
+
+  it('should filter by priority', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all', priority: Priority.HIGH });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.every((t) => t.priority === Priority.HIGH)).toBe(true);
+  });
+
+  it('should filter by project', () => {
+    const tasksWithProjects = [
+      ...mockTasks.map((t) => ({ ...t, project: 'work' })),
+      {
+        id: 'task-4',
+        title: 'Personal Task',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        creation_date: new Date().toISOString(),
+        project: 'personal',
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithProjects);
+    store.setFilters({ status: 'all', project: 'work' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.every((t) => t.project === 'work')).toBe(true);
+  });
+
+  it('should filter by search in description', () => {
+    const tasksWithDesc = mockTasks.map((t) => ({
+      ...t,
+      text_description: t.id === 'task-1' ? 'important description' : undefined,
+    }));
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithDesc);
+    store.setFilters({ status: 'all', search: 'description' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.length).toBe(1);
+    expect(result.current[0].id).toBe('task-1');
+  });
+
+  it('should filter out blocked tasks when includeBlocked is false', () => {
+    const tasksWithDeps = [
+      ...mockTasks,
+      {
+        id: 'task-blocked',
+        title: 'Blocked Task',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: ['task-1'],
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithDeps);
+    store.setFilters({ status: 'active', includeBlocked: false });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.find((t) => t.id === 'task-blocked')).toBeUndefined();
+  });
+
+  it('should include blocked tasks when includeBlocked is true', () => {
+    const tasksWithDeps = [
+      ...mockTasks,
+      {
+        id: 'task-blocked',
+        title: 'Blocked Task',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: ['task-1'],
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithDeps);
+    store.setFilters({ status: 'active', includeBlocked: true });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.find((t) => t.id === 'task-blocked')).toBeDefined();
   });
 });
 

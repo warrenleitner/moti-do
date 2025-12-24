@@ -172,7 +172,8 @@ This project uses [Poe the Poet](https://github.com/nat-n/poethepoet) for task r
 
 Run tasks using `poetry run poe <task_name>`:
 
-*   **Run All Checks (Python + Frontend):** `poetry run poe check` ⭐ **Recommended**
+*   **Sign-Off Workflow:** `bash scripts/check-all.sh` ⭐ **Recommended - Run before committing**
+*   **Alternative Check Command:** `poetry run poe check` (Run All Checks - Python + Frontend)
 *   **Format Code:** `poetry run poe format` (Applies Black and isort)
 *   **Lint Code:** `poetry run poe lint`
 *   **Type Check:** `poetry run poe typecheck`
@@ -203,20 +204,63 @@ npm run test:coverage     # With coverage
 # Production build
 npm run build
 npm run preview           # Preview build
+
+# E2E Tests (Playwright)
+npm run test:e2e          # Run all E2E tests
+npm run test:e2e:ui       # Run with Playwright UI
+npm run test:e2e:headed   # Run in headed browser
+npm run test:e2e:debug    # Debug mode
 ```
+
+### E2E Testing
+
+E2E tests use Playwright to test full user workflows through the browser with a **local Docker PostgreSQL** database:
+
+```bash
+# Run from project root (starts Docker PostgreSQL + servers automatically)
+bash scripts/run-e2e.sh
+
+# Run with Playwright UI for debugging
+bash scripts/run-e2e.sh --ui
+
+# Keep Docker database running after tests (for inspection)
+bash scripts/run-e2e.sh --keep-db
+
+# Use JSON storage instead of Docker (faster, less realistic)
+bash scripts/run-e2e.sh --no-docker
+
+# Run E2E with all unit tests
+bash scripts/check-all.sh --e2e
+```
+
+**Prerequisites for E2E tests:**
+- Docker installed and running (or use `--no-docker` flag)
+- Port 5433 available for PostgreSQL test container
+
+E2E tests cover:
+- Authentication (login, registration, session management)
+- Task CRUD operations
+- All views (Calendar, Kanban, Habits, Graph, Settings)
+- Cross-page navigation and data consistency
 
 ### CI/CD Requirements
 
 Before submitting code, ensure all checks pass:
 
-**Quick Check (Recommended):**
+**Sign-Off Workflow (Recommended):**
 ```bash
-poetry run poe check      # Runs ALL Python + Frontend checks
+bash scripts/check-all.sh      # Official sign-off - run before committing
 ```
+
+This is the **official sign-off workflow** that matches our CI/CD pipeline exactly.
 
 This single command verifies:
 - Python: format, lint (10.0/10.0), typecheck (0 errors), coverage (100%)
 - Frontend: lint (ESLint), typecheck (TypeScript), test (Vitest), build
+
+**Include E2E tests:** `bash scripts/check-all.sh --e2e`
+
+**Alternative:** `poetry run poe check` (unit tests only)
 
 **Manual Checks (if needed):**
 ```bash
@@ -234,7 +278,7 @@ npm run test              # Vitest tests must pass
 npm run build             # Build must succeed
 ```
 
-All checks are enforced by GitHub Actions on every PR.
+All checks (including E2E tests) are enforced by GitHub Actions on every PR.
 
 ## Deployment
 

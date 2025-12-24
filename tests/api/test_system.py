@@ -26,6 +26,19 @@ class TestHealthEndpoint:
         response = empty_client.get("/api/health")
         assert response.status_code == 200
 
+    def test_db_health_check(self, client: TestClient) -> None:
+        """Test database health check returns healthy status."""
+        response = client.get("/api/health/db")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert data["database"] == "connected"
+
+    def test_db_health_check_no_auth(self, empty_client: TestClient) -> None:
+        """Test database health check works without authentication."""
+        response = empty_client.get("/api/health/db")
+        assert response.status_code == 200
+
 
 class TestSystemStatusEndpoint:
     """Tests for GET /api/system/status endpoint."""

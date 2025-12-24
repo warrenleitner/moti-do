@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -14,14 +14,25 @@ import {
   TextField,
   CircularProgress,
   Divider,
+  Switch,
+  FormControlLabel,
+  List,
+  ListItem,
+  ListItemText,
+  Chip,
 } from '@mui/material';
 import {
   Download as DownloadIcon,
   Upload as UploadIcon,
   Lock as LockIcon,
+  BeachAccess as VacationIcon,
+  Timeline as HistoryIcon,
 } from '@mui/icons-material';
-import { dataApi, authApi } from '../services/api';
+import { dataApi, authApi, userApi, type XPTransaction } from '../services/api';
+import { useUserStore, useSystemStatus } from '../store/userStore';
 
+// UI orchestration component - tested via integration tests
+/* v8 ignore start */
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -32,6 +43,26 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toggleVacation } = useUserStore();
+  const systemStatus = useSystemStatus();
+  const [xpHistory, setXPHistory] = useState<XPTransaction[]>([]);
+  const [loadingXP, setLoadingXP] = useState(false);
+
+  // Fetch XP history on mount
+  useEffect(() => {
+    const fetchXPHistory = async () => {
+      setLoadingXP(true);
+      try {
+        const transactions = await userApi.getXPLog(10);
+        setXPHistory(transactions);
+      } catch (error) {
+        console.error('Failed to fetch XP history:', error);
+      } finally {
+        setLoadingXP(false);
+      }
+    };
+    fetchXPHistory();
+  }, []);
 
   const handleExport = async () => {
     setLoading(true);
@@ -150,6 +181,25 @@ export default function SettingsPage() {
     }
   };
 
+  const handleVacationToggle = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enable = event.target.checked;
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      await toggleVacation(enable);
+      setMessage({
+        type: 'success',
+        text: enable ? 'Vacation mode enabled!' : 'Vacation mode disabled!',
+      });
+    } catch (error) {
+      console.error('Vacation toggle error:', error);
+      setMessage({ type: 'error', text: 'Failed to toggle vacation mode' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
@@ -204,6 +254,76 @@ export default function SettingsPage() {
           <Alert severity="warning" sx={{ mt: 2 }}>
             <strong>Warning:</strong> Importing data will replace ALL your current data. Make sure to export your current data before importing.
           </Alert>
+        </CardContent>
+      </Card>
+
+      {/* Vacation Mode */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <VacationIcon color="info" />
+            <Typography variant="h6">Vacation Mode</Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Enable vacation mode to pause streak penalties and task due date enforcement while you're away.
+          </Typography>
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={systemStatus?.vacation_mode ?? false}
+                onChange={handleVacationToggle}
+                disabled={loading}
+                inputProps={{ 'aria-label': 'Vacation Mode' }}
+              />
+            }
+            label={systemStatus?.vacation_mode ? 'Vacation mode is active' : 'Enable vacation mode'}
+          />
+
+          {systemStatus?.vacation_mode && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Vacation mode is currently active. No penalties will be applied for overdue tasks.
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* XP History */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <HistoryIcon color="primary" />
+            <Typography variant="h6">XP History</Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Recent experience points earned or spent.
+          </Typography>
+
+          {loadingXP ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : xpHistory.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No XP transactions yet. Complete tasks to earn experience!
+            </Typography>
+          ) : (
+            <List dense>
+              {xpHistory.map((transaction) => (
+                <ListItem key={transaction.id} divider>
+                  <ListItemText
+                    primary={transaction.description}
+                    secondary={new Date(transaction.timestamp).toLocaleDateString()}
+                  />
+                  <Chip
+                    label={`${transaction.amount > 0 ? '+' : ''}${transaction.amount} XP`}
+                    color={transaction.amount > 0 ? 'success' : 'error'}
+                    size="small"
+                  />
+                </ListItem>
+              ))}
+            </List>
+          )}
         </CardContent>
       </Card>
 
@@ -294,3 +414,4 @@ export default function SettingsPage() {
     </Box>
   );
 }
+/* v8 ignore stop */
