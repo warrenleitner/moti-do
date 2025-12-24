@@ -347,40 +347,9 @@ jobs:
         working-directory: frontend
         run: npx playwright install --with-deps chromium
 
-      - name: Verify PostgreSQL connection
-        run: |
-          echo "Verifying PostgreSQL database connection..."
-          poetry run python -c "
-          import psycopg2
-          import os
-          import time
-
-          database_url = os.environ.get('DATABASE_URL')
-          print(f'Connecting to: {database_url}')
-
-          for attempt in range(10):
-              try:
-                  conn = psycopg2.connect(database_url)
-                  print('PostgreSQL connection successful!')
-
-                  # Test that we can create tables
-                  with conn.cursor() as cur:
-                      cur.execute('SELECT 1')
-                      result = cur.fetchone()
-                      print(f'Query result: {result}')
-
-                  conn.close()
-                  break
-              except Exception as e:
-                  print(f'Attempt {attempt + 1}/10 failed: {e}')
-                  if attempt < 9:
-                      time.sleep(2)
-                  else:
-                      raise
-          "
-
       - name: Start backend server
         run: |
+          echo "Starting backend with DATABASE_URL=$DATABASE_URL"
           poetry run uvicorn motido.api.main:app --host 0.0.0.0 --port 8000 &
           echo "Waiting for backend to start..."
           for i in {1..30}; do
@@ -391,16 +360,21 @@ jobs:
             sleep 1
           done
 
-          # Also verify database connectivity
+          # Verify database connectivity via the db health endpoint
           echo "Verifying database connectivity..."
-          for i in {1..10}; do
-            if curl -s http://localhost:8000/api/health/db > /dev/null 2>&1; then
+          for i in {1..15}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/health/db)
+            if [ "$response" = "200" ]; then
               echo "Database connection verified!"
               break
             fi
-            echo "Database not ready, retrying in 2 seconds..."
+            echo "Database not ready (status: $response), retrying in 2 seconds... (attempt $i/15)"
             sleep 2
           done
+
+          # Final check - if still not ready, show the error
+          response=$(curl -s http://localhost:8000/api/health/db)
+          echo "Final db health response: $response"
 
       - name: Run E2E tests (shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})
         working-directory: frontend
