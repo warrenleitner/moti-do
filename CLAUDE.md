@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build/Test Commands
 
-### All Checks (Python + Frontend) - Sign-Off Workflow
-- **Run all checks**: `bash scripts/check-all.sh` (recommended) or `poetry run poe check`
+### All Checks (Python + Frontend + E2E) - Sign-Off Workflow
+- **Run all checks**: `bash scripts/check-all.sh` (recommended)
   - This is our **sign-off workflow** - run this before considering any work complete
-  - Runs all Python and frontend checks in one command, matching CI/CD pipeline behavior
-- **Include E2E tests**: `bash scripts/check-all.sh --e2e`
-  - Runs all unit checks PLUS E2E tests (slower, starts Docker + servers)
+  - Runs ALL checks including E2E tests, matching CI/CD pipeline behavior exactly
   - Uses LOCAL Docker PostgreSQL (not Supabase) - no cloud resources consumed
+- **Skip E2E tests**: `bash scripts/check-all.sh --skip-e2e` or `--unit-only`
+  - Runs only unit tests (faster, no Docker required)
+  - Use sparingly - E2E tests are part of our quality standard
 
 ### Python Backend
 - Format code: `poetry run poe format`
@@ -95,8 +96,9 @@ bash scripts/check-all.sh
 This single command runs:
 - **Python**: format, lint (10.0/10.0), typecheck (0 errors), coverage (100%)
 - **Frontend**: lint (ESLint), typecheck (TypeScript), test (Vitest), build
+- **E2E**: Playwright tests against Docker PostgreSQL (full user workflow coverage)
 
-Alternative: `poetry run poe check` (equivalent but check-all.sh matches CI/CD exactly)
+Alternative: `poetry run poe check` (unit tests only, does not include E2E)
 
 ### Manual Verification (if needed)
 If you need to run checks individually:
@@ -121,8 +123,7 @@ npm run build              # Build must succeed
 
 ### Verification Checklist
 Before marking any task complete, confirm:
-- [ ] **`bash scripts/check-all.sh`** passes (sign-off workflow - includes all Python + Frontend unit checks)
-- [ ] E2E tests pass (run `bash scripts/check-all.sh --e2e` for major UI changes)
+- [ ] **`bash scripts/check-all.sh`** passes (sign-off workflow - includes ALL checks: Python, Frontend, and E2E)
 
 **These checks are enforced by GitHub Actions CI on every PR. Do NOT submit code that fails these checks.**
 

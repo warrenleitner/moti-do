@@ -172,8 +172,9 @@ This project uses [Poe the Poet](https://github.com/nat-n/poethepoet) for task r
 
 Run tasks using `poetry run poe <task_name>`:
 
-*   **Sign-Off Workflow:** `bash scripts/check-all.sh` ⭐ **Recommended - Run before committing**
-*   **Alternative Check Command:** `poetry run poe check` (Run All Checks - Python + Frontend)
+*   **Sign-Off Workflow:** `bash scripts/check-all.sh` ⭐ **Recommended - Run before committing** (includes E2E)
+*   **Skip E2E tests:** `bash scripts/check-all.sh --skip-e2e` (unit tests only, faster)
+*   **Alternative Check Command:** `poetry run poe check` (unit tests only, no E2E)
 *   **Format Code:** `poetry run poe format` (Applies Black and isort)
 *   **Lint Code:** `poetry run poe lint`
 *   **Type Check:** `poetry run poe typecheck`
@@ -229,8 +230,11 @@ bash scripts/run-e2e.sh --keep-db
 # Use JSON storage instead of Docker (faster, less realistic)
 bash scripts/run-e2e.sh --no-docker
 
-# Run E2E with all unit tests
-bash scripts/check-all.sh --e2e
+# Run ALL tests including E2E (default)
+bash scripts/check-all.sh
+
+# Run unit tests only (skip E2E)
+bash scripts/check-all.sh --skip-e2e
 ```
 
 **Prerequisites for E2E tests:**
@@ -247,7 +251,7 @@ E2E tests cover:
 
 Before submitting code, ensure all checks pass:
 
-**Sign-Off Workflow (Recommended):**
+**Sign-Off Workflow (Required):**
 ```bash
 bash scripts/check-all.sh      # Official sign-off - run before committing
 ```
@@ -257,10 +261,11 @@ This is the **official sign-off workflow** that matches our CI/CD pipeline exact
 This single command verifies:
 - Python: format, lint (10.0/10.0), typecheck (0 errors), coverage (100%)
 - Frontend: lint (ESLint), typecheck (TypeScript), test (Vitest), build
+- E2E: Playwright tests against Docker PostgreSQL
 
-**Include E2E tests:** `bash scripts/check-all.sh --e2e`
+**Skip E2E tests:** `bash scripts/check-all.sh --skip-e2e` (use sparingly)
 
-**Alternative:** `poetry run poe check` (unit tests only)
+**Alternative:** `poetry run poe check` (unit tests only, no E2E)
 
 **Manual Checks (if needed):**
 ```bash
