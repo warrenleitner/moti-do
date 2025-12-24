@@ -161,8 +161,10 @@ class PostgresDataManager(DataManager):
         try:
             with self._get_connection() as conn:
                 self._create_tables(conn)
+                print("PostgreSQL tables created/verified successfully.")
         except psycopg2.Error as e:
             print(f"PostgreSQL initialization failed: {e}")
+            raise  # Re-raise to fail fast if database can't be initialized
 
     def load_user(self, username: str = DEFAULT_USERNAME) -> User | None:
         """Loads user data and their tasks from the PostgreSQL database."""

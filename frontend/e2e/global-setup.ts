@@ -38,10 +38,17 @@ async function waitForUrl(url: string, timeout: number = 60000): Promise<void> {
 }
 
 /**
- * Reset user data by deleting the users.json file.
- * This ensures tests start with a clean slate.
+ * Reset user data by deleting the users.json file (for JSON backend only).
+ * This ensures tests start with a clean slate when using JSON storage.
+ * With PostgreSQL, we don't reset data - the database is ephemeral in CI.
  */
 function resetUserData(): void {
+  // Skip reset if using PostgreSQL (DATABASE_URL is set)
+  if (process.env.DATABASE_URL) {
+    console.log('Using PostgreSQL backend - skipping local JSON reset.');
+    return;
+  }
+
   // Path to the users.json file (relative to project root)
   const projectRoot = path.resolve(__dirname, '../../..');
   const usersJsonPath = path.join(projectRoot, 'src/motido/data/motido_data/users.json');
@@ -57,35 +64,65 @@ function resetUserData(): void {
 
 /**
  * Register the test user with known credentials.
+ * Includes retry logic for transient database startup issues.
  */
-async function registerTestUser(): Promise<void> {
+async function registerTestUser(retries: number = 3): Promise<void> {
   console.log(`Registering test user: ${TEST_USERNAME}`);
 
-  try {
-    const response = await fetch('http://localhost:8000/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username: TEST_USERNAME,
-        password: TEST_PASSWORD,
-      }),
-    });
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch('http://localhost:8000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: TEST_USERNAME,
+          password: TEST_PASSWORD,
+        }),
+      });
 
-    if (response.ok) {
-      console.log('Test user registered successfully.');
-    } else {
-      const error = await response.json();
-      // If user already exists, that's fine - we'll try to login
-      if (error.detail?.includes('already registered')) {
-        console.log('Test user already registered, will use existing credentials.');
+      if (response.ok) {
+        console.log('Test user registered successfully.');
+        return;
+      }
+
+      // Try to parse as JSON, but handle non-JSON responses gracefully
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const error = await response.json();
+        // If user already exists, that's fine - we'll try to login
+        if (error.detail?.includes('already registered')) {
+          console.log('Test user already registered, will use existing credentials.');
+          return;
+        } else {
+          console.warn(`Failed to register test user: ${error.detail}`);
+        }
       } else {
-        console.warn(`Failed to register test user: ${error.detail}`);
+        // Non-JSON response (e.g., "Internal Server Error")
+        const text = await response.text();
+        console.warn(`Failed to register test user (attempt ${attempt}/${retries}, status ${response.status}): ${text}`);
+
+        // If this is a 500 error, wait and retry (database might still be initializing)
+        if (response.status >= 500 && attempt < retries) {
+          console.log(`Waiting 2 seconds before retry...`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          continue;
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to register test user (attempt ${attempt}/${retries}):`, error);
+      if (attempt < retries) {
+        console.log(`Waiting 2 seconds before retry...`);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        continue;
       }
     }
-  } catch (error) {
-    console.warn('Failed to register test user:', error);
+
+    // If we get here without returning, something failed
+    if (attempt === retries) {
+      console.warn(`All ${retries} attempts to register test user failed.`);
+    }
   }
 }
 
@@ -95,6 +132,10 @@ async function registerTestUser(): Promise<void> {
 async function globalSetup(_config: FullConfig): Promise<void> { // eslint-disable-line @typescript-eslint/no-unused-vars
   console.log('Running global setup...');
 
+  // Log database backend for debugging
+  const dbType = process.env.DATABASE_URL ? 'PostgreSQL' : 'JSON (local)';
+  console.log(`Database backend: ${dbType}`);
+
   // Wait for backend to be ready
   console.log('Waiting for backend server...');
   await waitForUrl('http://localhost:8000/api/health', 120000);
@@ -103,7 +144,7 @@ async function globalSetup(_config: FullConfig): Promise<void> { // eslint-disab
   console.log('Waiting for frontend server...');
   await waitForUrl('http://localhost:5173', 120000);
 
-  // Reset user data to ensure clean test state
+  // Reset user data to ensure clean test state (only for JSON backend)
   resetUserData();
 
   // Register the test user with known credentials
