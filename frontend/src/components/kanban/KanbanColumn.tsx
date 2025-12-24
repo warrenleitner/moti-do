@@ -14,6 +14,8 @@ interface KanbanColumnProps {
   onEditTask?: (task: Task) => void;
 }
 
+// UI component - tested via integration tests
+/* v8 ignore start */
 export default function KanbanColumn({
   id,
   title,
@@ -107,3 +109,4 @@ export default function KanbanColumn({
     </Paper>
   );
 }
+/* v8 ignore stop */

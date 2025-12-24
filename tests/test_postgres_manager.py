@@ -185,7 +185,7 @@ def test_initialize_success(mock_print: Any, mock_psycopg2: Any) -> None:
 @patch("motido.data.postgres_manager.psycopg2")
 @patch("motido.data.postgres_manager.print")
 def test_initialize_error(mock_print: Any, mock_psycopg2: Any) -> None:
-    """Test database initialization error handling."""
+    """Test database initialization error handling - should raise exception."""
     from motido.data.postgres_manager import PostgresDataManager
 
     # Create a mock error class
@@ -194,7 +194,9 @@ def test_initialize_error(mock_print: Any, mock_psycopg2: Any) -> None:
     mock_psycopg2.connect.side_effect = mock_error("Init failed")
 
     manager = PostgresDataManager("postgresql://test")
-    manager.initialize()  # Should not raise, just print error
+    # Should raise exception to fail fast if database can't be initialized
+    with pytest.raises(Exception, match="Init failed"):
+        manager.initialize()
 
     mock_print.assert_any_call("Initializing PostgreSQL database...")
 

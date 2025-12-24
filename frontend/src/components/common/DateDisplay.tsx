@@ -10,7 +10,10 @@ interface DateDisplayProps {
 }
 
 function formatRelativeDate(dateStr: string): { text: string; color: string; isOverdue: boolean } {
-  const date = new Date(dateStr);
+  // Parse date as local time to avoid timezone issues
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -37,6 +40,7 @@ function formatRelativeDate(dateStr: string): { text: string; color: string; isO
     return { text: `In ${diffDays} days`, color: 'text.secondary', isOverdue: false };
   }
 
+  // Default case for dates > 7 days away
   return {
     text: targetDate.toLocaleDateString(),
     color: 'text.secondary',
@@ -54,7 +58,10 @@ export default function DateDisplay({
     return null;
   }
 
-  const dateObj = new Date(date);
+  // Parse date as local time to avoid timezone issues
+  const [year, month, day] = date.split('-').map(Number);
+  const dateObj = new Date(year, month - 1, day);
+
   const fullDate = dateObj.toLocaleDateString(undefined, {
     weekday: 'long',
     year: 'numeric',

@@ -1,3 +1,5 @@
+// Re-export modules - no logic to test
+/* v8 ignore start */
 export { default as LoadingSpinner } from './LoadingSpinner';
 export { default as EmptyState } from './EmptyState';
 export { default as ConfirmDialog } from './ConfirmDialog';
@@ -10,3 +12,4 @@ export { default as FilterBar } from './FilterBar';
 export { default as XPDisplay } from './XPDisplay';
 export { default as StreakBadge } from './StreakBadge';
 export { default as DateDisplay } from './DateDisplay';
+/* v8 ignore stop */

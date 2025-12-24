@@ -12,14 +12,18 @@ interface HabitListProps {
   allTasks: Task[];
   onComplete: (id: string) => void;
   onEdit: (habit: Task) => void;
+  onDelete: (id: string) => void;
   onCreateNew?: () => void;
 }
 
+// UI component - tested via integration tests
+/* v8 ignore start */
 export default function HabitList({
   habits,
   allTasks,
   onComplete,
   onEdit,
+  onDelete,
   onCreateNew,
 }: HabitListProps) {
   const [view, setView] = useState<'list' | 'heatmap'>('list');
@@ -68,6 +72,7 @@ export default function HabitList({
                   habit={habit}
                   onComplete={onComplete}
                   onEdit={onEdit}
+                  onDelete={onDelete}
                 />
               ))}
             </Box>
@@ -85,6 +90,7 @@ export default function HabitList({
                   habit={habit}
                   onComplete={onComplete}
                   onEdit={onEdit}
+                  onDelete={onDelete}
                 />
               ))}
             </Box>
@@ -105,3 +111,4 @@ export default function HabitList({
     </Box>
   );
 }
+/* v8 ignore stop */

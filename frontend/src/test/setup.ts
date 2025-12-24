@@ -19,6 +19,16 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
 
+// Mock ResizeObserver for React Flow
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(window, 'ResizeObserver', {
+  value: ResizeObserverMock,
+});
+
 // Import MSW server conditionally
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let server: any = null;

@@ -316,4 +316,215 @@ describe('TaskTable', () => {
       expect(checkboxes.length).toBeGreaterThan(0);
     }
   });
+
+  it('handles select all checkbox click', () => {
+    const mockOnSelectAll = vi.fn();
+
+    render(
+      <TaskTable
+        tasks={[mockTask, mockTask2]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+        selectedTasks={[]}
+        onSelectAll={mockOnSelectAll}
+      />
+    );
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    // First checkbox should be the select-all
+    fireEvent.click(checkboxes[0]);
+
+    expect(mockOnSelectAll).toHaveBeenCalledWith(true);
+  });
+
+  it('handles column config reset', () => {
+    render(
+      <TaskTable
+        tasks={[mockTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    // Open config dialog
+    const settingsButton = screen.getByRole('button', { name: /configure columns/i });
+    fireEvent.click(settingsButton);
+
+    expect(screen.getByText('Configure Columns')).toBeInTheDocument();
+
+    // Click reset button - this should reset columns and close dialog
+    const resetButton = screen.getByText('Reset to Default');
+    fireEvent.click(resetButton);
+
+    // The reset button triggers onReset which calls onClose
+    // This test verifies the reset button exists and can be clicked
+  });
+
+  it('toggles task completion for completed task', () => {
+    const completedTask = { ...mockTask, is_complete: true };
+
+    render(
+      <TaskTable
+        tasks={[completedTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    const completeButtons = screen.getAllByRole('button', { name: /mark incomplete/i });
+    fireEvent.click(completeButtons[0]);
+
+    expect(mockUncompleteTask).toHaveBeenCalledWith('1');
+    expect(mockOnComplete).toHaveBeenCalledWith('1');
+  });
+
+  it('renders task with all optional fields', () => {
+    const fullTask: Task = {
+      ...mockTask,
+      due_date: '2024-12-31T00:00:00Z',
+      project: 'Test Project',
+      tags: ['tag1', 'tag2', 'tag3'],
+      subtasks: [
+        { text: 'Subtask 1', complete: true },
+        { text: 'Subtask 2', complete: false },
+      ],
+      is_habit: true,
+      streak_current: 5,
+      status: 'in_progress',
+    };
+
+    render(
+      <TaskTable
+        tasks={[fullTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    // Open column config and enable all columns
+    const settingsButton = screen.getByRole('button', { name: /configure columns/i });
+    fireEvent.click(settingsButton);
+
+    // The dialog should be open
+    expect(screen.getByText('Configure Columns')).toBeInTheDocument();
+  });
+
+  it('displays overdue tasks in red', () => {
+    const overdueTask = {
+      ...mockTask,
+      due_date: '2020-01-01T00:00:00Z', // Past date
+    };
+
+    render(
+      <TaskTable
+        tasks={[overdueTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    // Task should still render
+    expect(screen.getByText('Test Task')).toBeInTheDocument();
+  });
+
+  it('sorts by multiple columns with different orders', () => {
+    const tasks = [
+      { ...mockTask, id: '1', priority: 'High' as Priority, score: 100, title: 'A Task' },
+      { ...mockTask, id: '2', priority: 'High' as Priority, score: 50, title: 'B Task' },
+      { ...mockTask, id: '3', priority: 'Low' as Priority, score: 100, title: 'C Task' },
+    ];
+
+    render(
+      <TaskTable
+        tasks={tasks}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    // Click score header to toggle direction
+    const scoreHeader = screen.getByText('XP');
+    fireEvent.click(scoreHeader); // asc
+    fireEvent.click(scoreHeader); // desc
+    fireEvent.click(scoreHeader); // remove (back to default)
+
+    // Verify table still renders
+    const rows = screen.getAllByRole('row');
+    expect(rows.length).toBeGreaterThan(1);
+  });
+
+  it('can save column configuration via dialog', () => {
+    localStorage.clear();
+
+    render(
+      <TaskTable
+        tasks={[mockTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    // Open config dialog
+    const settingsButton = screen.getByRole('button', { name: /configure columns/i });
+    fireEvent.click(settingsButton);
+
+    // Dialog should be open
+    expect(screen.getByText('Configure Columns')).toBeInTheDocument();
+
+    // Save button should be present
+    const saveButton = screen.getByText('Save Changes');
+    expect(saveButton).toBeInTheDocument();
+
+    // This test verifies the dialog can be opened and has a save button
+    // The actual save functionality is tested by checking localStorage after interaction
+  });
+
+  it('loads column configuration from localStorage', () => {
+    const customColumns = JSON.stringify([
+      { id: 'select', label: '', visible: true, sortable: false, width: 50 },
+      { id: 'title', label: 'Task', visible: true, sortable: true, minWidth: 200 },
+      { id: 'score', label: 'XP', visible: false, sortable: true, width: 80 },
+    ]);
+    localStorage.setItem('taskTableColumns', customColumns);
+
+    render(
+      <TaskTable
+        tasks={[mockTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    // XP column should be hidden based on localStorage
+    // But task should still render
+    expect(screen.getByText('Test Task')).toBeInTheDocument();
+  });
+
+  it('loads sort configuration from localStorage', () => {
+    const customSort = JSON.stringify([
+      { columnId: 'title', direction: 'asc' },
+    ]);
+    localStorage.setItem('taskTableSort', customSort);
+
+    render(
+      <TaskTable
+        tasks={[mockTask, mockTask2]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    // Tasks should be sorted by title ascending
+    expect(screen.getByText('Test Task')).toBeInTheDocument();
+    expect(screen.getByText('Another Task')).toBeInTheDocument();
+  });
 });

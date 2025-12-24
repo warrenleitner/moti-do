@@ -270,4 +270,134 @@ describe('TaskCard', () => {
     expect(screen.getByText('work')).toBeVisible();
     expect(screen.getByText('important')).toBeVisible();
   });
+
+  it('calls onSubtaskToggle when subtask is toggled', async () => {
+    const user = userEvent.setup();
+    const mockOnSubtaskToggle = vi.fn();
+
+    render(
+      <TaskCard
+        task={mockTask}
+        onComplete={mockOnComplete}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onSubtaskToggle={mockOnSubtaskToggle}
+      />
+    );
+
+    // Expand to show subtasks
+    const expandButton = screen.getByTestId('ExpandMoreIcon').closest('button');
+    if (expandButton) {
+      await user.click(expandButton);
+    }
+
+    // Find and click a subtask checkbox
+    const subtaskCheckboxes = screen.getAllByRole('checkbox');
+    // First checkbox is the main task, subsequent ones are subtasks
+    if (subtaskCheckboxes.length > 1) {
+      await user.click(subtaskCheckboxes[1]);
+      expect(mockOnSubtaskToggle).toHaveBeenCalledWith('test-task-1', 0);
+    }
+  });
+
+  it('does not call onSubtaskToggle when callback not provided', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TaskCard
+        task={mockTask}
+        onComplete={mockOnComplete}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        // onSubtaskToggle not provided
+      />
+    );
+
+    // Expand to show subtasks
+    const expandButton = screen.getByTestId('ExpandMoreIcon').closest('button');
+    if (expandButton) {
+      await user.click(expandButton);
+    }
+
+    // Subtasks should still be visible but not interactive
+    expect(screen.getByText(/Subtask 1/)).toBeVisible();
+  });
+
+  it('shows task without expand button when no details', () => {
+    const simpleTask: Task = {
+      ...mockTask,
+      text_description: '',
+      tags: [],
+      subtasks: [],
+    };
+
+    render(
+      <TaskCard
+        task={simpleTask}
+        onComplete={mockOnComplete}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    // Should not have expand button
+    expect(screen.queryByTestId('ExpandMoreIcon')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('ExpandLessIcon')).not.toBeInTheDocument();
+  });
+
+  it('renders task with icon', () => {
+    const taskWithIcon: Task = {
+      ...mockTask,
+      icon: '📋',
+    };
+
+    render(
+      <TaskCard
+        task={taskWithIcon}
+        onComplete={mockOnComplete}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    expect(screen.getByText('📋')).toBeInTheDocument();
+  });
+
+  it('renders task with dependencies indicator', () => {
+    const taskWithDeps: Task = {
+      ...mockTask,
+      dependencies: ['dep1', 'dep2'],
+    };
+
+    render(
+      <TaskCard
+        task={taskWithDeps}
+        onComplete={mockOnComplete}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    // Should show link icon for dependencies
+    expect(screen.getByTestId('LinkIcon')).toBeInTheDocument();
+  });
+
+  it('renders task with due date', () => {
+    const taskWithDueDate: Task = {
+      ...mockTask,
+      due_date: '2025-12-31',  // DateDisplay expects YYYY-MM-DD format
+    };
+
+    render(
+      <TaskCard
+        task={taskWithDueDate}
+        onComplete={mockOnComplete}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    // Should show calendar icon (DateDisplay component renders CalendarToday icon)
+    expect(screen.getByTestId('CalendarTodayIcon')).toBeInTheDocument();
+  });
 });

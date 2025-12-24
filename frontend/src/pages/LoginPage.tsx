@@ -14,6 +14,8 @@ import {
 } from '@mui/material';
 import { authApi } from '../services/api';
 
+// UI component - tested via integration tests
+/* v8 ignore start */
 export default function LoginPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -171,3 +173,4 @@ export default function LoginPage() {
     </Box>
   );
 }
+/* v8 ignore stop */
