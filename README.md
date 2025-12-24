@@ -6,9 +6,31 @@ A gamified task and habit tracker with XP, streaks, and badges. Built with FastA
 
 ### Prerequisites
 
-- Python 3.9+ with Poetry
+**Required:**
+- Python 3.9+
 - Node.js 18+ with npm
-- PostgreSQL database (local or hosted)
+- Poetry (Python dependency manager)
+
+**Optional (for E2E tests and local database):**
+- Docker (for local PostgreSQL and E2E tests)
+
+**macOS Installation (via Homebrew):**
+```bash
+# Install Homebrew if not already installed
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install required dependencies
+brew install python@3.11 node@18 poetry
+
+# Install Docker Desktop (optional, for E2E tests)
+brew install --cask docker
+```
+
+**Other platforms:**
+- Python: [python.org](https://www.python.org/downloads/)
+- Node.js: [nodejs.org](https://nodejs.org/)
+- Poetry: `pip install poetry` or [python-poetry.org](https://python-poetry.org/docs/#installation)
+- Docker: [docker.com](https://www.docker.com/products/docker-desktop/)
 
 ### Installation
 
@@ -28,6 +50,13 @@ A gamified task and habit tracker with XP, streaks, and badges. Built with FastA
     ```bash
     cd frontend
     npm install
+    cd ..
+    ```
+
+4.  **Install Playwright browsers (for E2E tests):**
+    ```bash
+    cd frontend
+    npx playwright install
     cd ..
     ```
 
@@ -55,20 +84,42 @@ A gamified task and habit tracker with XP, streaks, and badges. Built with FastA
 
 ### Running Locally
 
+#### Quick Start: Using dev.sh (Recommended)
+
+The easiest way to run Moti-Do is with the `dev.sh` script, which starts both frontend and backend with a single command:
+
+```bash
+# Run with Supabase database (uses DATABASE_URL from .env)
+./scripts/dev.sh
+
+# Run with local Docker PostgreSQL (no cloud resources needed)
+./scripts/dev.sh --local
+
+# Keep Docker DB running after stopping (for data persistence)
+./scripts/dev.sh --local --keep
+```
+
+The script:
+- Starts both backend (port 8000) and frontend (port 5173)
+- Waits for each server to be ready before continuing
+- Shows status with colored output
+- Handles clean shutdown on Ctrl+C
+- In `--local` mode, manages Docker PostgreSQL automatically
+
+Access the app at [http://localhost:5173](http://localhost:5173)
+
 #### Option 1: Development Mode (No Database)
 
-Run without PostgreSQL using in-memory storage:
+Run without PostgreSQL using in-memory storage (manual startup):
 
 ```bash
 # Backend (port 8000)
 poetry run uvicorn motido.api.main:app --reload
 
-# Frontend (port 5173)
+# Frontend (port 5173) - in separate terminal
 cd frontend
 npm run dev
 ```
-
-Access the app at [http://localhost:5173](http://localhost:5173)
 
 #### Option 2: With Local PostgreSQL
 
@@ -170,18 +221,22 @@ This project uses Poetry for dependency management and packaging.
 
 This project uses [Poe the Poet](https://github.com/nat-n/poethepoet) for task running, configured in `pyproject.toml`.
 
-Run tasks using `poetry run poe <task_name>`:
+**Scripts (in `scripts/` directory):**
+*   **`./scripts/dev.sh`** ⭐ **Start development servers** (frontend + backend)
+*   **`./scripts/dev.sh --local`** - Use local Docker PostgreSQL instead of Supabase
+*   **`./scripts/check-all.sh`** ⭐ **Sign-off workflow** - Run all checks before committing
+*   **`./scripts/run-e2e.sh`** - Run E2E tests with Playwright
 
-*   **Sign-Off Workflow:** `bash scripts/check-all.sh` ⭐ **Recommended - Run before committing** (includes E2E)
-*   **Skip E2E tests:** `bash scripts/check-all.sh --skip-e2e` (unit tests only, faster)
-*   **Alternative Check Command:** `poetry run poe check` (unit tests only, no E2E)
-*   **Format Code:** `poetry run poe format` (Applies Black and isort)
-*   **Lint Code:** `poetry run poe lint`
-*   **Type Check:** `poetry run poe typecheck`
-*   **Run Tests:** `poetry run poe test`
-*   **Check Test Coverage:** `poetry run poe coverage` (Requires 100% coverage)
-*   **Python-Only Checks:** `poetry run poe check-python` (Runs format, lint, typecheck, coverage)
-*   **Frontend-Only Checks:** `poetry run poe frontend-check` (Runs lint, typecheck, test, build)
+**Poe tasks** (run with `poetry run poe <task_name>`):
+
+*   **`poe check`** - Run all unit tests (Python + Frontend, no E2E)
+*   **`poe format`** - Format code with Black and isort
+*   **`poe lint`** - Run Pylint
+*   **`poe typecheck`** - Run mypy type checking
+*   **`poe test`** - Run Python tests
+*   **`poe coverage`** - Run tests with coverage (requires 100%)
+*   **`poe check-python`** - Run all Python checks (format, lint, typecheck, coverage)
+*   **`poe frontend-check`** - Run all frontend checks (lint, typecheck, test, build)
 
 ### Frontend Development Commands
 
