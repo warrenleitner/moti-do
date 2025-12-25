@@ -12,19 +12,8 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import {
-  Box,
-  Paper,
-  Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  ToggleButton,
-  ToggleButtonGroup,
-} from '@mui/material';
-import { AccountTree, ArrowUpward, ArrowDownward, FilterCenterFocus } from '@mui/icons-material';
+import { Box, Paper, Text, Select, Badge, CloseButton, Group, SegmentedControl, Center } from '@mantine/core';
+import { IconGitBranch, IconArrowUp, IconArrowDown, IconFocus2 } from '@tabler/icons-react';
 import type { Task } from '../../types';
 import TaskNode from './TaskNode';
 
@@ -236,74 +225,96 @@ export default function DependencyGraph({ tasks, onSelectTask }: DependencyGraph
 
   if (tasksWithDeps.length === 0) {
     return (
-      <Paper sx={{ p: 4, textAlign: 'center' }}>
-        <AccountTree sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-        <Typography variant="h6" color="text.secondary">
+      <Paper p="xl" ta="center">
+        <IconGitBranch size={64} color="var(--mantine-color-gray-5)" style={{ marginBottom: 16 }} />
+        <Text size="lg" c="dimmed">
           No Dependencies
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
+        </Text>
+        <Text size="sm" c="dimmed">
           Add dependencies between tasks to see the dependency graph.
-        </Typography>
+        </Text>
       </Paper>
     );
   }
 
+  // Generate select options
+  const taskOptions = [
+    { value: '', label: 'All Tasks' },
+    ...tasksWithDeps.map((task) => ({
+      value: task.id,
+      label: `${task.icon || ''} ${task.title}`.trim(),
+    })),
+  ];
+
+  // Generate direction options for SegmentedControl
+  const directionData = [
+    { value: 'all', label: 'All' },
+    {
+      value: 'isolated',
+      label: (
+        <Center style={{ gap: 4 }}>
+          <IconFocus2 size={14} />
+          <span>Isolated</span>
+        </Center>
+      ),
+    },
+    {
+      value: 'upstream',
+      label: (
+        <Center style={{ gap: 4 }}>
+          <IconArrowUp size={14} />
+          <span>Upstream</span>
+        </Center>
+      ),
+    },
+    {
+      value: 'downstream',
+      label: (
+        <Center style={{ gap: 4 }}>
+          <IconArrowDown size={14} />
+          <span>Downstream</span>
+        </Center>
+      ),
+    },
+  ];
+
   return (
-    <Box sx={{ height: 'calc(100vh - 250px)', display: 'flex', flexDirection: 'column' }}>
+    <Box style={{ height: 'calc(100vh - 250px)', display: 'flex', flexDirection: 'column' }}>
       {/* Controls */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Focus on Task</InputLabel>
-          <Select
-            value={selectedTaskId || ''}
-            label="Focus on Task"
-            onChange={(e) => setSelectedTaskId(e.target.value || null)}
-          >
-            <MenuItem value="">All Tasks</MenuItem>
-            {tasksWithDeps.map((task) => (
-              <MenuItem key={task.id} value={task.id}>
-                {task.icon} {task.title}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <Group gap="md" mb="md" align="flex-end" wrap="wrap">
+        <Select
+          label="Focus on Task"
+          value={selectedTaskId || ''}
+          onChange={(v) => setSelectedTaskId(v || null)}
+          data={taskOptions}
+          size="sm"
+          w={200}
+        />
 
         {selectedTaskId && (
-          <ToggleButtonGroup
+          <SegmentedControl
             value={direction}
-            exclusive
-            onChange={(_, value) => value && setDirection(value)}
-            size="small"
-          >
-            <ToggleButton value="all">
-              All
-            </ToggleButton>
-            <ToggleButton value="isolated">
-              <FilterCenterFocus fontSize="small" sx={{ mr: 0.5 }} />
-              Isolated
-            </ToggleButton>
-            <ToggleButton value="upstream">
-              <ArrowUpward fontSize="small" sx={{ mr: 0.5 }} />
-              Upstream
-            </ToggleButton>
-            <ToggleButton value="downstream">
-              <ArrowDownward fontSize="small" sx={{ mr: 0.5 }} />
-              Downstream
-            </ToggleButton>
-          </ToggleButtonGroup>
-        )}
-
-        {selectedTaskId && (
-          <Chip
-            label={`Focused: ${tasks.find((t) => t.id === selectedTaskId)?.title}`}
-            onDelete={() => setSelectedTaskId(null)}
-            size="small"
+            onChange={(value) => setDirection(value as Direction)}
+            data={directionData}
+            size="sm"
           />
         )}
-      </Box>
+
+        {selectedTaskId && (
+          <Badge
+            size="lg"
+            variant="light"
+            rightSection={
+              <CloseButton size="xs" onClick={() => setSelectedTaskId(null)} aria-label="Clear focus" />
+            }
+          >
+            Focused: {tasks.find((t) => t.id === selectedTaskId)?.title}
+          </Badge>
+        )}
+      </Group>
 
       {/* Graph */}
-      <Paper sx={{ flex: 1 }}>
+      <Paper style={{ flex: 1 }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -324,23 +335,23 @@ export default function DependencyGraph({ tasks, onSelectTask }: DependencyGraph
       </Paper>
 
       {/* Legend */}
-      <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap' }}>
+      <Group gap="md" mt="md" wrap="wrap">
         {Object.entries(priorityColors).map(([priority, color]) => (
-          <Box key={priority} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Group key={priority} gap={4} align="center">
             <Box
-              sx={{
+              style={{
                 width: 12,
                 height: 12,
                 borderRadius: '50%',
                 backgroundColor: color,
               }}
             />
-            <Typography variant="caption" sx={{ textTransform: 'capitalize' }}>
+            <Text size="xs" style={{ textTransform: 'capitalize' }}>
               {priority}
-            </Typography>
-          </Box>
+            </Text>
+          </Group>
         ))}
-      </Box>
+      </Group>
     </Box>
   );
 }

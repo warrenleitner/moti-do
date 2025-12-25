@@ -94,23 +94,24 @@ describe('DependencyGraph', () => {
 
   it('displays tasks as nodes', () => {
     render(<DependencyGraph tasks={mockTasks} />);
-    expect(screen.getByText('Task 1')).toBeInTheDocument();
-    expect(screen.getByText('Task 2')).toBeInTheDocument();
+    // Use getAllByText since task names appear in both nodes and select options
+    expect(screen.getAllByText('Task 1').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Task 2').length).toBeGreaterThan(0);
   });
 
   it('calls onTaskClick when task node clicked', () => {
     const onSelectTask = vi.fn();
     render(<DependencyGraph tasks={mockTasks} onSelectTask={onSelectTask} />);
     // Task nodes are interactive - verify they render with the onSelectTask prop
-    expect(screen.getByText('Task 1')).toBeInTheDocument();
+    expect(screen.getAllByText('Task 1').length).toBeGreaterThan(0);
     expect(onSelectTask).toBeInstanceOf(Function);
   });
 
   it('shows dependencies between tasks', () => {
     render(<DependencyGraph tasks={mockTasks} />);
     // Should render both tasks with dependency relationship
-    expect(screen.getByText('Task 1')).toBeInTheDocument();
-    expect(screen.getByText('Task 2')).toBeInTheDocument();
+    expect(screen.getAllByText('Task 1').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Task 2').length).toBeGreaterThan(0);
   });
 
   it('handles empty task list', () => {
@@ -122,7 +123,7 @@ describe('DependencyGraph', () => {
     const tasksWithCompleted = [
       ...mockTasks,
       {
-        id: '3',
+        id: '5',
         title: 'Completed Task',
         text_description: '',
         priority: 'low' as const,
@@ -140,7 +141,7 @@ describe('DependencyGraph', () => {
 
     // Completed tasks are shown in the graph (filtering based on is_habit, not is_complete)
     render(<DependencyGraph tasks={tasksWithCompleted} />);
-    expect(screen.getByText('Completed Task')).toBeInTheDocument();
+    expect(screen.getAllByText('Completed Task').length).toBeGreaterThan(0);
   });
 
   it('shows completed tasks when showCompleted is true', () => {
@@ -164,16 +165,16 @@ describe('DependencyGraph', () => {
     ];
 
     render(<DependencyGraph tasks={tasksWithCompleted} />);
-    expect(screen.getByText('Completed Task')).toBeInTheDocument();
+    expect(screen.getAllByText('Completed Task').length).toBeGreaterThan(0);
   });
 
   it('allows filtering to specific task', () => {
     // This component is wrapped in v8 ignore, testing that filter controls render
     render(<DependencyGraph tasks={mockTasks} />);
 
-    // Verify the graph renders with tasks
-    expect(screen.getByText('Task 1')).toBeInTheDocument();
-    expect(screen.getByText('Task 2')).toBeInTheDocument();
+    // Verify the graph renders with tasks (use getAllByText since names appear in nodes and select)
+    expect(screen.getAllByText('Task 1').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Task 2').length).toBeGreaterThan(0);
   });
 
   it('shows direction toggle when task is focused', () => {
@@ -188,10 +189,10 @@ describe('DependencyGraph', () => {
     // This component is wrapped in v8 ignore, testing basic render
     render(<DependencyGraph tasks={mockTasks} />);
 
-    // All three tasks should be visible in the unfiltered view
-    expect(screen.getByText('Task 1')).toBeInTheDocument();
-    expect(screen.getByText('Task 2')).toBeInTheDocument();
-    expect(screen.getByText('Task 3')).toBeInTheDocument();
+    // All three tasks should be visible in the unfiltered view (use getAllByText for multiple matches)
+    expect(screen.getAllByText('Task 1').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Task 2').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Task 3').length).toBeGreaterThan(0);
   });
 
   it('filters to downstream dependencies', () => {

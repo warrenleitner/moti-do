@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Paper, Typography, Box } from '@mui/material';
-import { CheckCircle, RadioButtonUnchecked } from '@mui/icons-material';
+import { Paper, Text, Group, Box } from '@mantine/core';
+import { IconCircleCheck, IconCircle } from '@tabler/icons-react';
 import type { Task } from '../../types';
 
 interface TaskNodeProps {
@@ -19,19 +19,17 @@ function TaskNode({ data }: TaskNodeProps) {
 
   return (
     <Paper
-      elevation={isSelected ? 8 : 2}
-      sx={{
-        p: 1.5,
+      shadow={isSelected ? 'lg' : 'xs'}
+      p="sm"
+      style={{
         minWidth: 180,
         maxWidth: 220,
         borderLeft: `4px solid ${color}`,
-        backgroundColor: isSelected ? 'action.selected' : 'background.paper',
+        backgroundColor: isSelected
+          ? 'var(--mantine-color-gray-1)'
+          : 'var(--mantine-color-white)',
         cursor: 'pointer',
         transition: 'all 0.2s',
-        '&:hover': {
-          elevation: 4,
-          transform: 'scale(1.02)',
-        },
       }}
     >
       {/* Input handle */}
@@ -46,34 +44,34 @@ function TaskNode({ data }: TaskNodeProps) {
       />
 
       {/* Content */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+      <Group gap="xs" align="flex-start" wrap="nowrap">
         {task.is_complete ? (
-          <CheckCircle sx={{ fontSize: 18, color: 'success.main', mt: 0.25 }} />
+          <IconCircleCheck size={18} color="var(--mantine-color-green-6)" style={{ marginTop: 2 }} />
         ) : (
-          <RadioButtonUnchecked sx={{ fontSize: 18, color: 'text.secondary', mt: 0.25 }} />
+          <IconCircle size={18} color="var(--mantine-color-gray-5)" style={{ marginTop: 2 }} />
         )}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography
-            variant="body2"
-            fontWeight="medium"
-            sx={{
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Text
+            size="sm"
+            fw={500}
+            style={{
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              textDecoration: task.is_complete ? 'line-through' : 'none',
-              color: task.is_complete ? 'text.secondary' : 'text.primary',
             }}
+            td={task.is_complete ? 'line-through' : undefined}
+            c={task.is_complete ? 'dimmed' : undefined}
           >
             {task.icon && <span style={{ marginRight: 4 }}>{task.icon}</span>}
             {task.title}
-          </Typography>
+          </Text>
           {task.project && (
-            <Typography variant="caption" color="text.secondary">
+            <Text size="xs" c="dimmed">
               {task.project}
-            </Typography>
+            </Text>
           )}
         </Box>
-      </Box>
+      </Group>
 
       {/* Output handle */}
       <Handle

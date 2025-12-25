@@ -28,15 +28,15 @@ export class GraphPage {
     this.graphContainer = page.locator('.react-flow');
     // Empty state when no dependencies exist
     this.emptyStateMessage = page.getByText('No Dependencies');
-    // MUI Drawer for task details (anchor="right", not hidden)
+    // MUI Drawer for task details (GraphPage.tsx still uses MUI)
     this.taskDrawer = page.locator('.MuiDrawer-root.MuiDrawer-anchorRight:not([aria-hidden="true"])');
     this.snackbar = page.getByRole('alert');
 
-    // Direction toggle buttons - use text locators as MUI ToggleButton accessible names can be tricky with icons
-    this.allDirectionButton = page.getByRole('button', { name: 'All', exact: true });
-    this.upstreamButton = page.locator('button').filter({ hasText: 'Upstream' });
-    this.downstreamButton = page.locator('button').filter({ hasText: 'Downstream' });
-    this.isolatedButton = page.locator('button').filter({ hasText: 'Isolated' });
+    // Direction toggle - Mantine SegmentedControl renders as labels, use text locators
+    this.allDirectionButton = page.locator('.mantine-SegmentedControl-root').getByText('All', { exact: true });
+    this.upstreamButton = page.locator('.mantine-SegmentedControl-root').getByText('Upstream');
+    this.downstreamButton = page.locator('.mantine-SegmentedControl-root').getByText('Downstream');
+    this.isolatedButton = page.locator('.mantine-SegmentedControl-root').getByText('Isolated');
   }
 
   /**
@@ -131,6 +131,7 @@ export class GraphPage {
    * Get the task title shown in the drawer.
    */
   async getDrawerTaskTitle(): Promise<string | null> {
+    // MUI Typography component (GraphPage.tsx still uses MUI)
     const titleElement = this.taskDrawer.locator('.MuiTypography-root').first();
     return await titleElement.textContent();
   }
@@ -206,6 +207,7 @@ export class GraphPage {
    */
   async getDependenciesInDrawer(): Promise<string[]> {
     const dependenciesSection = this.taskDrawer.getByText('Dependencies').locator('..');
+    // MUI Card component (GraphPage.tsx still uses MUI)
     const cards = dependenciesSection.locator('.MuiCard-root');
     const count = await cards.count();
     const titles: string[] = [];

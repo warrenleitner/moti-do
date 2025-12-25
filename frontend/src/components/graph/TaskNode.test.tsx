@@ -1,10 +1,14 @@
 import { render, screen } from '../../test/utils';
 import TaskNode from './TaskNode';
 import { ReactFlowProvider } from '@xyflow/react';
+import { MantineProvider } from '@mantine/core';
+import { theme } from '../../theme';
 
-// Wrapper component to provide React Flow context
+// Wrapper component to provide React Flow context with MantineProvider
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-  <ReactFlowProvider>{children}</ReactFlowProvider>
+  <MantineProvider theme={theme}>
+    <ReactFlowProvider>{children}</ReactFlowProvider>
+  </MantineProvider>
 );
 
 describe('TaskNode', () => {
