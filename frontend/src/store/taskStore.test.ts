@@ -312,6 +312,61 @@ describe('TaskStore', () => {
       expect(result.current.error).toBe('Network error');
       expect(result.current.isLoading).toBe(false);
     });
+
+    it('should undo a task change via API', async () => {
+      const { result } = renderHook(() => useTaskStore());
+
+      // Set up a task with history
+      const taskWithHistory = {
+        ...mockTasks[0],
+        title: 'Changed Title',
+        history: [
+          {
+            timestamp: new Date().toISOString(),
+            field: 'title',
+            old_value: 'Original Title',
+            new_value: 'Changed Title',
+          },
+        ],
+      };
+
+      act(() => {
+        result.current.setTasks([taskWithHistory]);
+      });
+
+      // Undo the change
+      await act(async () => {
+        const undoneTask = await result.current.undoTask('task-1');
+        expect(undoneTask).toBeDefined();
+      });
+    });
+
+    it('should handle undo task error', async () => {
+      const { result } = renderHook(() => useTaskStore());
+
+      act(() => {
+        result.current.setTasks(mockTasks);
+      });
+
+      // Mock the API to fail
+      const taskApi = await import('../services/api');
+      const originalUndo = taskApi.taskApi.undoTask;
+      taskApi.taskApi.undoTask = vi.fn().mockRejectedValue(new Error('No history'));
+
+      // Attempt to undo and expect error
+      await expect(async () => {
+        await act(async () => {
+          await result.current.undoTask('task-1');
+        });
+      }).rejects.toThrow('No history');
+
+      // Verify error was set
+      const state = useTaskStore.getState();
+      expect(state.error).toBeTruthy();
+
+      // Restore original API function
+      taskApi.taskApi.undoTask = originalUndo;
+    });
   });
 });
 

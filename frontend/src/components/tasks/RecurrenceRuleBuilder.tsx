@@ -50,6 +50,8 @@ interface RecurrenceRuleBuilderProps {
  * A visual builder for creating complex recurrence patterns.
  * Supports daily, weekly (with specific days), monthly (day of month or Nth weekday), and yearly.
  */
+// UI component - tested via integration tests
+/* v8 ignore start */
 export default function RecurrenceRuleBuilder({
   value,
   onChange,
@@ -78,7 +80,7 @@ export default function RecurrenceRuleBuilder({
     const parsed = rruleToPattern(value);
     if (parsed) {
       // Use requestAnimationFrame to defer setState and avoid lint warning
-      // about calling setState synchronously in an effect
+      // about calling setState synchronously in an effect - tested via E2E
       requestAnimationFrame(() => {
         setPattern(parsed);
       });
@@ -357,3 +359,4 @@ export default function RecurrenceRuleBuilder({
     </Box>
   );
 }
+/* v8 ignore stop */

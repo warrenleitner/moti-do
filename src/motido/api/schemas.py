@@ -108,6 +108,7 @@ class TagBase(BaseModel):
 
     name: str
     color: str = "#808080"
+    multiplier: float = 1.0
 
 
 class TagCreate(TagBase):
@@ -128,6 +129,7 @@ class ProjectBase(BaseModel):
 
     name: str
     color: str = "#4A90D9"
+    multiplier: float = 1.0
 
 
 class ProjectCreate(ProjectBase):

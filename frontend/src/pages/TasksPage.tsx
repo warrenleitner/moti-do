@@ -3,6 +3,7 @@ import { Box, Typography, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButt
 import { Add, ViewList, TableChart } from '@mui/icons-material';
 import { TaskList, TaskForm } from '../components/tasks';
 import TaskTable from '../components/tasks/TaskTable';
+import QuickAddBox from '../components/tasks/QuickAddBox';
 import { ConfirmDialog } from '../components/common';
 import { useTaskStore } from '../store';
 import { useFilteredTasks } from '../store/taskStore';
@@ -13,7 +14,7 @@ import type { Task } from '../types';
 /* v8 ignore start */
 export default function TasksPage() {
   // Use API actions from the store
-  const { createTask, saveTask, deleteTask, completeTask, uncompleteTask, isLoading } = useTaskStore();
+  const { createTask, saveTask, deleteTask, completeTask, uncompleteTask, undoTask, isLoading } = useTaskStore();
   const { fetchStats } = useUserStore();
   const filteredTasks = useFilteredTasks();
 
@@ -122,6 +123,15 @@ export default function TasksPage() {
     }
   };
 
+  const handleUndo = async (taskId: string) => {
+    try {
+      await undoTask(taskId);
+      setSnackbar({ open: true, message: 'Change undone', severity: 'success' });
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to undo change', severity: 'error' });
+    }
+  };
+
   return (
     <Box>
       {/* Header */}
@@ -148,6 +158,9 @@ export default function TasksPage() {
         </Box>
       </Box>
 
+      {/* Quick-add box for rapid task creation */}
+      <QuickAddBox />
+
       {/* Task list or table based on view mode */}
       {viewMode === 'list' ? (
         <TaskList
@@ -155,6 +168,7 @@ export default function TasksPage() {
           onDelete={handleDeleteClick}
           onComplete={handleComplete}
           onSubtaskToggle={handleSubtaskToggle}
+          onUndo={handleUndo}
           onCreateNew={handleCreateNew}
         />
       ) : (

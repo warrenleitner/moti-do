@@ -10,6 +10,7 @@ interface TaskListProps {
   onDelete: (id: string) => void;
   onComplete: (id: string) => void;
   onSubtaskToggle?: (taskId: string, subtaskIndex: number) => void;
+  onUndo?: (id: string) => void;
   onCreateNew?: () => void;
 }
 
@@ -20,6 +21,7 @@ export default function TaskList({
   onDelete,
   onComplete,
   onSubtaskToggle,
+  onUndo,
   onCreateNew,
 }: TaskListProps) {
   const { filters, sort, setFilters, resetFilters, setSort, tasks: allTasks } = useTaskStore();
@@ -117,6 +119,7 @@ export default function TaskList({
               onEdit={onEdit}
               onDelete={onDelete}
               onSubtaskToggle={onSubtaskToggle}
+              onUndo={onUndo}
               isBlocked={isTaskBlocked(task)}
             />
           ))}

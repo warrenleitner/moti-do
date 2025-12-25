@@ -23,6 +23,7 @@ export const mockTasks: Task[] = [
     streak_current: 0,
     streak_best: 0,
     history: [],
+    score: 100,
   },
   {
     id: 'task-2',
@@ -40,6 +41,7 @@ export const mockTasks: Task[] = [
     streak_current: 0,
     streak_best: 0,
     history: [],
+    score: 25,
   },
   {
     id: 'habit-1',
@@ -57,6 +59,7 @@ export const mockTasks: Task[] = [
     streak_current: 5,
     streak_best: 10,
     history: [],
+    score: 50,
   },
 ];
 
@@ -111,6 +114,7 @@ export const handlers = [
       streak_current: 0,
       streak_best: 0,
       history: [],
+      score: 50,
     };
     return HttpResponse.json(newTask, { status: 201 });
   }),
@@ -160,6 +164,15 @@ export const handlers = [
       return HttpResponse.json({ detail: 'Task is not complete' }, { status: 400 });
     }
     return HttpResponse.json({ ...task, is_complete: false });
+  }),
+
+  http.post(`${API_BASE}/tasks/:taskId/undo`, ({ params }) => {
+    const task = mockTasks.find((t) => t.id === params.taskId);
+    if (!task) {
+      return HttpResponse.json({ detail: 'Task not found' }, { status: 404 });
+    }
+    // Simulate undo by returning the task with modified title
+    return HttpResponse.json({ ...task, title: 'Undone Task', history: [] });
   }),
 
   // User endpoints

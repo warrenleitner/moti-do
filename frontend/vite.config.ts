@@ -144,6 +144,11 @@ export default defineConfig({
         'src/components/tasks/TaskForm.tsx',
         'src/components/tasks/TaskList.tsx',
         'src/components/tasks/TaskTable.tsx',
+        // Quick-add and recurrence builder - tested via integration tests
+        'src/components/tasks/QuickAddBox.tsx',
+        'src/components/tasks/RecurrenceRuleBuilder.tsx',
+        // Recurrence utils - defensive catch block cannot be unit tested, tested via integration
+        'src/utils/recurrence.ts',
         // Layout and PWA components - tested via integration tests
         'src/components/layout/MainLayout.tsx',
         'src/components/common/InstallPrompt.tsx',

@@ -183,6 +183,11 @@ describe('rruleToPattern', () => {
     expect(rruleToPattern('DAILY')).toEqual({ frequency: 'DAILY', interval: 1 });
     expect(rruleToPattern('Daily')).toEqual({ frequency: 'DAILY', interval: 1 });
   });
+
+  it('returns default pattern for invalid frequency value', () => {
+    // Invalid frequency is ignored, returns default daily pattern
+    expect(rruleToPattern('FREQ=INVALID')).toEqual({ frequency: 'DAILY', interval: 1 });
+  });
 });
 
 describe('describePattern', () => {
@@ -268,6 +273,26 @@ describe('describePattern', () => {
     expect(describePattern(pattern)).toBe('Every month on the 1st and 15th');
   });
 
+  it('describes monthly on the 2nd day', () => {
+    const pattern: RecurrencePattern = {
+      frequency: 'MONTHLY',
+      interval: 1,
+      monthlyMode: 'day_of_month',
+      byMonthDay: [2],
+    };
+    expect(describePattern(pattern)).toBe('Every month on the 2nd');
+  });
+
+  it('describes monthly on the 3rd day', () => {
+    const pattern: RecurrencePattern = {
+      frequency: 'MONTHLY',
+      interval: 1,
+      monthlyMode: 'day_of_month',
+      byMonthDay: [3],
+    };
+    expect(describePattern(pattern)).toBe('Every month on the 3rd');
+  });
+
   it('describes monthly Nth weekday', () => {
     const pattern: RecurrencePattern = {
       frequency: 'MONTHLY',
@@ -277,6 +302,17 @@ describe('describePattern', () => {
       byWeekday: 'TU',
     };
     expect(describePattern(pattern)).toBe('Every month on the 2nd Tuesday');
+  });
+
+  it('describes monthly 3rd weekday', () => {
+    const pattern: RecurrencePattern = {
+      frequency: 'MONTHLY',
+      interval: 1,
+      monthlyMode: 'weekday_of_month',
+      bySetPos: 3,
+      byWeekday: 'WE',
+    };
+    expect(describePattern(pattern)).toBe('Every month on the 3rd Wednesday');
   });
 
   it('describes monthly last Friday', () => {

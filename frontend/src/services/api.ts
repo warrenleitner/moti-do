@@ -318,6 +318,12 @@ export const taskApi = {
     const response = await apiClient.delete<Task>(`/tasks/${taskId}/dependencies/${depId}`);
     return response.data;
   },
+
+  // Undo last change to a task
+  undoTask: async (id: string): Promise<Task> => {
+    const response = await apiClient.post<Task>(`/tasks/${id}/undo`);
+    return response.data;
+  },
 };
 /* v8 ignore stop */
 

@@ -19,6 +19,7 @@ import {
   Loop,
   Link as LinkIcon,
   Star,
+  Undo,
 } from '@mui/icons-material';
 import { useState } from 'react';
 import type { Task } from '../../types';
@@ -38,6 +39,7 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onSubtaskToggle?: (taskId: string, subtaskIndex: number) => void;
+  onUndo?: (id: string) => void;
   isBlocked?: boolean;
 }
 
@@ -47,6 +49,7 @@ export default function TaskCard({
   onEdit,
   onDelete,
   onSubtaskToggle,
+  onUndo,
   isBlocked = false,
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -190,6 +193,13 @@ export default function TaskCard({
 
       <CardActions sx={{ px: 2, pt: 0 }}>
         <Box sx={{ flex: 1 }} />
+        {onUndo && task.history.length > 0 && (
+          <Tooltip title="Undo last change">
+            <IconButton size="small" onClick={() => onUndo(task.id)} color="info">
+              <Undo fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
         <IconButton size="small" onClick={() => onEdit(task)} title="Edit task">
           <Edit fontSize="small" />
         </IconButton>

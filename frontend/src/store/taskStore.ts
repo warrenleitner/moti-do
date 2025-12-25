@@ -56,6 +56,7 @@ interface TaskState {
   deleteTask: (id: string) => Promise<void>;
   completeTask: (id: string) => Promise<Task>;
   uncompleteTask: (id: string) => Promise<Task>;
+  undoTask: (id: string) => Promise<Task>;
 }
 
 const defaultFilters: TaskFilters = {
@@ -268,6 +269,22 @@ export const useTaskStore = create<TaskState>()(
               }));
             }
             const message = error instanceof Error ? error.message : 'Failed to uncomplete task';
+            set({ error: message });
+            throw error;
+          }
+        },
+
+        undoTask: async (id) => {
+          try {
+            const updatedTask = await taskApi.undoTask(id);
+            set((state) => ({
+              tasks: state.tasks.map((t) =>
+                t.id === id ? updatedTask : t
+              ),
+            }));
+            return updatedTask;
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to undo task change';
             set({ error: message });
             throw error;
           }

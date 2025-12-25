@@ -44,9 +44,10 @@ export interface Subtask {
 }
 
 export interface HistoryEntry {
-  date: string; // ISO date string
-  action: string;
-  details?: string;
+  timestamp: string; // ISO datetime string
+  field: string;
+  old_value: string | null;
+  new_value: string | null;
 }
 
 export const TaskStatus = {

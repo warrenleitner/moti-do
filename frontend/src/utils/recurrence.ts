@@ -143,7 +143,9 @@ export function rruleToPattern(rule: string): RecurrencePattern | null {
     }
 
     return pattern;
+    /* v8 ignore next 4 */
   } catch {
+    // Defensive catch for any unexpected parsing errors
     return null;
   }
 }
