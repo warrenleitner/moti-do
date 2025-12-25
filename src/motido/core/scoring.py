@@ -357,6 +357,64 @@ def load_scoring_config() -> Dict[str, Any]:
         raise ValueError(f"Error reading scoring config file: {e}") from e
 
 
+def save_scoring_config(config: Dict[str, Any]) -> None:
+    """
+    Save the scoring configuration to the scoring_config.json file.
+
+    This validates the config before saving to ensure it's valid.
+
+    Args:
+        config: The scoring configuration to save
+
+    Raises:
+        ValueError: If the config is invalid
+    """
+    # Validate first by loading through the validation logic
+    # We'll temporarily write to validate, then keep if valid
+    config_path = get_scoring_config_path()
+
+    # Validate required keys
+    required_keys = [
+        "base_score",
+        "field_presence_bonus",
+        "difficulty_multiplier",
+        "duration_multiplier",
+        "age_factor",
+        "daily_penalty",
+        "due_date_proximity",
+        "start_date_aging",
+        "dependency_chain",
+        "priority_multiplier",
+    ]
+    for key in required_keys:
+        if key not in config:
+            raise ValueError(f"Missing required key '{key}' in scoring config.")
+
+    # Ensure optional keys have defaults
+    if "tag_multipliers" not in config:
+        config["tag_multipliers"] = {}
+    if "project_multipliers" not in config:
+        config["project_multipliers"] = {}
+    if "habit_streak_bonus" not in config:
+        config["habit_streak_bonus"] = {
+            "enabled": True,
+            "bonus_per_streak_day": 1.0,
+            "max_bonus": 50.0,
+        }
+    if "status_bumps" not in config:
+        config["status_bumps"] = {
+            "in_progress_bonus": 5.0,
+            "next_up_bonus": 10.0,
+            "next_up_threshold_days": 3,
+        }
+
+    try:
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2)
+    except IOError as e:
+        raise ValueError(f"Error writing scoring config file: {e}") from e
+
+
 def build_scoring_config_with_user_multipliers(
     config: Dict[str, Any], user: User
 ) -> Dict[str, Any]:

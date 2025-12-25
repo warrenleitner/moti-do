@@ -24,6 +24,7 @@ from motido.core.scoring import (
     calculate_start_date_bonus,
     get_last_penalty_check_date,
     load_scoring_config,
+    save_scoring_config,
     withdraw_xp,
 )
 from motido.data.abstraction import DEFAULT_USERNAME
@@ -418,6 +419,110 @@ def test_load_scoring_config_invalid_overdue_scale_factor() -> None:
             match="'due_date_proximity.overdue_scale_factor' must be a non-negative number",
         ):
             load_scoring_config()
+
+
+# --- Test Save Scoring Configuration ---
+
+
+def test_save_scoring_config_valid() -> None:
+    """Test saving a valid scoring configuration."""
+    config = {
+        "base_score": 15,
+        "field_presence_bonus": {"text_description": 5},
+        "difficulty_multiplier": {"MEDIUM": 2.0},
+        "duration_multiplier": {"MEDIUM": 1.5},
+        "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
+        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_scaling": "logarithmic",
+            "overdue_scale_factor": 0.75,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.05,
+        },
+        "start_date_aging": {
+            "enabled": True,
+            "bonus_points_per_day": 0.5,
+        },
+        "dependency_chain": {
+            "enabled": True,
+            "dependent_score_percentage": 0.1,
+        },
+        "priority_multiplier": {"MEDIUM": 1.5},
+    }
+
+    with patch("builtins.open", mock_open()) as mock_file:
+        save_scoring_config(config)
+        mock_file.assert_called_once()
+
+
+def test_save_scoring_config_missing_required_key() -> None:
+    """Test saving config with missing required key raises error."""
+    config = {
+        "base_score": 10,
+        # Missing other required keys
+    }
+
+    with pytest.raises(ValueError, match="Missing required key"):
+        save_scoring_config(config)
+
+
+def test_save_scoring_config_adds_optional_defaults() -> None:
+    """Test saving config adds default values for optional keys."""
+    config = {
+        "base_score": 10,
+        "field_presence_bonus": {"text_description": 5},
+        "difficulty_multiplier": {"MEDIUM": 2.0},
+        "duration_multiplier": {"MEDIUM": 1.5},
+        "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
+        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_scaling": "logarithmic",
+            "overdue_scale_factor": 0.75,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.05,
+        },
+        "start_date_aging": {"enabled": True, "bonus_points_per_day": 0.5},
+        "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
+        "priority_multiplier": {"MEDIUM": 1.5},
+        # No tag_multipliers, project_multipliers, habit_streak_bonus, or status_bumps
+    }
+
+    with patch("builtins.open", mock_open()) as mock_file:
+        save_scoring_config(config)
+        mock_file.assert_called_once()
+        # The function should have added defaults
+        assert "tag_multipliers" in config
+        assert "project_multipliers" in config
+        assert "habit_streak_bonus" in config
+        assert "status_bumps" in config
+
+
+def test_save_scoring_config_io_error() -> None:
+    """Test saving config with IO error raises ValueError."""
+    config = {
+        "base_score": 10,
+        "field_presence_bonus": {"text_description": 5},
+        "difficulty_multiplier": {"MEDIUM": 2.0},
+        "duration_multiplier": {"MEDIUM": 1.5},
+        "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
+        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "overdue_scaling": "logarithmic",
+            "overdue_scale_factor": 0.75,
+            "approaching_threshold_days": 14,
+            "approaching_multiplier_per_day": 0.05,
+        },
+        "start_date_aging": {"enabled": True, "bonus_points_per_day": 0.5},
+        "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
+        "priority_multiplier": {"MEDIUM": 1.5},
+    }
+
+    with patch("builtins.open", side_effect=IOError("Permission denied")):
+        with pytest.raises(ValueError, match="Error writing scoring config file"):
+            save_scoring_config(config)
 
 
 # --- Test Score Calculation ---

@@ -47,7 +47,7 @@ import {
   CalendarMonth as CalendarIcon,
   CardGiftcard as RewardIcon,
 } from '@mui/icons-material';
-import { dataApi, authApi, userApi, type XPTransaction, type TagDefinition, type ProjectDefinition } from '../services/api';
+import { dataApi, authApi, userApi, type XPTransaction, type TagDefinition, type ProjectDefinition, type ScoringConfig } from '../services/api';
 import { useUserStore, useSystemStatus, useUserStats } from '../store/userStore';
 
 // UI orchestration component - tested via integration tests
@@ -90,6 +90,12 @@ export default function SettingsPage() {
   const [projectForm, setProjectForm] = useState({ name: '', color: '#4A90D9', multiplier: 1.0 });
   const [showAddProject, setShowAddProject] = useState(false);
 
+  // Scoring configuration state
+  const [scoringConfig, setScoringConfig] = useState<ScoringConfig | null>(null);
+  const [loadingScoringConfig, setLoadingScoringConfig] = useState(false);
+  const [savingScoringConfig, setSavingScoringConfig] = useState(false);
+  const [scoringConfigExpanded, setScoringConfigExpanded] = useState(false);
+
   // Fetch XP history, tags, and projects on mount
   useEffect(() => {
     const fetchXPHistory = async () => {
@@ -128,9 +134,22 @@ export default function SettingsPage() {
       }
     };
 
+    const fetchScoringConfig = async () => {
+      setLoadingScoringConfig(true);
+      try {
+        const config = await userApi.getScoringConfig();
+        setScoringConfig(config);
+      } catch (error) {
+        console.error('Failed to fetch scoring config:', error);
+      } finally {
+        setLoadingScoringConfig(false);
+      }
+    };
+
     fetchXPHistory();
     fetchTags();
     fetchProjects();
+    fetchScoringConfig();
   }, []);
 
   const handleExport = async () => {
@@ -433,6 +452,29 @@ export default function SettingsPage() {
 
   const handleSetProjectMultiplier = (value: number) => {
     setProjectForm({ ...projectForm, multiplier: value });
+  };
+
+  const handleSaveScoringConfig = async () => {
+    if (!scoringConfig) return;
+    setSavingScoringConfig(true);
+    try {
+      const updated = await userApi.updateScoringConfig(scoringConfig);
+      setScoringConfig(updated);
+      setMessage({ type: 'success', text: 'Scoring configuration saved successfully!' });
+    } catch (error) {
+      console.error('Save scoring config error:', error);
+      setMessage({ type: 'error', text: 'Failed to save scoring configuration' });
+    } finally {
+      setSavingScoringConfig(false);
+    }
+  };
+
+  const updateScoringField = <K extends keyof ScoringConfig>(
+    field: K,
+    value: ScoringConfig[K]
+  ) => {
+    if (!scoringConfig) return;
+    setScoringConfig({ ...scoringConfig, [field]: value });
   };
 
   return (
@@ -889,6 +931,325 @@ export default function SettingsPage() {
               </Table>
             </TableContainer>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Scoring Configuration */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <HistoryIcon color="primary" />
+              <Typography variant="h6">Scoring Configuration</Typography>
+            </Box>
+            <Button
+              variant="text"
+              onClick={() => setScoringConfigExpanded(!scoringConfigExpanded)}
+            >
+              {scoringConfigExpanded ? 'Collapse' : 'Expand'}
+            </Button>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Configure how task scores are calculated. Higher scores mean higher priority in the task list.
+          </Typography>
+
+          {loadingScoringConfig ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : scoringConfig && scoringConfigExpanded ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Base Score */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Base Score</Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  value={scoringConfig.base_score}
+                  onChange={(e) => updateScoringField('base_score', parseFloat(e.target.value) || 0)}
+                  helperText="Starting score for all tasks"
+                  sx={{ width: 150 }}
+                />
+              </Box>
+
+              <Divider />
+
+              {/* Priority Multipliers */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Priority Multipliers</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  {Object.entries(scoringConfig.priority_multiplier).map(([key, value]) => (
+                    <TextField
+                      key={key}
+                      type="number"
+                      size="small"
+                      label={key.replace(/_/g, ' ')}
+                      value={value}
+                      onChange={(e) => updateScoringField('priority_multiplier', {
+                        ...scoringConfig.priority_multiplier,
+                        [key]: parseFloat(e.target.value) || 1
+                      })}
+                      inputProps={{ step: 0.1, min: 1 }}
+                      sx={{ width: 120 }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Difficulty Multipliers */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Difficulty Multipliers</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  {Object.entries(scoringConfig.difficulty_multiplier).map(([key, value]) => (
+                    <TextField
+                      key={key}
+                      type="number"
+                      size="small"
+                      label={key.replace(/_/g, ' ')}
+                      value={value}
+                      onChange={(e) => updateScoringField('difficulty_multiplier', {
+                        ...scoringConfig.difficulty_multiplier,
+                        [key]: parseFloat(e.target.value) || 1
+                      })}
+                      inputProps={{ step: 0.1, min: 1 }}
+                      sx={{ width: 120 }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Duration Multipliers */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Duration Multipliers</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  {Object.entries(scoringConfig.duration_multiplier).map(([key, value]) => (
+                    <TextField
+                      key={key}
+                      type="number"
+                      size="small"
+                      label={key.replace(/_/g, ' ')}
+                      value={value}
+                      onChange={(e) => updateScoringField('duration_multiplier', {
+                        ...scoringConfig.duration_multiplier,
+                        [key]: parseFloat(e.target.value) || 1
+                      })}
+                      inputProps={{ step: 0.1, min: 1 }}
+                      sx={{ width: 120 }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Age Factor */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Age Factor</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Bonus multiplier applied as tasks age
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <TextField
+                    type="number"
+                    size="small"
+                    label="Multiplier per unit"
+                    value={scoringConfig.age_factor.multiplier_per_unit}
+                    onChange={(e) => updateScoringField('age_factor', {
+                      ...scoringConfig.age_factor,
+                      multiplier_per_unit: parseFloat(e.target.value) || 0
+                    })}
+                    inputProps={{ step: 0.01, min: 0 }}
+                    sx={{ width: 150 }}
+                  />
+                  <TextField
+                    select
+                    size="small"
+                    label="Unit"
+                    value={scoringConfig.age_factor.unit}
+                    onChange={(e) => updateScoringField('age_factor', {
+                      ...scoringConfig.age_factor,
+                      unit: e.target.value as 'days' | 'weeks'
+                    })}
+                    sx={{ width: 120 }}
+                    SelectProps={{ native: true }}
+                  >
+                    <option value="days">Days</option>
+                    <option value="weeks">Weeks</option>
+                  </TextField>
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Due Date Proximity */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Due Date Proximity</Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={scoringConfig.due_date_proximity.enabled}
+                      onChange={(e) => updateScoringField('due_date_proximity', {
+                        ...scoringConfig.due_date_proximity,
+                        enabled: e.target.checked
+                      })}
+                    />
+                  }
+                  label="Enable due date proximity scoring"
+                />
+                {scoringConfig.due_date_proximity.enabled && (
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
+                    <TextField
+                      type="number"
+                      size="small"
+                      label="Overdue scale factor"
+                      value={scoringConfig.due_date_proximity.overdue_scale_factor}
+                      onChange={(e) => updateScoringField('due_date_proximity', {
+                        ...scoringConfig.due_date_proximity,
+                        overdue_scale_factor: parseFloat(e.target.value) || 0
+                      })}
+                      inputProps={{ step: 0.1, min: 0 }}
+                      sx={{ width: 150 }}
+                    />
+                    <TextField
+                      type="number"
+                      size="small"
+                      label="Threshold days"
+                      value={scoringConfig.due_date_proximity.approaching_threshold_days}
+                      onChange={(e) => updateScoringField('due_date_proximity', {
+                        ...scoringConfig.due_date_proximity,
+                        approaching_threshold_days: parseFloat(e.target.value) || 0
+                      })}
+                      inputProps={{ step: 1, min: 0 }}
+                      sx={{ width: 130 }}
+                    />
+                    <TextField
+                      type="number"
+                      size="small"
+                      label="Approaching mult/day"
+                      value={scoringConfig.due_date_proximity.approaching_multiplier_per_day}
+                      onChange={(e) => updateScoringField('due_date_proximity', {
+                        ...scoringConfig.due_date_proximity,
+                        approaching_multiplier_per_day: parseFloat(e.target.value) || 0
+                      })}
+                      inputProps={{ step: 0.01, min: 0 }}
+                      sx={{ width: 150 }}
+                    />
+                  </Box>
+                )}
+              </Box>
+
+              <Divider />
+
+              {/* Habit Streak Bonus */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Habit Streak Bonus</Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={scoringConfig.habit_streak_bonus.enabled}
+                      onChange={(e) => updateScoringField('habit_streak_bonus', {
+                        ...scoringConfig.habit_streak_bonus,
+                        enabled: e.target.checked
+                      })}
+                    />
+                  }
+                  label="Enable habit streak bonuses"
+                />
+                {scoringConfig.habit_streak_bonus.enabled && (
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
+                    <TextField
+                      type="number"
+                      size="small"
+                      label="Bonus per streak day"
+                      value={scoringConfig.habit_streak_bonus.bonus_per_streak_day}
+                      onChange={(e) => updateScoringField('habit_streak_bonus', {
+                        ...scoringConfig.habit_streak_bonus,
+                        bonus_per_streak_day: parseFloat(e.target.value) || 0
+                      })}
+                      inputProps={{ step: 0.1, min: 0 }}
+                      sx={{ width: 150 }}
+                    />
+                    <TextField
+                      type="number"
+                      size="small"
+                      label="Max bonus"
+                      value={scoringConfig.habit_streak_bonus.max_bonus}
+                      onChange={(e) => updateScoringField('habit_streak_bonus', {
+                        ...scoringConfig.habit_streak_bonus,
+                        max_bonus: parseFloat(e.target.value) || 0
+                      })}
+                      inputProps={{ step: 1, min: 0 }}
+                      sx={{ width: 120 }}
+                    />
+                  </Box>
+                )}
+              </Box>
+
+              <Divider />
+
+              {/* Status Bumps */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Status Bonuses</Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <TextField
+                    type="number"
+                    size="small"
+                    label="In Progress bonus"
+                    value={scoringConfig.status_bumps.in_progress_bonus}
+                    onChange={(e) => updateScoringField('status_bumps', {
+                      ...scoringConfig.status_bumps,
+                      in_progress_bonus: parseFloat(e.target.value) || 0
+                    })}
+                    inputProps={{ step: 1, min: 0 }}
+                    sx={{ width: 140 }}
+                  />
+                  <TextField
+                    type="number"
+                    size="small"
+                    label="Next Up bonus"
+                    value={scoringConfig.status_bumps.next_up_bonus}
+                    onChange={(e) => updateScoringField('status_bumps', {
+                      ...scoringConfig.status_bumps,
+                      next_up_bonus: parseFloat(e.target.value) || 0
+                    })}
+                    inputProps={{ step: 1, min: 0 }}
+                    sx={{ width: 130 }}
+                  />
+                  <TextField
+                    type="number"
+                    size="small"
+                    label="Next Up threshold days"
+                    value={scoringConfig.status_bumps.next_up_threshold_days}
+                    onChange={(e) => updateScoringField('status_bumps', {
+                      ...scoringConfig.status_bumps,
+                      next_up_threshold_days: parseInt(e.target.value, 10) || 0
+                    })}
+                    inputProps={{ step: 1, min: 0 }}
+                    sx={{ width: 160 }}
+                  />
+                </Box>
+              </Box>
+
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={handleSaveScoringConfig}
+                  disabled={savingScoringConfig}
+                  startIcon={savingScoringConfig ? <CircularProgress size={16} /> : <CheckIcon />}
+                >
+                  {savingScoringConfig ? 'Saving...' : 'Save Scoring Configuration'}
+                </Button>
+              </Box>
+            </Box>
+          ) : scoringConfig ? (
+            <Typography variant="body2" color="text.secondary">
+              Click "Expand" to view and edit scoring configuration.
+            </Typography>
+          ) : null}
         </CardContent>
       </Card>
 

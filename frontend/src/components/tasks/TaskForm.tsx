@@ -19,8 +19,9 @@ import {
   Typography,
   Divider,
   Autocomplete,
+  Tooltip,
 } from '@mui/material';
-import { Add, Delete } from '@mui/icons-material';
+import { Add, Delete, InfoOutlined } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -34,12 +35,45 @@ import {
   DurationEmoji,
   DifficultyLabel,
   DurationLabel,
+  PriorityDescription,
+  DifficultyDescription,
+  DurationDescription,
   SubtaskRecurrenceMode,
   RecurrenceType,
 } from '../../types';
 import RecurrenceRuleBuilder from './RecurrenceRuleBuilder';
 import { getNextOccurrenceText } from '../../utils/recurrence';
 import { useDefinedTags, useDefinedProjects } from '../../store/userStore';
+
+// Helper component for field info tooltips
+interface FieldInfoTooltipProps<T extends string> {
+  values: readonly T[];
+  emojis: Record<T, string>;
+  labels: Record<T, string>;
+  descriptions: Record<T, string>;
+}
+
+function FieldInfoTooltip<T extends string>({
+  values,
+  emojis,
+  labels,
+  descriptions,
+}: FieldInfoTooltipProps<T>) {
+  return (
+    <Box sx={{ p: 0.5 }}>
+      {values.map((value) => (
+        <Box key={value} sx={{ mb: 1, '&:last-child': { mb: 0 } }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+            {emojis[value]} {labels[value]}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {descriptions[value]}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
+  );
+}
 
 interface TaskFormProps {
   open: boolean;
@@ -156,50 +190,98 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
 
             {/* Priority, Difficulty, Duration row */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <FormControl fullWidth>
-                <InputLabel>Priority</InputLabel>
-                <Select
-                  value={formData.priority || Priority.MEDIUM}
-                  label="Priority"
-                  onChange={(e) => handleChange('priority', e.target.value as typeof Priority[keyof typeof Priority])}
+              <Box sx={{ flex: 1, position: 'relative' }}>
+                <Tooltip
+                  title={
+                    <FieldInfoTooltip
+                      values={Object.values(Priority)}
+                      emojis={PriorityEmoji}
+                      labels={{ [Priority.TRIVIAL]: 'Trivial', [Priority.LOW]: 'Low', [Priority.MEDIUM]: 'Medium', [Priority.HIGH]: 'High', [Priority.DEFCON_ONE]: 'Defcon One' }}
+                      descriptions={PriorityDescription}
+                    />
+                  }
+                  placement="top"
+                  arrow
                 >
-                  <MenuItem value={Priority.TRIVIAL}>{PriorityEmoji[Priority.TRIVIAL]} Trivial</MenuItem>
-                  <MenuItem value={Priority.LOW}>{PriorityEmoji[Priority.LOW]} Low</MenuItem>
-                  <MenuItem value={Priority.MEDIUM}>{PriorityEmoji[Priority.MEDIUM]} Medium</MenuItem>
-                  <MenuItem value={Priority.HIGH}>{PriorityEmoji[Priority.HIGH]} High</MenuItem>
-                  <MenuItem value={Priority.DEFCON_ONE}>{PriorityEmoji[Priority.DEFCON_ONE]} Defcon One</MenuItem>
-                </Select>
-              </FormControl>
+                  <InfoOutlined sx={{ position: 'absolute', right: 8, top: -8, fontSize: 16, color: 'text.secondary', cursor: 'help', zIndex: 1 }} />
+                </Tooltip>
+                <FormControl fullWidth>
+                  <InputLabel>Priority</InputLabel>
+                  <Select
+                    value={formData.priority || Priority.MEDIUM}
+                    label="Priority"
+                    onChange={(e) => handleChange('priority', e.target.value as typeof Priority[keyof typeof Priority])}
+                  >
+                    <MenuItem value={Priority.TRIVIAL}>{PriorityEmoji[Priority.TRIVIAL]} Trivial</MenuItem>
+                    <MenuItem value={Priority.LOW}>{PriorityEmoji[Priority.LOW]} Low</MenuItem>
+                    <MenuItem value={Priority.MEDIUM}>{PriorityEmoji[Priority.MEDIUM]} Medium</MenuItem>
+                    <MenuItem value={Priority.HIGH}>{PriorityEmoji[Priority.HIGH]} High</MenuItem>
+                    <MenuItem value={Priority.DEFCON_ONE}>{PriorityEmoji[Priority.DEFCON_ONE]} Defcon One</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
 
-              <FormControl fullWidth>
-                <InputLabel>Difficulty</InputLabel>
-                <Select
-                  value={formData.difficulty || Difficulty.MEDIUM}
-                  label="Difficulty"
-                  onChange={(e) => handleChange('difficulty', e.target.value as typeof Difficulty[keyof typeof Difficulty])}
+              <Box sx={{ flex: 1, position: 'relative' }}>
+                <Tooltip
+                  title={
+                    <FieldInfoTooltip
+                      values={Object.values(Difficulty)}
+                      emojis={DifficultyEmoji}
+                      labels={DifficultyLabel}
+                      descriptions={DifficultyDescription}
+                    />
+                  }
+                  placement="top"
+                  arrow
                 >
-                  <MenuItem value={Difficulty.TRIVIAL}>{DifficultyEmoji[Difficulty.TRIVIAL]} {DifficultyLabel[Difficulty.TRIVIAL]}</MenuItem>
-                  <MenuItem value={Difficulty.LOW}>{DifficultyEmoji[Difficulty.LOW]} {DifficultyLabel[Difficulty.LOW]}</MenuItem>
-                  <MenuItem value={Difficulty.MEDIUM}>{DifficultyEmoji[Difficulty.MEDIUM]} {DifficultyLabel[Difficulty.MEDIUM]}</MenuItem>
-                  <MenuItem value={Difficulty.HIGH}>{DifficultyEmoji[Difficulty.HIGH]} {DifficultyLabel[Difficulty.HIGH]}</MenuItem>
-                  <MenuItem value={Difficulty.HERCULEAN}>{DifficultyEmoji[Difficulty.HERCULEAN]} {DifficultyLabel[Difficulty.HERCULEAN]}</MenuItem>
-                </Select>
-              </FormControl>
+                  <InfoOutlined sx={{ position: 'absolute', right: 8, top: -8, fontSize: 16, color: 'text.secondary', cursor: 'help', zIndex: 1 }} />
+                </Tooltip>
+                <FormControl fullWidth>
+                  <InputLabel>Difficulty</InputLabel>
+                  <Select
+                    value={formData.difficulty || Difficulty.MEDIUM}
+                    label="Difficulty"
+                    onChange={(e) => handleChange('difficulty', e.target.value as typeof Difficulty[keyof typeof Difficulty])}
+                  >
+                    <MenuItem value={Difficulty.TRIVIAL}>{DifficultyEmoji[Difficulty.TRIVIAL]} {DifficultyLabel[Difficulty.TRIVIAL]}</MenuItem>
+                    <MenuItem value={Difficulty.LOW}>{DifficultyEmoji[Difficulty.LOW]} {DifficultyLabel[Difficulty.LOW]}</MenuItem>
+                    <MenuItem value={Difficulty.MEDIUM}>{DifficultyEmoji[Difficulty.MEDIUM]} {DifficultyLabel[Difficulty.MEDIUM]}</MenuItem>
+                    <MenuItem value={Difficulty.HIGH}>{DifficultyEmoji[Difficulty.HIGH]} {DifficultyLabel[Difficulty.HIGH]}</MenuItem>
+                    <MenuItem value={Difficulty.HERCULEAN}>{DifficultyEmoji[Difficulty.HERCULEAN]} {DifficultyLabel[Difficulty.HERCULEAN]}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
 
-              <FormControl fullWidth>
-                <InputLabel>Duration</InputLabel>
-                <Select
-                  value={formData.duration || Duration.MEDIUM}
-                  label="Duration"
-                  onChange={(e) => handleChange('duration', e.target.value as typeof Duration[keyof typeof Duration])}
+              <Box sx={{ flex: 1, position: 'relative' }}>
+                <Tooltip
+                  title={
+                    <FieldInfoTooltip
+                      values={Object.values(Duration)}
+                      emojis={DurationEmoji}
+                      labels={DurationLabel}
+                      descriptions={DurationDescription}
+                    />
+                  }
+                  placement="top"
+                  arrow
                 >
-                  <MenuItem value={Duration.MINUSCULE}>{DurationEmoji[Duration.MINUSCULE]} {DurationLabel[Duration.MINUSCULE]}</MenuItem>
-                  <MenuItem value={Duration.SHORT}>{DurationEmoji[Duration.SHORT]} {DurationLabel[Duration.SHORT]}</MenuItem>
-                  <MenuItem value={Duration.MEDIUM}>{DurationEmoji[Duration.MEDIUM]} {DurationLabel[Duration.MEDIUM]}</MenuItem>
-                  <MenuItem value={Duration.LONG}>{DurationEmoji[Duration.LONG]} {DurationLabel[Duration.LONG]}</MenuItem>
-                  <MenuItem value={Duration.ODYSSEYAN}>{DurationEmoji[Duration.ODYSSEYAN]} {DurationLabel[Duration.ODYSSEYAN]}</MenuItem>
-                </Select>
-              </FormControl>
+                  <InfoOutlined sx={{ position: 'absolute', right: 8, top: -8, fontSize: 16, color: 'text.secondary', cursor: 'help', zIndex: 1 }} />
+                </Tooltip>
+                <FormControl fullWidth>
+                  <InputLabel>Duration</InputLabel>
+                  <Select
+                    value={formData.duration || Duration.MEDIUM}
+                    label="Duration"
+                    onChange={(e) => handleChange('duration', e.target.value as typeof Duration[keyof typeof Duration])}
+                  >
+                    <MenuItem value={Duration.MINUSCULE}>{DurationEmoji[Duration.MINUSCULE]} {DurationLabel[Duration.MINUSCULE]}</MenuItem>
+                    <MenuItem value={Duration.SHORT}>{DurationEmoji[Duration.SHORT]} {DurationLabel[Duration.SHORT]}</MenuItem>
+                    <MenuItem value={Duration.MEDIUM}>{DurationEmoji[Duration.MEDIUM]} {DurationLabel[Duration.MEDIUM]}</MenuItem>
+                    <MenuItem value={Duration.LONG}>{DurationEmoji[Duration.LONG]} {DurationLabel[Duration.LONG]}</MenuItem>
+                    <MenuItem value={Duration.ODYSSEYAN}>{DurationEmoji[Duration.ODYSSEYAN]} {DurationLabel[Duration.ODYSSEYAN]}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
             </Stack>
 
             {/* Dates row */}
