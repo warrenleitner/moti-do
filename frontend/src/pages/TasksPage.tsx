@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Box, Typography, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton } from '@mui/material';
-import { Add, ViewList, TableChart } from '@mui/icons-material';
+import { Box, Title, Button, SegmentedControl, Group, VisuallyHidden } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { IconPlus, IconList, IconTable } from '@tabler/icons-react';
 import { TaskList, TaskForm } from '../components/tasks';
 import TaskTable from '../components/tasks/TaskTable';
 import QuickAddBox from '../components/tasks/QuickAddBox';
@@ -26,17 +27,18 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
 
-  const handleViewModeChange = (_: React.MouseEvent<HTMLElement>, newMode: 'list' | 'table' | null) => {
-    if (newMode !== null) {
-      setViewMode(newMode);
-      localStorage.setItem('taskViewMode', newMode);
-    }
+  const showNotification = (message: string, color: 'green' | 'red') => {
+    notifications.show({
+      message,
+      color,
+      autoClose: 3000,
+    });
+  };
+
+  const handleViewModeChange = (newMode: string) => {
+    setViewMode(newMode as 'list' | 'table');
+    localStorage.setItem('taskViewMode', newMode);
   };
 
   const handleCreateNew = () => {
@@ -54,16 +56,16 @@ export default function TasksPage() {
       if (editingTask) {
         // Update existing task via API
         await saveTask(editingTask.id, taskData);
-        setSnackbar({ open: true, message: 'Task updated successfully', severity: 'success' });
+        showNotification('Task updated successfully', 'green');
       } else {
         // Create new task via API
         await createTask(taskData);
-        setSnackbar({ open: true, message: 'Task created successfully', severity: 'success' });
+        showNotification('Task created successfully', 'green');
       }
       setFormOpen(false);
       setEditingTask(null);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to save task', severity: 'error' });
+      showNotification('Failed to save task', 'red');
     }
   };
 
@@ -75,15 +77,15 @@ export default function TasksPage() {
     try {
       if (task.is_complete) {
         await uncompleteTask(taskId);
-        setSnackbar({ open: true, message: 'Task marked as incomplete', severity: 'success' });
+        showNotification('Task marked as incomplete', 'green');
       } else {
         await completeTask(taskId);
         // Refresh user stats to update XP display
         await fetchStats();
-        setSnackbar({ open: true, message: 'Task completed! XP earned.', severity: 'success' });
+        showNotification('Task completed! XP earned.', 'green');
       }
     } catch {
-      setSnackbar({ open: true, message: 'Failed to update task', severity: 'error' });
+      showNotification('Failed to update task', 'red');
     }
   };
 
@@ -96,9 +98,9 @@ export default function TasksPage() {
     if (taskToDelete) {
       try {
         await deleteTask(taskToDelete);
-        setSnackbar({ open: true, message: 'Task deleted', severity: 'success' });
+        showNotification('Task deleted', 'green');
       } catch {
-        setSnackbar({ open: true, message: 'Failed to delete task', severity: 'error' });
+        showNotification('Failed to delete task', 'red');
       }
     }
     setDeleteDialogOpen(false);
@@ -119,44 +121,40 @@ export default function TasksPage() {
     try {
       await saveTask(taskId, { subtasks: updatedSubtasks });
     } catch {
-      setSnackbar({ open: true, message: 'Failed to update subtask', severity: 'error' });
+      showNotification('Failed to update subtask', 'red');
     }
   };
 
   const handleUndo = async (taskId: string) => {
     try {
       await undoTask(taskId);
-      setSnackbar({ open: true, message: 'Change undone', severity: 'success' });
+      showNotification('Change undone', 'green');
     } catch {
-      setSnackbar({ open: true, message: 'Failed to undo change', severity: 'error' });
+      showNotification('Failed to undo change', 'red');
     }
   };
 
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Tasks</Typography>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <ToggleButtonGroup
+      <Group justify="space-between" align="center" mb="lg">
+        <Title order={2}>Tasks</Title>
+        <Group gap="md">
+          <SegmentedControl
             value={viewMode}
-            exclusive
             onChange={handleViewModeChange}
-            size="small"
+            data={[
+              { value: 'list', label: <><IconList size={16} aria-hidden="true" /><VisuallyHidden>List view</VisuallyHidden></> },
+              { value: 'table', label: <><IconTable size={16} aria-hidden="true" /><VisuallyHidden>Table view</VisuallyHidden></> },
+            ]}
+            size="sm"
             aria-label="view mode"
-          >
-            <ToggleButton value="list" aria-label="list view">
-              <ViewList />
-            </ToggleButton>
-            <ToggleButton value="table" aria-label="table view">
-              <TableChart />
-            </ToggleButton>
-          </ToggleButtonGroup>
-          <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew} disabled={isLoading}>
+          />
+          <Button leftSection={<IconPlus size={16} />} onClick={handleCreateNew} disabled={isLoading}>
             New Task
           </Button>
-        </Box>
-      </Box>
+        </Group>
+      </Group>
 
       {/* Quick-add box for rapid task creation */}
       <QuickAddBox />
@@ -204,17 +202,6 @@ export default function TasksPage() {
           setTaskToDelete(null);
         }}
       />
-
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

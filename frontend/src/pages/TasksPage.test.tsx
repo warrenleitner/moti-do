@@ -116,18 +116,19 @@ describe('TasksPage', () => {
     expect(screen.getByText('Test Task')).toBeInTheDocument();
   });
 
-  it('has view mode toggle buttons', () => {
+  it('has view mode toggle options', () => {
     render(<TasksPage />);
-    expect(screen.getByRole('button', { name: /list view/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /table view/i })).toBeInTheDocument();
+    // Mantine SegmentedControl uses radio inputs
+    expect(screen.getByRole('radio', { name: /list view/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /table view/i })).toBeInTheDocument();
   });
 
   it('switches between list and table views', async () => {
     const { user } = render(<TasksPage />);
 
-    // Find table view button
-    const tableViewButton = screen.getByRole('button', { name: /table view/i });
-    await user.click(tableViewButton);
+    // Find table view option (Mantine SegmentedControl uses radio inputs)
+    const tableViewOption = screen.getByRole('radio', { name: /table view/i });
+    await user.click(tableViewOption);
 
     // Verify localStorage was updated
     expect(localStorage.getItem('taskViewMode')).toBe('table');
@@ -137,8 +138,8 @@ describe('TasksPage', () => {
     localStorage.setItem('taskViewMode', 'table');
     render(<TasksPage />);
 
-    // Table view button should be selected
-    const tableViewButton = screen.getByRole('button', { name: /table view/i });
-    expect(tableViewButton).toHaveAttribute('aria-pressed', 'true');
+    // Table view option should be checked (Mantine uses radio inputs)
+    const tableViewOption = screen.getByRole('radio', { name: /table view/i });
+    expect(tableViewOption).toBeChecked();
   });
 });

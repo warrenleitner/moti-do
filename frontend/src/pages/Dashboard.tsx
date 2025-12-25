@@ -1,11 +1,11 @@
-import { Box, Card, CardContent, Typography, LinearProgress, Chip, Stack, Grid, Alert } from '@mui/material';
+import { Box, Card, Title, Text, Progress, Badge, Group, SimpleGrid, Alert } from '@mantine/core';
 import {
-  EmojiEvents as XPIcon,
-  CheckCircle as CompletedIcon,
-  TrendingUp as StreakIcon,
-  Star as BadgeIcon,
-  Warning as WarningIcon,
-} from '@mui/icons-material';
+  IconTrophy,
+  IconCircleCheck,
+  IconTrendingUp,
+  IconStar,
+  IconAlertTriangle,
+} from '@tabler/icons-react';
 import { useUserStore, useTaskStore } from '../store';
 import { useUserStats, useSystemStatus } from '../store/userStore';
 
@@ -40,13 +40,13 @@ export default function Dashboard() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
+      <Title order={2} mb="md">
         Welcome back{user ? `, ${user.username}` : ''}!
-      </Typography>
+      </Title>
 
       {/* Pending days warning */}
       {systemStatus && systemStatus.pending_days > 0 && (
-        <Alert severity="warning" icon={<WarningIcon />} sx={{ mb: 3 }}>
+        <Alert color="yellow" icon={<IconAlertTriangle size={16} />} mb="lg">
           You have {systemStatus.pending_days} day{systemStatus.pending_days > 1 ? 's' : ''} to process.
           Visit Settings to advance the date and apply any pending penalties.
         </Alert>
@@ -54,134 +54,115 @@ export default function Dashboard() {
 
       {/* Vacation mode notice */}
       {systemStatus?.vacation_mode && (
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <Alert color="blue" mb="lg">
           Vacation mode is active. No penalties will be applied until you disable it in Settings.
         </Alert>
       )}
 
       {/* Stats Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg" mb="xl">
         {/* XP Card */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <XPIcon color="primary" />
-                <Typography variant="subtitle2" color="text.secondary">
-                  Experience
-                </Typography>
-              </Box>
-              <Typography variant="h4" fontWeight="bold">
-                {totalXP} XP
-              </Typography>
-              <Box sx={{ mt: 1 }}>
-                <LinearProgress
-                  variant="determinate"
-                  value={xpProgress}
-                  sx={{ height: 8, borderRadius: 4 }}
-                />
-                <Typography variant="caption" color="text.secondary">
-                  {xpProgress}/100 to Level {currentLevel + 1}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group gap="xs" mb="md">
+            <IconTrophy size={20} color="var(--mantine-color-blue-6)" />
+            <Text size="sm" c="dimmed">
+              Experience
+            </Text>
+          </Group>
+          <Title order={3} fw={700}>
+            {totalXP} XP
+          </Title>
+          <Box mt="xs">
+            <Progress
+              value={xpProgress}
+              size="md"
+              radius="xl"
+            />
+            <Text size="xs" c="dimmed" mt={4}>
+              {xpProgress}/100 to Level {currentLevel + 1}
+            </Text>
+          </Box>
+        </Card>
 
         {/* Completed Today Card */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <CompletedIcon color="success" />
-                <Typography variant="subtitle2" color="text.secondary">
-                  Completed Today
-                </Typography>
-              </Box>
-              <Typography variant="h4" fontWeight="bold">
-                {completedToday}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {dueToday} due today
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group gap="xs" mb="md">
+            <IconCircleCheck size={20} color="var(--mantine-color-green-6)" />
+            <Text size="sm" c="dimmed">
+              Completed Today
+            </Text>
+          </Group>
+          <Title order={3} fw={700}>
+            {completedToday}
+          </Title>
+          <Text size="xs" c="dimmed">
+            {dueToday} due today
+          </Text>
+        </Card>
 
         {/* Active Tasks Card */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <StreakIcon color="warning" />
-                <Typography variant="subtitle2" color="text.secondary">
-                  Active Tasks
-                </Typography>
-              </Box>
-              <Typography variant="h4" fontWeight="bold">
-                {activeTasks}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {habitsCount} habits pending
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group gap="xs" mb="md">
+            <IconTrendingUp size={20} color="var(--mantine-color-orange-6)" />
+            <Text size="sm" c="dimmed">
+              Active Tasks
+            </Text>
+          </Group>
+          <Title order={3} fw={700}>
+            {activeTasks}
+          </Title>
+          <Text size="xs" c="dimmed">
+            {habitsCount} habits pending
+          </Text>
+        </Card>
 
         {/* Badges Card */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <BadgeIcon color="secondary" />
-                <Typography variant="subtitle2" color="text.secondary">
-                  Badges Earned
-                </Typography>
-              </Box>
-              <Typography variant="h4" fontWeight="bold">
-                {badgesEarned}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Level {currentLevel}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group gap="xs" mb="md">
+            <IconStar size={20} color="var(--mantine-color-violet-6)" />
+            <Text size="sm" c="dimmed">
+              Badges Earned
+            </Text>
+          </Group>
+          <Title order={3} fw={700}>
+            {badgesEarned}
+          </Title>
+          <Text size="xs" c="dimmed">
+            Level {currentLevel}
+          </Text>
+        </Card>
+      </SimpleGrid>
 
       {/* Recent Badges */}
       {user && user.badges.length > 0 && (
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Recent Badges
-            </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {user.badges.slice(-5).map((badge) => (
-                <Chip
-                  key={badge.id}
-                  icon={<span>{badge.glyph}</span>}
-                  label={badge.name}
-                  color="primary"
-                  variant="outlined"
-                />
-              ))}
-            </Stack>
-          </CardContent>
+        <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
+          <Title order={4} mb="md">
+            Recent Badges
+          </Title>
+          <Group gap="xs" wrap="wrap">
+            {user.badges.slice(-5).map((badge) => (
+              <Badge
+                key={badge.id}
+                leftSection={<span>{badge.glyph}</span>}
+                variant="outline"
+                color="blue"
+              >
+                {badge.name}
+              </Badge>
+            ))}
+          </Group>
         </Card>
       )}
 
       {/* Quick Actions */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Quick Start
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Use the sidebar to navigate to Tasks, view your Calendar, or see your habits.
-            This dashboard will show your daily progress and achievements.
-          </Typography>
-        </CardContent>
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Title order={4} mb="xs">
+          Quick Start
+        </Title>
+        <Text size="sm" c="dimmed">
+          Use the sidebar to navigate to Tasks, view your Calendar, or see your habits.
+          This dashboard will show your daily progress and achievements.
+        </Text>
       </Card>
     </Box>
   );
