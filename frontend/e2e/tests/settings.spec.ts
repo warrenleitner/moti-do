@@ -139,24 +139,22 @@ test.describe('Settings Page', () => {
       if (await changePasswordBtn.isVisible()) {
         await changePasswordBtn.click();
 
-        // Try to submit with short password
-        const currentPasswordInput = page.getByLabel(/current password/i);
-        const newPasswordInput = page.getByLabel('New Password', { exact: true });
+        // Wait for dialog to appear
+        const dialog = page.getByRole('dialog', { name: 'Change Password' });
+        await expect(dialog).toBeVisible({ timeout: 5000 });
 
-        await currentPasswordInput.fill('testpassword123');
-        await newPasswordInput.fill('short');
+        // Fill current password
+        await dialog.getByLabel(/current password/i).fill('testpassword123');
 
-        // Submit - the button inside the form (different from the one that opened the form)
-        // Use the disabled/enabled state to find the submit button in the form
-        const formSubmitBtn = securityCard.getByRole('button', { name: /change password/i }).last();
-        await formSubmitBtn.click();
+        // Fill with short password
+        await dialog.getByLabel('New Password', { exact: true }).fill('short');
 
-        // Should show validation error
-        const error = page.getByRole('alert').first();
-        if (await error.isVisible()) {
-          const errorText = await error.textContent();
-          expect(errorText?.toLowerCase()).toContain('8 characters');
-        }
+        // The submit button should be disabled due to client-side validation
+        const submitBtn = dialog.getByRole('button', { name: 'Change Password' });
+        await expect(submitBtn).toBeDisabled();
+
+        // Verify the helper text shows minimum requirement
+        await expect(dialog.getByText('Minimum 8 characters')).toBeVisible();
       }
     });
   });
