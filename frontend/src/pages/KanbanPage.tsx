@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Box, Typography, Snackbar, Alert } from '@mui/material';
+import { Box, Title } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { KanbanBoard } from '../components/kanban';
 import { TaskForm } from '../components/tasks';
 import { useTaskStore } from '../store';
@@ -12,11 +13,14 @@ export default function KanbanPage() {
   const { tasks, updateTask, addTask } = useTaskStore();
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+
+  const showNotification = (message: string, color: 'green' | 'red') => {
+    notifications.show({
+      message,
+      color,
+      autoClose: 3000,
+    });
+  };
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
@@ -26,7 +30,7 @@ export default function KanbanPage() {
   const handleSave = (taskData: Partial<Task>) => {
     if (editingTask) {
       updateTask(editingTask.id, taskData);
-      setSnackbar({ open: true, message: 'Task updated successfully', severity: 'success' });
+      showNotification('Task updated successfully', 'green');
     } else {
       const newTask: Task = {
         id: crypto.randomUUID(),
@@ -47,7 +51,7 @@ export default function KanbanPage() {
         ...taskData,
       };
       addTask(newTask);
-      setSnackbar({ open: true, message: 'Task created successfully', severity: 'success' });
+      showNotification('Task created successfully', 'green');
     }
     setFormOpen(false);
     setEditingTask(null);
@@ -55,18 +59,14 @@ export default function KanbanPage() {
 
   const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
     updateTask(taskId, updates);
-    setSnackbar({
-      open: true,
-      message: updates.is_complete ? 'Task completed!' : 'Task updated',
-      severity: 'success',
-    });
+    showNotification(updates.is_complete ? 'Task completed!' : 'Task updated', 'green');
   };
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
+      <Title order={2} mb="md">
         Kanban Board
-      </Typography>
+      </Title>
 
       <KanbanBoard
         tasks={tasks}
@@ -84,17 +84,6 @@ export default function KanbanPage() {
           setEditingTask(null);
         }}
       />
-
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

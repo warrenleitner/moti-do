@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Box, Typography, Snackbar, Alert } from '@mui/material';
+import { Box, Title, Text } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { TaskCalendar } from '../components/calendar';
 import { TaskForm } from '../components/tasks';
 import { useTaskStore } from '../store';
@@ -12,11 +13,14 @@ export default function CalendarPage() {
   const { tasks, updateTask, addTask } = useTaskStore();
   const [formOpen, setFormOpen] = useState(false);
   const [newTaskDate, setNewTaskDate] = useState<Date | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+
+  const showNotification = (message: string, color: 'green' | 'red') => {
+    notifications.show({
+      message,
+      color,
+      autoClose: 3000,
+    });
+  };
 
   const handleCreateTask = (date: Date) => {
     setNewTaskDate(date);
@@ -48,18 +52,14 @@ export default function CalendarPage() {
       ...taskData,
     };
     addTask(newTask);
-    setSnackbar({ open: true, message: 'Task created successfully', severity: 'success' });
+    showNotification('Task created successfully', 'green');
     setFormOpen(false);
     setNewTaskDate(null);
   };
 
   const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
     updateTask(taskId, updates);
-    setSnackbar({
-      open: true,
-      message: updates.is_complete ? 'Task completed!' : 'Task updated',
-      severity: 'success',
-    });
+    showNotification(updates.is_complete ? 'Task completed!' : 'Task updated', 'green');
   };
 
   // Create a default task with the selected date pre-filled
@@ -84,13 +84,13 @@ export default function CalendarPage() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
+      <Title order={2} mb="xs">
         Calendar
-      </Typography>
+      </Title>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Text size="sm" c="dimmed" mb="md">
         View and manage tasks by their due dates. Click on a date to create a new task. Drag tasks to reschedule.
-      </Typography>
+      </Text>
 
       <TaskCalendar
         tasks={tasks}
@@ -109,17 +109,6 @@ export default function CalendarPage() {
           setNewTaskDate(null);
         }}
       />
-
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }
