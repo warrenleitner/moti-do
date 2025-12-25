@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from motido.api.deps import CurrentUser, ManagerDep
 from motido.api.schemas import (
+    HistoryEntrySchema,
     SubtaskCreate,
     SubtaskSchema,
     TaskCreate,
@@ -23,9 +24,15 @@ from motido.core.models import (
     Duration,
     Priority,
     RecurrenceType,
+    SubtaskRecurrenceMode,
     Task,
+    User,
 )
-from motido.core.scoring import calculate_score, load_scoring_config
+from motido.core.scoring import (
+    build_scoring_config_with_user_multipliers,
+    calculate_score,
+    load_scoring_config,
+)
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -60,9 +67,10 @@ def task_to_response(
         recurrence_rule=task.recurrence_rule,
         recurrence_type=task.recurrence_type.value if task.recurrence_type else None,
         habit_start_delta=task.habit_start_delta,
+        subtask_recurrence_mode=task.subtask_recurrence_mode.value,
         subtasks=[SubtaskSchema(**s) for s in task.subtasks],
         dependencies=task.dependencies,
-        history=[],  # Simplified for API
+        history=[HistoryEntrySchema(**h) for h in task.history],
         streak_current=task.streak_current,
         streak_best=task.streak_best,
         parent_habit_id=task.parent_habit_id,
@@ -102,6 +110,16 @@ def parse_recurrence_type(value: str | None) -> RecurrenceType | None:
         if r.value.lower() == value.lower():  # pragma: no cover
             return r  # pragma: no cover
     return RecurrenceType.STRICT  # pragma: no cover
+
+
+def parse_subtask_recurrence_mode(value: str | None) -> SubtaskRecurrenceMode:
+    """Parse subtask recurrence mode string to enum."""
+    if value is None:
+        return SubtaskRecurrenceMode.DEFAULT
+    for m in SubtaskRecurrenceMode:
+        if m.value.lower() == value.lower():
+            return m
+    return SubtaskRecurrenceMode.DEFAULT
 
 
 @router.get("", response_model=list[TaskResponse])
@@ -144,6 +162,8 @@ async def list_tasks(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    # Merge user's tag/project multipliers into config
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -176,6 +196,9 @@ async def create_task(
         recurrence_rule=task_data.recurrence_rule,
         recurrence_type=parse_recurrence_type(task_data.recurrence_type),
         habit_start_delta=task_data.habit_start_delta,
+        subtask_recurrence_mode=parse_subtask_recurrence_mode(
+            task_data.subtask_recurrence_mode
+        ),
         subtasks=[{"text": s.text, "complete": False} for s in task_data.subtasks],
         dependencies=task_data.dependencies,
     )
@@ -197,6 +220,7 @@ async def create_task(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -220,10 +244,119 @@ async def get_task(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
     return task_to_response(task, all_tasks, config, effective_date)
+
+
+def record_history(
+    task: Task,
+    field: str,
+    old_value: Any,
+    new_value: Any,
+) -> None:
+    """Record a change in the task's history for undo support."""
+    # Convert enum values to strings for comparison and storage
+    old_str = old_value.value if hasattr(old_value, "value") else old_value
+    new_str = new_value.value if hasattr(new_value, "value") else new_value
+
+    # Only record if value actually changed
+    if old_str != new_str:
+        task.history.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "field": field,
+                "old_value": old_str,
+                "new_value": new_str,
+            }
+        )
+
+
+def apply_task_updates(  # pylint: disable=too-many-branches,too-many-statements
+    task: Task,
+    task_data: TaskUpdate,
+    user: User,
+) -> None:
+    """Apply task updates with history recording for undo support."""
+    # Simple field updates
+    if task_data.title is not None:
+        record_history(task, "title", task.title, task_data.title)
+        task.title = task_data.title
+    if task_data.text_description is not None:  # pragma: no cover
+        record_history(
+            task, "text_description", task.text_description, task_data.text_description
+        )
+        task.text_description = task_data.text_description
+    if task_data.due_date is not None:  # pragma: no cover
+        record_history(task, "due_date", task.due_date, task_data.due_date)
+        task.due_date = task_data.due_date
+    if task_data.start_date is not None:  # pragma: no cover
+        record_history(task, "start_date", task.start_date, task_data.start_date)
+        task.start_date = task_data.start_date
+    if task_data.icon is not None:  # pragma: no cover
+        record_history(task, "icon", task.icon, task_data.icon)
+        task.icon = task_data.icon
+    if task_data.is_habit is not None:  # pragma: no cover
+        record_history(task, "is_habit", task.is_habit, task_data.is_habit)
+        task.is_habit = task_data.is_habit
+    if task_data.recurrence_rule is not None:  # pragma: no cover
+        record_history(
+            task, "recurrence_rule", task.recurrence_rule, task_data.recurrence_rule
+        )
+        task.recurrence_rule = task_data.recurrence_rule
+    if task_data.habit_start_delta is not None:  # pragma: no cover
+        record_history(
+            task,
+            "habit_start_delta",
+            task.habit_start_delta,
+            task_data.habit_start_delta,
+        )
+        task.habit_start_delta = task_data.habit_start_delta
+    if task_data.is_complete is not None:  # pragma: no cover
+        record_history(task, "is_complete", task.is_complete, task_data.is_complete)
+        task.is_complete = task_data.is_complete
+
+    # Enum field updates (need parsing)
+    if task_data.priority is not None:
+        old_priority = task.priority
+        task.priority = parse_priority(task_data.priority)
+        record_history(task, "priority", old_priority, task.priority)
+    if task_data.difficulty is not None:  # pragma: no cover
+        old_difficulty = task.difficulty
+        task.difficulty = parse_difficulty(task_data.difficulty)
+        record_history(task, "difficulty", old_difficulty, task.difficulty)
+    if task_data.duration is not None:  # pragma: no cover
+        old_duration = task.duration
+        task.duration = parse_duration(task_data.duration)
+        record_history(task, "duration", old_duration, task.duration)
+    if task_data.recurrence_type is not None:  # pragma: no cover
+        old_recurrence_type = task.recurrence_type
+        task.recurrence_type = parse_recurrence_type(task_data.recurrence_type)
+        record_history(
+            task, "recurrence_type", old_recurrence_type, task.recurrence_type
+        )
+    if task_data.subtask_recurrence_mode is not None:  # pragma: no cover
+        old_mode = task.subtask_recurrence_mode
+        task.subtask_recurrence_mode = parse_subtask_recurrence_mode(
+            task_data.subtask_recurrence_mode
+        )
+        record_history(
+            task, "subtask_recurrence_mode", old_mode, task.subtask_recurrence_mode
+        )
+
+    # Fields with side effects
+    if task_data.tags is not None:
+        record_history(task, "tags", task.tags, task_data.tags)
+        task.tags = task_data.tags
+        for tag_name in task.tags:
+            user.get_or_create_tag(tag_name)
+    if task_data.project is not None:  # pragma: no cover
+        record_history(task, "project", task.project, task_data.project)
+        task.project = task_data.project
+        if task.project:
+            user.get_or_create_project(task.project)
 
 
 @router.put("/{task_id}", response_model=TaskResponse)
@@ -233,9 +366,7 @@ async def update_task(
     user: CurrentUser,
     manager: ManagerDep,
 ) -> TaskResponse:
-    """
-    Update a task.
-    """
+    """Update a task."""
     task = user.find_task_by_id(task_id)
     if not task:  # pragma: no cover
         raise HTTPException(  # pragma: no cover
@@ -243,48 +374,12 @@ async def update_task(
             detail=f"Task with ID {task_id} not found",
         )
 
-    # Update fields if provided
-    if task_data.title is not None:
-        task.title = task_data.title
-    if task_data.text_description is not None:  # pragma: no cover
-        task.text_description = task_data.text_description  # pragma: no cover
-    if task_data.priority is not None:
-        task.priority = parse_priority(task_data.priority)
-    if task_data.difficulty is not None:  # pragma: no cover
-        task.difficulty = parse_difficulty(task_data.difficulty)  # pragma: no cover
-    if task_data.duration is not None:  # pragma: no cover
-        task.duration = parse_duration(task_data.duration)  # pragma: no cover
-    if task_data.due_date is not None:  # pragma: no cover
-        task.due_date = task_data.due_date  # pragma: no cover
-    if task_data.start_date is not None:  # pragma: no cover
-        task.start_date = task_data.start_date  # pragma: no cover
-    if task_data.icon is not None:  # pragma: no cover
-        task.icon = task_data.icon  # pragma: no cover
-    if task_data.tags is not None:
-        task.tags = task_data.tags
-        for tag_name in task.tags:
-            user.get_or_create_tag(tag_name)
-    if task_data.project is not None:  # pragma: no cover
-        task.project = task_data.project  # pragma: no cover
-        if task.project:  # pragma: no cover
-            user.get_or_create_project(task.project)  # pragma: no cover
-    if task_data.is_habit is not None:  # pragma: no cover
-        task.is_habit = task_data.is_habit  # pragma: no cover
-    if task_data.recurrence_rule is not None:  # pragma: no cover
-        task.recurrence_rule = task_data.recurrence_rule  # pragma: no cover
-    if task_data.recurrence_type is not None:  # pragma: no cover
-        task.recurrence_type = parse_recurrence_type(
-            task_data.recurrence_type
-        )  # pragma: no cover
-    if task_data.habit_start_delta is not None:  # pragma: no cover
-        task.habit_start_delta = task_data.habit_start_delta  # pragma: no cover
-    if task_data.is_complete is not None:  # pragma: no cover
-        task.is_complete = task_data.is_complete  # pragma: no cover
-
+    apply_task_updates(task, task_data, user)
     manager.save_user(user)
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -309,6 +404,78 @@ async def delete_task(
 
     user.remove_task(task.id)
     manager.save_user(user)
+
+
+@router.post("/{task_id}/undo", response_model=TaskResponse)
+async def undo_task_change(
+    task_id: str,
+    user: CurrentUser,
+    manager: ManagerDep,
+) -> TaskResponse:
+    """
+    Undo the last change to a task.
+
+    Reverts the most recent field change recorded in the task's history.
+    """
+    task = user.find_task_by_id(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task with ID {task_id} not found",
+        )
+
+    if not task.history:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No changes to undo",
+        )
+
+    # Pop the last history entry
+    last_change = task.history.pop()
+    field = last_change["field"]
+    old_value = last_change["old_value"]
+
+    # Revert the field to its old value
+    if field == "title":
+        task.title = old_value
+    elif field == "text_description":
+        task.text_description = old_value
+    elif field == "priority":
+        task.priority = parse_priority(old_value)
+    elif field == "difficulty":
+        task.difficulty = parse_difficulty(old_value)
+    elif field == "duration":
+        task.duration = parse_duration(old_value)
+    elif field == "due_date":
+        task.due_date = old_value
+    elif field == "start_date":
+        task.start_date = old_value
+    elif field == "icon":
+        task.icon = old_value
+    elif field == "tags":
+        task.tags = old_value if old_value else []
+    elif field == "project":
+        task.project = old_value
+    elif field == "is_habit":
+        task.is_habit = old_value
+    elif field == "recurrence_rule":
+        task.recurrence_rule = old_value
+    elif field == "recurrence_type":
+        task.recurrence_type = parse_recurrence_type(old_value)
+    elif field == "habit_start_delta":
+        task.habit_start_delta = old_value
+    elif field == "is_complete":
+        task.is_complete = old_value
+
+    manager.save_user(user)
+
+    # Load scoring context for score calculation
+    config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return task_to_response(task, all_tasks, config, effective_date)
 
 
 @router.post("/{task_id}/complete", response_model=TaskResponse)
@@ -345,6 +512,7 @@ async def complete_task(
     from motido.core.scoring import check_badges
 
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
     xp_earned = int(calculate_score(task, all_tasks, config, effective_date))
@@ -401,6 +569,7 @@ async def uncomplete_task(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -432,6 +601,7 @@ async def add_subtask(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -470,6 +640,7 @@ async def update_subtask(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -504,6 +675,7 @@ async def delete_subtask(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -543,6 +715,7 @@ async def add_dependency(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -573,6 +746,7 @@ async def remove_dependency(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 

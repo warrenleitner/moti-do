@@ -16,6 +16,7 @@ from motido.core.models import (
     Priority,
     Project,
     RecurrenceType,
+    SubtaskRecurrenceMode,
     Tag,
     Task,
     User,
@@ -181,7 +182,21 @@ class JsonDataManager(DataManager):
             streak_current=task_dict.get("streak_current", 0),
             streak_best=task_dict.get("streak_best", 0),
             parent_habit_id=task_dict.get("parent_habit_id"),
+            subtask_recurrence_mode=self._parse_subtask_recurrence_mode(
+                task_dict.get("subtask_recurrence_mode")
+            ),
         )
+
+    def _parse_subtask_recurrence_mode(
+        self, mode_str: str | None
+    ) -> SubtaskRecurrenceMode:
+        """Parse a subtask recurrence mode string, returning DEFAULT if invalid."""
+        if not mode_str:
+            return SubtaskRecurrenceMode.DEFAULT
+        try:
+            return SubtaskRecurrenceMode(mode_str)
+        except ValueError:
+            return SubtaskRecurrenceMode.DEFAULT
 
     def _deserialize_xp_transaction(self, trans_dict: Dict[str, Any]) -> XPTransaction:
         """Deserialize an XP transaction dictionary."""
@@ -217,6 +232,7 @@ class JsonDataManager(DataManager):
             id=tag_dict.get("id", str(uuid.uuid4())),
             name=tag_dict.get("name", "Unknown"),
             color=tag_dict.get("color", "#808080"),
+            multiplier=tag_dict.get("multiplier", 1.0),
         )
 
     def _deserialize_project(self, project_dict: Dict[str, Any]) -> Project:
@@ -225,6 +241,7 @@ class JsonDataManager(DataManager):
             id=project_dict.get("id", str(uuid.uuid4())),
             name=project_dict.get("name", "Unknown"),
             color=project_dict.get("color", "#4A90D9"),
+            multiplier=project_dict.get("multiplier", 1.0),
         )
 
     def deserialize_user_data(
@@ -366,6 +383,7 @@ class JsonDataManager(DataManager):
                 "streak_current": task.streak_current,
                 "streak_best": task.streak_best,
                 "parent_habit_id": task.parent_habit_id,
+                "subtask_recurrence_mode": task.subtask_recurrence_mode.value,
             }
             for task in user.tasks
         ]
@@ -407,6 +425,7 @@ class JsonDataManager(DataManager):
                     "id": tag.id,
                     "name": tag.name,
                     "color": tag.color,
+                    "multiplier": tag.multiplier,
                 }
                 for tag in getattr(user, "defined_tags", [])
             ],
@@ -415,6 +434,7 @@ class JsonDataManager(DataManager):
                     "id": proj.id,
                     "name": proj.name,
                     "color": proj.color,
+                    "multiplier": proj.multiplier,
                 }
                 for proj in getattr(user, "defined_projects", [])
             ],

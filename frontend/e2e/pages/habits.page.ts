@@ -39,13 +39,17 @@ export class HabitsPage {
   /**
    * Create a new habit.
    * Habits use the same TaskForm but with is_habit toggle enabled.
+   * The RecurrenceRuleBuilder visual UI replaces the old text input.
    */
   async createHabit(
     title: string,
     options?: {
       description?: string;
-      recurrenceRule?: string;
+      frequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+      weekdays?: string[]; // For weekly: ['MO', 'WE', 'FR']
       priority?: string;
+      subtasks?: string[]; // List of subtask texts
+      subtaskRecurrenceMode?: 'default' | 'partial' | 'always';
     }
   ): Promise<void> {
     await this.clickNewHabit();
@@ -56,10 +60,28 @@ export class HabitsPage {
 
     // The "Recurring Habit" switch is ON by default for habits on the Habits page
     // No need to toggle it - it starts enabled on the Habits page
+    // RecurrenceRuleBuilder defaults to FREQ=DAILY
 
-    // Set recurrence rule if specified
-    if (options?.recurrenceRule) {
-      await dialog.getByLabel('Recurrence Rule').fill(options.recurrenceRule);
+    // Set frequency if specified (using the RecurrenceRuleBuilder visual UI)
+    if (options?.frequency && options.frequency !== 'DAILY') {
+      // Click the frequency dropdown and select the desired frequency
+      const frequencyLabel = options.frequency === 'WEEKLY' ? 'Week' :
+                             options.frequency === 'MONTHLY' ? 'Month' :
+                             options.frequency === 'YEARLY' ? 'Year' : 'Day';
+      const frequencyDropdown = dialog.getByRole('combobox').filter({ hasText: /Day|Week|Month|Year/ });
+      await frequencyDropdown.click();
+      await this.page.getByRole('option', { name: new RegExp(`^${frequencyLabel}s?$`) }).click();
+    }
+
+    // For weekly frequency, select specific weekdays
+    if (options?.weekdays && options.weekdays.length > 0) {
+      for (const day of options.weekdays) {
+        const dayLabels: Record<string, string> = {
+          'MO': 'Mon', 'TU': 'Tue', 'WE': 'Wed', 'TH': 'Thu',
+          'FR': 'Fri', 'SA': 'Sat', 'SU': 'Sun'
+        };
+        await dialog.getByRole('button', { name: dayLabels[day] }).click();
+      }
     }
 
     // Set description if specified
@@ -71,6 +93,30 @@ export class HabitsPage {
     if (options?.priority) {
       await dialog.getByRole('combobox').filter({ hasText: '🟡' }).click();
       await this.page.getByRole('option', { name: new RegExp(options.priority, 'i') }).click();
+    }
+
+    // Add subtasks if specified
+    if (options?.subtasks && options.subtasks.length > 0) {
+      for (const subtaskText of options.subtasks) {
+        const subtaskInput = dialog.getByPlaceholder('Add subtask...');
+        await subtaskInput.fill(subtaskText);
+        await subtaskInput.press('Enter');
+        await this.page.waitForTimeout(200); // Wait for subtask to be added
+      }
+
+      // Set subtask recurrence mode if specified
+      if (options.subtaskRecurrenceMode) {
+        const modeLabel = {
+          default: 'All Complete First',
+          partial: 'Carry Over Completed',
+          always: 'Always Copy All',
+        }[options.subtaskRecurrenceMode];
+
+        // Click the subtask recurrence dropdown
+        const recurrenceDropdown = dialog.locator('.MuiFormControl-root').filter({ hasText: 'Subtask Recurrence' }).getByRole('combobox');
+        await recurrenceDropdown.click();
+        await this.page.getByRole('option', { name: new RegExp(modeLabel) }).click();
+      }
     }
 
     // Submit the form - Habits page uses "Save Changes" button
@@ -144,13 +190,22 @@ export class HabitsPage {
 
   /**
    * Update habit in the edit dialog.
+   * Uses the RecurrenceRuleBuilder visual UI instead of text input.
    */
-  async updateHabit(updates: { title?: string; recurrenceRule?: string }): Promise<void> {
+  async updateHabit(updates: {
+    title?: string;
+    frequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+  }): Promise<void> {
     if (updates.title) {
       await this.page.getByLabel('Title').fill(updates.title);
     }
-    if (updates.recurrenceRule) {
-      await this.page.getByLabel('Recurrence Rule').fill(updates.recurrenceRule);
+    if (updates.frequency) {
+      const frequencyLabel = updates.frequency === 'WEEKLY' ? 'Week' :
+                             updates.frequency === 'MONTHLY' ? 'Month' :
+                             updates.frequency === 'YEARLY' ? 'Year' : 'Day';
+      const frequencyDropdown = this.page.getByRole('combobox').filter({ hasText: /Day|Week|Month|Year/ });
+      await frequencyDropdown.click();
+      await this.page.getByRole('option', { name: new RegExp(`^${frequencyLabel}s?$`) }).click();
     }
 
     await this.page.getByRole('button', { name: 'Save Changes' }).click();

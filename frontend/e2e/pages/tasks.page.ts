@@ -19,6 +19,14 @@ export class TasksPage {
   readonly priorityFilter: Locator;
   readonly projectFilter: Locator;
 
+  // Quick Add Box
+  readonly quickAddInput: Locator;
+
+  // Subtask View Toggle
+  readonly subtaskHiddenButton: Locator;
+  readonly subtaskInlineButton: Locator;
+  readonly subtaskTopLevelButton: Locator;
+
   constructor(page: Page) {
     this.page = page;
     // Use exact: true to avoid matching "No tasks found" heading
@@ -37,6 +45,15 @@ export class TasksPage {
     this.statusFilter = page.locator('.MuiFormControl-root').filter({ hasText: 'Status' }).getByRole('combobox');
     this.priorityFilter = page.locator('.MuiFormControl-root').filter({ hasText: 'Priority' }).getByRole('combobox');
     this.projectFilter = page.locator('.MuiFormControl-root').filter({ hasText: 'Project' }).getByRole('combobox');
+
+    // Quick Add Box - the persistent input at the top of TasksPage
+    // Placeholder includes hint text, so use partial match
+    this.quickAddInput = page.getByPlaceholder(/Add a task/);
+
+    // Subtask View Toggle buttons - aria-label attributes from ToggleButton components
+    this.subtaskHiddenButton = page.getByRole('button', { name: 'hide subtasks' });
+    this.subtaskInlineButton = page.getByRole('button', { name: 'show subtasks inline' });
+    this.subtaskTopLevelButton = page.getByRole('button', { name: 'show subtasks as tasks' });
   }
 
   /**
@@ -254,5 +271,45 @@ export class TasksPage {
   async getTaskCount(): Promise<number> {
     // Count MuiCard-root elements that contain task content
     return await this.page.locator('.MuiCard-root').count();
+  }
+
+  /**
+   * Quick add a task using the quick add input box.
+   * Supports inline modifiers: !priority, #tag, @date, ~project
+   */
+  async quickAddTask(input: string): Promise<void> {
+    await this.quickAddInput.fill(input);
+    await this.quickAddInput.press('Enter');
+    // Wait for snackbar confirmation - message format is 'Task "..." created!'
+    await expect(this.page.getByText(/created!/i)).toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Set subtask view mode to hidden.
+   */
+  async setSubtaskViewHidden(): Promise<void> {
+    await this.subtaskHiddenButton.click();
+  }
+
+  /**
+   * Set subtask view mode to inline (default).
+   */
+  async setSubtaskViewInline(): Promise<void> {
+    await this.subtaskInlineButton.click();
+  }
+
+  /**
+   * Set subtask view mode to top-level (subtasks shown as separate items).
+   */
+  async setSubtaskViewTopLevel(): Promise<void> {
+    await this.subtaskTopLevelButton.click();
+  }
+
+  /**
+   * Check if a subtask is visible as a separate card (top-level mode).
+   */
+  async subtaskCardVisible(subtaskText: string): Promise<boolean> {
+    // Subtask cards have a SubdirectoryArrowRight icon and the subtask text
+    return await this.page.locator('.MuiCard-root').filter({ hasText: subtaskText }).locator('svg[data-testid="SubdirectoryArrowRightIcon"]').isVisible();
   }
 }

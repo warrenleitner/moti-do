@@ -24,7 +24,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
-import { AccountTree, ArrowUpward, ArrowDownward } from '@mui/icons-material';
+import { AccountTree, ArrowUpward, ArrowDownward, FilterCenterFocus } from '@mui/icons-material';
 import type { Task } from '../../types';
 import TaskNode from './TaskNode';
 
@@ -33,7 +33,7 @@ interface DependencyGraphProps {
   onSelectTask?: (task: Task) => void;
 }
 
-type Direction = 'all' | 'upstream' | 'downstream';
+type Direction = 'all' | 'upstream' | 'downstream' | 'isolated';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const nodeTypes: Record<string, any> = {
@@ -73,7 +73,7 @@ function buildGraph(
 
       if (!currentTask) continue;
 
-      if (direction === 'upstream') {
+      if (direction === 'upstream' || direction === 'isolated') {
         // Find tasks that this task depends on
         currentTask.dependencies?.forEach((depId) => {
           if (!visited.has(depId)) {
@@ -83,7 +83,7 @@ function buildGraph(
         });
       }
 
-      if (direction === 'downstream') {
+      if (direction === 'downstream' || direction === 'isolated') {
         // Find tasks that depend on this task
         tasks.forEach((t) => {
           if (t.dependencies?.includes(currentId) && !visited.has(t.id)) {
@@ -277,6 +277,10 @@ export default function DependencyGraph({ tasks, onSelectTask }: DependencyGraph
           >
             <ToggleButton value="all">
               All
+            </ToggleButton>
+            <ToggleButton value="isolated">
+              <FilterCenterFocus fontSize="small" sx={{ mr: 0.5 }} />
+              Isolated
             </ToggleButton>
             <ToggleButton value="upstream">
               <ArrowUpward fontSize="small" sx={{ mr: 0.5 }} />

@@ -213,6 +213,7 @@ class Tag:
     name: str
     color: str = "#808080"  # Default gray
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    multiplier: float = 1.0  # Score multiplier for tasks with this tag
 
 
 @dataclass
@@ -222,6 +223,7 @@ class Project:
     name: str
     color: str = "#4A90D9"  # Default blue
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    multiplier: float = 1.0  # Score multiplier for tasks in this project
 
 
 @dataclass
@@ -259,6 +261,9 @@ class Task:  # pylint: disable=too-many-instance-attributes
     streak_best: int = 0
     parent_habit_id: str | None = (
         None  # Links to original habit for auto-generated instances
+    )
+    subtask_recurrence_mode: SubtaskRecurrenceMode = field(
+        default=SubtaskRecurrenceMode.DEFAULT
     )
 
     def __str__(self) -> str:

@@ -14,10 +14,11 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from motido.core.models import Difficulty, Duration, Priority, Task, User
+from motido.core.models import Difficulty, Duration, Priority, Project, Tag, Task, User
 from motido.core.scoring import (
     add_xp,
     apply_penalties,
+    build_scoring_config_with_user_multipliers,
     calculate_due_date_multiplier,
     calculate_score,
     calculate_start_date_bonus,
@@ -1640,3 +1641,167 @@ def test_calculate_score_with_logarithmic_overdue() -> None:
     # due_date_mult = 1.0 + (log(31) * 0.75) ≈ 3.57
     # score = 10 * 2.0 * 1.5 * 1.0 * 3.57 = 107.1 ≈ 107
     assert 105 <= score <= 109  # Allow small rounding variance
+
+
+# --- Test User Multipliers ---
+
+
+def test_build_scoring_config_with_user_multipliers_empty_user() -> None:
+    """Test building config with user that has no tags or projects."""
+    config: Dict[str, Any] = {
+        "base_score": 10,
+        "tag_multipliers": {"existing_tag": 1.5},
+        "project_multipliers": {"existing_project": 1.2},
+    }
+    user = User(username=DEFAULT_USERNAME)
+
+    merged = build_scoring_config_with_user_multipliers(config, user)
+
+    # Should preserve original config multipliers
+    assert merged["tag_multipliers"] == {"existing_tag": 1.5}
+    assert merged["project_multipliers"] == {"existing_project": 1.2}
+
+
+def test_build_scoring_config_with_user_tag_multipliers() -> None:
+    """Test building config with user-defined tag multipliers."""
+    config: Dict[str, Any] = {
+        "base_score": 10,
+        "tag_multipliers": {"config_tag": 1.3},
+        "project_multipliers": {},
+    }
+    user = User(
+        username=DEFAULT_USERNAME,
+        defined_tags=[
+            Tag(name="work", multiplier=2.0),
+            Tag(name="personal", multiplier=0.5),
+        ],
+    )
+
+    merged = build_scoring_config_with_user_multipliers(config, user)
+
+    # User tags should be added
+    assert merged["tag_multipliers"]["work"] == 2.0
+    assert merged["tag_multipliers"]["personal"] == 0.5
+    # Config tag should still be there
+    assert merged["tag_multipliers"]["config_tag"] == 1.3
+
+
+def test_build_scoring_config_with_user_project_multipliers() -> None:
+    """Test building config with user-defined project multipliers."""
+    config: Dict[str, Any] = {
+        "base_score": 10,
+        "tag_multipliers": {},
+        "project_multipliers": {"config_project": 1.1},
+    }
+    user = User(
+        username=DEFAULT_USERNAME,
+        defined_projects=[
+            Project(name="CriticalProject", multiplier=2.0),
+            Project(name="LowPrio", multiplier=0.8),
+        ],
+    )
+
+    merged = build_scoring_config_with_user_multipliers(config, user)
+
+    # User projects should be added
+    assert merged["project_multipliers"]["CriticalProject"] == 2.0
+    assert merged["project_multipliers"]["LowPrio"] == 0.8
+    # Config project should still be there
+    assert merged["project_multipliers"]["config_project"] == 1.1
+
+
+def test_build_scoring_config_user_overrides_config_multipliers() -> None:
+    """Test that user-defined multipliers override config file multipliers."""
+    config: Dict[str, Any] = {
+        "base_score": 10,
+        "tag_multipliers": {"work": 1.5},  # Will be overridden
+        "project_multipliers": {"MyProject": 1.2},  # Will be overridden
+    }
+    user = User(
+        username=DEFAULT_USERNAME,
+        defined_tags=[Tag(name="work", multiplier=2.0)],  # Override
+        defined_projects=[Project(name="MyProject", multiplier=1.8)],  # Override
+    )
+
+    merged = build_scoring_config_with_user_multipliers(config, user)
+
+    # User values should override config values
+    assert merged["tag_multipliers"]["work"] == 2.0
+    assert merged["project_multipliers"]["MyProject"] == 1.8
+
+
+def test_build_scoring_config_does_not_modify_original() -> None:
+    """Test that original config is not modified."""
+    config: Dict[str, Any] = {
+        "base_score": 10,
+        "tag_multipliers": {"original": 1.0},
+        "project_multipliers": {},
+    }
+    user = User(
+        username=DEFAULT_USERNAME,
+        defined_tags=[Tag(name="new_tag", multiplier=2.0)],
+    )
+
+    merged = build_scoring_config_with_user_multipliers(config, user)
+
+    # Original config should not be modified
+    assert "new_tag" not in config["tag_multipliers"]
+    assert config["tag_multipliers"] == {"original": 1.0}
+    # Merged should have both
+    assert merged["tag_multipliers"]["new_tag"] == 2.0
+    assert merged["tag_multipliers"]["original"] == 1.0
+
+
+def test_calculate_score_with_user_tag_multiplier() -> None:
+    """Test that calculate_score uses user-defined tag multipliers."""
+    config = get_default_scoring_config()
+    user = User(
+        username=DEFAULT_USERNAME,
+        defined_tags=[Tag(name="urgent", multiplier=2.0)],
+    )
+
+    # Merge user multipliers into config
+    merged_config = build_scoring_config_with_user_multipliers(config, user)
+
+    task = Task(
+        title="Urgent task",
+        creation_date=datetime(2025, 1, 1),
+        tags=["urgent"],
+    )
+
+    effective_date = date(2025, 1, 1)
+    score_with_multiplier = calculate_score(task, None, merged_config, effective_date)
+
+    # Without the tag multiplier
+    score_without = calculate_score(task, None, config, effective_date)
+
+    # Score with multiplier should be 2x the score without
+    assert score_with_multiplier == score_without * 2
+
+
+def test_calculate_score_with_user_project_multiplier() -> None:
+    """Test that calculate_score uses user-defined project multipliers."""
+    config = get_default_scoring_config()
+    user = User(
+        username=DEFAULT_USERNAME,
+        defined_projects=[Project(name="CriticalProject", multiplier=1.5)],
+    )
+
+    # Merge user multipliers into config
+    merged_config = build_scoring_config_with_user_multipliers(config, user)
+
+    task = Task(
+        title="Critical task",
+        creation_date=datetime(2025, 1, 1),
+        project="CriticalProject",
+    )
+
+    effective_date = date(2025, 1, 1)
+    score_with_multiplier = calculate_score(task, None, merged_config, effective_date)
+
+    # Without the project multiplier
+    score_without = calculate_score(task, None, config, effective_date)
+
+    # Score with 1.5x multiplier
+    expected = int(round(score_without * 1.5))
+    assert score_with_multiplier == expected

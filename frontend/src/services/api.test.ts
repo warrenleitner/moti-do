@@ -690,27 +690,49 @@ describe('API Tests', () => {
 
     describe('createTag', () => {
       it('should create a tag', async () => {
-        const mockTag = { id: 'tag-2', name: 'work', color: '#0000ff' };
+        const mockTag = { id: 'tag-2', name: 'work', color: '#0000ff', multiplier: 1.0 };
 
         mockAxiosInstance.post.mockResolvedValue({ data: mockTag });
 
         const result = await userApi.createTag('work', '#0000ff');
 
         expect(result).toEqual(mockTag);
-        expect(mockAxiosInstance.post).toHaveBeenCalledWith('/user/tags', { name: 'work', color: '#0000ff' });
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith('/user/tags', { name: 'work', color: '#0000ff', multiplier: 1 });
+      });
+
+      it('should create a tag with custom multiplier', async () => {
+        const mockTag = { id: 'tag-3', name: 'important', color: '#ff0000', multiplier: 2.0 };
+
+        mockAxiosInstance.post.mockResolvedValue({ data: mockTag });
+
+        const result = await userApi.createTag('important', '#ff0000', 2.0);
+
+        expect(result).toEqual(mockTag);
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith('/user/tags', { name: 'important', color: '#ff0000', multiplier: 2 });
       });
     });
 
     describe('updateTag', () => {
       it('should update a tag', async () => {
-        const mockTag = { id: 'tag-1', name: 'urgent-updated', color: '#ff00ff' };
+        const mockTag = { id: 'tag-1', name: 'urgent-updated', color: '#ff00ff', multiplier: 1.0 };
 
         mockAxiosInstance.put.mockResolvedValue({ data: mockTag });
 
         const result = await userApi.updateTag('tag-1', 'urgent-updated', '#ff00ff');
 
         expect(result).toEqual(mockTag);
-        expect(mockAxiosInstance.put).toHaveBeenCalledWith('/user/tags/tag-1', { name: 'urgent-updated', color: '#ff00ff' });
+        expect(mockAxiosInstance.put).toHaveBeenCalledWith('/user/tags/tag-1', { name: 'urgent-updated', color: '#ff00ff', multiplier: 1 });
+      });
+
+      it('should update a tag with custom multiplier', async () => {
+        const mockTag = { id: 'tag-1', name: 'urgent', color: '#ff0000', multiplier: 1.5 };
+
+        mockAxiosInstance.put.mockResolvedValue({ data: mockTag });
+
+        const result = await userApi.updateTag('tag-1', 'urgent', '#ff0000', 1.5);
+
+        expect(result).toEqual(mockTag);
+        expect(mockAxiosInstance.put).toHaveBeenCalledWith('/user/tags/tag-1', { name: 'urgent', color: '#ff0000', multiplier: 1.5 });
       });
     });
 
@@ -741,27 +763,49 @@ describe('API Tests', () => {
 
     describe('createProject', () => {
       it('should create a project', async () => {
-        const mockProject = { id: 'proj-2', name: 'App', color: '#ff00ff' };
+        const mockProject = { id: 'proj-2', name: 'App', color: '#ff00ff', multiplier: 1.0 };
 
         mockAxiosInstance.post.mockResolvedValue({ data: mockProject });
 
         const result = await userApi.createProject('App', '#ff00ff');
 
         expect(result).toEqual(mockProject);
-        expect(mockAxiosInstance.post).toHaveBeenCalledWith('/user/projects', { name: 'App', color: '#ff00ff' });
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith('/user/projects', { name: 'App', color: '#ff00ff', multiplier: 1 });
+      });
+
+      it('should create a project with custom multiplier', async () => {
+        const mockProject = { id: 'proj-3', name: 'Priority', color: '#00ff00', multiplier: 2.0 };
+
+        mockAxiosInstance.post.mockResolvedValue({ data: mockProject });
+
+        const result = await userApi.createProject('Priority', '#00ff00', 2.0);
+
+        expect(result).toEqual(mockProject);
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith('/user/projects', { name: 'Priority', color: '#00ff00', multiplier: 2 });
       });
     });
 
     describe('updateProject', () => {
       it('should update a project', async () => {
-        const mockProject = { id: 'proj-1', name: 'Website-updated', color: '#00ffff' };
+        const mockProject = { id: 'proj-1', name: 'Website-updated', color: '#00ffff', multiplier: 1.0 };
 
         mockAxiosInstance.put.mockResolvedValue({ data: mockProject });
 
         const result = await userApi.updateProject('proj-1', 'Website-updated', '#00ffff');
 
         expect(result).toEqual(mockProject);
-        expect(mockAxiosInstance.put).toHaveBeenCalledWith('/user/projects/proj-1', { name: 'Website-updated', color: '#00ffff' });
+        expect(mockAxiosInstance.put).toHaveBeenCalledWith('/user/projects/proj-1', { name: 'Website-updated', color: '#00ffff', multiplier: 1 });
+      });
+
+      it('should update a project with custom multiplier', async () => {
+        const mockProject = { id: 'proj-1', name: 'Website', color: '#00ff00', multiplier: 0.5 };
+
+        mockAxiosInstance.put.mockResolvedValue({ data: mockProject });
+
+        const result = await userApi.updateProject('proj-1', 'Website', '#00ff00', 0.5);
+
+        expect(result).toEqual(mockProject);
+        expect(mockAxiosInstance.put).toHaveBeenCalledWith('/user/projects/proj-1', { name: 'Website', color: '#00ff00', multiplier: 0.5 });
       });
     });
 

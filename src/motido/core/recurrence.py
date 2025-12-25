@@ -8,7 +8,7 @@ from typing import Optional, cast
 
 from dateutil.rrule import rrulestr
 
-from motido.core.models import RecurrenceType, Task
+from motido.core.models import RecurrenceType, SubtaskRecurrenceMode, Task
 
 
 def calculate_next_occurrence(
@@ -80,6 +80,9 @@ def create_next_habit_instance(
     if task.habit_start_delta is not None and task.habit_start_delta > 0:
         start_date = next_due - timedelta(days=task.habit_start_delta)
 
+    # Calculate subtasks based on subtask_recurrence_mode
+    new_subtasks = _calculate_recurring_subtasks(task)
+
     # Create new task copying relevant fields from parent
     new_task = Task(
         id=str(uuid.uuid4()),
@@ -100,14 +103,47 @@ def create_next_habit_instance(
         habit_start_delta=task.habit_start_delta,  # Carry forward the delta
         streak_current=task.streak_current,  # Carry forward the streak
         streak_best=task.streak_best,
-        subtasks=[],  # Fresh subtasks - can be enhanced with SubtaskRecurrenceMode
+        subtasks=new_subtasks,
         dependencies=[],  # Dependencies don't carry forward
         history=[],  # New history for new instance
         is_complete=False,
         parent_habit_id=task.id,  # Link to parent
+        subtask_recurrence_mode=task.subtask_recurrence_mode,  # Carry forward mode
     )
 
     return new_task
+
+
+def _calculate_recurring_subtasks(task: Task) -> list:
+    """
+    Calculate which subtasks should be included in the next habit instance
+    based on the subtask_recurrence_mode setting.
+
+    Args:
+        task: The completed habit task to calculate subtasks for.
+
+    Returns:
+        List of subtask dictionaries for the new instance.
+    """
+    if not task.subtasks:
+        return []
+
+    mode = task.subtask_recurrence_mode
+
+    if mode == SubtaskRecurrenceMode.ALWAYS:
+        # Copy all subtasks with complete set to False
+        return [{"text": s["text"], "complete": False} for s in task.subtasks]
+
+    if mode == SubtaskRecurrenceMode.PARTIAL:
+        # Only carry over subtasks that were completed
+        return [
+            {"text": s["text"], "complete": False}
+            for s in task.subtasks
+            if s.get("complete", False)
+        ]
+
+    # DEFAULT mode: No subtasks carried over (fresh start)
+    return []
 
 
 def _normalize_rule(rule: str) -> str:

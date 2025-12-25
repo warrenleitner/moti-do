@@ -19,9 +19,11 @@ import {
   Loop,
   Link as LinkIcon,
   Star,
+  Undo,
 } from '@mui/icons-material';
 import { useState } from 'react';
 import type { Task } from '../../types';
+import type { SubtaskViewMode } from '../../store/taskStore';
 import {
   PriorityChip,
   DifficultyChip,
@@ -38,7 +40,9 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onSubtaskToggle?: (taskId: string, subtaskIndex: number) => void;
+  onUndo?: (id: string) => void;
   isBlocked?: boolean;
+  subtaskViewMode?: SubtaskViewMode;
 }
 
 export default function TaskCard({
@@ -47,13 +51,17 @@ export default function TaskCard({
   onEdit,
   onDelete,
   onSubtaskToggle,
+  onUndo,
   isBlocked = false,
+  subtaskViewMode = 'inline',
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const completedSubtasks = task.subtasks.filter((s) => s.complete).length;
   const hasSubtasks = task.subtasks.length > 0;
-  const hasDetails = task.text_description || hasSubtasks || task.tags.length > 0;
+  // In hidden and top-level modes, subtasks don't contribute to hasDetails
+  const showSubtasksInline = subtaskViewMode === 'inline' && hasSubtasks;
+  const hasDetails = task.text_description || showSubtasksInline || task.tags.length > 0;
 
   return (
     <Card
@@ -141,8 +149,8 @@ export default function TaskCard({
               />
             )}
 
-            {/* Subtask progress */}
-            {hasSubtasks && (
+            {/* Subtask progress - show in inline and top-level modes */}
+            {hasSubtasks && subtaskViewMode !== 'hidden' && (
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
                 Subtasks: {completedSubtasks}/{task.subtasks.length}
               </Typography>
@@ -174,7 +182,7 @@ export default function TaskCard({
               </Stack>
             )}
 
-            {hasSubtasks && (
+            {showSubtasksInline && (
               <SubtaskList
                 subtasks={task.subtasks}
                 onToggle={
@@ -190,6 +198,13 @@ export default function TaskCard({
 
       <CardActions sx={{ px: 2, pt: 0 }}>
         <Box sx={{ flex: 1 }} />
+        {onUndo && task.history.length > 0 && (
+          <Tooltip title="Undo last change">
+            <IconButton size="small" onClick={() => onUndo(task.id)} color="info">
+              <Undo fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
         <IconButton size="small" onClick={() => onEdit(task)} title="Edit task">
           <Edit fontSize="small" />
         </IconButton>

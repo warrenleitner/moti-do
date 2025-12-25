@@ -16,6 +16,7 @@ from motido.core.models import (
     Priority,
     Project,
     RecurrenceType,
+    SubtaskRecurrenceMode,
     Tag,
     Task,
     User,
@@ -135,7 +136,8 @@ class PostgresDataManager(DataManager):
                         streak_current INTEGER NOT NULL DEFAULT 0,
                         streak_best INTEGER NOT NULL DEFAULT 0,
                         parent_habit_id TEXT,
-                        habit_start_delta INTEGER
+                        habit_start_delta INTEGER,
+                        subtask_recurrence_mode TEXT DEFAULT 'default'
                     )
                 """
                 )
@@ -205,6 +207,7 @@ class PostgresDataManager(DataManager):
                                 id=t.get("id", ""),
                                 name=t.get("name", "Unknown"),
                                 color=t.get("color", "#808080"),
+                                multiplier=t.get("multiplier", 1.0),
                             )
                             for t in tags_data
                         ]
@@ -222,6 +225,7 @@ class PostgresDataManager(DataManager):
                                 id=p.get("id", ""),
                                 name=p.get("name", "Unknown"),
                                 color=p.get("color", "#4A90D9"),
+                                multiplier=p.get("multiplier", 1.0),
                             )
                             for p in projects_data
                         ]
@@ -329,7 +333,21 @@ class PostgresDataManager(DataManager):
             streak_best=row.get("streak_best", 0),
             parent_habit_id=row.get("parent_habit_id"),
             habit_start_delta=row.get("habit_start_delta"),
+            subtask_recurrence_mode=self._parse_subtask_recurrence_mode(
+                row.get("subtask_recurrence_mode")
+            ),
         )
+
+    def _parse_subtask_recurrence_mode(
+        self, mode_str: str | None
+    ) -> SubtaskRecurrenceMode:
+        """Parse a subtask recurrence mode string, returning DEFAULT if invalid."""
+        if not mode_str:
+            return SubtaskRecurrenceMode.DEFAULT
+        try:
+            return SubtaskRecurrenceMode(mode_str)
+        except ValueError:
+            return SubtaskRecurrenceMode.DEFAULT
 
     def save_user(self, user: User) -> None:
         """Saves the user and their tasks to the PostgreSQL database."""
@@ -340,13 +358,23 @@ class PostgresDataManager(DataManager):
                     # Upsert user
                     defined_tags_json = json.dumps(
                         [
-                            {"id": t.id, "name": t.name, "color": t.color}
+                            {
+                                "id": t.id,
+                                "name": t.name,
+                                "color": t.color,
+                                "multiplier": t.multiplier,
+                            }
                             for t in user.defined_tags
                         ]
                     )
                     defined_projects_json = json.dumps(
                         [
-                            {"id": p.id, "name": p.name, "color": p.color}
+                            {
+                                "id": p.id,
+                                "name": p.name,
+                                "color": p.color,
+                                "multiplier": p.multiplier,
+                            }
                             for p in user.defined_projects
                         ]
                     )
@@ -390,10 +418,11 @@ class PostgresDataManager(DataManager):
                                 is_complete, creation_date, due_date, start_date,
                                 icon, tags, project, subtasks, dependencies, history,
                                 user_username, is_habit, recurrence_rule, recurrence_type,
-                                streak_current, streak_best, parent_habit_id, habit_start_delta
+                                streak_current, streak_best, parent_habit_id, habit_start_delta,
+                                subtask_recurrence_mode
                             ) VALUES (
                                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                                %s, %s, %s, %s, %s, %s, %s, %s
+                                %s, %s, %s, %s, %s, %s, %s, %s, %s
                             )
                             """,
                             (
@@ -429,6 +458,7 @@ class PostgresDataManager(DataManager):
                                 task.streak_best,
                                 task.parent_habit_id,
                                 task.habit_start_delta,
+                                task.subtask_recurrence_mode.value,
                             ),
                         )
 

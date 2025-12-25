@@ -400,4 +400,90 @@ describe('TaskCard', () => {
     // Should show calendar icon (DateDisplay component renders CalendarToday icon)
     expect(screen.getByTestId('CalendarTodayIcon')).toBeInTheDocument();
   });
+
+  it('shows undo button when task has history and onUndo is provided', () => {
+    const taskWithHistory: Task = {
+      ...mockTask,
+      history: [
+        { timestamp: '2025-01-01T10:00:00Z', field: 'title', old_value: 'Old Title', new_value: 'Test Task' }
+      ],
+    };
+
+    render(
+      <TaskCard
+        task={taskWithHistory}
+        onComplete={mockOnComplete}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onUndo={vi.fn()}
+      />
+    );
+
+    // Should show undo icon
+    expect(screen.getByTestId('UndoIcon')).toBeInTheDocument();
+  });
+
+  it('calls onUndo when undo button is clicked', async () => {
+    const user = userEvent.setup();
+    const mockOnUndo = vi.fn();
+    const taskWithHistory: Task = {
+      ...mockTask,
+      history: [
+        { timestamp: '2025-01-01T10:00:00Z', field: 'title', old_value: 'Old Title', new_value: 'Test Task' }
+      ],
+    };
+
+    render(
+      <TaskCard
+        task={taskWithHistory}
+        onComplete={mockOnComplete}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onUndo={mockOnUndo}
+      />
+    );
+
+    const undoButton = screen.getByTestId('UndoIcon').closest('button');
+    if (undoButton) {
+      await user.click(undoButton);
+    }
+    expect(mockOnUndo).toHaveBeenCalledWith('test-task-1');
+  });
+
+  it('does not show undo button when task has no history', () => {
+    render(
+      <TaskCard
+        task={mockTask}
+        onComplete={mockOnComplete}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onUndo={vi.fn()}
+      />
+    );
+
+    // Should not show undo icon since history is empty
+    expect(screen.queryByTestId('UndoIcon')).not.toBeInTheDocument();
+  });
+
+  it('does not show undo button when onUndo is not provided', () => {
+    const taskWithHistory: Task = {
+      ...mockTask,
+      history: [
+        { timestamp: '2025-01-01T10:00:00Z', field: 'title', old_value: 'Old Title', new_value: 'Test Task' }
+      ],
+    };
+
+    render(
+      <TaskCard
+        task={taskWithHistory}
+        onComplete={mockOnComplete}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        // onUndo not provided
+      />
+    );
+
+    // Should not show undo icon since onUndo is not provided
+    expect(screen.queryByTestId('UndoIcon')).not.toBeInTheDocument();
+  });
 });

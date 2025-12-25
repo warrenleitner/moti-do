@@ -1,15 +1,34 @@
-import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Stack } from '@mui/material';
-import { Sort } from '@mui/icons-material';
+import {
+  Box,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
+  ToggleButtonGroup,
+  ToggleButton,
+  Tooltip,
+} from '@mui/material';
+import {
+  Sort,
+  VisibilityOff,
+  ListAlt,
+  FormatListBulleted,
+} from '@mui/icons-material';
 import type { Task } from '../../types';
 import { EmptyState, FilterBar } from '../common';
 import TaskCard from './TaskCard';
+import SubtaskCard from './SubtaskCard';
 import { useTaskStore, useFilteredTasks } from '../../store';
+import type { SubtaskViewMode } from '../../store/taskStore';
 
 interface TaskListProps {
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onComplete: (id: string) => void;
   onSubtaskToggle?: (taskId: string, subtaskIndex: number) => void;
+  onUndo?: (id: string) => void;
   onCreateNew?: () => void;
 }
 
@@ -20,9 +39,19 @@ export default function TaskList({
   onDelete,
   onComplete,
   onSubtaskToggle,
+  onUndo,
   onCreateNew,
 }: TaskListProps) {
-  const { filters, sort, setFilters, resetFilters, setSort, tasks: allTasks } = useTaskStore();
+  const {
+    filters,
+    sort,
+    setFilters,
+    resetFilters,
+    setSort,
+    tasks: allTasks,
+    subtaskViewMode,
+    setSubtaskViewMode,
+  } = useTaskStore();
   const filteredTasks = useFilteredTasks();
 
   // Get unique projects and tags from tasks
@@ -89,6 +118,31 @@ export default function TaskList({
             <MenuItem value="asc">Ascending</MenuItem>
           </Select>
         </FormControl>
+        <ToggleButtonGroup
+          value={subtaskViewMode}
+          exclusive
+          onChange={(_, value: SubtaskViewMode | null) => {
+            if (value) setSubtaskViewMode(value);
+          }}
+          size="small"
+          aria-label="subtask view mode"
+        >
+          <ToggleButton value="hidden" aria-label="hide subtasks">
+            <Tooltip title="Hide Subtasks">
+              <VisibilityOff fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="inline" aria-label="show subtasks inline">
+            <Tooltip title="Show Inline">
+              <ListAlt fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="top-level" aria-label="show subtasks as tasks">
+            <Tooltip title="Show as Tasks">
+              <FormatListBulleted fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+        </ToggleButtonGroup>
         <Box sx={{ flex: 1 }} />
         <Typography variant="body2" color="text.secondary">
           {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
@@ -110,15 +164,28 @@ export default function TaskList({
       ) : (
         <Box>
           {filteredTasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onComplete={onComplete}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onSubtaskToggle={onSubtaskToggle}
-              isBlocked={isTaskBlocked(task)}
-            />
+            <Box key={task.id}>
+              <TaskCard
+                task={task}
+                onComplete={onComplete}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onSubtaskToggle={onSubtaskToggle}
+                onUndo={onUndo}
+                isBlocked={isTaskBlocked(task)}
+                subtaskViewMode={subtaskViewMode}
+              />
+              {subtaskViewMode === 'top-level' &&
+                task.subtasks.map((subtask, index) => (
+                  <SubtaskCard
+                    key={`${task.id}-subtask-${index}`}
+                    subtask={subtask}
+                    subtaskIndex={index}
+                    parentTask={task}
+                    onToggle={onSubtaskToggle}
+                  />
+                ))}
+            </Box>
           ))}
         </Box>
       )}
