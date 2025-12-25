@@ -137,9 +137,9 @@ describe('TaskCalendar', () => {
     // This component is wrapped in v8 ignore, testing that the filter UI elements render
     render(<TaskCalendar {...defaultProps} tasks={mockTasks} />);
 
-    // Verify the project filter select is present (using role)
-    const combobox = screen.getByRole('combobox');
-    expect(combobox).toBeInTheDocument();
+    // Verify the project filter select is present (Mantine Select uses textbox role)
+    const textbox = screen.getByRole('textbox');
+    expect(textbox).toBeInTheDocument();
     expect(screen.getAllByText('Project').length).toBeGreaterThan(0);
   });
 
@@ -147,9 +147,9 @@ describe('TaskCalendar', () => {
     // This component is wrapped in v8 ignore, testing basic render
     render(<TaskCalendar {...defaultProps} tasks={mockTasks} />);
 
-    // Verify filter control is present
-    const combobox = screen.getByRole('combobox');
-    expect(combobox).toBeInTheDocument();
+    // Verify filter control is present (Mantine Select uses textbox role)
+    const textbox = screen.getByRole('textbox');
+    expect(textbox).toBeInTheDocument();
     expect(screen.getAllByText('Project').length).toBeGreaterThan(0);
   });
 

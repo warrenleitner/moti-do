@@ -4,21 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import type { EventClickArg, DateSelectArg, EventDropArg } from '@fullcalendar/core';
-import {
-  Box,
-  Paper,
-  Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-} from '@mui/material';
+import { Box, Paper, Text, Modal, Button, Select, Badge, CloseButton, Group } from '@mantine/core';
 import type { Task } from '../../types';
 
 interface TaskCalendarProps {
@@ -126,73 +112,76 @@ export default function TaskCalendar({
     }
   };
 
+  // Generate project options
+  const projectOptions = [
+    { value: 'all', label: 'All Projects' },
+    ...projects.map((project) => ({ value: project, label: project })),
+  ];
+
   return (
     <Box>
       {/* Filters */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center', flexWrap: 'wrap' }}>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Project</InputLabel>
-          <Select
-            value={filterProject}
-            label="Project"
-            onChange={(e) => setFilterProject(e.target.value)}
-          >
-            <MenuItem value="all">All Projects</MenuItem>
-            {projects.map((project) => (
-              <MenuItem key={project} value={project}>
-                {project}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <Group gap="md" mb="lg" align="flex-end" wrap="wrap">
+        <Select
+          label="Project"
+          value={filterProject}
+          onChange={(v) => setFilterProject(v || 'all')}
+          data={projectOptions}
+          size="sm"
+          w={150}
+        />
 
         {filterProject !== 'all' && (
-          <Chip
-            label={`Project: ${filterProject}`}
-            size="small"
-            onDelete={() => setFilterProject('all')}
-          />
+          <Badge
+            size="lg"
+            variant="light"
+            rightSection={
+              <CloseButton size="xs" onClick={() => setFilterProject('all')} aria-label="Clear filter" />
+            }
+          >
+            Project: {filterProject}
+          </Badge>
         )}
 
-        <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
+        <Text size="sm" c="dimmed" style={{ marginLeft: 'auto' }}>
           {events.length} tasks with due dates
-        </Typography>
-      </Box>
+        </Text>
+      </Group>
 
       {/* Legend */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+      <Group gap="md" mb="md" wrap="wrap">
         {Object.entries(priorityColors).map(([priority, colors]) => (
-          <Box key={priority} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Group key={priority} gap={4} align="center">
             <Box
-              sx={{
+              style={{
                 width: 12,
                 height: 12,
-                borderRadius: 1,
+                borderRadius: 4,
                 backgroundColor: colors.bg,
                 border: `2px solid ${colors.border}`,
               }}
             />
-            <Typography variant="caption" sx={{ textTransform: 'capitalize' }}>
+            <Text size="xs" style={{ textTransform: 'capitalize' }}>
               {priority}
-            </Typography>
-          </Box>
+            </Text>
+          </Group>
         ))}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Group gap={4} align="center">
           <Box
-            sx={{
+            style={{
               width: 12,
               height: 12,
-              borderRadius: 1,
+              borderRadius: 4,
               backgroundColor: '#e0e0e0',
               border: '2px solid #9e9e9e',
             }}
           />
-          <Typography variant="caption">Completed</Typography>
-        </Box>
-      </Box>
+          <Text size="xs">Completed</Text>
+        </Group>
+      </Group>
 
       {/* Calendar */}
-      <Paper sx={{ p: 2 }}>
+      <Paper p="md">
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -222,78 +211,94 @@ export default function TaskCalendar({
         />
       </Paper>
 
-      {/* Task details dialog */}
-      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="sm" fullWidth>
+      {/* Task details modal */}
+      <Modal
+        opened={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        title={
+          selectedTask && (
+            <Group gap="xs">
+              {selectedTask.icon && <span>{selectedTask.icon}</span>}
+              <Text
+                size="lg"
+                fw={500}
+                td={selectedTask.is_complete ? 'line-through' : undefined}
+              >
+                {selectedTask.title}
+              </Text>
+            </Group>
+          )
+        }
+        size="md"
+      >
         {selectedTask && (
-          <>
-            <DialogTitle>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {selectedTask.icon && <span>{selectedTask.icon}</span>}
-                <Typography
-                  variant="h6"
-                  sx={{
-                    textDecoration: selectedTask.is_complete ? 'line-through' : 'none',
-                  }}
-                >
-                  {selectedTask.title}
-                </Typography>
-              </Box>
-            </DialogTitle>
-            <DialogContent>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {selectedTask.description && (
-                  <Typography variant="body2">{selectedTask.description}</Typography>
-                )}
+          <Box>
+            {selectedTask.description && (
+              <Text size="sm" mb="md">
+                {selectedTask.description}
+              </Text>
+            )}
 
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  <Chip
-                    label={selectedTask.priority}
-                    size="small"
-                    sx={{
-                      backgroundColor: priorityColors[selectedTask.priority]?.bg,
-                      color: priorityColors[selectedTask.priority]?.text,
-                      textTransform: 'capitalize',
-                    }}
-                  />
-                  <Chip label={selectedTask.difficulty} size="small" sx={{ textTransform: 'capitalize' }} />
-                  <Chip label={selectedTask.duration} size="small" sx={{ textTransform: 'capitalize' }} />
-                  {selectedTask.is_habit && <Chip label="Habit" size="small" color="secondary" />}
-                </Box>
+            <Group gap="xs" mb="md" wrap="wrap">
+              <Badge
+                size="sm"
+                style={{
+                  backgroundColor: priorityColors[selectedTask.priority]?.bg,
+                  color: priorityColors[selectedTask.priority]?.text,
+                  textTransform: 'capitalize',
+                }}
+              >
+                {selectedTask.priority}
+              </Badge>
+              <Badge size="sm" variant="light" style={{ textTransform: 'capitalize' }}>
+                {selectedTask.difficulty}
+              </Badge>
+              <Badge size="sm" variant="light" style={{ textTransform: 'capitalize' }}>
+                {selectedTask.duration}
+              </Badge>
+              {selectedTask.is_habit && (
+                <Badge size="sm" color="violet">
+                  Habit
+                </Badge>
+              )}
+            </Group>
 
-                {selectedTask.due_date && (
-                  <Typography variant="body2" color="text.secondary">
-                    Due: {new Date(selectedTask.due_date).toLocaleString()}
-                  </Typography>
-                )}
+            {selectedTask.due_date && (
+              <Text size="sm" c="dimmed" mb="xs">
+                Due: {new Date(selectedTask.due_date).toLocaleString()}
+              </Text>
+            )}
 
-                {selectedTask.project && (
-                  <Typography variant="body2" color="text.secondary">
-                    Project: {selectedTask.project}
-                  </Typography>
-                )}
+            {selectedTask.project && (
+              <Text size="sm" c="dimmed" mb="xs">
+                Project: {selectedTask.project}
+              </Text>
+            )}
 
-                {selectedTask.tags && selectedTask.tags.length > 0 && (
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                    {selectedTask.tags.map((tag) => (
-                      <Chip key={tag} label={tag} size="small" variant="outlined" />
-                    ))}
-                  </Box>
-                )}
-              </Box>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDetailsOpen(false)}>Close</Button>
+            {selectedTask.tags && selectedTask.tags.length > 0 && (
+              <Group gap={4} mb="md" wrap="wrap">
+                {selectedTask.tags.map((tag) => (
+                  <Badge key={tag} size="sm" variant="outline">
+                    {tag}
+                  </Badge>
+                ))}
+              </Group>
+            )}
+
+            <Group justify="flex-end" mt="lg">
+              <Button variant="subtle" onClick={() => setDetailsOpen(false)}>
+                Close
+              </Button>
               <Button
-                variant="contained"
-                color={selectedTask.is_complete ? 'warning' : 'success'}
+                color={selectedTask.is_complete ? 'yellow' : 'green'}
                 onClick={handleToggleComplete}
               >
                 {selectedTask.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
               </Button>
-            </DialogActions>
-          </>
+            </Group>
+          </Box>
         )}
-      </Dialog>
+      </Modal>
     </Box>
   );
 }

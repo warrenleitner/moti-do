@@ -18,9 +18,9 @@ export class CalendarPage {
     this.description = page.getByText('View and manage tasks by their due dates');
     // FullCalendar container
     this.calendar = page.locator('.fc');
-    // Project filter select
-    this.projectFilter = page.getByLabel('Project');
-    // Task details dialog
+    // Project filter - Mantine Select uses textbox role
+    this.projectFilter = page.getByRole('textbox', { name: 'Project' });
+    // Task details modal - Mantine Modal
     this.taskDetailsDialog = page.getByRole('dialog');
   }
 
