@@ -266,7 +266,7 @@ def record_history(
     if old_str != new_str:
         task.history.append(
             {
-                "timestamp": datetime.now(),
+                "timestamp": datetime.now().isoformat(),
                 "field": field,
                 "old_value": old_str,
                 "new_value": new_str,

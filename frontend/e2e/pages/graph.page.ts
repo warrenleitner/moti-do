@@ -14,6 +14,12 @@ export class GraphPage {
 
   readonly emptyStateMessage: Locator;
 
+  // Direction toggle buttons
+  readonly allDirectionButton: Locator;
+  readonly upstreamButton: Locator;
+  readonly downstreamButton: Locator;
+  readonly isolatedButton: Locator;
+
   constructor(page: Page) {
     this.page = page;
     this.heading = page.getByRole('heading', { name: 'Dependency Graph' });
@@ -25,6 +31,12 @@ export class GraphPage {
     // MUI Drawer for task details (anchor="right", not hidden)
     this.taskDrawer = page.locator('.MuiDrawer-root.MuiDrawer-anchorRight:not([aria-hidden="true"])');
     this.snackbar = page.getByRole('alert');
+
+    // Direction toggle buttons - use text locators as MUI ToggleButton accessible names can be tricky with icons
+    this.allDirectionButton = page.getByRole('button', { name: 'All', exact: true });
+    this.upstreamButton = page.locator('button').filter({ hasText: 'Upstream' });
+    this.downstreamButton = page.locator('button').filter({ hasText: 'Downstream' });
+    this.isolatedButton = page.locator('button').filter({ hasText: 'Isolated' });
   }
 
   /**
@@ -88,7 +100,10 @@ export class GraphPage {
    */
   async clickNode(title: string): Promise<void> {
     const node = this.getNodeByTitle(title);
-    await node.click();
+    // Ensure the node is scrolled into view and visible
+    await node.scrollIntoViewIfNeeded();
+    // Use force click to bypass any overlapping elements (page headers, etc.)
+    await node.click({ force: true });
     // Wait for drawer to open
     await this.taskDrawer.waitFor({ timeout: 5000 });
   }
@@ -104,8 +119,9 @@ export class GraphPage {
    * Close the task drawer.
    */
   async closeDrawer(): Promise<void> {
-    // Find the close button in the drawer
-    await this.taskDrawer.getByRole('button', { name: 'Close' }).click();
+    // Find the close button in the drawer (X icon next to "Task Details" heading)
+    const closeButton = this.taskDrawer.locator('button').first();
+    await closeButton.click();
     await expect(this.taskDrawer).not.toBeVisible({ timeout: 5000 });
   }
 
@@ -196,5 +212,52 @@ export class GraphPage {
       if (title) titles.push(title.trim());
     }
     return titles;
+  }
+
+  /**
+   * Select a task node for direction filtering (closes drawer to allow clicking buttons).
+   * Use this instead of clickNode when you need to interact with direction toggle buttons.
+   */
+  async selectNodeForDirection(title: string): Promise<void> {
+    await this.clickNode(title);
+    await this.closeDrawer();
+    // Wait for the direction toggle to appear
+    await this.allDirectionButton.waitFor({ timeout: 5000 });
+  }
+
+  /**
+   * Set direction filter to show all dependencies.
+   */
+  async setDirectionAll(): Promise<void> {
+    await this.allDirectionButton.click();
+  }
+
+  /**
+   * Set direction filter to show only upstream dependencies.
+   */
+  async setDirectionUpstream(): Promise<void> {
+    await this.upstreamButton.click();
+  }
+
+  /**
+   * Set direction filter to show only downstream dependencies.
+   */
+  async setDirectionDownstream(): Promise<void> {
+    await this.downstreamButton.click();
+  }
+
+  /**
+   * Set direction filter to isolated mode (only connected tree of selected task).
+   */
+  async setDirectionIsolated(): Promise<void> {
+    await this.isolatedButton.click();
+  }
+
+  /**
+   * Check if direction toggle is visible.
+   * Direction toggle only appears when a task is selected.
+   */
+  async isDirectionToggleVisible(): Promise<boolean> {
+    return await this.allDirectionButton.isVisible();
   }
 }

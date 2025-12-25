@@ -225,4 +225,107 @@ test.describe('Settings Page', () => {
       await expect(page).toHaveURL('/login');
     });
   });
+
+  test.describe('Tags Management', () => {
+    test('should display tags section', async ({ page }) => {
+      await page.goto('/settings');
+
+      // Check for Tags heading
+      await expect(page.getByRole('heading', { name: 'Tags' })).toBeVisible();
+    });
+
+    test('should have new tag button', async ({ page }) => {
+      await page.goto('/settings');
+
+      // Check for add tag button
+      const addTagButton = page.getByRole('button', { name: 'Add Tag' });
+      await expect(addTagButton).toBeVisible();
+    });
+
+    test('should create a new tag with multiplier', async ({ page }) => {
+      await page.goto('/settings');
+
+      // Click add tag button
+      const addTagButton = page.getByRole('button', { name: 'Add Tag' });
+      await addTagButton.click();
+
+      // Wait for form row to appear
+      await page.waitForTimeout(300);
+
+      // Fill in tag name (first textbox in the form row - Tags section)
+      const tagName = `TestTag${Date.now()}`;
+      const tagsSection = page.locator('.MuiCard-root').filter({ hasText: 'Tags' });
+      const nameInput = tagsSection.getByRole('textbox').first();
+      await nameInput.fill(tagName);
+
+      // Click a quick multiplier button instead of typing
+      await page.getByRole('button', { name: '1.5x' }).click();
+
+      // Submit form by clicking the check icon button
+      await tagsSection.getByRole('button').filter({ has: page.locator('svg[data-testid="CheckIcon"]') }).click();
+
+      // Verify tag appears in list
+      await expect(page.getByText(tagName)).toBeVisible({ timeout: 5000 });
+    });
+
+    test('should show multiplier quick buttons', async ({ page }) => {
+      await page.goto('/settings');
+
+      // Click add tag button
+      const addTagButton = page.getByRole('button', { name: 'Add Tag' });
+      await addTagButton.click();
+
+      // Wait for form to appear
+      await page.waitForTimeout(300);
+
+      // Check for quick multiplier buttons (note: 1x and 2x, not 1.0x and 2.0x)
+      await expect(page.getByRole('button', { name: '0.5x' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '1x' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '1.5x' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '2x' })).toBeVisible();
+    });
+  });
+
+  test.describe('Projects Management', () => {
+    test('should display projects section', async ({ page }) => {
+      await page.goto('/settings');
+
+      // Check for Projects heading
+      await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible();
+    });
+
+    test('should have new project button', async ({ page }) => {
+      await page.goto('/settings');
+
+      // Check for add project button
+      const addProjectButton = page.getByRole('button', { name: 'Add Project' });
+      await expect(addProjectButton).toBeVisible();
+    });
+
+    test('should create a new project with multiplier', async ({ page }) => {
+      await page.goto('/settings');
+
+      // Click add project button
+      const addProjectButton = page.getByRole('button', { name: 'Add Project' });
+      await addProjectButton.click();
+
+      // Wait for form row to appear
+      await page.waitForTimeout(300);
+
+      // Fill in project name (first textbox in the form row - Projects section)
+      const projectName = `TestProject${Date.now()}`;
+      const projectsSection = page.locator('.MuiCard-root').filter({ hasText: 'Projects' });
+      const nameInput = projectsSection.getByRole('textbox').first();
+      await nameInput.fill(projectName);
+
+      // Click a quick multiplier button (the Projects section should have its own buttons)
+      await projectsSection.getByRole('button', { name: '2x' }).click();
+
+      // Submit form by clicking the check icon button
+      await projectsSection.getByRole('button').filter({ has: page.locator('svg[data-testid="CheckIcon"]') }).click();
+
+      // Verify project appears in list
+      await expect(page.getByText(projectName)).toBeVisible({ timeout: 5000 });
+    });
+  });
 });

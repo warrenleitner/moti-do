@@ -45,8 +45,24 @@ test.describe('Habits Management', () => {
       await habitsPage.goto();
 
       const habitTitle = `Daily Exercise ${Date.now()}`;
+      // Daily is the default, so no need to specify frequency
       await habitsPage.createHabit(habitTitle, {
-        recurrenceRule: 'FREQ=DAILY',
+        frequency: 'DAILY',
+      });
+
+      // Verify habit appears
+      const habit = habitsPage.getHabitByTitle(habitTitle);
+      await expect(habit).toBeVisible();
+    });
+
+    test('should create weekly habit with specific days', async ({ page }) => {
+      const habitsPage = new HabitsPage(page);
+      await habitsPage.goto();
+
+      const habitTitle = `Weekly Workout ${Date.now()}`;
+      await habitsPage.createHabit(habitTitle, {
+        frequency: 'WEEKLY',
+        weekdays: ['MO', 'WE', 'FR'],
       });
 
       // Verify habit appears
@@ -154,6 +170,77 @@ test.describe('Habits Management', () => {
 
       // Verify it's gone
       await expect(habit).not.toBeVisible();
+    });
+  });
+
+  test.describe('Subtask Recurrence Mode', () => {
+    test('should create habit with subtasks', async ({ page }) => {
+      const habitsPage = new HabitsPage(page);
+      await habitsPage.goto();
+
+      const habitTitle = `Habit With Subtasks ${Date.now()}`;
+      await habitsPage.createHabit(habitTitle, {
+        subtasks: ['Step 1', 'Step 2', 'Step 3'],
+      });
+
+      // Verify habit appears
+      const habit = habitsPage.getHabitByTitle(habitTitle);
+      await expect(habit).toBeVisible();
+    });
+
+    test('should create habit with "Always Copy All" recurrence mode', async ({ page }) => {
+      const habitsPage = new HabitsPage(page);
+      await habitsPage.goto();
+
+      const habitTitle = `Always Copy Habit ${Date.now()}`;
+      await habitsPage.createHabit(habitTitle, {
+        subtasks: ['Task A', 'Task B'],
+        subtaskRecurrenceMode: 'always',
+      });
+
+      // Verify habit appears
+      const habit = habitsPage.getHabitByTitle(habitTitle);
+      await expect(habit).toBeVisible();
+    });
+
+    test('should create habit with "Carry Over Completed" recurrence mode', async ({ page }) => {
+      const habitsPage = new HabitsPage(page);
+      await habitsPage.goto();
+
+      const habitTitle = `Partial Copy Habit ${Date.now()}`;
+      await habitsPage.createHabit(habitTitle, {
+        subtasks: ['Morning routine', 'Evening routine'],
+        subtaskRecurrenceMode: 'partial',
+      });
+
+      // Verify habit appears
+      const habit = habitsPage.getHabitByTitle(habitTitle);
+      await expect(habit).toBeVisible();
+    });
+
+    test('should show subtask recurrence dropdown when habit has subtasks', async ({ page }) => {
+      const habitsPage = new HabitsPage(page);
+      await habitsPage.goto();
+
+      // Open new habit form
+      await habitsPage.clickNewHabit();
+      const dialog = habitsPage.habitFormDialog;
+
+      // Fill in title
+      await dialog.getByLabel('Title').fill('Test Habit');
+
+      // Add a subtask to make the dropdown appear
+      const subtaskInput = dialog.getByPlaceholder('Add subtask...');
+      await subtaskInput.fill('First subtask');
+      await subtaskInput.press('Enter');
+      await page.waitForTimeout(300);
+
+      // Check that the subtask recurrence dropdown is visible
+      const recurrenceDropdown = dialog.locator('.MuiFormControl-root').filter({ hasText: 'Subtask Recurrence' });
+      await expect(recurrenceDropdown).toBeVisible();
+
+      // Close dialog
+      await habitsPage.closeHabitForm();
     });
   });
 });

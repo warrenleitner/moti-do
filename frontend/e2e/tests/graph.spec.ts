@@ -208,4 +208,110 @@ test.describe('Dependency Graph', () => {
       expect(edgeCount).toBeGreaterThanOrEqual(2);
     });
   });
+
+  test.describe('Direction Filter', () => {
+    test('should show direction toggle when task is selected', async ({ page }) => {
+      // Seed tasks with dependencies
+      const { parentTask } = await seedSimpleDependency(page);
+
+      // Navigate to graph
+      const graphPage = new GraphPage(page);
+      await graphPage.goto();
+      await graphPage.waitForGraph();
+
+      // Direction toggle should be visible when a task is selected (close drawer to see buttons)
+      await graphPage.selectNodeForDirection(parentTask.title);
+
+      // Direction buttons should be visible
+      await expect(graphPage.allDirectionButton).toBeVisible({ timeout: 5000 });
+    });
+
+    test('should filter to upstream only', async ({ page }) => {
+      // Seed tasks with chain: parent -> child -> grandchild
+      const { parentTask, childTask } = await seedTasksWithDependencies(page);
+
+      // Navigate to graph
+      const graphPage = new GraphPage(page);
+      await graphPage.goto();
+      await graphPage.waitForGraph();
+
+      // Select the child task (close drawer to access direction buttons)
+      await graphPage.selectNodeForDirection(childTask.title);
+
+      // Switch to upstream mode (should show parent and child, not grandchild)
+      await graphPage.setDirectionUpstream();
+      await page.waitForTimeout(300);
+
+      // Parent should be visible (it's upstream)
+      await expect(graphPage.getNodeByTitle(parentTask.title)).toBeVisible();
+    });
+
+    test('should filter to downstream only', async ({ page }) => {
+      // Seed tasks with chain: parent -> child -> grandchild
+      const { childTask, grandchildTask } = await seedTasksWithDependencies(page);
+
+      // Navigate to graph
+      const graphPage = new GraphPage(page);
+      await graphPage.goto();
+      await graphPage.waitForGraph();
+
+      // Select the child task (close drawer to access direction buttons)
+      await graphPage.selectNodeForDirection(childTask.title);
+
+      // Switch to downstream mode (should show child and grandchild, not parent)
+      await graphPage.setDirectionDownstream();
+      await page.waitForTimeout(300);
+
+      // Grandchild should be visible (it's downstream)
+      await expect(graphPage.getNodeByTitle(grandchildTask.title)).toBeVisible();
+    });
+
+    test('should filter to isolated mode (connected tree only)', async ({ page }) => {
+      // Seed tasks with chain: parent -> child -> grandchild
+      const { parentTask, childTask, grandchildTask } = await seedTasksWithDependencies(page);
+
+      // Navigate to graph
+      const graphPage = new GraphPage(page);
+      await graphPage.goto();
+      await graphPage.waitForGraph();
+
+      // Select the child task (close drawer to access direction buttons)
+      await graphPage.selectNodeForDirection(childTask.title);
+
+      // Switch to isolated mode (should show entire connected tree)
+      await graphPage.setDirectionIsolated();
+      await page.waitForTimeout(300);
+
+      // All connected nodes should be visible
+      await expect(graphPage.getNodeByTitle(parentTask.title)).toBeVisible();
+      await expect(graphPage.getNodeByTitle(childTask.title)).toBeVisible();
+      await expect(graphPage.getNodeByTitle(grandchildTask.title)).toBeVisible();
+    });
+
+    test('should show all nodes when direction is set to all', async ({ page }) => {
+      // Seed tasks with dependencies
+      const { parentTask, childTask, grandchildTask } = await seedTasksWithDependencies(page);
+
+      // Navigate to graph
+      const graphPage = new GraphPage(page);
+      await graphPage.goto();
+      await graphPage.waitForGraph();
+
+      // Select a task (close drawer to access direction buttons)
+      await graphPage.selectNodeForDirection(childTask.title);
+
+      // Switch to isolated first
+      await graphPage.setDirectionIsolated();
+      await page.waitForTimeout(200);
+
+      // Then back to all
+      await graphPage.setDirectionAll();
+      await page.waitForTimeout(300);
+
+      // All nodes should be visible
+      await expect(graphPage.getNodeByTitle(parentTask.title)).toBeVisible();
+      await expect(graphPage.getNodeByTitle(childTask.title)).toBeVisible();
+      await expect(graphPage.getNodeByTitle(grandchildTask.title)).toBeVisible();
+    });
+  });
 });
