@@ -6,11 +6,16 @@ describe('InstallPrompt', () => {
   let mockMatchMedia: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    mockMatchMedia = vi.fn().mockReturnValue({
-      matches: false,
+    mockMatchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(display-mode: standalone)' ? false : false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
-    });
+      dispatchEvent: vi.fn(),
+    }));
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: mockMatchMedia,
@@ -23,21 +28,30 @@ describe('InstallPrompt', () => {
   });
 
   it('renders nothing when already installed', () => {
-    mockMatchMedia.mockReturnValue({ matches: true });
-    const { container } = render(<InstallPrompt />);
-    expect(container.firstChild).toBeNull();
+    mockMatchMedia.mockImplementation((query: string) => ({
+      matches: query === '(display-mode: standalone)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    render(<InstallPrompt />);
+    expect(screen.queryByText('Install Moti-Do')).not.toBeInTheDocument();
   });
 
   it('renders nothing when no install prompt available', () => {
-    const { container } = render(<InstallPrompt />);
-    expect(container.firstChild).toBeNull();
+    render(<InstallPrompt />);
+    expect(screen.queryByText('Install Moti-Do')).not.toBeInTheDocument();
   });
 
   it('renders nothing when dismissed recently', () => {
     const recentTime = Date.now() - 1000 * 60 * 60; // 1 hour ago
     localStorage.setItem('pwa-install-dismissed', recentTime.toString());
-    const { container } = render(<InstallPrompt />);
-    expect(container.firstChild).toBeNull();
+    render(<InstallPrompt />);
+    expect(screen.queryByText('Install Moti-Do')).not.toBeInTheDocument();
   });
 
   it('handles beforeinstallprompt event', () => {

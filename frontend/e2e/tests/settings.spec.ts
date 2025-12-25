@@ -125,7 +125,7 @@ test.describe('Settings Page', () => {
 
         // Should show form with current and new password fields
         await expect(page.getByLabel(/current password/i)).toBeVisible();
-        await expect(page.getByLabel(/new password/i)).toBeVisible();
+        await expect(page.getByLabel('New Password', { exact: true })).toBeVisible();
       }
     });
 
@@ -139,7 +139,7 @@ test.describe('Settings Page', () => {
 
         // Try to submit with short password
         const currentPasswordInput = page.getByLabel(/current password/i);
-        const newPasswordInput = page.getByLabel(/new password/i);
+        const newPasswordInput = page.getByLabel('New Password', { exact: true });
 
         await currentPasswordInput.fill('testpassword123');
         await newPasswordInput.fill('short');

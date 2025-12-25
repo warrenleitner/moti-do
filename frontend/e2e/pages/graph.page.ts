@@ -102,8 +102,10 @@ export class GraphPage {
     const node = this.getNodeByTitle(title);
     // Ensure the node is scrolled into view and visible
     await node.scrollIntoViewIfNeeded();
-    // Use force click to bypass any overlapping elements (page headers, etc.)
-    await node.click({ force: true });
+    // Wait a moment for any animations to settle
+    await this.page.waitForTimeout(100);
+    // Use dispatchEvent as fallback for React Flow nodes that may be at canvas edges
+    await node.dispatchEvent('click');
     // Wait for drawer to open
     await this.taskDrawer.waitFor({ timeout: 5000 });
   }

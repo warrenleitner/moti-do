@@ -1,4 +1,4 @@
-import { render } from '../../test/utils';
+import { render, screen } from '../../test/utils';
 import DateDisplay from './DateDisplay';
 
 // Helper to create a date string in local timezone (avoiding UTC conversion issues)
@@ -11,8 +11,8 @@ function toLocalDateString(date: Date): string {
 
 describe('DateDisplay', () => {
   it('renders nothing when date is undefined', () => {
-    const { container } = render(<DateDisplay date={undefined} />);
-    expect(container.firstChild).toBeNull();
+    render(<DateDisplay date={undefined} />);
+    expect(screen.queryByText(/today|tomorrow|yesterday|overdue|days/i)).not.toBeInTheDocument();
   });
 
   it('renders date with icon', () => {

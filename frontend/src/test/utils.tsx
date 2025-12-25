@@ -10,6 +10,8 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { MantineProvider } from '@mantine/core';
+import { theme as mantineTheme } from '../theme';
 
 // Create a fresh QueryClient for each test
 const createTestQueryClient = () =>
@@ -35,7 +37,9 @@ function AllProviders({ children }: AllProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
-        <BrowserRouter>{children}</BrowserRouter>
+        <MantineProvider theme={mantineTheme}>
+          <BrowserRouter>{children}</BrowserRouter>
+        </MantineProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

@@ -9,8 +9,8 @@ describe('SubtaskList', () => {
   ];
 
   it('renders nothing when empty', () => {
-    const { container } = render(<SubtaskList subtasks={[]} />);
-    expect(container.firstChild).toBeNull();
+    render(<SubtaskList subtasks={[]} />);
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
   it('renders subtask list', () => {
