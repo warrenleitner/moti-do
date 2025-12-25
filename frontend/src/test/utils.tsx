@@ -9,7 +9,6 @@ import { render as rtlRender, type RenderOptions } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { MantineProvider } from '@mantine/core';
 import { theme as mantineTheme } from '../theme';
 
@@ -24,9 +23,6 @@ const createTestQueryClient = () =>
     },
   });
 
-// Simple theme for testing
-const theme = createTheme();
-
 interface AllProvidersProps {
   children: ReactNode;
 }
@@ -36,11 +32,9 @@ function AllProviders({ children }: AllProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <MantineProvider theme={mantineTheme}>
-          <BrowserRouter>{children}</BrowserRouter>
-        </MantineProvider>
-      </ThemeProvider>
+      <MantineProvider theme={mantineTheme}>
+        <BrowserRouter>{children}</BrowserRouter>
+      </MantineProvider>
     </QueryClientProvider>
   );
 }

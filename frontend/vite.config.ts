@@ -10,8 +10,10 @@ export default defineConfig({
         manualChunks: {
           // Core React
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // MUI components
-          'vendor-mui': ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
+          // Mantine UI components
+          'vendor-mantine': ['@mantine/core', '@mantine/hooks', '@mantine/dates', '@mantine/notifications', '@mantine/form'],
+          // Icons
+          'vendor-icons': ['@tabler/icons-react'],
           // Calendar
           'vendor-calendar': [
             '@fullcalendar/core',
@@ -27,7 +29,7 @@ export default defineConfig({
           // Data fetching & state
           'vendor-data': ['axios', 'zustand', '@tanstack/react-query'],
           // Date utilities
-          'vendor-date': ['date-fns', '@mui/x-date-pickers'],
+          'vendor-date': ['date-fns', 'dayjs'],
         },
       },
     },
@@ -122,7 +124,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    testTimeout: 10000, // 10 seconds for slow MUI component tests
+    testTimeout: 10000, // 10 seconds for component tests
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -139,7 +141,7 @@ export default defineConfig({
         'src/components/calendar/TaskCalendar.tsx',
         'src/components/graph/DependencyGraph.tsx',
         'src/components/kanban/KanbanBoard.tsx',
-        // Complex UI components with MUI interactions that are hard to unit test
+        // Complex UI components with interactions that are hard to unit test
         'src/components/common/FilterBar.tsx',
         'src/components/tasks/TaskForm.tsx',
         'src/components/tasks/TaskList.tsx',

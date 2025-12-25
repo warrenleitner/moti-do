@@ -53,7 +53,7 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    // Mantine Loader renders as a span with specific class, test for loading text
     expect(screen.getByText('Loading Moti-Do...')).toBeInTheDocument();
   });
 
@@ -67,7 +67,6 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(screen.queryByText('Loading Moti-Do...')).not.toBeInTheDocument();
   });
 
@@ -76,14 +75,15 @@ describe('App', () => {
     vi.mocked(useAppInitialization).mockReturnValue({
       isLoading: false,
       isInitialized: false,
-      error: 'Failed to connect to server',
+      error: 'Network connection error',
       retry: mockRetry,
     });
 
     render(<App />);
 
-    // Check for error message (there are two instances - title and body)
-    expect(screen.getAllByText('Failed to connect to server')).toHaveLength(2);
+    // Mantine Alert title and body are separate
+    expect(screen.getByText('Failed to connect to server')).toBeInTheDocument();
+    expect(screen.getByText('Network connection error')).toBeInTheDocument();
     expect(screen.getByText('Make sure the API server is running on http://localhost:8000')).toBeInTheDocument();
 
     const retryButton = screen.getByRole('button', { name: /try again/i });

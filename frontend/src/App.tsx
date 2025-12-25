@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
-import { Box, Container, CircularProgress, Typography, Button, Alert } from '@mui/material';
+import { Box, Center, Container, Loader, Text, Button, Alert, Stack } from '@mantine/core';
 import MainLayout from './components/layout/MainLayout';
 import { InstallPrompt } from './components/common/InstallPrompt';
 import { ProtectedRoute } from './components/auth';
@@ -21,51 +21,33 @@ function App() {
   // Show loading state while initializing
   if (isLoading && !isInitialized) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          gap: 2,
-        }}
-      >
-        <CircularProgress size={48} />
-        <Typography variant="h6" color="text.secondary">
-          Loading Moti-Do...
-        </Typography>
-      </Box>
+      <Center mih="100vh">
+        <Stack align="center" gap="md">
+          <Loader size={48} />
+          <Text size="lg" c="dimmed">
+            Loading Moti-Do...
+          </Text>
+        </Stack>
+      </Center>
     );
   }
 
   // Show error state if initialization failed
   if (error && !isInitialized) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          gap: 2,
-          p: 3,
-        }}
-      >
-        <Alert severity="error" sx={{ maxWidth: 400, width: '100%' }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            Failed to connect to server
-          </Typography>
-          <Typography variant="body2">{error}</Typography>
-        </Alert>
-        <Button variant="contained" onClick={retry}>
-          Try Again
-        </Button>
-        <Typography variant="caption" color="text.secondary">
-          Make sure the API server is running on http://localhost:8000
-        </Typography>
-      </Box>
+      <Center mih="100vh" p="lg">
+        <Stack align="center" gap="md" maw={400} w="100%">
+          <Alert color="red" title="Failed to connect to server" w="100%">
+            <Text size="sm">{error}</Text>
+          </Alert>
+          <Button onClick={retry}>
+            Try Again
+          </Button>
+          <Text size="xs" c="dimmed">
+            Make sure the API server is running on http://localhost:8000
+          </Text>
+        </Stack>
+      </Center>
     );
   }
 
@@ -79,9 +61,9 @@ function App() {
         path="/*"
         element={
           <ProtectedRoute>
-            <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+            <Box style={{ display: 'flex', minHeight: '100vh' }}>
               <MainLayout>
-                <Container maxWidth="xl" sx={{ py: 3 }}>
+                <Container size="xl" py="lg">
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/tasks" element={<TasksPage />} />
