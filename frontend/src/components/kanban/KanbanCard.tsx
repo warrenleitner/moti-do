@@ -1,6 +1,6 @@
-import { Card, CardContent, Typography, Box, Chip, IconButton } from '@mui/material';
+import { Card, Text, Box, Group, Badge, ActionIcon } from '@mantine/core';
 import { Draggable } from '@hello-pangea/dnd';
-import { Edit, Schedule, LocalFireDepartment } from '@mui/icons-material';
+import { IconPencil, IconClock, IconFlame } from '@tabler/icons-react';
 import type { Task } from '../../types';
 import { PriorityChip, DurationChip } from '../common';
 
@@ -30,99 +30,101 @@ export default function KanbanCard({ task, index, onEdit }: KanbanCardProps) {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          sx={{
-            mb: 1,
+          shadow={snapshot.isDragging ? 'md' : 'xs'}
+          padding="sm"
+          radius="sm"
+          mb="xs"
+          style={{
             borderLeft: `4px solid ${priorityColors[task.priority] || '#1976d2'}`,
-            backgroundColor: snapshot.isDragging ? 'action.hover' : 'background.paper',
-            boxShadow: snapshot.isDragging ? 4 : 1,
+            backgroundColor: snapshot.isDragging
+              ? 'var(--mantine-color-gray-1)'
+              : 'var(--mantine-color-white)',
             transition: 'box-shadow 0.2s',
-            '&:hover': {
-              boxShadow: 2,
-            },
           }}
         >
-          <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <Typography
-                variant="body2"
-                fontWeight="medium"
-                sx={{
-                  flex: 1,
-                  textDecoration: task.is_complete ? 'line-through' : 'none',
-                  color: task.is_complete ? 'text.secondary' : 'text.primary',
+          <Group justify="space-between" align="flex-start" wrap="nowrap">
+            <Text
+              size="sm"
+              fw={500}
+              style={{ flex: 1 }}
+              td={task.is_complete ? 'line-through' : undefined}
+              c={task.is_complete ? 'dimmed' : undefined}
+            >
+              {task.icon && <span style={{ marginRight: 4 }}>{task.icon}</span>}
+              {task.title}
+            </Text>
+            {onEdit && (
+              <ActionIcon
+                size="sm"
+                variant="subtle"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(task);
+                }}
+                aria-label="Edit task"
+              >
+                <IconPencil size={14} />
+              </ActionIcon>
+            )}
+          </Group>
+
+          {/* Tags */}
+          {task.tags && task.tags.length > 0 && (
+            <Group gap={4} mt="xs" wrap="wrap">
+              {task.tags.slice(0, 3).map((tag) => (
+                <Badge key={tag} size="xs" variant="light">
+                  {tag}
+                </Badge>
+              ))}
+              {task.tags.length > 3 && (
+                <Badge size="xs" variant="light">
+                  +{task.tags.length - 3}
+                </Badge>
+              )}
+            </Group>
+          )}
+
+          {/* Meta info */}
+          <Group gap="xs" mt="xs" wrap="wrap">
+            <PriorityChip priority={task.priority} size="small" />
+            <DurationChip duration={task.duration} size="small" />
+
+            {/* Streak for habits */}
+            {task.is_habit && task.streak_current > 0 && (
+              <Group gap={2}>
+                <IconFlame size={14} color="var(--mantine-color-yellow-6)" />
+                <Text size="xs" c="yellow.6">
+                  {task.streak_current}
+                </Text>
+              </Group>
+            )}
+
+            {/* Due date */}
+            {task.due_date && (
+              <Group
+                gap={2}
+                style={{
+                  color: isOverdue
+                    ? 'var(--mantine-color-red-6)'
+                    : 'var(--mantine-color-dimmed)',
                 }}
               >
-                {task.icon && <span style={{ marginRight: 4 }}>{task.icon}</span>}
-                {task.title}
-              </Typography>
-              {onEdit && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(task);
-                  }}
-                  sx={{ ml: 0.5, p: 0.5 }}
-                >
-                  <Edit fontSize="small" />
-                </IconButton>
-              )}
-            </Box>
-
-            {/* Tags */}
-            {task.tags && task.tags.length > 0 && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                {task.tags.slice(0, 3).map((tag) => (
-                  <Chip key={tag} label={tag} size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
-                ))}
-                {task.tags.length > 3 && (
-                  <Chip label={`+${task.tags.length - 3}`} size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
-                )}
-              </Box>
+                <IconClock size={14} />
+                <Text size="xs">
+                  {new Date(task.due_date).toLocaleDateString()}
+                </Text>
+              </Group>
             )}
+          </Group>
 
-            {/* Meta info */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-              <PriorityChip priority={task.priority} size="small" />
-              <DurationChip duration={task.duration} size="small" />
-
-              {/* Streak for habits */}
-              {task.is_habit && task.streak_current > 0 && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                  <LocalFireDepartment sx={{ fontSize: 14, color: 'warning.main' }} />
-                  <Typography variant="caption" color="warning.main">
-                    {task.streak_current}
-                  </Typography>
-                </Box>
-              )}
-
-              {/* Due date */}
-              {task.due_date && (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.25,
-                    color: isOverdue ? 'error.main' : 'text.secondary',
-                  }}
-                >
-                  <Schedule sx={{ fontSize: 14 }} />
-                  <Typography variant="caption">
-                    {new Date(task.due_date).toLocaleDateString()}
-                  </Typography>
-                </Box>
-              )}
+          {/* Subtask progress */}
+          {task.subtasks && task.subtasks.length > 0 && (
+            <Box mt="xs">
+              <Text size="xs" c="dimmed">
+                {task.subtasks.filter((s) => s.complete).length}/{task.subtasks.length} subtasks
+              </Text>
             </Box>
-
-            {/* Subtask progress */}
-            {task.subtasks && task.subtasks.length > 0 && (
-              <Box sx={{ mt: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  {task.subtasks.filter((s) => s.complete).length}/{task.subtasks.length} subtasks
-                </Typography>
-              </Box>
-            )}
-          </CardContent>
+          )}
         </Card>
       )}
     </Draggable>

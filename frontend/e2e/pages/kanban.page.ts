@@ -15,8 +15,9 @@ export class KanbanPage {
   constructor(page: Page) {
     this.page = page;
     this.heading = page.getByRole('heading', { name: 'Kanban Board' });
-    this.projectFilter = page.getByLabel('Project');
-    this.tagFilter = page.getByLabel('Tag');
+    // Mantine Select uses textbox role for the input element
+    this.projectFilter = page.getByRole('textbox', { name: 'Project' });
+    this.tagFilter = page.getByRole('textbox', { name: 'Tag' });
     this.taskCountText = page.getByText(/Showing \d+ tasks/);
     this.snackbar = page.getByRole('alert');
   }
@@ -33,8 +34,8 @@ export class KanbanPage {
    * Get a kanban column by its title.
    */
   getColumn(columnTitle: string): Locator {
-    // Find the Paper element containing the column title
-    return this.page.locator('.MuiPaper-root').filter({ hasText: columnTitle });
+    // Find the Paper element containing the column title (Mantine Paper)
+    return this.page.locator('.mantine-Paper-root').filter({ hasText: columnTitle });
   }
 
   /**
@@ -68,7 +69,8 @@ export class KanbanPage {
    * Get a task card by its title.
    */
   getTaskByTitle(title: string): Locator {
-    return this.page.locator('.MuiCard-root').filter({ hasText: title });
+    // Mantine Card
+    return this.page.locator('.mantine-Card-root').filter({ hasText: title });
   }
 
   /**
@@ -82,7 +84,8 @@ export class KanbanPage {
     const columns = ['Backlog', 'To Do', 'In Progress', 'Blocked', 'Done'];
     for (const col of columns) {
       const column = this.getColumn(col);
-      const taskInColumn = column.locator('.MuiCard-root').filter({ hasText: title });
+      // Mantine Card
+      const taskInColumn = column.locator('.mantine-Card-root').filter({ hasText: title });
       if (await taskInColumn.isVisible()) {
         return col;
       }
@@ -132,12 +135,12 @@ export class KanbanPage {
   }
 
   /**
-   * Clear filters by clicking the chip's delete button.
+   * Clear filters by clicking the badge's close button.
    */
   async clearFilter(filterText: string): Promise<void> {
-    // Find the chip with this text and click its delete button
-    const chip = this.page.locator('.MuiChip-root').filter({ hasText: filterText });
-    await chip.locator('[data-testid="CancelIcon"]').click();
+    // Find the badge with this text and click its close button (Mantine Badge with CloseButton)
+    const badge = this.page.locator('.mantine-Badge-root').filter({ hasText: filterText });
+    await badge.getByRole('button', { name: /clear/i }).click();
   }
 
   /**
@@ -145,7 +148,8 @@ export class KanbanPage {
    */
   async taskExistsInColumn(taskTitle: string, columnTitle: string): Promise<boolean> {
     const column = this.getColumn(columnTitle);
-    const taskInColumn = column.locator('.MuiCard-root').filter({ hasText: taskTitle });
+    // Mantine Card
+    const taskInColumn = column.locator('.mantine-Card-root').filter({ hasText: taskTitle });
     return (await taskInColumn.count()) > 0;
   }
 
@@ -155,7 +159,8 @@ export class KanbanPage {
    */
   async getTasksInColumn(columnTitle: string): Promise<string[]> {
     const column = this.getColumn(columnTitle);
-    const cards = column.locator('.MuiCard-root');
+    // Mantine Card
+    const cards = column.locator('.mantine-Card-root');
     const count = await cards.count();
 
     // Limit to first 50 cards to avoid timeout in parallel tests
@@ -163,8 +168,8 @@ export class KanbanPage {
     const titles: string[] = [];
 
     for (let i = 0; i < limit; i++) {
-      // Get the first Typography element which contains the title
-      const titleText = await cards.nth(i).locator('.MuiTypography-root').first().textContent();
+      // Get the first Text element which contains the title (Mantine Text)
+      const titleText = await cards.nth(i).locator('.mantine-Text-root').first().textContent();
       if (titleText) titles.push(titleText.trim());
     }
 

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Chip } from '@mui/material';
+import { Box, Text, Select, Group, Badge, CloseButton } from '@mantine/core';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
 import type { Task } from '../../types';
 import { Priority } from '../../types';
@@ -126,76 +126,90 @@ export default function KanbanBoard({ tasks, onUpdateTask, onEditTask }: KanbanB
     onUpdateTask(draggableId, updates);
   };
 
+  // Generate project options
+  const projectOptions = [
+    { value: 'all', label: 'All Projects' },
+    ...projects.map((project) => ({ value: project, label: project })),
+  ];
+
+  // Generate tag options
+  const tagOptions = [
+    { value: 'all', label: 'All Tags' },
+    ...tags.map((tag) => ({ value: tag, label: tag })),
+  ];
+
   return (
     <Box>
       {/* Filters */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Project</InputLabel>
-          <Select
-            value={filterProject}
-            label="Project"
-            onChange={(e) => setFilterProject(e.target.value)}
-          >
-            <MenuItem value="all">All Projects</MenuItem>
-            {projects.map((project) => (
-              <MenuItem key={project} value={project}>
-                {project}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <Group gap="md" mb="lg" wrap="wrap">
+        <Select
+          label="Project"
+          value={filterProject}
+          onChange={(v) => setFilterProject(v || 'all')}
+          data={projectOptions}
+          size="sm"
+          w={150}
+        />
 
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Tag</InputLabel>
-          <Select
-            value={filterTag}
-            label="Tag"
-            onChange={(e) => setFilterTag(e.target.value)}
-          >
-            <MenuItem value="all">All Tags</MenuItem>
-            {tags.map((tag) => (
-              <MenuItem key={tag} value={tag}>
-                {tag}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Select
+          label="Tag"
+          value={filterTag}
+          onChange={(v) => setFilterTag(v || 'all')}
+          data={tagOptions}
+          size="sm"
+          w={150}
+        />
 
         {/* Active filters */}
         {(filterProject !== 'all' || filterTag !== 'all') && (
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Group gap="xs" align="flex-end" style={{ paddingBottom: 4 }}>
             {filterProject !== 'all' && (
-              <Chip
-                label={`Project: ${filterProject}`}
-                size="small"
-                onDelete={() => setFilterProject('all')}
-              />
+              <Badge
+                size="lg"
+                variant="light"
+                rightSection={
+                  <CloseButton
+                    size="xs"
+                    onClick={() => setFilterProject('all')}
+                    aria-label="Clear project filter"
+                  />
+                }
+              >
+                Project: {filterProject}
+              </Badge>
             )}
             {filterTag !== 'all' && (
-              <Chip
-                label={`Tag: ${filterTag}`}
-                size="small"
-                onDelete={() => setFilterTag('all')}
-              />
+              <Badge
+                size="lg"
+                variant="light"
+                rightSection={
+                  <CloseButton
+                    size="xs"
+                    onClick={() => setFilterTag('all')}
+                    aria-label="Clear tag filter"
+                  />
+                }
+              >
+                Tag: {filterTag}
+              </Badge>
             )}
-          </Box>
+          </Group>
         )}
-      </Box>
+      </Group>
 
       {/* Task count */}
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Text size="sm" c="dimmed" mb="md">
         Showing {filteredTasks.length} tasks
-      </Typography>
+      </Text>
 
       {/* Kanban columns */}
       <DragDropContext onDragEnd={handleDragEnd}>
         <Box
-          sx={{
+          style={{
             display: 'flex',
-            gap: 2,
+            gap: 'var(--mantine-spacing-md)',
             overflowX: 'auto',
-            pb: 2,
+            paddingBottom: 'var(--mantine-spacing-md)',
           }}
         >
           {columns.map((column) => (

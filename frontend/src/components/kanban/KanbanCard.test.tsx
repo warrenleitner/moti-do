@@ -61,12 +61,9 @@ describe('KanbanCard', () => {
     const onEdit = vi.fn();
     const { user } = renderWithDnD(mockTask, onEdit);
 
-    // Component has v8 ignore - find edit button by icon
-    const editIcon = screen.getByTestId('EditIcon');
-    const editButton = editIcon.closest('button');
-    if (editButton) {
-      await user.click(editButton);
-    }
+    // Find edit button by aria-label (Mantine ActionIcon)
+    const editButton = screen.getByRole('button', { name: 'Edit task' });
+    await user.click(editButton);
 
     expect(onEdit).toHaveBeenCalledWith(mockTask);
   });
@@ -75,12 +72,9 @@ describe('KanbanCard', () => {
     const onEdit = vi.fn();
     const { user } = renderWithDnD(mockTask, onEdit);
 
-    // Component has v8 ignore - find edit button by icon
-    const editIcon = screen.getByTestId('EditIcon');
-    const editButton = editIcon.closest('button');
-    if (editButton) {
-      await user.click(editButton);
-    }
+    // Find edit button by aria-label (Mantine ActionIcon)
+    const editButton = screen.getByRole('button', { name: 'Edit task' });
+    await user.click(editButton);
 
     // Should call onEdit (propagation tested internally)
     expect(onEdit).toHaveBeenCalled();
@@ -89,8 +83,8 @@ describe('KanbanCard', () => {
   it('does not show edit button when onEdit is not provided', () => {
     renderWithDnD(mockTask, undefined);
 
-    // Component has v8 ignore - check edit icon is not present
-    expect(screen.queryByTestId('EditIcon')).not.toBeInTheDocument();
+    // Check edit button is not present
+    expect(screen.queryByRole('button', { name: 'Edit task' })).not.toBeInTheDocument();
   });
 
   it('displays subtask progress', () => {
@@ -125,8 +119,8 @@ describe('KanbanCard', () => {
   it('does not show streak for non-habits', () => {
     renderWithDnD(mockTask, vi.fn());
 
-    // Streak icon should not be present
-    const fireIcons = screen.queryAllByTestId('LocalFireDepartmentIcon');
+    // Streak icon (flame) should not be present - check by Tabler icon class
+    const fireIcons = document.querySelectorAll('.tabler-icon-flame');
     expect(fireIcons.length).toBe(0);
   });
 
@@ -138,9 +132,9 @@ describe('KanbanCard', () => {
 
     renderWithDnD(taskWithDueDate, vi.fn());
 
-    // Component has v8 ignore - just verify date is rendered (format may vary by locale)
-    const scheduleIcon = screen.getByTestId('ScheduleIcon');
-    expect(scheduleIcon).toBeInTheDocument();
+    // Verify clock icon is present (Tabler icon class)
+    const clockIcon = document.querySelector('.tabler-icon-clock');
+    expect(clockIcon).toBeInTheDocument();
   });
 
   it('highlights overdue tasks', () => {
