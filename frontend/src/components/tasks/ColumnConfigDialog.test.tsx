@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '../../test/utils';
 import ColumnConfigDialog from './ColumnConfigDialog';
 import { ColumnConfig } from './TaskTable';
 
@@ -243,16 +243,17 @@ describe('ColumnConfigDialog', () => {
       />
     );
 
-    const listItems = screen.getAllByRole('listitem');
+    // Paper elements are draggable items now (Mantine Paper instead of MUI ListItem)
+    const paperItems = document.querySelectorAll('.mantine-Paper-root[draggable="true"]');
 
     // Simulate drag start on first item
-    fireEvent.dragStart(listItems[0]);
+    fireEvent.dragStart(paperItems[0]);
 
     // Simulate drag over second item
-    fireEvent.dragOver(listItems[1]);
+    fireEvent.dragOver(paperItems[1]);
 
     // Simulate drag end
-    fireEvent.dragEnd(listItems[0]);
+    fireEvent.dragEnd(paperItems[0]);
 
     // Columns should have been reordered
     expect(screen.getByText('Configure Columns')).toBeInTheDocument();
@@ -269,13 +270,13 @@ describe('ColumnConfigDialog', () => {
       />
     );
 
-    const listItems = screen.getAllByRole('listitem');
+    const paperItems = document.querySelectorAll('.mantine-Paper-root[draggable="true"]');
 
     // Simulate drag start on first item
-    fireEvent.dragStart(listItems[0]);
+    fireEvent.dragStart(paperItems[0]);
 
     // Simulate drag over same item (should do nothing)
-    fireEvent.dragOver(listItems[0]);
+    fireEvent.dragOver(paperItems[0]);
 
     // Columns should remain unchanged
     expect(screen.getByText('Configure Columns')).toBeInTheDocument();
@@ -292,13 +293,13 @@ describe('ColumnConfigDialog', () => {
       />
     );
 
-    const listItems = screen.getAllByRole('listitem');
+    const paperItems = document.querySelectorAll('.mantine-Paper-root[draggable="true"]');
 
     // Simulate drag start
-    fireEvent.dragStart(listItems[0]);
+    fireEvent.dragStart(paperItems[0]);
 
     // Simulate drag end
-    fireEvent.dragEnd(listItems[0]);
+    fireEvent.dragEnd(paperItems[0]);
 
     // State should be cleared
     expect(screen.getByText('Configure Columns')).toBeInTheDocument();
@@ -315,22 +316,16 @@ describe('ColumnConfigDialog', () => {
       />
     );
 
-    // Find a non-essential column's visibility icon button
-    const visibilityIcons = screen.getAllByTestId('VisibilityIcon');
+    // Find ActionIcon buttons with title attributes (visibility toggles)
+    const visibilityButtons = screen.getAllByTitle(/show column|hide column/i);
 
-    // Find the one that's not disabled (not essential)
-    const scoreVisibilityButton = visibilityIcons.find((icon) => {
-      const button = icon.closest('button');
-      return button && !button.hasAttribute('disabled');
-    });
+    // Find one that's not disabled
+    const enabledButton = visibilityButtons.find((btn) => !btn.hasAttribute('disabled'));
 
-    if (scoreVisibilityButton) {
-      const button = scoreVisibilityButton.closest('button');
-      if (button) {
-        fireEvent.click(button);
-        // Visibility should toggle
-        expect(screen.getByText('Configure Columns')).toBeInTheDocument();
-      }
+    if (enabledButton) {
+      fireEvent.click(enabledButton);
+      // Visibility should toggle
+      expect(screen.getByText('Configure Columns')).toBeInTheDocument();
     }
   });
 
@@ -368,8 +363,8 @@ describe('ColumnConfigDialog', () => {
       />
     );
 
-    // Each list item should have a drag indicator
-    const dragIndicators = screen.getAllByTestId('DragIndicatorIcon');
+    // Mantine Paper items with drag icons (Tabler icons are SVGs with class 'tabler-icon')
+    const dragIndicators = document.querySelectorAll('.tabler-icon-grip-vertical');
     expect(dragIndicators.length).toBe(mockColumns.length);
   });
 
@@ -384,13 +379,13 @@ describe('ColumnConfigDialog', () => {
       />
     );
 
-    const listItems = screen.getAllByRole('listitem');
+    const paperItems = document.querySelectorAll('.mantine-Paper-root[draggable="true"]');
 
     // Start dragging
-    fireEvent.dragStart(listItems[0]);
+    fireEvent.dragStart(paperItems[0]);
 
-    // The item should have reduced opacity (this is handled by React state)
-    expect(listItems[0]).toHaveAttribute('draggable', 'true');
+    // The item should be draggable (opacity is handled by inline style)
+    expect(paperItems[0]).toHaveAttribute('draggable', 'true');
   });
 
   it('resets local state when dialog closes', () => {

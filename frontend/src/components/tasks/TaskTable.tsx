@@ -1,26 +1,15 @@
 import React, { useMemo, useState } from 'react';
+import { Table, Checkbox, ActionIcon, Tooltip, Badge, Box, Group, Text } from '@mantine/core';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Checkbox,
-  IconButton,
-  Tooltip,
-  Chip,
-  Box,
-  TableSortLabel,
-} from '@mui/material';
-import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  CheckCircle as CheckCircleIcon,
-  RadioButtonUnchecked as RadioButtonUncheckedIcon,
-  Settings as SettingsIcon,
-} from '@mui/icons-material';
+  IconEdit,
+  IconTrash,
+  IconCircleCheck,
+  IconCircle,
+  IconSettings,
+  IconChevronUp,
+  IconChevronDown,
+  IconStar,
+} from '@tabler/icons-react';
 import type { Task } from '../../types/models';
 import { useTaskStore } from '../../store/taskStore';
 import PriorityChip from '../common/PriorityChip';
@@ -223,7 +212,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
           <Checkbox
             checked={selectedTasks.includes(task.id)}
             onChange={() => onSelectTask?.(task.id)}
-            size="small"
+            size="sm"
           />
         );
 
@@ -232,26 +221,32 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'title':
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Group gap="xs" wrap="nowrap">
             {task.is_complete ? (
-              <CheckCircleIcon color="success" fontSize="small" />
+              <IconCircleCheck size={16} color="var(--mantine-color-green-6)" />
             ) : (
-              <RadioButtonUncheckedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+              <IconCircle size={16} color="var(--mantine-color-gray-5)" />
             )}
-            <span style={{ textDecoration: task.is_complete ? 'line-through' : 'none' }}>
+            <Text
+              size="sm"
+              style={{ textDecoration: task.is_complete ? 'line-through' : 'none' }}
+            >
               {task.title}
-            </span>
-          </Box>
+            </Text>
+          </Group>
         );
 
       case 'score':
         return (
-          <Chip
-            label={`${task.score} XP`}
-            size="small"
-            icon={<span>⭐</span>}
-            sx={{ fontWeight: 'bold' }}
-          />
+          <Badge
+            leftSection={<IconStar size={12} />}
+            size="sm"
+            variant="outline"
+            color="grape"
+            fw={600}
+          >
+            {task.score} XP
+          </Badge>
         );
 
       case 'priority':
@@ -265,36 +260,51 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'due_date':
         return task.due_date ? (
-          <span style={{ color: new Date(task.due_date) < new Date() ? '#f44336' : 'inherit' }}>
+          <Text
+            size="sm"
+            c={new Date(task.due_date) < new Date() ? 'red' : undefined}
+          >
             {format(new Date(task.due_date), 'MMM d, yyyy')}
-          </span>
+          </Text>
         ) : (
           '-'
         );
 
       case 'creation_date':
-        return format(new Date(task.creation_date), 'MMM d, yyyy');
+        return <Text size="sm">{format(new Date(task.creation_date), 'MMM d, yyyy')}</Text>;
 
       case 'project':
-        return task.project ? <Chip label={task.project} size="small" variant="outlined" /> : '-';
+        return task.project ? (
+          <Badge size="sm" variant="outline">
+            {task.project}
+          </Badge>
+        ) : (
+          '-'
+        );
 
       case 'tags':
         return task.tags.length > 0 ? (
-          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          <Group gap={4} wrap="wrap">
             {task.tags.slice(0, 2).map((tag) => (
-              <Chip key={tag} label={tag} size="small" />
+              <Badge key={tag} size="sm">
+                {tag}
+              </Badge>
             ))}
             {task.tags.length > 2 && (
-              <Chip label={`+${task.tags.length - 2}`} size="small" variant="outlined" />
+              <Badge size="sm" variant="outline">
+                +{task.tags.length - 2}
+              </Badge>
             )}
-          </Box>
+          </Group>
         ) : (
           '-'
         );
 
       case 'streak':
         return task.is_habit && task.streak_current > 0 ? (
-          <Chip label={`🔥 ${task.streak_current}`} size="small" color="warning" />
+          <Badge size="sm" color="orange">
+            🔥 {task.streak_current}
+          </Badge>
         ) : (
           '-'
         );
@@ -307,27 +317,30 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'status':
         return task.status ? (
-          <Chip
-            label={task.status.replace('_', ' ')}
-            size="small"
+          <Badge
+            size="sm"
             color={
               task.status === 'in_progress'
-                ? 'primary'
+                ? 'blue'
                 : task.status === 'blocked'
-                ? 'error'
-                : 'default'
+                ? 'red'
+                : 'gray'
             }
-          />
+          >
+            {task.status.replace('_', ' ')}
+          </Badge>
         ) : (
           '-'
         );
 
       case 'actions':
         return (
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Tooltip title={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}>
-              <IconButton
-                size="small"
+          <Group gap={4}>
+            <Tooltip label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}>
+              <ActionIcon
+                size="sm"
+                variant="subtle"
+                aria-label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
                 onClick={() => {
                   if (task.is_complete) {
                     uncompleteTask(task.id);
@@ -337,24 +350,31 @@ const TaskTable: React.FC<TaskTableProps> = ({
                   onComplete(task.id);
                 }}
               >
-                {task.is_complete ? (
-                  <RadioButtonUncheckedIcon fontSize="small" />
-                ) : (
-                  <CheckCircleIcon fontSize="small" />
-                )}
-              </IconButton>
+                {task.is_complete ? <IconCircle size={16} /> : <IconCircleCheck size={16} />}
+              </ActionIcon>
             </Tooltip>
-            <Tooltip title="Edit">
-              <IconButton size="small" onClick={() => onEdit(task)}>
-                <EditIcon fontSize="small" />
-              </IconButton>
+            <Tooltip label="Edit">
+              <ActionIcon
+                size="sm"
+                variant="subtle"
+                aria-label="Edit"
+                onClick={() => onEdit(task)}
+              >
+                <IconEdit size={16} />
+              </ActionIcon>
             </Tooltip>
-            <Tooltip title="Delete">
-              <IconButton size="small" onClick={() => onDelete(task.id)} color="error">
-                <DeleteIcon fontSize="small" />
-              </IconButton>
+            <Tooltip label="Delete">
+              <ActionIcon
+                size="sm"
+                variant="subtle"
+                color="red"
+                aria-label="Delete"
+                onClick={() => onDelete(task.id)}
+              >
+                <IconTrash size={16} />
+              </ActionIcon>
             </Tooltip>
-          </Box>
+          </Group>
         );
 
       default:
@@ -376,70 +396,77 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
   return (
     <>
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-        <Tooltip title="Configure Columns">
-          <IconButton onClick={() => setConfigDialogOpen(true)}>
-            <SettingsIcon />
-          </IconButton>
+      <Box mb="md" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Tooltip label="Configure Columns">
+          <ActionIcon
+            variant="subtle"
+            aria-label="Configure Columns"
+            onClick={() => setConfigDialogOpen(true)}
+          >
+            <IconSettings size={20} />
+          </ActionIcon>
         </Tooltip>
       </Box>
 
-      <TableContainer component={Paper}>
-        <Table size="small" stickyHeader>
-          <TableHead>
-            <TableRow>
+      <Table.ScrollContainer minWidth={800}>
+        <Table striped highlightOnHover withTableBorder withColumnBorders>
+          <Table.Thead>
+            <Table.Tr>
               {visibleColumns.map((col) => (
-                <TableCell
+                <Table.Th
                   key={col.id}
-                  style={{ width: col.width, minWidth: col.minWidth }}
-                  sx={{ fontWeight: 'bold' }}
+                  style={{ width: col.width, minWidth: col.minWidth, fontWeight: 600 }}
                 >
                   {col.id === 'select' && onSelectAll ? (
                     <Checkbox
                       checked={allSelected}
                       indeterminate={someSelected}
-                      onChange={(e) => onSelectAll(e.target.checked)}
-                      size="small"
+                      onChange={(e) => onSelectAll(e.currentTarget.checked)}
+                      size="sm"
                     />
                   ) : col.sortable ? (
-                    <TableSortLabel
-                      active={getSortLabel(col.id)?.active}
-                      direction={getSortLabel(col.id)?.direction}
+                    <Group
+                      gap={4}
+                      wrap="nowrap"
+                      style={{ cursor: 'pointer' }}
                       onClick={() => handleSort(col.id)}
                     >
-                      {col.label}
-                      {getSortLabel(col.id)?.index && (
-                        <Box
-                          component="span"
-                          sx={{
-                            ml: 0.5,
-                            fontSize: '0.75rem',
-                            color: 'primary.main',
-                            fontWeight: 'bold',
-                          }}
-                        >
-                          {getSortLabel(col.id)?.index}
-                        </Box>
+                      <Text size="sm" fw={600}>
+                        {col.label}
+                      </Text>
+                      {getSortLabel(col.id)?.active && (
+                        <>
+                          {getSortLabel(col.id)?.direction === 'asc' ? (
+                            <IconChevronUp size={14} />
+                          ) : (
+                            <IconChevronDown size={14} />
+                          )}
+                          {getSortLabel(col.id)?.index && (
+                            <Text size="xs" c="blue" fw={700}>
+                              {getSortLabel(col.id)?.index}
+                            </Text>
+                          )}
+                        </>
                       )}
-                    </TableSortLabel>
+                    </Group>
                   ) : (
                     col.label
                   )}
-                </TableCell>
+                </Table.Th>
               ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {sortedTasks.map((task) => (
-              <TableRow key={task.id} hover>
+              <Table.Tr key={task.id}>
                 {visibleColumns.map((col) => (
-                  <TableCell key={col.id}>{renderCellContent(task, col.id)}</TableCell>
+                  <Table.Td key={col.id}>{renderCellContent(task, col.id)}</Table.Td>
                 ))}
-              </TableRow>
+              </Table.Tr>
             ))}
-          </TableBody>
+          </Table.Tbody>
         </Table>
-      </TableContainer>
+      </Table.ScrollContainer>
 
       <ColumnConfigDialog
         open={configDialogOpen}

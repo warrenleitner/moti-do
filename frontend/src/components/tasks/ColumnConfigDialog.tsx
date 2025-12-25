@@ -1,26 +1,22 @@
 import React, { useState } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Modal,
   Button,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
+  Stack,
+  Group,
   Checkbox,
-  IconButton,
+  ActionIcon,
   Box,
-  Typography,
+  Text,
   Divider,
-} from '@mui/material';
+  Paper,
+} from '@mantine/core';
 import {
-  DragIndicator as DragIndicatorIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-  RestartAlt as RestartAltIcon,
-} from '@mui/icons-material';
+  IconGripVertical,
+  IconEye,
+  IconEyeOff,
+  IconRefresh,
+} from '@tabler/icons-react';
 import type { ColumnConfig } from './TaskTable';
 
 interface ColumnConfigDialogProps {
@@ -103,111 +99,127 @@ const ColumnConfigDialog: React.FC<ColumnConfigDialogProps> = ({
   const visibleCount = localColumns.filter((col) => col.visible).length;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>Configure Columns</span>
+    <Modal
+      opened={open}
+      onClose={onClose}
+      title="Configure Columns"
+      size="md"
+      transitionProps={{ duration: 0 }}
+    >
+      <Stack gap="md">
+        <Group justify="flex-end">
           <Button
-            startIcon={<RestartAltIcon />}
+            leftSection={<IconRefresh size={16} />}
             onClick={handleReset}
-            size="small"
-            color="secondary"
+            size="xs"
+            variant="subtle"
           >
             Reset to Default
           </Button>
-        </Box>
-      </DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        </Group>
+
+        <Text size="sm" c="dimmed">
           Drag columns to reorder. Click the eye icon to show/hide columns.
           <br />
           {visibleCount} of {localColumns.length} columns visible
-        </Typography>
+        </Text>
 
-        <Divider sx={{ mb: 2 }} />
+        <Divider />
 
-        <List>
+        <Stack gap="xs">
           {localColumns.map((col, index) => {
             const isEssential = !canToggle(col);
 
             return (
-              <ListItem
+              <Paper
                 key={col.id}
+                p="sm"
+                withBorder
                 draggable
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragEnd={handleDragEnd}
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  mb: 1,
+                style={{
                   cursor: 'grab',
                   opacity: draggedIndex === index ? 0.5 : 1,
-                  backgroundColor: col.visible ? 'background.paper' : 'action.hover',
-                  '&:hover': {
-                    backgroundColor: col.visible ? 'action.hover' : 'action.selected',
-                  },
+                  backgroundColor: col.visible ? undefined : 'var(--mantine-color-gray-1)',
                 }}
-                secondaryAction={
-                  <IconButton
-                    edge="end"
-                    onClick={() => handleToggleVisible(col.id)}
-                    disabled={isEssential}
-                    title={
-                      isEssential
-                        ? 'This column cannot be hidden'
-                        : col.visible
-                        ? 'Hide column'
-                        : 'Show column'
-                    }
-                  >
-                    {col.visible ? (
-                      <VisibilityIcon color={isEssential ? 'disabled' : 'primary'} />
-                    ) : (
-                      <VisibilityOffIcon color="disabled" />
-                    )}
-                  </IconButton>
-                }
               >
-                <ListItemIcon>
-                  <DragIndicatorIcon sx={{ cursor: 'grab' }} />
-                </ListItemIcon>
-                <ListItemText
-                  primary={col.label || col.id}
-                  secondary={
-                    isEssential ? 'Essential column (always visible)' : col.sortable ? 'Sortable' : ''
-                  }
-                  sx={{
-                    opacity: col.visible ? 1 : 0.5,
-                  }}
-                />
-                <Checkbox
-                  checked={col.visible}
-                  disabled={isEssential}
-                  onChange={() => handleToggleVisible(col.id)}
-                  sx={{ ml: 2 }}
-                />
-              </ListItem>
+                <Group justify="space-between" wrap="nowrap">
+                  <Group gap="sm" wrap="nowrap">
+                    <IconGripVertical
+                      size={20}
+                      style={{ cursor: 'grab', color: 'var(--mantine-color-gray-5)' }}
+                    />
+                    <Box style={{ opacity: col.visible ? 1 : 0.5 }}>
+                      <Text size="sm" fw={500}>
+                        {col.label || col.id}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        {isEssential
+                          ? 'Essential column (always visible)'
+                          : col.sortable
+                          ? 'Sortable'
+                          : ''}
+                      </Text>
+                    </Box>
+                  </Group>
+
+                  <Group gap="xs" wrap="nowrap">
+                    <Checkbox
+                      checked={col.visible}
+                      disabled={isEssential}
+                      onChange={() => handleToggleVisible(col.id)}
+                      size="sm"
+                    />
+                    <ActionIcon
+                      variant="subtle"
+                      onClick={() => handleToggleVisible(col.id)}
+                      disabled={isEssential}
+                      title={
+                        isEssential
+                          ? 'This column cannot be hidden'
+                          : col.visible
+                          ? 'Hide column'
+                          : 'Show column'
+                      }
+                    >
+                      {col.visible ? (
+                        <IconEye
+                          size={18}
+                          color={
+                            isEssential
+                              ? 'var(--mantine-color-gray-4)'
+                              : 'var(--mantine-color-blue-6)'
+                          }
+                        />
+                      ) : (
+                        <IconEyeOff size={18} color="var(--mantine-color-gray-4)" />
+                      )}
+                    </ActionIcon>
+                  </Group>
+                </Group>
+              </Paper>
             );
           })}
-        </List>
+        </Stack>
 
-        <Box sx={{ mt: 3, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-          <Typography variant="body2" color="info.contrastText">
+        <Paper p="sm" bg="blue.0" radius="sm">
+          <Text size="sm" c="blue.9">
             <strong>Tip:</strong> You can sort by multiple columns! Click column headers in the
             table to add them to the sort order. Click again to toggle ascending/descending, or a
             third time to remove from sort.
-          </Typography>
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSave} variant="contained" color="primary">
-          Save Changes
-        </Button>
-      </DialogActions>
-    </Dialog>
+          </Text>
+        </Paper>
+
+        <Group justify="flex-end" gap="sm">
+          <Button variant="subtle" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave}>Save Changes</Button>
+        </Group>
+      </Stack>
+    </Modal>
   );
 };
 
