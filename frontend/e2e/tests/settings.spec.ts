@@ -65,16 +65,15 @@ test.describe('Settings Page', () => {
     test('should toggle vacation mode on', async ({ page }) => {
       await page.goto('/settings');
 
-      // Find vacation mode toggle - MUI Switch gets name from FormControlLabel
-      // The label starts with "Enable vacation mode" or "Vacation mode is active"
-      const vacationToggle = page.getByRole('switch');
-      await expect(vacationToggle).toBeVisible();
+      // Find vacation mode toggle - Mantine Switch has hidden input but accessible label
+      // Click on the label text instead of the hidden input
+      const vacationToggle = page.getByRole('switch', { name: 'Vacation Mode' });
 
       // Get initial state
       const initialState = await vacationToggle.isChecked();
 
-      // Toggle vacation mode
-      await vacationToggle.click();
+      // Toggle vacation mode (use force since Mantine Switch input is visually hidden)
+      await vacationToggle.click({ force: true });
 
       // Wait for API call and state update
       await page.waitForTimeout(500);
@@ -84,7 +83,7 @@ test.describe('Settings Page', () => {
       expect(newState).not.toBe(initialState);
 
       // Toggle back to original state
-      await vacationToggle.click();
+      await vacationToggle.click({ force: true });
       await page.waitForTimeout(500);
     });
 
@@ -94,12 +93,11 @@ test.describe('Settings Page', () => {
       // Check for vacation mode heading
       await expect(page.getByRole('heading', { name: 'Vacation Mode' })).toBeVisible();
 
-      // Check for vacation mode switch and label using the form control
-      const vacationSwitch = page.getByRole('switch');
-      await expect(vacationSwitch).toBeVisible();
+      // Check for vacation mode switch by aria-label (Mantine Switch input is hidden)
+      const vacationSwitch = page.getByRole('switch', { name: 'Vacation Mode' });
+      await expect(vacationSwitch).toBeAttached();
 
-      // Verify the vacation mode toggle or label is present
-      // The label may show "Enable vacation mode" or "Disable vacation mode" depending on state
+      // Verify the vacation mode label text is present
       const vacationLabel = page.getByText(/vacation mode/i).first();
       await expect(vacationLabel).toBeVisible();
     });
@@ -174,7 +172,7 @@ test.describe('Settings Page', () => {
       await expect(xpHistoryHeading).toBeVisible();
 
       // Get the XP History card (parent container of the heading)
-      const xpHistoryCard = page.locator('.MuiCard-root').filter({ has: xpHistoryHeading });
+      const xpHistoryCard = page.locator('.mantine-Card-root').filter({ has: xpHistoryHeading });
 
       // Wait for loading to complete
       await page.waitForTimeout(500);
@@ -254,7 +252,7 @@ test.describe('Settings Page', () => {
 
       // Fill in tag name (first textbox in the form row - Tags section)
       const tagName = `TestTag${Date.now()}`;
-      const tagsSection = page.locator('.MuiCard-root').filter({ hasText: 'Tags' });
+      const tagsSection = page.locator('.mantine-Card-root').filter({ hasText: 'Tags' });
       const nameInput = tagsSection.getByRole('textbox').first();
       await nameInput.fill(tagName);
 
@@ -314,7 +312,7 @@ test.describe('Settings Page', () => {
 
       // Fill in project name (first textbox in the form row - Projects section)
       const projectName = `TestProject${Date.now()}`;
-      const projectsSection = page.locator('.MuiCard-root').filter({ hasText: 'Projects' });
+      const projectsSection = page.locator('.mantine-Card-root').filter({ hasText: 'Projects' });
       const nameInput = projectsSection.getByRole('textbox').first();
       await nameInput.fill(projectName);
 

@@ -13,8 +13,9 @@ test.describe('Authentication', () => {
 
       // Verify page elements
       await expect(loginPage.heading).toBeVisible();
-      await expect(loginPage.loginTab).toBeVisible();
-      await expect(loginPage.registerTab).toBeVisible();
+      // Mantine SegmentedControl uses hidden radio inputs
+      await expect(loginPage.loginTab).toBeAttached();
+      await expect(loginPage.registerTab).toBeAttached();
       await expect(loginPage.usernameInput).toBeVisible();
       await expect(loginPage.passwordInput).toBeVisible();
       await expect(loginPage.submitButton).toBeVisible();

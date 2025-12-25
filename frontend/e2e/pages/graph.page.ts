@@ -28,8 +28,8 @@ export class GraphPage {
     this.graphContainer = page.locator('.react-flow');
     // Empty state when no dependencies exist
     this.emptyStateMessage = page.getByText('No Dependencies');
-    // MUI Drawer for task details (GraphPage.tsx still uses MUI)
-    this.taskDrawer = page.locator('.MuiDrawer-root.MuiDrawer-anchorRight:not([aria-hidden="true"])');
+    // Mantine Drawer for task details
+    this.taskDrawer = page.locator('.mantine-Drawer-content');
     this.snackbar = page.getByRole('alert');
 
     // Direction toggle - Mantine SegmentedControl renders as labels, use text locators
@@ -131,8 +131,8 @@ export class GraphPage {
    * Get the task title shown in the drawer.
    */
   async getDrawerTaskTitle(): Promise<string | null> {
-    // MUI Typography component (GraphPage.tsx still uses MUI)
-    const titleElement = this.taskDrawer.locator('.MuiTypography-root').first();
+    // Mantine Title component in drawer header
+    const titleElement = this.taskDrawer.getByRole('heading').first();
     return await titleElement.textContent();
   }
 
@@ -208,7 +208,7 @@ export class GraphPage {
   async getDependenciesInDrawer(): Promise<string[]> {
     const dependenciesSection = this.taskDrawer.getByText('Dependencies').locator('..');
     // MUI Card component (GraphPage.tsx still uses MUI)
-    const cards = dependenciesSection.locator('.MuiCard-root');
+    const cards = dependenciesSection.locator('.mantine-Card-root');
     const count = await cards.count();
     const titles: string[] = [];
     for (let i = 0; i < count; i++) {

@@ -32,12 +32,13 @@ export class TasksPage {
     // Use exact: true to avoid matching "No tasks found" heading
     this.heading = page.getByRole('heading', { name: 'Tasks', exact: true });
     this.newTaskButton = page.getByRole('button', { name: 'New Task' });
-    // aria-label attributes from the ToggleButton components
-    this.listViewButton = page.getByRole('button', { name: 'list view' });
-    this.tableViewButton = page.getByRole('button', { name: 'table view' });
+    // Mantine SegmentedControl uses radio inputs with VisuallyHidden labels
+    this.listViewButton = page.getByRole('radio', { name: 'List view' });
+    this.tableViewButton = page.getByRole('radio', { name: 'Table view' });
     this.taskFormDialog = page.getByRole('dialog');
     this.deleteConfirmDialog = page.getByRole('dialog').filter({ hasText: 'Delete Task' });
-    this.snackbar = page.getByRole('alert');
+    // Mantine notifications can stack, use first() for most recent
+    this.snackbar = page.getByRole('alert').first();
 
     // Filter controls - Mantine Select components
     // Use getByRole('textbox') to specifically target the input, not the dropdown
@@ -219,14 +220,19 @@ export class TasksPage {
    * Switch to list view.
    */
   async switchToListView(): Promise<void> {
-    await this.listViewButton.click();
+    // Mantine SegmentedControl has hidden radio inputs, use force
+    await this.listViewButton.click({ force: true });
   }
 
   /**
    * Switch to table view.
    */
   async switchToTableView(): Promise<void> {
-    await this.tableViewButton.click();
+    // Click the label element for table view (second label in the segmented control)
+    const segmentedControl = this.page.locator('[aria-label="view mode"]');
+    await segmentedControl.scrollIntoViewIfNeeded();
+    // Click the second label (table view)
+    await segmentedControl.locator('.mantine-SegmentedControl-label').nth(1).click();
   }
 
   /**

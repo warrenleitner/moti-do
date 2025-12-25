@@ -63,7 +63,8 @@ export class LoginPage {
    * Switch to register mode.
    */
   async switchToRegister(): Promise<void> {
-    await this.registerTab.click();
+    // Mantine SegmentedControl has hidden radio inputs, use force
+    await this.registerTab.click({ force: true });
     await this.confirmPasswordInput.waitFor({ timeout: 5000 });
   }
 
@@ -71,7 +72,8 @@ export class LoginPage {
    * Switch to login mode.
    */
   async switchToLogin(): Promise<void> {
-    await this.loginTab.click();
+    // Mantine SegmentedControl has hidden radio inputs, use force
+    await this.loginTab.click({ force: true });
   }
 
   /**
