@@ -473,6 +473,11 @@ export const userApi = {
     const response = await apiClient.put<ScoringConfig>('/user/scoring-config', config);
     return response.data;
   },
+
+  resetScoringConfig: async (): Promise<ScoringConfig> => {
+    const response = await apiClient.post<ScoringConfig>('/user/scoring-config/reset');
+    return response.data;
+  },
 };
 /* v8 ignore stop */
 

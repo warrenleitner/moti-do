@@ -20,17 +20,17 @@ def get_scoring_config_path() -> str:
     return os.path.join(data_dir, "scoring_config.json")
 
 
-# pylint: disable=too-many-branches,too-many-statements
-def load_scoring_config() -> Dict[str, Any]:
+def get_default_scoring_config() -> Dict[str, Any]:
     """
-    Loads the scoring configuration from the scoring_config.json file.
-    Returns default config if the file doesn't exist.
+    Returns the default scoring configuration.
 
-    Raises:
-        ValueError: If the config file is invalid or missing required fields.
+    This provides the canonical default values used when no config file exists
+    or when the user resets to defaults.
+
+    Returns:
+        Dictionary containing all default scoring configuration values.
     """
-    config_path = get_scoring_config_path()
-    default_config: Dict[str, Any] = {
+    return {
         "base_score": 10,
         "field_presence_bonus": {"text_description": 5},
         "difficulty_multiplier": {
@@ -86,6 +86,19 @@ def load_scoring_config() -> Dict[str, Any]:
             "next_up_threshold_days": 3,
         },
     }
+
+
+# pylint: disable=too-many-branches,too-many-statements
+def load_scoring_config() -> Dict[str, Any]:
+    """
+    Loads the scoring configuration from the scoring_config.json file.
+    Returns default config if the file doesn't exist.
+
+    Raises:
+        ValueError: If the config file is invalid or missing required fields.
+    """
+    config_path = get_scoring_config_path()
+    default_config = get_default_scoring_config()
 
     if not os.path.exists(config_path):
         # Create default config if file doesn't exist

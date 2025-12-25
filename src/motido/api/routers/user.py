@@ -577,6 +577,38 @@ async def get_scoring_config(  # pragma: no cover
     )
 
 
+@router.post("/scoring-config/reset", response_model=ScoringConfigResponse)
+async def reset_scoring_config(  # pragma: no cover
+    _user: CurrentUser,
+) -> ScoringConfigResponse:
+    """
+    Reset the scoring configuration to default values.
+
+    Restores all scoring weights and multipliers to their original defaults.
+    """
+    from motido.core.scoring import get_default_scoring_config, save_scoring_config
+
+    config = get_default_scoring_config()
+    save_scoring_config(config)
+
+    return ScoringConfigResponse(
+        base_score=config.get("base_score", 10),
+        field_presence_bonus=config.get(
+            "field_presence_bonus", {"text_description": 5}
+        ),
+        difficulty_multiplier=config.get("difficulty_multiplier", {}),
+        duration_multiplier=config.get("duration_multiplier", {}),
+        priority_multiplier=config.get("priority_multiplier", {}),
+        age_factor=config.get("age_factor", {}),
+        daily_penalty=config.get("daily_penalty", {}),
+        due_date_proximity=config.get("due_date_proximity", {}),
+        start_date_aging=config.get("start_date_aging", {}),
+        dependency_chain=config.get("dependency_chain", {}),
+        habit_streak_bonus=config.get("habit_streak_bonus", {}),
+        status_bumps=config.get("status_bumps", {}),
+    )
+
+
 @router.put("/scoring-config", response_model=ScoringConfigResponse)
 async def update_scoring_config(  # pragma: no cover
     update_data: ScoringConfigUpdate,
