@@ -83,4 +83,28 @@ describe('DateDisplay', () => {
     const { container } = render(<DateDisplay date={toLocalDateString(testDate)} label="Due" showRelative={false} />);
     expect(container.textContent).toMatch(/6\/15\/2025/);
   });
+
+  it('handles ISO datetime format (with T and timezone)', () => {
+    const today = new Date();
+    // Create an ISO datetime string for today
+    const isoDate = `${toLocalDateString(today)}T10:30:00.000Z`;
+    const { container } = render(<DateDisplay date={isoDate} />);
+    expect(container.textContent).toContain('Today');
+  });
+
+  it('handles ISO datetime format for future dates', () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const isoDate = `${toLocalDateString(tomorrow)}T23:59:59.999Z`;
+    const { container } = render(<DateDisplay date={isoDate} />);
+    expect(container.textContent).toContain('Tomorrow');
+  });
+
+  it('handles ISO datetime format for past dates', () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isoDate = `${toLocalDateString(yesterday)}T00:00:00.000Z`;
+    const { container } = render(<DateDisplay date={isoDate} />);
+    expect(container.textContent).toContain('Yesterday');
+  });
 });

@@ -59,6 +59,7 @@ const defaultTask: Partial<Task> = {
 /* v8 ignore start */
 export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps) {
   // Initialize form data based on task prop
+  // Note: Parent must use key={task?.id ?? 'new'} to reset state when task changes
   const getInitialFormData = () => (task ? { ...task } : { ...defaultTask });
   const [formData, setFormData] = useState<Partial<Task>>(getInitialFormData);
   const [newTag, setNewTag] = useState('');

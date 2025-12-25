@@ -44,9 +44,11 @@ import {
   Add as AddIcon,
   Check as CheckIcon,
   Close as CloseIcon,
+  CalendarMonth as CalendarIcon,
+  CardGiftcard as RewardIcon,
 } from '@mui/icons-material';
 import { dataApi, authApi, userApi, type XPTransaction, type TagDefinition, type ProjectDefinition } from '../services/api';
-import { useUserStore, useSystemStatus } from '../store/userStore';
+import { useUserStore, useSystemStatus, useUserStats } from '../store/userStore';
 
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
@@ -60,10 +62,19 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toggleVacation } = useUserStore();
+  const { toggleVacation, advanceDate, withdrawXP } = useUserStore();
   const systemStatus = useSystemStatus();
+  const stats = useUserStats();
   const [xpHistory, setXPHistory] = useState<XPTransaction[]>([]);
   const [loadingXP, setLoadingXP] = useState(false);
+
+  // Advance Date state
+  const [advancingDate, setAdvancingDate] = useState(false);
+
+  // XP Withdrawal state
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawDescription, setWithdrawDescription] = useState('');
+  const [withdrawing, setWithdrawing] = useState(false);
 
   // Tags state
   const [tags, setTags] = useState<TagDefinition[]>([]);
@@ -255,6 +266,58 @@ export default function SettingsPage() {
       setMessage({ type: 'error', text: 'Failed to toggle vacation mode' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAdvanceDate = async () => {
+    if (!systemStatus?.pending_days || systemStatus.pending_days <= 0) return;
+
+    setAdvancingDate(true);
+    setMessage(null);
+
+    try {
+      await advanceDate({ days: systemStatus.pending_days });
+      setMessage({
+        type: 'success',
+        text: `Successfully processed ${systemStatus.pending_days} day${systemStatus.pending_days > 1 ? 's' : ''}! Penalties have been applied.`,
+      });
+      // Refetch XP history to show new penalty transactions
+      const transactions = await userApi.getXPLog(10);
+      setXPHistory(transactions);
+    } catch (error) {
+      console.error('Advance date error:', error);
+      setMessage({ type: 'error', text: 'Failed to advance date' });
+    } finally {
+      setAdvancingDate(false);
+    }
+  };
+
+  const handleWithdrawXP = async () => {
+    const amount = parseInt(withdrawAmount, 10);
+    if (isNaN(amount) || amount <= 0) {
+      setMessage({ type: 'error', text: 'Please enter a valid amount' });
+      return;
+    }
+
+    setWithdrawing(true);
+    setMessage(null);
+
+    try {
+      await withdrawXP(amount, withdrawDescription || undefined);
+      setMessage({
+        type: 'success',
+        text: `Withdrew ${amount} XP${withdrawDescription ? ` for "${withdrawDescription}"` : ''}!`,
+      });
+      // Reset form and refetch XP history
+      setWithdrawAmount('');
+      setWithdrawDescription('');
+      const transactions = await userApi.getXPLog(10);
+      setXPHistory(transactions);
+    } catch (error) {
+      console.error('Withdraw XP error:', error);
+      setMessage({ type: 'error', text: 'Failed to withdraw XP' });
+    } finally {
+      setWithdrawing(false);
     }
   };
 
@@ -830,6 +893,102 @@ export default function SettingsPage() {
               </Table>
             </TableContainer>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Date Processing */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <CalendarIcon color="primary" />
+            <Typography variant="h6">Date Processing</Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Process pending days to apply overdue penalties and generate recurring tasks.
+          </Typography>
+
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              <strong>Today:</strong> {new Date().toLocaleDateString()}
+            </Typography>
+            <Typography variant="body2">
+              <strong>Last Processed:</strong> {systemStatus?.last_processed_date || 'Never'}
+            </Typography>
+            <Typography variant="body2" color={systemStatus?.pending_days && systemStatus.pending_days > 0 ? 'error.main' : 'text.secondary'}>
+              <strong>Days Behind:</strong> {systemStatus?.pending_days ?? 0} day{(systemStatus?.pending_days ?? 0) !== 1 ? 's' : ''}
+            </Typography>
+          </Box>
+
+          {systemStatus?.pending_days && systemStatus.pending_days > 0 ? (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAdvanceDate}
+              disabled={advancingDate || loading}
+              startIcon={advancingDate ? <CircularProgress size={20} color="inherit" /> : <CalendarIcon />}
+            >
+              Process {systemStatus.pending_days} Pending Day{systemStatus.pending_days > 1 ? 's' : ''}
+            </Button>
+          ) : (
+            <Alert severity="success" sx={{ mt: 1 }}>
+              All caught up! No pending days to process.
+            </Alert>
+          )}
+
+          {systemStatus?.pending_days && systemStatus.pending_days > 0 && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Processing will apply penalties for incomplete overdue tasks.
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* XP Withdrawal */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <RewardIcon color="secondary" />
+            <Typography variant="h6">Spend XP</Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Spend your earned XP on rewards. Current balance: <strong>{stats?.total_xp ?? 0} XP</strong>
+          </Typography>
+
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <TextField
+              label="Amount"
+              type="number"
+              size="small"
+              value={withdrawAmount}
+              onChange={(e) => setWithdrawAmount(e.target.value)}
+              sx={{ width: 120 }}
+              InputProps={{
+                inputProps: { min: 1 },
+                endAdornment: <InputAdornment position="end">XP</InputAdornment>,
+              }}
+            />
+            <TextField
+              label="Reward Description (optional)"
+              size="small"
+              value={withdrawDescription}
+              onChange={(e) => setWithdrawDescription(e.target.value)}
+              placeholder="e.g., Movie night"
+              sx={{ flex: 1, minWidth: 200 }}
+            />
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={handleWithdrawXP}
+              disabled={withdrawing || loading || !withdrawAmount}
+              startIcon={withdrawing ? <CircularProgress size={20} color="inherit" /> : <RewardIcon />}
+            >
+              Withdraw
+            </Button>
+          </Box>
+
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+            You can go into XP debt if you withdraw more than your current balance.
+          </Typography>
         </CardContent>
       </Card>
 

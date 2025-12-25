@@ -13,6 +13,10 @@ import {
   Chip,
   Box,
   TableSortLabel,
+  Toolbar,
+  Typography,
+  Button,
+  alpha,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -68,6 +72,8 @@ interface TaskTableProps {
   selectedTasks?: string[];
   onSelectTask?: (taskId: string) => void;
   onSelectAll?: (selected: boolean) => void;
+  onBulkComplete?: (taskIds: string[]) => void;
+  onBulkDelete?: (taskIds: string[]) => void;
 }
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
@@ -98,6 +104,8 @@ const TaskTable: React.FC<TaskTableProps> = ({
   selectedTasks = [],
   onSelectTask,
   onSelectAll,
+  onBulkComplete,
+  onBulkDelete,
 }) => {
   const completeTask = useTaskStore((state) => state.completeTask);
   const uncompleteTask = useTaskStore((state) => state.uncompleteTask);
@@ -232,16 +240,9 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'title':
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {task.is_complete ? (
-              <CheckCircleIcon color="success" fontSize="small" />
-            ) : (
-              <RadioButtonUncheckedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-            )}
-            <span style={{ textDecoration: task.is_complete ? 'line-through' : 'none' }}>
-              {task.title}
-            </span>
-          </Box>
+          <span style={{ textDecoration: task.is_complete ? 'line-through' : 'none' }}>
+            {task.title}
+          </span>
         );
 
       case 'score':
@@ -374,8 +375,49 @@ const TaskTable: React.FC<TaskTableProps> = ({
     };
   };
 
+  const numSelected = selectedTasks.length;
+
   return (
     <>
+      {/* Bulk Actions Toolbar */}
+      {numSelected > 0 && (
+        <Toolbar
+          sx={{
+            pl: { sm: 2 },
+            pr: { xs: 1, sm: 1 },
+            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+            borderRadius: 1,
+            mb: 1,
+          }}
+        >
+          <Typography sx={{ flex: '1 1 100%' }} color="inherit" variant="subtitle1" component="div">
+            {numSelected} task{numSelected > 1 ? 's' : ''} selected
+          </Typography>
+          {onBulkComplete && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<CheckCircleIcon />}
+              onClick={() => onBulkComplete(selectedTasks)}
+              sx={{ mr: 1 }}
+            >
+              Complete Selected
+            </Button>
+          )}
+          {onBulkDelete && (
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={<DeleteIcon />}
+              onClick={() => onBulkDelete(selectedTasks)}
+            >
+              Delete Selected
+            </Button>
+          )}
+        </Toolbar>
+      )}
+
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
         <Tooltip title="Configure Columns">
           <IconButton onClick={() => setConfigDialogOpen(true)}>
