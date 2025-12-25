@@ -16,6 +16,29 @@ vi.mock('../services/api', () => ({
   authApi: {
     changePassword: vi.fn(),
   },
+  userApi: {
+    getXPLog: vi.fn().mockResolvedValue([]),
+    getTags: vi.fn().mockResolvedValue([]),
+    getProjects: vi.fn().mockResolvedValue([]),
+    getScoringConfig: vi.fn().mockResolvedValue({
+      base_score: 10,
+      priority_multiplier: {},
+      difficulty_multiplier: {},
+      duration_multiplier: {},
+      age_factor: { multiplier_per_unit: 0.01, unit: 'days' },
+      due_date_proximity: { enabled: false },
+      habit_streak_bonus: { enabled: false },
+      status_bumps: { in_progress_bonus: 5, next_up_bonus: 10, next_up_threshold_days: 3 },
+    }),
+    updateTag: vi.fn(),
+    createTag: vi.fn(),
+    deleteTag: vi.fn(),
+    updateProject: vi.fn(),
+    createProject: vi.fn(),
+    deleteProject: vi.fn(),
+    updateScoringConfig: vi.fn(),
+    resetScoringConfig: vi.fn(),
+  },
 }));
 
 // Mock window.location.reload
@@ -40,7 +63,6 @@ describe('SettingsPage', () => {
     it('should render settings page with all sections', () => {
       render(<SettingsPage />);
 
-      expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(screen.getByText('Data Backup & Restore')).toBeInTheDocument();
       expect(screen.getByText('Security')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /export data/i })).toBeInTheDocument();

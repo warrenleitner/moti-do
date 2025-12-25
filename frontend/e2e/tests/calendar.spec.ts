@@ -15,7 +15,7 @@ test.describe('Calendar View', () => {
       const calendarPage = new CalendarPage(page);
       await calendarPage.goto();
 
-      await expect(calendarPage.heading).toBeVisible();
+      await expect(calendarPage.calendar).toBeVisible();
       await calendarPage.waitForCalendar();
       await expect(calendarPage.calendar).toBeVisible();
     });

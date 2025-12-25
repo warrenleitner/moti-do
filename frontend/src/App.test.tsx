@@ -54,7 +54,7 @@ describe('App', () => {
     render(<App />);
 
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
-    expect(screen.getByText('Loading Moti-Do...')).toBeInTheDocument();
+    expect(screen.getByText('Loading Motodo...')).toBeInTheDocument();
   });
 
   it('should not show loading when already initialized', () => {
@@ -68,7 +68,7 @@ describe('App', () => {
     render(<App />);
 
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-    expect(screen.queryByText('Loading Moti-Do...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Loading Motodo...')).not.toBeInTheDocument();
   });
 
   it('should show error state when initialization fails', () => {

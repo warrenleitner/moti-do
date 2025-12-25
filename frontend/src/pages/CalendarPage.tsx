@@ -84,10 +84,6 @@ export default function CalendarPage() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Calendar
-      </Typography>
-
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         View and manage tasks by their due dates. Click on a date to create a new task. Drag tasks to reschedule.
       </Typography>

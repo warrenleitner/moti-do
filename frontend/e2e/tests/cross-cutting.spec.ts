@@ -243,42 +243,42 @@ test.describe('Cross-Cutting Flows', () => {
         await page.goto('/tasks');
       });
       navigationTimings.push(tasksTiming);
-      await expect(page.getByRole('heading', { name: 'Tasks', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'New Task' })).toBeVisible();
 
       // Calendar
       const calendarTiming = await measureNavigation(page, '/calendar', async () => {
         await page.goto('/calendar');
       });
       navigationTimings.push(calendarTiming);
-      await expect(page.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible();
+      await expect(page.locator('.fc')).toBeVisible();
 
       // Kanban
       const kanbanTiming = await measureNavigation(page, '/kanban', async () => {
         await page.goto('/kanban');
       });
       navigationTimings.push(kanbanTiming);
-      await expect(page.getByRole('heading', { name: 'Kanban Board' })).toBeVisible();
+      await expect(page.getByText('Backlog', { exact: true })).toBeVisible();
 
       // Habits
       const habitsTiming = await measureNavigation(page, '/habits', async () => {
         await page.goto('/habits');
       });
       navigationTimings.push(habitsTiming);
-      await expect(page.getByRole('heading', { name: 'Habits', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'New Habit' })).toBeVisible();
 
       // Graph
       const graphTiming = await measureNavigation(page, '/graph', async () => {
         await page.goto('/graph');
       });
       navigationTimings.push(graphTiming);
-      await expect(page.getByRole('heading', { name: 'Dependency Graph' })).toBeVisible();
+      await expect(page.getByText('Visualize task dependencies')).toBeVisible();
 
       // Settings
       const settingsTiming = await measureNavigation(page, '/settings', async () => {
         await page.goto('/settings');
       });
       navigationTimings.push(settingsTiming);
-      await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Data Backup & Restore' })).toBeVisible();
 
       // Log performance summary
       await logPerformanceSummary('Multi-Page Navigation', navigationTimings, page);
@@ -325,7 +325,7 @@ test.describe('Cross-Cutting Flows', () => {
       await page.reload();
 
       // Task should still be visible (data persisted)
-      await expect(tasksPage.heading).toBeVisible();
+      await expect(tasksPage.newTaskButton).toBeVisible();
       const task = tasksPage.getTaskByTitle(taskTitle);
       await expect(task).toBeVisible();
     });

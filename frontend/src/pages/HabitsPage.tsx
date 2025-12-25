@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Typography, Button, Snackbar, Alert } from '@mui/material';
+import { Box, Button, Snackbar, Alert } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import { HabitList } from '../components/habits';
 import { TaskForm } from '../components/tasks';
@@ -113,9 +113,8 @@ export default function HabitsPage() {
 
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Habits</Typography>
+      {/* Header actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
         <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew}>
           New Habit
         </Button>

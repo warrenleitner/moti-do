@@ -33,7 +33,7 @@ function App() {
       >
         <CircularProgress size={48} />
         <Typography variant="h6" color="text.secondary">
-          Loading Moti-Do...
+          Loading Motodo...
         </Typography>
       </Box>
     );

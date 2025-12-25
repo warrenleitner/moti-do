@@ -1,5 +1,5 @@
 /**
- * API client for communicating with the Moti-Do backend.
+ * API client for communicating with the Motodo backend.
  */
 
 import axios, { type AxiosInstance } from 'axios';
@@ -130,6 +130,66 @@ export interface SystemStatus {
   current_date: string;
   vacation_mode: boolean;
   pending_days: number;
+}
+
+// Scoring configuration types
+export interface FieldPresenceBonus {
+  text_description: number;
+}
+
+export interface AgeFactorConfig {
+  unit: 'days' | 'weeks';
+  multiplier_per_unit: number;
+}
+
+export interface DailyPenaltyConfig {
+  apply_penalty: boolean;
+  penalty_points: number;
+}
+
+export interface DueDateProximityConfig {
+  enabled: boolean;
+  overdue_scaling: 'linear' | 'logarithmic';
+  overdue_scale_factor: number;
+  approaching_threshold_days: number;
+  approaching_multiplier_per_day: number;
+}
+
+export interface StartDateAgingConfig {
+  enabled: boolean;
+  bonus_points_per_day: number;
+}
+
+export interface DependencyChainConfig {
+  enabled: boolean;
+  dependent_score_percentage: number;
+}
+
+export interface HabitStreakBonusConfig {
+  enabled: boolean;
+  bonus_per_streak_day: number;
+  max_bonus: number;
+}
+
+export interface StatusBumpsConfig {
+  in_progress_bonus: number;
+  next_up_bonus: number;
+  next_up_threshold_days: number;
+}
+
+export interface ScoringConfig {
+  base_score: number;
+  field_presence_bonus: FieldPresenceBonus;
+  difficulty_multiplier: Record<string, number>;
+  duration_multiplier: Record<string, number>;
+  priority_multiplier: Record<string, number>;
+  age_factor: AgeFactorConfig;
+  daily_penalty: DailyPenaltyConfig;
+  due_date_proximity: DueDateProximityConfig;
+  start_date_aging: StartDateAgingConfig;
+  dependency_chain: DependencyChainConfig;
+  habit_streak_bonus: HabitStreakBonusConfig;
+  status_bumps: StatusBumpsConfig;
 }
 
 export interface TokenResponse {
@@ -401,6 +461,22 @@ export const userApi = {
 
   deleteProject: async (id: string): Promise<void> => {
     await apiClient.delete(`/user/projects/${id}`);
+  },
+
+  // Scoring configuration
+  getScoringConfig: async (): Promise<ScoringConfig> => {
+    const response = await apiClient.get<ScoringConfig>('/user/scoring-config');
+    return response.data;
+  },
+
+  updateScoringConfig: async (config: Partial<ScoringConfig>): Promise<ScoringConfig> => {
+    const response = await apiClient.put<ScoringConfig>('/user/scoring-config', config);
+    return response.data;
+  },
+
+  resetScoringConfig: async (): Promise<ScoringConfig> => {
+    const response = await apiClient.post<ScoringConfig>('/user/scoring-config/reset');
+    return response.data;
   },
 };
 /* v8 ignore stop */

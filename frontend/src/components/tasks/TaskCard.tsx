@@ -137,17 +137,15 @@ export default function TaskCard({
               {task.is_habit && (
                 <StreakBadge current={task.streak_current} best={task.streak_best} />
               )}
+              {/* Project badge - inline with other metadata */}
+              {task.project && (
+                <Chip
+                  label={task.project}
+                  size="small"
+                  variant="outlined"
+                />
+              )}
             </Stack>
-
-            {/* Project badge */}
-            {task.project && (
-              <Chip
-                label={task.project}
-                size="small"
-                sx={{ mt: 1 }}
-                variant="outlined"
-              />
-            )}
 
             {/* Subtask progress - show in inline and top-level modes */}
             {hasSubtasks && subtaskViewMode !== 'hidden' && (

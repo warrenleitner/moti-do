@@ -6,15 +6,12 @@ import { type Page, type Locator, expect } from '@playwright/test';
 
 export class HabitsPage {
   readonly page: Page;
-  readonly heading: Locator;
   readonly newHabitButton: Locator;
   readonly habitFormDialog: Locator;
   readonly snackbar: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    // Use exact: true to avoid matching "No habits yet" heading
-    this.heading = page.getByRole('heading', { name: 'Habits', exact: true });
     this.newHabitButton = page.getByRole('button', { name: 'New Habit' });
     this.habitFormDialog = page.getByRole('dialog');
     this.snackbar = page.getByRole('alert');
@@ -25,7 +22,7 @@ export class HabitsPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/habits');
-    await this.heading.waitFor({ timeout: 10000 });
+    await this.newHabitButton.waitFor({ timeout: 10000 });
   }
 
   /**

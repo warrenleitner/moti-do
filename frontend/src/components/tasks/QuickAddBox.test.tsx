@@ -11,6 +11,11 @@ vi.mock('../../store', () => ({
   useTaskStore: vi.fn(),
 }));
 
+vi.mock('../../store/userStore', () => ({
+  useDefinedTags: vi.fn(() => []),
+  useDefinedProjects: vi.fn(() => []),
+}));
+
 describe('QuickAddBox', () => {
   const mockCreateTask = vi.fn();
 
@@ -169,7 +174,7 @@ describe('QuickAddBox', () => {
     });
   });
 
-  it('parses tags and passes to createTask', async () => {
+  it('parses tags and passes to createTask with inbox default', async () => {
     const { user } = render(<QuickAddBox />);
 
     const input = screen.getByPlaceholderText(/add a task/i);
@@ -179,7 +184,7 @@ describe('QuickAddBox', () => {
       expect(mockCreateTask).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Test task',
-          tags: ['work', 'urgent'],
+          tags: expect.arrayContaining(['work', 'urgent', 'inbox']),
         })
       );
     });
@@ -201,7 +206,7 @@ describe('QuickAddBox', () => {
     });
   });
 
-  it('applies default values for missing fields', async () => {
+  it('applies default values for missing fields including inbox tag', async () => {
     const { user } = render(<QuickAddBox />);
 
     const input = screen.getByPlaceholderText(/add a task/i);
@@ -215,6 +220,7 @@ describe('QuickAddBox', () => {
           difficulty: 'Medium',
           duration: 'Medium',
           is_habit: false,
+          tags: expect.arrayContaining(['inbox']),
           subtasks: [],
           dependencies: [],
         })

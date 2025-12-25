@@ -14,7 +14,6 @@ test.describe('Habits Management', () => {
       const habitsPage = new HabitsPage(page);
       await habitsPage.goto();
 
-      await expect(habitsPage.heading).toBeVisible();
       await expect(habitsPage.newHabitButton).toBeVisible();
     });
 

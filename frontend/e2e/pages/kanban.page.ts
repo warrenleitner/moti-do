@@ -6,7 +6,6 @@ import { type Page, type Locator, expect } from '@playwright/test';
 
 export class KanbanPage {
   readonly page: Page;
-  readonly heading: Locator;
   readonly projectFilter: Locator;
   readonly tagFilter: Locator;
   readonly taskCountText: Locator;
@@ -14,7 +13,6 @@ export class KanbanPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: 'Kanban Board' });
     this.projectFilter = page.getByLabel('Project');
     this.tagFilter = page.getByLabel('Tag');
     this.taskCountText = page.getByText(/Showing \d+ tasks/);
@@ -26,7 +24,8 @@ export class KanbanPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/kanban');
-    await this.heading.waitFor({ timeout: 10000 });
+    // Wait for the Backlog column to be visible (first column in kanban)
+    await this.page.getByText('Backlog', { exact: true }).waitFor({ timeout: 10000 });
   }
 
   /**

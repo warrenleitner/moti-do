@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Box, Typography, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { Box, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import { Add, ViewList, TableChart } from '@mui/icons-material';
+import { AxiosError } from 'axios';
 import { TaskList, TaskForm } from '../components/tasks';
 import TaskTable from '../components/tasks/TaskTable';
 import QuickAddBox from '../components/tasks/QuickAddBox';
@@ -12,6 +13,27 @@ import type { Task } from '../types';
 
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
+
+/**
+ * Extract a user-friendly error message from an API error.
+ */
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof AxiosError) {
+    // Try to get detail from API response (FastAPI format)
+    const detail = error.response?.data?.detail;
+    if (typeof detail === 'string') {
+      return detail;
+    }
+    // Fall back to HTTP status text
+    if (error.response?.statusText) {
+      return `${error.response.statusText} (${error.response.status})`;
+    }
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return fallback;
+}
 export default function TasksPage() {
   // Use API actions from the store
   const { createTask, saveTask, deleteTask, completeTask, uncompleteTask, undoTask, isLoading } = useTaskStore();
@@ -31,6 +53,9 @@ export default function TasksPage() {
     message: '',
     severity: 'success',
   });
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [tasksToDelete, setTasksToDelete] = useState<string[]>([]);
 
   const handleViewModeChange = (_: React.MouseEvent<HTMLElement>, newMode: 'list' | 'table' | null) => {
     if (newMode !== null) {
@@ -62,8 +87,8 @@ export default function TasksPage() {
       }
       setFormOpen(false);
       setEditingTask(null);
-    } catch {
-      setSnackbar({ open: true, message: 'Failed to save task', severity: 'error' });
+    } catch (error) {
+      setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to save task'), severity: 'error' });
     }
   };
 
@@ -82,8 +107,8 @@ export default function TasksPage() {
         await fetchStats();
         setSnackbar({ open: true, message: 'Task completed! XP earned.', severity: 'success' });
       }
-    } catch {
-      setSnackbar({ open: true, message: 'Failed to update task', severity: 'error' });
+    } catch (error) {
+      setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to update task'), severity: 'error' });
     }
   };
 
@@ -97,8 +122,8 @@ export default function TasksPage() {
       try {
         await deleteTask(taskToDelete);
         setSnackbar({ open: true, message: 'Task deleted', severity: 'success' });
-      } catch {
-        setSnackbar({ open: true, message: 'Failed to delete task', severity: 'error' });
+      } catch (error) {
+        setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to delete task'), severity: 'error' });
       }
     }
     setDeleteDialogOpen(false);
@@ -118,8 +143,8 @@ export default function TasksPage() {
 
     try {
       await saveTask(taskId, { subtasks: updatedSubtasks });
-    } catch {
-      setSnackbar({ open: true, message: 'Failed to update subtask', severity: 'error' });
+    } catch (error) {
+      setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to update subtask'), severity: 'error' });
     }
   };
 
@@ -127,35 +152,95 @@ export default function TasksPage() {
     try {
       await undoTask(taskId);
       setSnackbar({ open: true, message: 'Change undone', severity: 'success' });
-    } catch {
-      setSnackbar({ open: true, message: 'Failed to undo change', severity: 'error' });
+    } catch (error) {
+      setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to undo change'), severity: 'error' });
     }
+  };
+
+  // Selection handlers for bulk actions
+  const handleSelectTask = (taskId: string) => {
+    setSelectedTasks((prev) =>
+      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
+    );
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    setSelectedTasks(selected ? filteredTasks.map((t) => t.id) : []);
+  };
+
+  // Bulk action handlers
+  const handleBulkComplete = async (taskIds: string[]) => {
+    let successCount = 0;
+    for (const taskId of taskIds) {
+      const task = filteredTasks.find((t) => t.id === taskId);
+      if (task && !task.is_complete) {
+        try {
+          await completeTask(taskId);
+          successCount++;
+        } catch {
+          // Continue with other tasks even if one fails
+        }
+      }
+    }
+    if (successCount > 0) {
+      await fetchStats();
+      setSnackbar({
+        open: true,
+        message: `Completed ${successCount} task${successCount > 1 ? 's' : ''}!`,
+        severity: 'success',
+      });
+    }
+    setSelectedTasks([]);
+  };
+
+  const handleBulkDeleteClick = (taskIds: string[]) => {
+    setTasksToDelete(taskIds);
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    let successCount = 0;
+    for (const taskId of tasksToDelete) {
+      try {
+        await deleteTask(taskId);
+        successCount++;
+      } catch {
+        // Continue with other tasks even if one fails
+      }
+    }
+    if (successCount > 0) {
+      setSnackbar({
+        open: true,
+        message: `Deleted ${successCount} task${successCount > 1 ? 's' : ''}`,
+        severity: 'success',
+      });
+    }
+    setSelectedTasks([]);
+    setBulkDeleteDialogOpen(false);
+    setTasksToDelete([]);
   };
 
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Tasks</Typography>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={handleViewModeChange}
-            size="small"
-            aria-label="view mode"
-          >
-            <ToggleButton value="list" aria-label="list view">
-              <ViewList />
-            </ToggleButton>
-            <ToggleButton value="table" aria-label="table view">
-              <TableChart />
-            </ToggleButton>
-          </ToggleButtonGroup>
-          <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew} disabled={isLoading}>
-            New Task
-          </Button>
-        </Box>
+      {/* Header actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3, gap: 2 }}>
+        <ToggleButtonGroup
+          value={viewMode}
+          exclusive
+          onChange={handleViewModeChange}
+          size="small"
+          aria-label="view mode"
+        >
+          <ToggleButton value="list" aria-label="list view">
+            <ViewList />
+          </ToggleButton>
+          <ToggleButton value="table" aria-label="table view">
+            <TableChart />
+          </ToggleButton>
+        </ToggleButtonGroup>
+        <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew} disabled={isLoading}>
+          New Task
+        </Button>
       </Box>
 
       {/* Quick-add box for rapid task creation */}
@@ -177,11 +262,17 @@ export default function TasksPage() {
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
           onComplete={handleComplete}
+          selectedTasks={selectedTasks}
+          onSelectTask={handleSelectTask}
+          onSelectAll={handleSelectAll}
+          onBulkComplete={handleBulkComplete}
+          onBulkDelete={handleBulkDeleteClick}
         />
       )}
 
       {/* Task form dialog */}
       <TaskForm
+        key={editingTask?.id ?? 'new'}
         open={formOpen}
         task={editingTask}
         onSave={handleSave}
@@ -202,6 +293,20 @@ export default function TasksPage() {
         onCancel={() => {
           setDeleteDialogOpen(false);
           setTaskToDelete(null);
+        }}
+      />
+
+      {/* Bulk delete confirmation dialog */}
+      <ConfirmDialog
+        open={bulkDeleteDialogOpen}
+        title="Delete Selected Tasks"
+        message={`Are you sure you want to delete ${tasksToDelete.length} task${tasksToDelete.length > 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmLabel="Delete All"
+        confirmColor="error"
+        onConfirm={handleBulkDeleteConfirm}
+        onCancel={() => {
+          setBulkDeleteDialogOpen(false);
+          setTasksToDelete([]);
         }}
       />
 

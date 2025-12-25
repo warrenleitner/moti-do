@@ -78,8 +78,8 @@ describe('GraphPage', () => {
 
   it('renders without crashing', () => {
     render(<GraphPage />);
-    const headings = screen.getAllByText(/Dependency Graph/i);
-    expect(headings[0]).toBeInTheDocument();
+    // Page renders with the description text
+    expect(screen.getByText(/Visualize task dependencies/i)).toBeInTheDocument();
   });
 
   it('displays empty state when no tasks', () => {

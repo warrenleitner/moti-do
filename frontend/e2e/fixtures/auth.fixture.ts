@@ -28,7 +28,7 @@ export async function login(
   await page.goto('/login');
 
   // Wait for login page to load
-  await page.getByRole('heading', { name: 'Moti-Do' }).waitFor({ timeout: 10000 });
+  await page.getByRole('heading', { name: 'Motodo' }).waitFor({ timeout: 10000 });
 
   // Fill credentials using MUI TextField textbox roles
   await page.getByRole('textbox', { name: 'Username' }).fill(username);
@@ -57,7 +57,7 @@ export async function register(
   await page.goto('/login');
 
   // Wait for login page to load
-  await page.getByRole('heading', { name: 'Moti-Do' }).waitFor({ timeout: 10000 });
+  await page.getByRole('heading', { name: 'Motodo' }).waitFor({ timeout: 10000 });
 
   // Switch to register mode using the ToggleButton
   await page.getByRole('button', { name: 'Register', exact: true }).click();
@@ -93,7 +93,7 @@ export async function logout(page: Page): Promise<void> {
   await page.goto('/login');
 
   // Wait for login page
-  await page.getByRole('heading', { name: 'Moti-Do' }).waitFor({ timeout: 10000 });
+  await page.getByRole('heading', { name: 'Motodo' }).waitFor({ timeout: 10000 });
 }
 
 /**

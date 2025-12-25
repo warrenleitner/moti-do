@@ -5,7 +5,6 @@ import { type Page, type Locator, expect } from '@playwright/test';
 
 export class TasksPage {
   readonly page: Page;
-  readonly heading: Locator;
   readonly newTaskButton: Locator;
   readonly listViewButton: Locator;
   readonly tableViewButton: Locator;
@@ -29,8 +28,6 @@ export class TasksPage {
 
   constructor(page: Page) {
     this.page = page;
-    // Use exact: true to avoid matching "No tasks found" heading
-    this.heading = page.getByRole('heading', { name: 'Tasks', exact: true });
     this.newTaskButton = page.getByRole('button', { name: 'New Task' });
     // aria-label attributes from the ToggleButton components
     this.listViewButton = page.getByRole('button', { name: 'list view' });
@@ -61,7 +58,7 @@ export class TasksPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/tasks');
-    await this.heading.waitFor({ timeout: 10000 });
+    await this.newTaskButton.waitFor({ timeout: 10000 });
   }
 
   /**

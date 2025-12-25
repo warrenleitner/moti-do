@@ -44,9 +44,12 @@ import {
   Add as AddIcon,
   Check as CheckIcon,
   Close as CloseIcon,
+  CalendarMonth as CalendarIcon,
+  CardGiftcard as RewardIcon,
+  RestartAlt as ResetIcon,
 } from '@mui/icons-material';
-import { dataApi, authApi, userApi, type XPTransaction, type TagDefinition, type ProjectDefinition } from '../services/api';
-import { useUserStore, useSystemStatus } from '../store/userStore';
+import { dataApi, authApi, userApi, type XPTransaction, type TagDefinition, type ProjectDefinition, type ScoringConfig } from '../services/api';
+import { useUserStore, useSystemStatus, useUserStats } from '../store/userStore';
 
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
@@ -60,10 +63,19 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toggleVacation } = useUserStore();
+  const { toggleVacation, advanceDate, withdrawXP } = useUserStore();
   const systemStatus = useSystemStatus();
+  const stats = useUserStats();
   const [xpHistory, setXPHistory] = useState<XPTransaction[]>([]);
   const [loadingXP, setLoadingXP] = useState(false);
+
+  // Advance Date state
+  const [advancingDate, setAdvancingDate] = useState(false);
+
+  // XP Withdrawal state
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawDescription, setWithdrawDescription] = useState('');
+  const [withdrawing, setWithdrawing] = useState(false);
 
   // Tags state
   const [tags, setTags] = useState<TagDefinition[]>([]);
@@ -78,6 +90,13 @@ export default function SettingsPage() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [projectForm, setProjectForm] = useState({ name: '', color: '#4A90D9', multiplier: 1.0 });
   const [showAddProject, setShowAddProject] = useState(false);
+
+  // Scoring configuration state
+  const [scoringConfig, setScoringConfig] = useState<ScoringConfig | null>(null);
+  const [loadingScoringConfig, setLoadingScoringConfig] = useState(false);
+  const [savingScoringConfig, setSavingScoringConfig] = useState(false);
+  const [resettingScoringConfig, setResettingScoringConfig] = useState(false);
+  const [scoringConfigExpanded, setScoringConfigExpanded] = useState(false);
 
   // Fetch XP history, tags, and projects on mount
   useEffect(() => {
@@ -117,9 +136,22 @@ export default function SettingsPage() {
       }
     };
 
+    const fetchScoringConfig = async () => {
+      setLoadingScoringConfig(true);
+      try {
+        const config = await userApi.getScoringConfig();
+        setScoringConfig(config);
+      } catch (error) {
+        console.error('Failed to fetch scoring config:', error);
+      } finally {
+        setLoadingScoringConfig(false);
+      }
+    };
+
     fetchXPHistory();
     fetchTags();
     fetchProjects();
+    fetchScoringConfig();
   }, []);
 
   const handleExport = async () => {
@@ -258,6 +290,58 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAdvanceDate = async () => {
+    if (!systemStatus?.pending_days || systemStatus.pending_days <= 0) return;
+
+    setAdvancingDate(true);
+    setMessage(null);
+
+    try {
+      await advanceDate({ days: systemStatus.pending_days });
+      setMessage({
+        type: 'success',
+        text: `Successfully processed ${systemStatus.pending_days} day${systemStatus.pending_days > 1 ? 's' : ''}! Penalties have been applied.`,
+      });
+      // Refetch XP history to show new penalty transactions
+      const transactions = await userApi.getXPLog(10);
+      setXPHistory(transactions);
+    } catch (error) {
+      console.error('Advance date error:', error);
+      setMessage({ type: 'error', text: 'Failed to advance date' });
+    } finally {
+      setAdvancingDate(false);
+    }
+  };
+
+  const handleWithdrawXP = async () => {
+    const amount = parseInt(withdrawAmount, 10);
+    if (isNaN(amount) || amount <= 0) {
+      setMessage({ type: 'error', text: 'Please enter a valid amount' });
+      return;
+    }
+
+    setWithdrawing(true);
+    setMessage(null);
+
+    try {
+      await withdrawXP(amount, withdrawDescription || undefined);
+      setMessage({
+        type: 'success',
+        text: `Withdrew ${amount} XP${withdrawDescription ? ` for "${withdrawDescription}"` : ''}!`,
+      });
+      // Reset form and refetch XP history
+      setWithdrawAmount('');
+      setWithdrawDescription('');
+      const transactions = await userApi.getXPLog(10);
+      setXPHistory(transactions);
+    } catch (error) {
+      console.error('Withdraw XP error:', error);
+      setMessage({ type: 'error', text: 'Failed to withdraw XP' });
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
   // === Tag Handlers ===
   const handleStartEditTag = (tag: TagDefinition) => {
     setEditingTagId(tag.id);
@@ -372,12 +456,45 @@ export default function SettingsPage() {
     setProjectForm({ ...projectForm, multiplier: value });
   };
 
+  const handleSaveScoringConfig = async () => {
+    if (!scoringConfig) return;
+    setSavingScoringConfig(true);
+    try {
+      const updated = await userApi.updateScoringConfig(scoringConfig);
+      setScoringConfig(updated);
+      setMessage({ type: 'success', text: 'Scoring configuration saved successfully!' });
+    } catch (error) {
+      console.error('Save scoring config error:', error);
+      setMessage({ type: 'error', text: 'Failed to save scoring configuration' });
+    } finally {
+      setSavingScoringConfig(false);
+    }
+  };
+
+  const handleResetScoringConfig = async () => {
+    setResettingScoringConfig(true);
+    try {
+      const defaults = await userApi.resetScoringConfig();
+      setScoringConfig(defaults);
+      setMessage({ type: 'success', text: 'Scoring configuration reset to defaults!' });
+    } catch (error) {
+      console.error('Reset scoring config error:', error);
+      setMessage({ type: 'error', text: 'Failed to reset scoring configuration' });
+    } finally {
+      setResettingScoringConfig(false);
+    }
+  };
+
+  const updateScoringField = <K extends keyof ScoringConfig>(
+    field: K,
+    value: ScoringConfig[K]
+  ) => {
+    if (!scoringConfig) return;
+    setScoringConfig({ ...scoringConfig, [field]: value });
+  };
+
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Settings
-      </Typography>
-
       {message && (
         <Alert severity={message.type} sx={{ mb: 3 }} onClose={() => setMessage(null)}>
           {message.text}
@@ -830,6 +947,460 @@ export default function SettingsPage() {
               </Table>
             </TableContainer>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Scoring Configuration */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <HistoryIcon color="primary" />
+              <Typography variant="h6">Scoring Configuration</Typography>
+            </Box>
+            <Button
+              variant="text"
+              onClick={() => setScoringConfigExpanded(!scoringConfigExpanded)}
+            >
+              {scoringConfigExpanded ? 'Collapse' : 'Expand'}
+            </Button>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Configure how task scores are calculated. Higher scores mean higher priority in the task list.
+          </Typography>
+
+          {loadingScoringConfig ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : scoringConfig && scoringConfigExpanded ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Base Score */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Base Score</Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  value={scoringConfig.base_score}
+                  onChange={(e) => updateScoringField('base_score', parseFloat(e.target.value) || 0)}
+                  helperText="Starting score for all tasks (default: 10, recommended: 5-20)"
+                  sx={{ width: 200 }}
+                />
+              </Box>
+
+              <Divider />
+
+              {/* Priority Multipliers */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Priority Multipliers</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  Recommended: 1.0-3.0 (defaults: NOT_SET=1.0, LOW=1.2, MEDIUM=1.5, HIGH=2.0, DEFCON_ONE=3.0)
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  {Object.entries(scoringConfig.priority_multiplier).map(([key, value]) => (
+                    <TextField
+                      key={key}
+                      type="number"
+                      size="small"
+                      label={key.replace(/_/g, ' ')}
+                      value={value}
+                      onChange={(e) => updateScoringField('priority_multiplier', {
+                        ...scoringConfig.priority_multiplier,
+                        [key]: parseFloat(e.target.value) || 1
+                      })}
+                      inputProps={{ step: 0.1, min: 1 }}
+                      sx={{ width: 120 }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Difficulty Multipliers */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Difficulty Multipliers</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  Recommended: 1.0-5.0 (defaults: NOT_SET=1.0, TRIVIAL=1.1, LOW=1.5, MEDIUM=2.0, HIGH=3.0, HERCULEAN=5.0)
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  {Object.entries(scoringConfig.difficulty_multiplier).map(([key, value]) => (
+                    <TextField
+                      key={key}
+                      type="number"
+                      size="small"
+                      label={key.replace(/_/g, ' ')}
+                      value={value}
+                      onChange={(e) => updateScoringField('difficulty_multiplier', {
+                        ...scoringConfig.difficulty_multiplier,
+                        [key]: parseFloat(e.target.value) || 1
+                      })}
+                      inputProps={{ step: 0.1, min: 1 }}
+                      sx={{ width: 120 }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Duration Multipliers */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Duration Multipliers</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  Recommended: 1.0-3.0 (defaults: NOT_SET=1.0, MINUSCULE=1.05, SHORT=1.2, MEDIUM=1.5, LONG=2.0, ODYSSEYAN=3.0)
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  {Object.entries(scoringConfig.duration_multiplier).map(([key, value]) => (
+                    <TextField
+                      key={key}
+                      type="number"
+                      size="small"
+                      label={key.replace(/_/g, ' ')}
+                      value={value}
+                      onChange={(e) => updateScoringField('duration_multiplier', {
+                        ...scoringConfig.duration_multiplier,
+                        [key]: parseFloat(e.target.value) || 1
+                      })}
+                      inputProps={{ step: 0.1, min: 1 }}
+                      sx={{ width: 120 }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Age Factor */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Age Factor</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Bonus multiplier applied as tasks age (default: 0.01/day, recommended: 0.01-0.1)
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <TextField
+                    type="number"
+                    size="small"
+                    label="Multiplier per unit"
+                    value={scoringConfig.age_factor.multiplier_per_unit}
+                    onChange={(e) => updateScoringField('age_factor', {
+                      ...scoringConfig.age_factor,
+                      multiplier_per_unit: parseFloat(e.target.value) || 0
+                    })}
+                    inputProps={{ step: 0.01, min: 0 }}
+                    sx={{ width: 150 }}
+                  />
+                  <TextField
+                    select
+                    size="small"
+                    label="Unit"
+                    value={scoringConfig.age_factor.unit}
+                    onChange={(e) => updateScoringField('age_factor', {
+                      ...scoringConfig.age_factor,
+                      unit: e.target.value as 'days' | 'weeks'
+                    })}
+                    sx={{ width: 120 }}
+                    SelectProps={{ native: true }}
+                  >
+                    <option value="days">Days</option>
+                    <option value="weeks">Weeks</option>
+                  </TextField>
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Due Date Proximity */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Due Date Proximity</Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={scoringConfig.due_date_proximity.enabled}
+                      onChange={(e) => updateScoringField('due_date_proximity', {
+                        ...scoringConfig.due_date_proximity,
+                        enabled: e.target.checked
+                      })}
+                    />
+                  }
+                  label="Enable due date proximity scoring"
+                />
+                {scoringConfig.due_date_proximity.enabled && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Defaults: scale factor=0.75, threshold=14 days, approaching=0.05/day
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      <TextField
+                        type="number"
+                        size="small"
+                        label="Overdue scale factor"
+                        value={scoringConfig.due_date_proximity.overdue_scale_factor}
+                        onChange={(e) => updateScoringField('due_date_proximity', {
+                          ...scoringConfig.due_date_proximity,
+                          overdue_scale_factor: parseFloat(e.target.value) || 0
+                        })}
+                        helperText="0.5-1.5"
+                        inputProps={{ step: 0.1, min: 0 }}
+                        sx={{ width: 150 }}
+                      />
+                      <TextField
+                        type="number"
+                        size="small"
+                        label="Threshold days"
+                        value={scoringConfig.due_date_proximity.approaching_threshold_days}
+                        onChange={(e) => updateScoringField('due_date_proximity', {
+                          ...scoringConfig.due_date_proximity,
+                          approaching_threshold_days: parseFloat(e.target.value) || 0
+                        })}
+                        helperText="7-30"
+                        inputProps={{ step: 1, min: 0 }}
+                        sx={{ width: 130 }}
+                      />
+                      <TextField
+                        type="number"
+                        size="small"
+                        label="Approaching mult/day"
+                        value={scoringConfig.due_date_proximity.approaching_multiplier_per_day}
+                        onChange={(e) => updateScoringField('due_date_proximity', {
+                          ...scoringConfig.due_date_proximity,
+                          approaching_multiplier_per_day: parseFloat(e.target.value) || 0
+                        })}
+                        helperText="0.01-0.2"
+                        inputProps={{ step: 0.01, min: 0 }}
+                        sx={{ width: 150 }}
+                      />
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+
+              <Divider />
+
+              {/* Habit Streak Bonus */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Habit Streak Bonus</Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={scoringConfig.habit_streak_bonus.enabled}
+                      onChange={(e) => updateScoringField('habit_streak_bonus', {
+                        ...scoringConfig.habit_streak_bonus,
+                        enabled: e.target.checked
+                      })}
+                    />
+                  }
+                  label="Enable habit streak bonuses"
+                />
+                {scoringConfig.habit_streak_bonus.enabled && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Defaults: 1.0/streak day, max 50 bonus
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      <TextField
+                        type="number"
+                        size="small"
+                        label="Bonus per streak day"
+                        value={scoringConfig.habit_streak_bonus.bonus_per_streak_day}
+                        onChange={(e) => updateScoringField('habit_streak_bonus', {
+                          ...scoringConfig.habit_streak_bonus,
+                          bonus_per_streak_day: parseFloat(e.target.value) || 0
+                        })}
+                        helperText="0.5-5.0"
+                        inputProps={{ step: 0.1, min: 0 }}
+                        sx={{ width: 150 }}
+                      />
+                      <TextField
+                        type="number"
+                        size="small"
+                        label="Max bonus"
+                        value={scoringConfig.habit_streak_bonus.max_bonus}
+                        onChange={(e) => updateScoringField('habit_streak_bonus', {
+                          ...scoringConfig.habit_streak_bonus,
+                          max_bonus: parseFloat(e.target.value) || 0
+                        })}
+                        helperText="10-100"
+                        inputProps={{ step: 1, min: 0 }}
+                        sx={{ width: 120 }}
+                      />
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+
+              <Divider />
+
+              {/* Status Bumps */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Status Bonuses</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  Defaults: In Progress=5, Next Up=10, threshold=3 days
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <TextField
+                    type="number"
+                    size="small"
+                    label="In Progress bonus"
+                    value={scoringConfig.status_bumps.in_progress_bonus}
+                    onChange={(e) => updateScoringField('status_bumps', {
+                      ...scoringConfig.status_bumps,
+                      in_progress_bonus: parseFloat(e.target.value) || 0
+                    })}
+                    helperText="0-20"
+                    inputProps={{ step: 1, min: 0 }}
+                    sx={{ width: 140 }}
+                  />
+                  <TextField
+                    type="number"
+                    size="small"
+                    label="Next Up bonus"
+                    value={scoringConfig.status_bumps.next_up_bonus}
+                    onChange={(e) => updateScoringField('status_bumps', {
+                      ...scoringConfig.status_bumps,
+                      next_up_bonus: parseFloat(e.target.value) || 0
+                    })}
+                    helperText="0-30"
+                    inputProps={{ step: 1, min: 0 }}
+                    sx={{ width: 130 }}
+                  />
+                  <TextField
+                    type="number"
+                    size="small"
+                    label="Next Up threshold days"
+                    value={scoringConfig.status_bumps.next_up_threshold_days}
+                    onChange={(e) => updateScoringField('status_bumps', {
+                      ...scoringConfig.status_bumps,
+                      next_up_threshold_days: parseInt(e.target.value, 10) || 0
+                    })}
+                    helperText="1-7"
+                    inputProps={{ step: 1, min: 0 }}
+                    sx={{ width: 160 }}
+                  />
+                </Box>
+              </Box>
+
+              <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={handleSaveScoringConfig}
+                  disabled={savingScoringConfig || resettingScoringConfig}
+                  startIcon={savingScoringConfig ? <CircularProgress size={16} /> : <CheckIcon />}
+                >
+                  {savingScoringConfig ? 'Saving...' : 'Save Scoring Configuration'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  onClick={handleResetScoringConfig}
+                  disabled={savingScoringConfig || resettingScoringConfig}
+                  startIcon={resettingScoringConfig ? <CircularProgress size={16} /> : <ResetIcon />}
+                >
+                  {resettingScoringConfig ? 'Resetting...' : 'Reset to Defaults'}
+                </Button>
+              </Box>
+            </Box>
+          ) : scoringConfig ? (
+            <Typography variant="body2" color="text.secondary">
+              Click "Expand" to view and edit scoring configuration.
+            </Typography>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {/* Date Processing */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <CalendarIcon color="primary" />
+            <Typography variant="h6">Date Processing</Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Process pending days to apply overdue penalties and generate recurring tasks.
+          </Typography>
+
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              <strong>Today:</strong> {new Date().toLocaleDateString()}
+            </Typography>
+            <Typography variant="body2">
+              <strong>Last Processed:</strong> {systemStatus?.last_processed_date || 'Never'}
+            </Typography>
+            <Typography variant="body2" color={systemStatus?.pending_days && systemStatus.pending_days > 0 ? 'error.main' : 'text.secondary'}>
+              <strong>Days Behind:</strong> {systemStatus?.pending_days ?? 0} day{(systemStatus?.pending_days ?? 0) !== 1 ? 's' : ''}
+            </Typography>
+          </Box>
+
+          {systemStatus?.pending_days && systemStatus.pending_days > 0 ? (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAdvanceDate}
+              disabled={advancingDate || loading}
+              startIcon={advancingDate ? <CircularProgress size={20} color="inherit" /> : <CalendarIcon />}
+            >
+              Process {systemStatus.pending_days} Pending Day{systemStatus.pending_days > 1 ? 's' : ''}
+            </Button>
+          ) : (
+            <Alert severity="success" sx={{ mt: 1 }}>
+              All caught up! No pending days to process.
+            </Alert>
+          )}
+
+          {systemStatus && systemStatus.pending_days > 0 && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Processing will apply penalties for incomplete overdue tasks.
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* XP Withdrawal */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <RewardIcon color="secondary" />
+            <Typography variant="h6">Spend XP</Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Spend your earned XP on rewards. Current balance: <strong>{stats?.total_xp ?? 0} XP</strong>
+          </Typography>
+
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <TextField
+              label="Amount"
+              type="number"
+              size="small"
+              value={withdrawAmount}
+              onChange={(e) => setWithdrawAmount(e.target.value)}
+              sx={{ width: 120 }}
+              InputProps={{
+                inputProps: { min: 1 },
+                endAdornment: <InputAdornment position="end">XP</InputAdornment>,
+              }}
+            />
+            <TextField
+              label="Reward Description (optional)"
+              size="small"
+              value={withdrawDescription}
+              onChange={(e) => setWithdrawDescription(e.target.value)}
+              placeholder="e.g., Movie night"
+              sx={{ flex: 1, minWidth: 200 }}
+            />
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={handleWithdrawXP}
+              disabled={withdrawing || loading || !withdrawAmount}
+              startIcon={withdrawing ? <CircularProgress size={20} color="inherit" /> : <RewardIcon />}
+            >
+              Withdraw
+            </Button>
+          </Box>
+
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+            You can go into XP debt if you withdraw more than your current balance.
+          </Typography>
         </CardContent>
       </Card>
 

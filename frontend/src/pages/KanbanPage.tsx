@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Typography, Snackbar, Alert } from '@mui/material';
+import { Box, Snackbar, Alert } from '@mui/material';
 import { KanbanBoard } from '../components/kanban';
 import { TaskForm } from '../components/tasks';
 import { useTaskStore } from '../store';
@@ -64,10 +64,6 @@ export default function KanbanPage() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Kanban Board
-      </Typography>
-
       <KanbanBoard
         tasks={tasks}
         onUpdateTask={handleUpdateTask}

@@ -9,9 +9,20 @@ interface DateDisplayProps {
   showRelative?: boolean;
 }
 
+/**
+ * Extract date-only portion from a date string.
+ * Handles both YYYY-MM-DD and ISO datetime (YYYY-MM-DDTHH:mm:ss.sssZ) formats.
+ */
+function extractDateParts(dateStr: string): [number, number, number] {
+  // Handle ISO datetime format by extracting just the date part
+  const dateOnly = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+  const [year, month, day] = dateOnly.split('-').map(Number);
+  return [year, month, day];
+}
+
 function formatRelativeDate(dateStr: string): { text: string; color: string; isOverdue: boolean } {
   // Parse date as local time to avoid timezone issues
-  const [year, month, day] = dateStr.split('-').map(Number);
+  const [year, month, day] = extractDateParts(dateStr);
   const date = new Date(year, month - 1, day);
 
   const today = new Date();
@@ -59,7 +70,7 @@ export default function DateDisplay({
   }
 
   // Parse date as local time to avoid timezone issues
-  const [year, month, day] = date.split('-').map(Number);
+  const [year, month, day] = extractDateParts(date);
   const dateObj = new Date(year, month - 1, day);
 
   const fullDate = dateObj.toLocaleDateString(undefined, {

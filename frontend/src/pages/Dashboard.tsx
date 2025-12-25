@@ -1,10 +1,11 @@
-import { Box, Card, CardContent, Typography, LinearProgress, Chip, Stack, Grid, Alert } from '@mui/material';
+import { Box, Card, CardContent, Typography, LinearProgress, Chip, Stack, Grid, Alert, Divider } from '@mui/material';
 import {
   EmojiEvents as XPIcon,
   CheckCircle as CompletedIcon,
   TrendingUp as StreakIcon,
   Star as BadgeIcon,
   Warning as WarningIcon,
+  CalendarMonth as CalendarIcon,
 } from '@mui/icons-material';
 import { useUserStore, useTaskStore } from '../store';
 import { useUserStats, useSystemStatus } from '../store/userStore';
@@ -58,6 +59,32 @@ export default function Dashboard() {
           Vacation mode is active. No penalties will be applied until you disable it in Settings.
         </Alert>
       )}
+
+      {/* Date Status */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <CalendarIcon fontSize="small" color="primary" />
+              <Typography variant="body2" color="text.secondary">
+                Today: <strong>{new Date().toLocaleDateString()}</strong>
+              </Typography>
+            </Box>
+            <Divider orientation="vertical" flexItem />
+            <Typography variant="body2" color="text.secondary">
+              Last Processed: <strong>{systemStatus?.last_processed_date || 'Never'}</strong>
+            </Typography>
+            {systemStatus && systemStatus.pending_days > 0 && (
+              <>
+                <Divider orientation="vertical" flexItem />
+                <Typography variant="body2" color="error.main">
+                  <strong>{systemStatus.pending_days} day{systemStatus.pending_days > 1 ? 's' : ''} behind</strong>
+                </Typography>
+              </>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
 
       {/* Stats Grid */}
       <Grid container spacing={3} sx={{ mb: 4 }}>

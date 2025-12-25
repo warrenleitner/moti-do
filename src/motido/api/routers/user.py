@@ -14,6 +14,8 @@ from motido.api.schemas import (
     BadgeSchema,
     ProjectCreate,
     ProjectResponse,
+    ScoringConfigResponse,
+    ScoringConfigUpdate,
     TagCreate,
     TagResponse,
     UserProfile,
@@ -535,3 +537,149 @@ async def import_user_data(
             "projects_count": len(getattr(imported_user, "defined_projects", [])),
         },
     }
+
+
+# === Scoring Configuration Endpoints ===
+# These endpoints are tested via E2E integration tests
+
+
+@router.get("/scoring-config", response_model=ScoringConfigResponse)
+async def get_scoring_config(  # pragma: no cover
+    _user: CurrentUser,
+) -> ScoringConfigResponse:
+    """
+    Get the current scoring configuration.
+
+    Returns all scoring weights and multipliers that affect task scoring.
+    Note: tag_multipliers and project_multipliers are managed separately
+    via the /tags and /projects endpoints.
+    """
+    from motido.core.scoring import load_scoring_config
+
+    config = load_scoring_config()
+
+    # Convert to response schema (excluding tag/project multipliers)
+    return ScoringConfigResponse(
+        base_score=config.get("base_score", 10),
+        field_presence_bonus=config.get(
+            "field_presence_bonus", {"text_description": 5}
+        ),
+        difficulty_multiplier=config.get("difficulty_multiplier", {}),
+        duration_multiplier=config.get("duration_multiplier", {}),
+        priority_multiplier=config.get("priority_multiplier", {}),
+        age_factor=config.get("age_factor", {}),
+        daily_penalty=config.get("daily_penalty", {}),
+        due_date_proximity=config.get("due_date_proximity", {}),
+        start_date_aging=config.get("start_date_aging", {}),
+        dependency_chain=config.get("dependency_chain", {}),
+        habit_streak_bonus=config.get("habit_streak_bonus", {}),
+        status_bumps=config.get("status_bumps", {}),
+    )
+
+
+@router.post("/scoring-config/reset", response_model=ScoringConfigResponse)
+async def reset_scoring_config(  # pragma: no cover
+    _user: CurrentUser,
+) -> ScoringConfigResponse:
+    """
+    Reset the scoring configuration to default values.
+
+    Restores all scoring weights and multipliers to their original defaults.
+    """
+    from motido.core.scoring import get_default_scoring_config, save_scoring_config
+
+    config = get_default_scoring_config()
+    save_scoring_config(config)
+
+    return ScoringConfigResponse(
+        base_score=config.get("base_score", 10),
+        field_presence_bonus=config.get(
+            "field_presence_bonus", {"text_description": 5}
+        ),
+        difficulty_multiplier=config.get("difficulty_multiplier", {}),
+        duration_multiplier=config.get("duration_multiplier", {}),
+        priority_multiplier=config.get("priority_multiplier", {}),
+        age_factor=config.get("age_factor", {}),
+        daily_penalty=config.get("daily_penalty", {}),
+        due_date_proximity=config.get("due_date_proximity", {}),
+        start_date_aging=config.get("start_date_aging", {}),
+        dependency_chain=config.get("dependency_chain", {}),
+        habit_streak_bonus=config.get("habit_streak_bonus", {}),
+        status_bumps=config.get("status_bumps", {}),
+    )
+
+
+@router.put("/scoring-config", response_model=ScoringConfigResponse)
+async def update_scoring_config(  # pragma: no cover
+    update_data: ScoringConfigUpdate,
+    _user: CurrentUser,
+) -> ScoringConfigResponse:
+    """
+    Update the scoring configuration.
+
+    Only the fields provided in the request will be updated.
+    Note: tag_multipliers and project_multipliers are managed separately
+    via the /tags and /projects endpoints.
+    """
+    from motido.core.scoring import load_scoring_config, save_scoring_config
+
+    # Load current config
+    config = load_scoring_config()
+
+    # Fields that are simple values (no model_dump needed)
+    simple_fields = [
+        "base_score",
+        "difficulty_multiplier",
+        "duration_multiplier",
+        "priority_multiplier",
+    ]
+    # Fields that are Pydantic models (need model_dump)
+    model_fields = [
+        "field_presence_bonus",
+        "age_factor",
+        "daily_penalty",
+        "due_date_proximity",
+        "start_date_aging",
+        "dependency_chain",
+        "habit_streak_bonus",
+        "status_bumps",
+    ]
+
+    # Update simple fields
+    for field in simple_fields:
+        value = getattr(update_data, field)
+        if value is not None:
+            config[field] = value
+
+    # Update model fields (need to call model_dump())
+    for field in model_fields:
+        value = getattr(update_data, field)
+        if value is not None:
+            config[field] = value.model_dump()
+
+    # Save updated config
+    try:
+        save_scoring_config(config)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+
+    # Return updated config
+    return ScoringConfigResponse(
+        base_score=config.get("base_score", 10),
+        field_presence_bonus=config.get(
+            "field_presence_bonus", {"text_description": 5}
+        ),
+        difficulty_multiplier=config.get("difficulty_multiplier", {}),
+        duration_multiplier=config.get("duration_multiplier", {}),
+        priority_multiplier=config.get("priority_multiplier", {}),
+        age_factor=config.get("age_factor", {}),
+        daily_penalty=config.get("daily_penalty", {}),
+        due_date_proximity=config.get("due_date_proximity", {}),
+        start_date_aging=config.get("start_date_aging", {}),
+        dependency_chain=config.get("dependency_chain", {}),
+        habit_streak_bonus=config.get("habit_streak_bonus", {}),
+        status_bumps=config.get("status_bumps", {}),
+    )

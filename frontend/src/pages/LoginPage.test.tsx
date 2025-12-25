@@ -39,7 +39,7 @@ describe('LoginPage', () => {
     it('should render login form by default', () => {
       render(<LoginPage />);
 
-      expect(screen.getByText('Moti-Do')).toBeInTheDocument();
+      expect(screen.getByText('Motodo')).toBeInTheDocument();
       expect(screen.getByText('Task and Habit Tracker')).toBeInTheDocument();
       expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/password/i)).toBeInTheDocument();

@@ -186,3 +186,30 @@ export const DurationLabel: Record<Duration, string> = {
   [Duration.LONG]: "Long",
   [Duration.ODYSSEYAN]: "Odysseyan",
 };
+
+// Priority descriptions for info tooltips
+export const PriorityDescription: Record<Priority, string> = {
+  [Priority.TRIVIAL]: "If this never happens even I won't notice (ordering new shoes)",
+  [Priority.LOW]: "I would like this to happen but it's no big deal if it doesn't (doing dishes, making coffee)",
+  [Priority.MEDIUM]: "I really need to make this happen, but if it doesn't, it's not the end of the world (laundry, nighttime routine)",
+  [Priority.HIGH]: "Important with noticeable consequences if missed (birthdays, returns, work tasks)",
+  [Priority.DEFCON_ONE]: "Serious consequences if this does not happen on time (urgent deadlines, critical commitments)",
+};
+
+// Difficulty descriptions for info tooltips
+export const DifficultyDescription: Record<Difficulty, string> = {
+  [Difficulty.TRIVIAL]: "I could do this in my sleep (Duolingo, changing contacts)",
+  [Difficulty.LOW]: "Very simple and easy (dishes, nighttime routine)",
+  [Difficulty.MEDIUM]: "Requires some effort but manageable (grocery shopping, cleaning)",
+  [Difficulty.HIGH]: "Hard but not unreasonably so (laundry, large homeowner tasks)",
+  [Difficulty.HERCULEAN]: "I really need to stretch myself to do this (asking for a raise, doctor visits)",
+};
+
+// Duration descriptions for info tooltips
+export const DurationDescription: Record<Duration, string> = {
+  [Duration.MINUSCULE]: "≤ 15 minutes",
+  [Duration.SHORT]: "15 min – 30 min",
+  [Duration.MEDIUM]: "30 min – 1 hour",
+  [Duration.LONG]: "1 – 3 hours",
+  [Duration.ODYSSEYAN]: "> 3 hours",
+};

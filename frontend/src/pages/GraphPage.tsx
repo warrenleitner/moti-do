@@ -40,10 +40,6 @@ export default function GraphPage() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Dependency Graph
-      </Typography>
-
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Visualize task dependencies. Click on a task to see details. Drag to pan, scroll to zoom.
       </Typography>

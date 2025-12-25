@@ -9,7 +9,7 @@ const AUTH_FILE = 'playwright/.auth/user.json';
 setup('authenticate', async ({ page }) => {
   // Navigate to login page
   await page.goto('/login');
-  await page.getByRole('heading', { name: 'Moti-Do' }).waitFor({ timeout: 10000 });
+  await page.getByRole('heading', { name: 'Motodo' }).waitFor({ timeout: 10000 });
 
   // Login with test credentials
   await page.getByRole('textbox', { name: 'Username' }).fill('default_user');

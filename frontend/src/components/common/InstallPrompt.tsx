@@ -135,7 +135,7 @@ export function InstallPrompt() {
         <InstallMobileIcon color="primary" fontSize="large" />
         <Box sx={{ flex: 1 }}>
           <Typography variant="subtitle1" fontWeight="bold">
-            Install Moti-Do
+            Install Motodo
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Add to your home screen for quick access and offline use

@@ -6,7 +6,6 @@ import { type Page, type Locator, expect } from '@playwright/test';
 
 export class GraphPage {
   readonly page: Page;
-  readonly heading: Locator;
   readonly description: Locator;
   readonly graphContainer: Locator;
   readonly taskDrawer: Locator;
@@ -22,7 +21,6 @@ export class GraphPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: 'Dependency Graph' });
     this.description = page.getByText('Visualize task dependencies');
     // ReactFlow container
     this.graphContainer = page.locator('.react-flow');
@@ -44,7 +42,7 @@ export class GraphPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/graph');
-    await this.heading.waitFor({ timeout: 10000 });
+    await this.waitForGraphOrEmptyState();
   }
 
   /**
@@ -102,8 +100,10 @@ export class GraphPage {
     const node = this.getNodeByTitle(title);
     // Ensure the node is scrolled into view and visible
     await node.scrollIntoViewIfNeeded();
-    // Use force click to bypass any overlapping elements (page headers, etc.)
-    await node.click({ force: true });
+    // Wait for node to be stable before clicking
+    await this.page.waitForTimeout(200);
+    // Click the node - use regular click, not force click, to ensure event handlers fire
+    await node.click();
     // Wait for drawer to open
     await this.taskDrawer.waitFor({ timeout: 5000 });
   }

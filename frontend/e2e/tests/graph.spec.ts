@@ -15,7 +15,7 @@ test.describe('Dependency Graph', () => {
       const graphPage = new GraphPage(page);
       await graphPage.goto();
 
-      await expect(graphPage.heading).toBeVisible();
+      await expect(graphPage.description).toBeVisible();
     });
 
     test('should show empty state or graph based on dependencies', async ({ page }) => {

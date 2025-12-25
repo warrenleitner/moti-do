@@ -12,8 +12,8 @@ test.describe('Settings Page', () => {
     test('should display settings page correctly', async ({ page }) => {
       await page.goto('/settings');
 
-      // Verify page title/heading
-      await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
+      // Verify page loads with Data Backup section visible
+      await expect(page.getByRole('heading', { name: 'Data Backup & Restore' })).toBeVisible();
     });
 
     test('should show all settings sections', async ({ page }) => {

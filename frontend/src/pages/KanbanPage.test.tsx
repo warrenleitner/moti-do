@@ -46,7 +46,8 @@ describe('KanbanPage', () => {
 
   it('renders without crashing', () => {
     render(<KanbanPage />);
-    expect(screen.getByText(/Kanban/i)).toBeInTheDocument();
+    // Page renders with the kanban columns
+    expect(screen.getByText(/Backlog/i)).toBeInTheDocument();
   });
 
   it('displays kanban board columns', () => {
