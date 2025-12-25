@@ -1,4 +1,4 @@
-import { Box, Typography, Tooltip, Paper } from '@mui/material';
+import { Box, Text, Tooltip, Paper, Group } from '@mantine/core';
 import type { Task } from '../../types';
 
 interface HabitHeatmapProps {
@@ -73,74 +73,73 @@ export default function HabitHeatmap({ habit, allTasks, weeks = 12 }: HabitHeatm
   const completionRate = totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
 
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="subtitle1" fontWeight="medium">
+    <Paper withBorder p="md" radius="md">
+      <Group justify="space-between" align="center" mb="md">
+        <Text fw={500}>
           {habit.icon} {habit.title}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
+        </Text>
+        <Text size="sm" c="dimmed">
           {completionRate}% completion ({completedDays}/{totalDays} days)
-        </Typography>
-      </Box>
+        </Text>
+      </Group>
 
-      <Box sx={{ display: 'flex', gap: 0.5 }}>
+      <Group gap={4} wrap="nowrap">
         {/* Day labels */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mr: 1 }}>
+        <Box style={{ display: 'flex', flexDirection: 'column', gap: 4, marginRight: 8 }}>
           {dayNames.map((day) => (
-            <Typography
+            <Text
               key={day}
-              variant="caption"
-              sx={{ height: 12, lineHeight: '12px', color: 'text.secondary' }}
+              size="xs"
+              c="dimmed"
+              style={{ height: 12, lineHeight: '12px' }}
             >
               {day}
-            </Typography>
+            </Text>
           ))}
         </Box>
 
         {/* Heatmap grid */}
         {weeksData.map((week, weekIdx) => (
-          <Box key={weekIdx} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Box key={weekIdx} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {week.map((day, dayIdx) => (
               <Tooltip
                 key={dayIdx}
-                title={`${day.date.toLocaleDateString()}: ${
+                label={`${day.date.toLocaleDateString()}: ${
                   day.isFuture ? 'Future' : day.completed ? 'Completed' : 'Not completed'
                 }`}
               >
                 <Box
-                  sx={{
+                  style={{
                     width: 12,
                     height: 12,
-                    borderRadius: 0.5,
+                    borderRadius: 2,
                     backgroundColor: getCellColor(day.completed, day.isFuture),
                     cursor: 'default',
                     transition: 'transform 0.1s',
-                    '&:hover': {
-                      transform: 'scale(1.2)',
-                    },
                   }}
+                  className="habit-heatmap-cell"
                 />
               </Tooltip>
             ))}
           </Box>
         ))}
-      </Box>
+      </Group>
 
       {/* Legend */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Box sx={{ width: 12, height: 12, borderRadius: 0.5, backgroundColor: '#e0e0e0' }} />
-          <Typography variant="caption" color="text.secondary">
+      <Group gap="md" mt="md">
+        <Group gap="xs">
+          <Box style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: '#e0e0e0' }} />
+          <Text size="xs" c="dimmed">
             Not completed
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Box sx={{ width: 12, height: 12, borderRadius: 0.5, backgroundColor: '#4caf50' }} />
-          <Typography variant="caption" color="text.secondary">
+          </Text>
+        </Group>
+        <Group gap="xs">
+          <Box style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: '#4caf50' }} />
+          <Text size="xs" c="dimmed">
             Completed
-          </Typography>
-        </Box>
-      </Box>
+          </Text>
+        </Group>
+      </Group>
     </Paper>
   );
 }

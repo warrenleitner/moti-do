@@ -1,11 +1,11 @@
-import { Box, Typography, Tabs, Tab, Stack } from '@mui/material';
+import { Box, Text, Tabs, Stack } from '@mantine/core';
 import { useState } from 'react';
 import type { Task } from '../../types';
 import { EmptyState } from '../common';
 import HabitCard from './HabitCard';
 import HabitHeatmap from './HabitHeatmap';
 import HabitStats from './HabitStats';
-import { Loop } from '@mui/icons-material';
+import { IconRepeat } from '@tabler/icons-react';
 
 interface HabitListProps {
   habits: Task[];
@@ -38,7 +38,7 @@ export default function HabitList({
   if (rootHabits.length === 0) {
     return (
       <EmptyState
-        icon={<Loop sx={{ fontSize: 64 }} />}
+        icon={<IconRepeat size={64} />}
         title="No habits yet"
         description="Create recurring habits to build consistency and track your streaks."
         actionLabel={onCreateNew ? 'Create Habit' : undefined}
@@ -53,19 +53,21 @@ export default function HabitList({
       <HabitStats habits={rootHabits} />
 
       {/* View tabs */}
-      <Tabs value={view} onChange={(_, v) => setView(v)} sx={{ mb: 3 }}>
-        <Tab label="List View" value="list" />
-        <Tab label="Heatmap View" value="heatmap" />
+      <Tabs value={view} onChange={(v) => setView(v as 'list' | 'heatmap')} mb="lg">
+        <Tabs.List>
+          <Tabs.Tab value="list">List View</Tabs.Tab>
+          <Tabs.Tab value="heatmap">Heatmap View</Tabs.Tab>
+        </Tabs.List>
       </Tabs>
 
       {view === 'list' ? (
         <>
           {/* Pending habits */}
           {pendingHabits.length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+            <Box mb="lg">
+              <Text size="sm" c="dimmed" mb="xs">
                 Pending ({pendingHabits.length})
-              </Typography>
+              </Text>
               {pendingHabits.map((habit) => (
                 <HabitCard
                   key={habit.id}
@@ -81,9 +83,9 @@ export default function HabitList({
           {/* Completed habits */}
           {completedHabits.length > 0 && (
             <Box>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              <Text size="sm" c="dimmed" mb="xs">
                 Completed Today ({completedHabits.length})
-              </Typography>
+              </Text>
               {completedHabits.map((habit) => (
                 <HabitCard
                   key={habit.id}
@@ -97,7 +99,7 @@ export default function HabitList({
           )}
         </>
       ) : (
-        <Stack spacing={2}>
+        <Stack gap="md">
           {rootHabits.map((habit) => (
             <HabitHeatmap
               key={habit.id}

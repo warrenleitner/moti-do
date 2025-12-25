@@ -132,8 +132,8 @@ export class HabitsPage {
    * Get a habit card by its title.
    */
   getHabitByTitle(title: string): Locator {
-    // Habits are displayed as MuiCard elements (HabitCard uses MUI)
-    return this.page.locator('.MuiCard-root').filter({ hasText: title });
+    // Habits are displayed as Mantine Card elements (HabitCard uses Mantine)
+    return this.page.locator('.mantine-Card-root').filter({ hasText: title });
   }
 
   /**
@@ -234,8 +234,8 @@ export class HabitsPage {
    * Get count of visible habits.
    */
   async getHabitCount(): Promise<number> {
-    // Count MuiCard elements (habit cards use MUI)
-    return await this.page.locator('.MuiCard-root').count();
+    // Count Mantine Card elements (habit cards use Mantine)
+    return await this.page.locator('.mantine-Card-root').count();
   }
 
   /**

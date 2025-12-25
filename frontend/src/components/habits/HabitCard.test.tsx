@@ -27,45 +27,46 @@ describe('HabitCard', () => {
   };
 
   it('renders habit name', () => {
-    render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={vi.fn()} />);
+    render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.getByText('Exercise')).toBeInTheDocument();
   });
 
   it('renders habit description', () => {
-    const { container } = render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={vi.fn()} />);
+    const { container } = render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={vi.fn()} onDelete={vi.fn()} />);
     // The description is not displayed in the current implementation, so just verify the card renders
     expect(container).toBeInTheDocument();
   });
 
   it('calls onEdit when edit clicked', async () => {
     const onEdit = vi.fn();
-    const { user } = render(<HabitCard habit={mockHabit} onEdit={onEdit} onComplete={vi.fn()} />);
-    await user.click(screen.getByTitle('Edit habit'));
+    const { user } = render(<HabitCard habit={mockHabit} onEdit={onEdit} onComplete={vi.fn()} onDelete={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Edit habit' }));
     expect(onEdit).toHaveBeenCalledWith(mockHabit);
   });
 
   it('calls onDelete when delete clicked', async () => {
-    // Delete is not implemented in current component, test should just verify component renders
-    const { container } = render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={vi.fn()} />);
-    expect(container).toBeInTheDocument();
+    const onDelete = vi.fn();
+    const { user } = render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={vi.fn()} onDelete={onDelete} />);
+    await user.click(screen.getByRole('button', { name: 'Delete habit' }));
+    expect(onDelete).toHaveBeenCalledWith(mockHabit.id);
   });
 
   it('calls onToggle when toggle clicked', async () => {
     const onComplete = vi.fn();
-    const { user } = render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={onComplete} />);
+    const { user } = render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={onComplete} onDelete={vi.fn()} />);
     const checkbox = screen.getByRole('checkbox');
     await user.click(checkbox);
     expect(onComplete).toHaveBeenCalledWith(mockHabit.id);
   });
 
   it('displays streak information', () => {
-    render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={vi.fn()} />);
+    render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={vi.fn()} onDelete={vi.fn()} />);
     // Verify streak is displayed somewhere (in progress bar or badge)
     expect(screen.getByText(/5 \/ 30 days/)).toBeInTheDocument();
   });
 
   it('displays frequency', () => {
-    render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={vi.fn()} />);
+    render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.getByText(/Repeats:/)).toBeInTheDocument();
   });
 });

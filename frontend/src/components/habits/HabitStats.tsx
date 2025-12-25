@@ -1,10 +1,10 @@
-import { Box, Card, CardContent, Typography, Grid } from '@mui/material';
+import { Box, Card, Text, SimpleGrid, Group, Title } from '@mantine/core';
 import {
-  LocalFireDepartment,
-  TrendingUp,
-  EmojiEvents,
-  CalendarMonth,
-} from '@mui/icons-material';
+  IconFlame,
+  IconTrendingUp,
+  IconTrophy,
+  IconCalendar,
+} from '@tabler/icons-react';
 import type { Task } from '../../types';
 
 interface HabitStatsProps {
@@ -27,25 +27,25 @@ export default function HabitStats({ habits }: HabitStatsProps) {
 
   const stats = [
     {
-      icon: <LocalFireDepartment sx={{ fontSize: 32 }} />,
+      icon: <IconFlame size={32} />,
       label: 'Total Streak Days',
       value: totalStreakDays,
       color: '#ff9800',
     },
     {
-      icon: <TrendingUp sx={{ fontSize: 32 }} />,
+      icon: <IconTrendingUp size={32} />,
       label: 'Average Streak',
       value: `${avgStreak} days`,
       color: '#2196f3',
     },
     {
-      icon: <EmojiEvents sx={{ fontSize: 32 }} />,
+      icon: <IconTrophy size={32} />,
       label: 'Best Ever Streak',
       value: `${bestStreak} days`,
       color: '#4caf50',
     },
     {
-      icon: <CalendarMonth sx={{ fontSize: 32 }} />,
+      icon: <IconCalendar size={32} />,
       label: 'Active Habits',
       value: `${activeHabits.length}`,
       color: '#9c27b0',
@@ -53,70 +53,68 @@ export default function HabitStats({ habits }: HabitStatsProps) {
   ];
 
   return (
-    <Box sx={{ mb: 4 }}>
-      <Typography variant="h6" gutterBottom>
+    <Box mb="xl">
+      <Title order={4} mb="sm">
         Habit Statistics
-      </Typography>
+      </Title>
 
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md" mb="lg">
         {stats.map((stat) => (
-          <Grid key={stat.label} size={{ xs: 6, sm: 3 }}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                <Box sx={{ color: stat.color, mb: 1 }}>{stat.icon}</Box>
-                <Typography variant="h5" fontWeight="bold">
-                  {stat.value}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {stat.label}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+          <Card key={stat.label} shadow="sm" padding="md" radius="md">
+            <Box ta="center" py="xs">
+              <Box style={{ color: stat.color }} mb="xs">{stat.icon}</Box>
+              <Text size="xl" fw={700}>
+                {stat.value}
+              </Text>
+              <Text size="xs" c="dimmed">
+                {stat.label}
+              </Text>
+            </Box>
+          </Card>
         ))}
-      </Grid>
+      </SimpleGrid>
 
       {/* Hot habits (7+ day streaks) */}
       {hotHabits.length > 0 && (
-        <Card variant="outlined" sx={{ mt: 2 }}>
-          <CardContent>
-            <Typography variant="subtitle2" color="warning.main" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <LocalFireDepartment /> Hot Streaks (7+ days)
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {hotHabits.map((habit) => (
-                <Box
-                  key={habit.id}
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    px: 1.5,
-                    py: 0.5,
-                    borderRadius: 2,
-                    backgroundColor: 'warning.light',
-                    color: 'warning.contrastText',
-                  }}
-                >
-                  {habit.icon && <span>{habit.icon}</span>}
-                  <Typography variant="body2" fontWeight="medium">
-                    {habit.title}
-                  </Typography>
-                  <Typography variant="caption">
-                    ({habit.streak_current} days)
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          </CardContent>
+        <Card withBorder mt="md" padding="md" radius="md">
+          <Group gap="xs" mb="xs">
+            <IconFlame size={20} color="var(--mantine-color-yellow-6)" />
+            <Text size="sm" fw={500} c="yellow.7">
+              Hot Streaks (7+ days)
+            </Text>
+          </Group>
+          <Group gap="xs" wrap="wrap">
+            {hotHabits.map((habit) => (
+              <Box
+                key={habit.id}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '4px 12px',
+                  borderRadius: 'var(--mantine-radius-md)',
+                  backgroundColor: 'var(--mantine-color-yellow-1)',
+                  color: 'var(--mantine-color-yellow-9)',
+                }}
+              >
+                {habit.icon && <span>{habit.icon}</span>}
+                <Text size="sm" fw={500}>
+                  {habit.title}
+                </Text>
+                <Text size="xs">
+                  ({habit.streak_current} days)
+                </Text>
+              </Box>
+            ))}
+          </Group>
         </Card>
       )}
 
       {/* Longest current streak */}
       {longestCurrentStreak > 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+        <Text size="sm" c="dimmed" mt="md">
           Your longest active streak is {longestCurrentStreak} days. Keep it going!
-        </Typography>
+        </Text>
       )}
     </Box>
   );
