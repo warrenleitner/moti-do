@@ -100,24 +100,21 @@ export class TasksPage {
       await dialog.getByLabel('Description').fill(options.description);
     }
 
-    // Set priority if specified (MUI Select - find by displayed text content)
+    // Set priority if specified (Mantine Select - use label to find input)
     if (options?.priority) {
-      // Priority combobox shows "🟡 Medium" by default
-      await dialog.getByRole('combobox').filter({ hasText: '🟡' }).click();
+      await dialog.getByRole('textbox', { name: 'Priority' }).click();
       await this.page.getByRole('option', { name: new RegExp(options.priority, 'i') }).click();
     }
 
     // Set difficulty if specified
     if (options?.difficulty) {
-      // Difficulty combobox shows "🧱 Medium" by default
-      await dialog.getByRole('combobox').filter({ hasText: '🧱' }).click();
+      await dialog.getByRole('textbox', { name: 'Difficulty' }).click();
       await this.page.getByRole('option', { name: new RegExp(options.difficulty, 'i') }).click();
     }
 
     // Set duration if specified
     if (options?.duration) {
-      // Duration combobox shows "🕰️ Medium" by default
-      await dialog.getByRole('combobox').filter({ hasText: '🕰️' }).click();
+      await dialog.getByRole('textbox', { name: 'Duration' }).click();
       await this.page.getByRole('option', { name: new RegExp(options.duration, 'i') }).click();
     }
 

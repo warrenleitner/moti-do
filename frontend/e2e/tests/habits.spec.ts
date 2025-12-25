@@ -235,9 +235,8 @@ test.describe('Habits Management', () => {
       await subtaskInput.press('Enter');
       await page.waitForTimeout(300);
 
-      // Check that the subtask recurrence dropdown is visible
-      const recurrenceDropdown = dialog.locator('.MuiFormControl-root').filter({ hasText: 'Subtask Recurrence' });
-      await expect(recurrenceDropdown).toBeVisible();
+      // Check that the subtask recurrence dropdown is visible (Mantine Select)
+      await expect(dialog.getByRole('textbox', { name: 'Subtask Recurrence' })).toBeVisible();
 
       // Close dialog
       await habitsPage.closeHabitForm();

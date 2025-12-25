@@ -201,13 +201,8 @@ describe('TaskForm', () => {
     const tagInput = screen.getByPlaceholderText(/add tag/i);
     await user.type(tagInput, 'urgent');
 
-    // Click add button or press Enter
-    const addButton = screen.getAllByRole('button').find(btn =>
-      btn.querySelector('[data-testid="AddIcon"]')
-    );
-    if (addButton) {
-      await user.click(addButton);
-    }
+    // Click add button
+    await user.click(screen.getByRole('button', { name: 'Add tag' }));
 
     // Verify tag was added
     expect(screen.getByText('urgent')).toBeInTheDocument();
@@ -261,17 +256,13 @@ describe('TaskForm', () => {
     const urgentChips = screen.getAllByText('urgent');
     expect(urgentChips.length).toBeGreaterThan(0);
 
-    // Remove the tag - find the first CancelIcon and click its parent button
-    const cancelIcons = screen.queryAllByTestId('CancelIcon');
-    if (cancelIcons.length > 0) {
-      const deleteButton = cancelIcons[0].closest('button');
-      if (deleteButton) {
-        await user.click(deleteButton);
-        // After deletion, tag should no longer be visible
-        const remainingChips = screen.queryAllByText('urgent');
-        expect(remainingChips.length).toBe(0);
-      }
-    }
+    // Remove the tag using the close button
+    const removeButton = screen.getByRole('button', { name: 'Remove urgent tag' });
+    await user.click(removeButton);
+
+    // After deletion, tag should no longer be visible
+    const remainingChips = screen.queryAllByText('urgent');
+    expect(remainingChips.length).toBe(0);
   });
 
   it('allows adding subtasks', async () => {
@@ -283,13 +274,8 @@ describe('TaskForm', () => {
     const subtaskInput = screen.getByPlaceholderText(/add subtask/i);
     await user.type(subtaskInput, 'First subtask');
 
-    // Find the Add button by icon
-    const addIcons = screen.getAllByTestId('AddIcon');
-    const addButtons = addIcons.map(icon => icon.closest('button')).filter(Boolean);
-    // The second AddIcon should be for subtasks (first is for tags)
-    if (addButtons.length > 1) {
-      await user.click(addButtons[1] as HTMLElement);
-    }
+    // Click add subtask button
+    await user.click(screen.getByRole('button', { name: 'Add subtask' }));
 
     // Subtask is displayed with bullet point prefix
     expect(screen.getByText('• First subtask')).toBeInTheDocument();
@@ -323,15 +309,8 @@ describe('TaskForm', () => {
 
     expect(screen.getByText('• Remove me')).toBeInTheDocument();
 
-    // Remove the subtask - find the delete icon by its fontSize prop
-    const deleteButtons = screen.getAllByTestId('DeleteIcon');
-    const deleteButton = deleteButtons.find((icon) => icon.closest('button'));
-    if (deleteButton) {
-      const button = deleteButton.closest('button');
-      if (button) {
-        await user.click(button);
-      }
-    }
+    // Remove the subtask using the remove button
+    await user.click(screen.getByRole('button', { name: 'Remove subtask' }));
 
     expect(screen.queryByText('• Remove me')).not.toBeInTheDocument();
   });
@@ -419,11 +398,8 @@ describe('TaskForm', () => {
     const tagInput = screen.getByPlaceholderText(/add tag/i);
     await user.type(tagInput, '   {Enter}');
 
-    // Should not add any tag chips
-    const chips = screen.queryAllByRole('button').filter(btn =>
-      btn.querySelector('[data-testid="CancelIcon"]')
-    );
-    expect(chips).toHaveLength(0);
+    // Should not add any tag chips (no remove tag buttons)
+    expect(screen.queryByRole('button', { name: /remove.*tag/i })).not.toBeInTheDocument();
   });
 
   it('prevents adding empty subtasks', async () => {
@@ -432,7 +408,7 @@ describe('TaskForm', () => {
     const subtaskInput = screen.getByPlaceholderText(/add subtask/i);
     await user.type(subtaskInput, '   {Enter}');
 
-    // Should not add any subtasks (only the input field exists)
-    expect(screen.queryByTestId('DeleteIcon')).not.toBeInTheDocument();
+    // Should not add any subtasks (no remove subtask buttons)
+    expect(screen.queryByRole('button', { name: 'Remove subtask' })).not.toBeInTheDocument();
   });
 });

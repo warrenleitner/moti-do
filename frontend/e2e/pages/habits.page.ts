@@ -89,9 +89,9 @@ export class HabitsPage {
       await dialog.getByLabel('Description').fill(options.description);
     }
 
-    // Set priority if specified (MUI Select - find by emoji prefix)
+    // Set priority if specified (Mantine Select - use label)
     if (options?.priority) {
-      await dialog.getByRole('combobox').filter({ hasText: '🟡' }).click();
+      await dialog.getByRole('textbox', { name: 'Priority' }).click();
       await this.page.getByRole('option', { name: new RegExp(options.priority, 'i') }).click();
     }
 
@@ -112,14 +112,13 @@ export class HabitsPage {
           always: 'Always Copy All',
         }[options.subtaskRecurrenceMode];
 
-        // Click the subtask recurrence dropdown
-        const recurrenceDropdown = dialog.locator('.MuiFormControl-root').filter({ hasText: 'Subtask Recurrence' }).getByRole('combobox');
-        await recurrenceDropdown.click();
+        // Click the subtask recurrence dropdown (Mantine Select - use label)
+        await dialog.getByRole('textbox', { name: 'Subtask Recurrence' }).click();
         await this.page.getByRole('option', { name: new RegExp(modeLabel) }).click();
       }
     }
 
-    // Submit the form - Habits page uses "Save Changes" button
+    // Submit the form - habits page opens the form in edit mode, so button says "Save Changes"
     await dialog.getByRole('button', { name: 'Save Changes' }).click();
 
     // Wait for dialog to close and habit to appear in list
