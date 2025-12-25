@@ -82,6 +82,64 @@ When implementing features or modifications for Moti-Do, you MUST:
 9. Use Poetry for managing dependencies (pyproject.toml)
 10. Verify compliance with `bash scripts/check-all.sh` before submitting (sign-off workflow)
 
+## Feature Development Workflow - MANDATORY
+
+### One Feature, One Commit, One CI Run
+When implementing multiple features, you MUST follow this incremental workflow:
+
+1. **Complete ONE feature at a time** - Do not batch multiple features together
+2. **Run full checks including E2E** - Never skip E2E tests (`bash scripts/check-all.sh` without `--skip-e2e`)
+3. **Commit the feature** - Create a focused commit for that single feature
+4. **Wait for CI** - Let GitHub Actions run and verify the feature passes in CI
+5. **Only then proceed** - Start the next feature only after CI passes
+
+**Why this matters:**
+- Smaller commits are easier to review and debug
+- CI catches environment-specific issues early
+- Rollbacks are simpler if a feature causes problems
+- Each feature gets proper validation before building on it
+
+**NEVER do this:**
+- Implement 3+ features in one session without committing
+- Skip E2E tests to "save time"
+- Batch all features into one giant commit
+- Proceed to the next feature before CI passes
+
+### E2E Test Requirements for New Features
+Every new user-facing feature MUST have E2E test coverage. This is not optional.
+
+**When to add E2E tests:**
+- New UI components that users interact with (buttons, forms, toggles)
+- New user workflows or navigation paths
+- New API endpoints that affect user-visible behavior
+- Changes to existing workflows
+
+**E2E test locations:**
+- `frontend/e2e/` - Main E2E test directory
+- Add tests to existing spec files when extending features
+- Create new spec files for entirely new feature areas
+
+**Example E2E test scenarios for common features:**
+- Toggle/switch: Test all states, verify persistence across page reload
+- Form field: Test input, validation, submission, and error states
+- Filter/sort: Test each option, verify results update correctly
+- CRUD operations: Test create, read, update, delete flows
+
+### Performance Test Requirements
+New features that affect page load or user interactions should have performance coverage:
+
+**When to add performance tests:**
+- New pages or major UI sections
+- Features that load significant data
+- Features with complex rendering (graphs, calendars, large lists)
+
+**Performance test location:** `frontend/e2e/performance.spec.ts`
+
+**What to measure:**
+- Page load times (LCP, FCP)
+- Interaction responsiveness
+- Bundle size impact (check build output)
+
 ## CI/CD Requirements - MANDATORY
 **Before completing ANY feature or fix, you MUST verify all CI checks pass locally:**
 

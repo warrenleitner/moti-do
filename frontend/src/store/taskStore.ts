@@ -17,6 +17,8 @@ interface TaskFilters {
   includeBlocked: boolean;
 }
 
+export type SubtaskViewMode = 'hidden' | 'inline' | 'top-level';
+
 interface TaskSort {
   field: 'priority' | 'due_date' | 'creation_date' | 'title' | 'score';
   order: 'asc' | 'desc';
@@ -32,6 +34,7 @@ interface TaskState {
   // Filters and sorting
   filters: TaskFilters;
   sort: TaskSort;
+  subtaskViewMode: SubtaskViewMode;
 
   // Local actions (immediate state updates)
   setTasks: (tasks: Task[]) => void;
@@ -44,6 +47,7 @@ interface TaskState {
   setFilters: (filters: Partial<TaskFilters>) => void;
   resetFilters: () => void;
   setSort: (sort: TaskSort) => void;
+  setSubtaskViewMode: (mode: SubtaskViewMode) => void;
 
   // Loading state
   setLoading: (loading: boolean) => void;
@@ -80,6 +84,7 @@ export const useTaskStore = create<TaskState>()(
         error: null,
         filters: defaultFilters,
         sort: defaultSort,
+        subtaskViewMode: 'inline',
 
         // Local task actions (for optimistic updates)
         setTasks: (tasks) => set({ tasks, isLoading: false, error: null }),
@@ -115,6 +120,8 @@ export const useTaskStore = create<TaskState>()(
         resetFilters: () => set({ filters: defaultFilters }),
 
         setSort: (sort) => set({ sort }),
+
+        setSubtaskViewMode: (mode) => set({ subtaskViewMode: mode }),
 
         // Loading state
         setLoading: (loading) => set({ isLoading: loading }),
@@ -295,6 +302,7 @@ export const useTaskStore = create<TaskState>()(
         partialize: (state) => ({
           filters: state.filters,
           sort: state.sort,
+          subtaskViewMode: state.subtaskViewMode,
         }),
       }
     ),

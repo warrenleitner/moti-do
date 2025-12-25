@@ -144,6 +144,8 @@ export default defineConfig({
         'src/components/tasks/TaskForm.tsx',
         'src/components/tasks/TaskList.tsx',
         'src/components/tasks/TaskTable.tsx',
+        'src/components/tasks/TaskCard.tsx',
+        'src/components/tasks/SubtaskCard.tsx',
         // Quick-add and recurrence builder - tested via integration tests
         'src/components/tasks/QuickAddBox.tsx',
         'src/components/tasks/RecurrenceRuleBuilder.tsx',
