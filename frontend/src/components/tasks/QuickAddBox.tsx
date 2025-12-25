@@ -10,19 +10,17 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  TextField,
-  InputAdornment,
-  IconButton,
+  TextInput,
+  ActionIcon,
   Paper,
-  Snackbar,
-  Alert,
   Tooltip,
   Box,
-  Typography,
-  Chip,
-  Stack,
-} from '@mui/material';
-import { Add, Bolt, HelpOutline } from '@mui/icons-material';
+  Text,
+  Badge,
+  Group,
+} from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { IconPlus, IconBolt, IconHelp } from '@tabler/icons-react';
 import { useTaskStore } from '../../store';
 import { parseQuickAddInput, quickAddResultToTask } from '../../utils/quickAdd';
 import { Priority, Difficulty, Duration, PriorityEmoji } from '../../types';
@@ -36,8 +34,6 @@ interface QuickAddBoxProps {
 /* v8 ignore start */
 export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
   const [input, setInput] = useState('');
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [lastCreated, setLastCreated] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const createTask = useTaskStore((state) => state.createTask);
@@ -66,8 +62,11 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
 
     try {
       await createTask(fullTaskData);
-      setLastCreated(parsed.title);
-      setShowSuccess(true);
+      notifications.show({
+        title: 'Task created',
+        message: `Task "${parsed.title}" created!`,
+        color: 'green',
+      });
       setInput('');
       onTaskCreated?.();
     } catch (error) /* v8 ignore next */ {
@@ -98,137 +97,93 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
   }, []);
 
   return (
-    <>
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2,
-          mb: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 2,
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-          <TextField
-            inputRef={inputRef}
-            fullWidth
-            size="small"
-            placeholder="Add a task... (try: !high #work @tomorrow ~project)"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Bolt color="primary" fontSize="small" />
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Tooltip title="Show syntax help">
-                    <IconButton
-                      size="small"
-                      onClick={() => setShowHelp(!showHelp)}
-                      aria-label="Show syntax help"
-                      sx={{ mr: 0.5 }}
-                    >
-                      <HelpOutline fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Add task (Enter)">
-                    <span>
-                      <IconButton
-                        size="small"
-                        onClick={handleSubmit}
-                        disabled={!parsed.title.trim()}
-                        color="primary"
-                        aria-label="Add task"
-                      >
-                        <Add />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'background.paper',
-              },
-            }}
-          />
+    <Paper p="md" mb="md" withBorder radius="md">
+      <TextInput
+        ref={inputRef}
+        placeholder="Add a task... (try: !high #work @tomorrow ~project)"
+        value={input}
+        onChange={(e) => setInput(e.currentTarget.value)}
+        onKeyDown={handleKeyDown}
+        leftSection={<IconBolt size={16} color="var(--mantine-color-blue-6)" />}
+        rightSection={
+          <Group gap={4}>
+            <Tooltip label="Show syntax help">
+              <ActionIcon
+                variant="subtle"
+                size="sm"
+                onClick={() => setShowHelp(!showHelp)}
+                aria-label="Show syntax help"
+              >
+                <IconHelp size={16} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Add task (Enter)">
+              <ActionIcon
+                variant="subtle"
+                size="sm"
+                onClick={handleSubmit}
+                disabled={!parsed.title.trim()}
+                color="blue"
+                aria-label="Add task"
+              >
+                <IconPlus size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        }
+        rightSectionWidth={70}
+      />
+
+      {/* Preview of parsed modifiers */}
+      {hasModifiers && (
+        <Group gap="xs" mt="xs" wrap="wrap">
+          {parsed.priority && (
+            <Badge size="sm" variant="outline" color="blue">
+              {PriorityEmoji[parsed.priority]} {parsed.priority}
+            </Badge>
+          )}
+          {parsed.tags.map((tag) => (
+            <Badge key={tag} size="sm" variant="outline">
+              #{tag}
+            </Badge>
+          ))}
+          {parsed.dueDate && (
+            <Badge size="sm" variant="outline" color="violet">
+              Due: {parsed.dueDate.toLocaleDateString()}
+            </Badge>
+          )}
+          {parsed.project && (
+            <Badge size="sm" variant="outline" color="cyan">
+              ~{parsed.project}
+            </Badge>
+          )}
+        </Group>
+      )}
+
+      {/* Help text */}
+      {showHelp && (
+        <Box mt="sm" p="sm" bg="gray.1" style={{ borderRadius: 'var(--mantine-radius-sm)' }}>
+          <Text size="xs" c="dimmed">
+            <strong>Quick-add syntax:</strong>
+            <br />
+            <code>!high</code>, <code>!low</code>, <code>!medium</code>,{' '}
+            <code>!critical</code> - Priority
+            <br />
+            <code>#tagname</code> - Add tags (multiple allowed)
+            <br />
+            <code>@tomorrow</code>, <code>@friday</code>, <code>@next-week</code>,{' '}
+            <code>@dec-25</code> - Due date
+            <br />
+            <code>~project</code> - Project name
+            <br />
+            <br />
+            <em>Example: Buy groceries !high #shopping @friday ~home</em>
+            <br />
+            <em>Press Ctrl/Cmd+K to focus this input</em>
+          </Text>
         </Box>
-
-        {/* Preview of parsed modifiers */}
-        {hasModifiers && (
-          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }} useFlexGap>
-            {parsed.priority && (
-              <Chip
-                size="small"
-                label={`${PriorityEmoji[parsed.priority]} ${parsed.priority}`}
-                color="primary"
-                variant="outlined"
-              />
-            )}
-            {parsed.tags.map((tag) => (
-              <Chip key={tag} size="small" label={`#${tag}`} variant="outlined" />
-            ))}
-            {parsed.dueDate && (
-              <Chip
-                size="small"
-                label={`Due: ${parsed.dueDate.toLocaleDateString()}`}
-                color="secondary"
-                variant="outlined"
-              />
-            )}
-            {parsed.project && (
-              <Chip
-                size="small"
-                label={`~${parsed.project}`}
-                color="info"
-                variant="outlined"
-              />
-            )}
-          </Stack>
-        )}
-
-        {/* Help text */}
-        {showHelp && (
-          <Box sx={{ mt: 1.5, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-            <Typography variant="caption" color="text.secondary" component="div">
-              <strong>Quick-add syntax:</strong>
-              <br />
-              <code>!high</code>, <code>!low</code>, <code>!medium</code>,{' '}
-              <code>!critical</code> - Priority
-              <br />
-              <code>#tagname</code> - Add tags (multiple allowed)
-              <br />
-              <code>@tomorrow</code>, <code>@friday</code>, <code>@next-week</code>,{' '}
-              <code>@dec-25</code> - Due date
-              <br />
-              <code>~project</code> - Project name
-              <br />
-              <br />
-              <em>Example: Buy groceries !high #shopping @friday ~home</em>
-              <br />
-              <em>Press Ctrl/Cmd+K to focus this input</em>
-            </Typography>
-          </Box>
-        )}
-      </Paper>
-
-      <Snackbar
-        open={showSuccess}
-        autoHideDuration={3000}
-        onClose={() => setShowSuccess(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setShowSuccess(false)} severity="success" sx={{ width: '100%' }}>
-          Task "{lastCreated}" created!
-        </Alert>
-      </Snackbar>
-    </>
+      )}
+    </Paper>
   );
 }
 /* v8 ignore stop */

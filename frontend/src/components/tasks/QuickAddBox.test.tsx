@@ -6,13 +6,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '../../test/utils';
 import QuickAddBox from './QuickAddBox';
 import * as stores from '../../store';
+import { notifications } from '@mantine/notifications';
 
 vi.mock('../../store', () => ({
   useTaskStore: vi.fn(),
 }));
 
+// Mock Mantine notifications
+vi.mock('@mantine/notifications', () => ({
+  notifications: {
+    show: vi.fn(),
+  },
+}));
+
 describe('QuickAddBox', () => {
   const mockCreateTask = vi.fn();
+  const mockNotificationsShow = vi.mocked(notifications.show);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -21,6 +30,7 @@ describe('QuickAddBox', () => {
       const state = { createTask: mockCreateTask };
       return typeof selector === 'function' ? selector(state as never) : state;
     });
+    mockNotificationsShow.mockClear();
   });
 
   it('renders input field', () => {
@@ -100,7 +110,12 @@ describe('QuickAddBox', () => {
     await user.type(input, 'Test task{Enter}');
 
     await waitFor(() => {
-      expect(screen.getByText(/task "test task" created/i)).toBeInTheDocument();
+      expect(notifications.show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Task "Test task" created!',
+          color: 'green',
+        })
+      );
     });
   });
 

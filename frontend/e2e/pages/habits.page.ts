@@ -65,10 +65,12 @@ export class HabitsPage {
     // Set frequency if specified (using the RecurrenceRuleBuilder visual UI)
     if (options?.frequency && options.frequency !== 'DAILY') {
       // Click the frequency dropdown and select the desired frequency
+      // Mantine Select renders as textbox - use getByDisplayValue to find by current value
       const frequencyLabel = options.frequency === 'WEEKLY' ? 'Week' :
                              options.frequency === 'MONTHLY' ? 'Month' :
                              options.frequency === 'YEARLY' ? 'Year' : 'Day';
-      const frequencyDropdown = dialog.getByRole('combobox').filter({ hasText: /Day|Week|Month|Year/ });
+      // The frequency dropdown displays "Day" by default (or "Days" if interval > 1)
+      const frequencyDropdown = dialog.locator('input[value="Day"], input[value="Days"]').first();
       await frequencyDropdown.click();
       await this.page.getByRole('option', { name: new RegExp(`^${frequencyLabel}s?$`) }).click();
     }
@@ -199,10 +201,12 @@ export class HabitsPage {
       await this.page.getByLabel('Title').fill(updates.title);
     }
     if (updates.frequency) {
+      // Mantine Select renders as textbox - use locator to find by current value
       const frequencyLabel = updates.frequency === 'WEEKLY' ? 'Week' :
                              updates.frequency === 'MONTHLY' ? 'Month' :
                              updates.frequency === 'YEARLY' ? 'Year' : 'Day';
-      const frequencyDropdown = this.page.getByRole('combobox').filter({ hasText: /Day|Week|Month|Year/ });
+      // The frequency dropdown displays current value (Day/Days/Week/Weeks/etc.)
+      const frequencyDropdown = this.page.locator('input[value="Day"], input[value="Days"], input[value="Week"], input[value="Weeks"], input[value="Month"], input[value="Months"], input[value="Year"], input[value="Years"]').first();
       await frequencyDropdown.click();
       await this.page.getByRole('option', { name: new RegExp(`^${frequencyLabel}s?$`) }).click();
     }

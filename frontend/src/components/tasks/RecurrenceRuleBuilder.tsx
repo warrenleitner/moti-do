@@ -6,19 +6,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
-  FormControl,
   Select,
-  MenuItem,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-  Typography,
-  RadioGroup,
-  FormControlLabel,
+  NumberInput,
+  Button,
+  Group,
+  Text,
   Radio,
   Paper,
-} from '@mui/material';
-import { Repeat as RepeatIcon } from '@mui/icons-material';
+  Stack,
+} from '@mantine/core';
+import { IconRepeat } from '@tabler/icons-react';
 import type {
   RecurrencePattern,
   Frequency,
@@ -193,170 +190,148 @@ export default function RecurrenceRuleBuilder({
 
   const description = describePattern(pattern);
 
+  // Generate frequency options based on interval
+  const frequencyData = [
+    { value: 'DAILY', label: pattern.interval === 1 ? 'Day' : 'Days' },
+    { value: 'WEEKLY', label: pattern.interval === 1 ? 'Week' : 'Weeks' },
+    { value: 'MONTHLY', label: pattern.interval === 1 ? 'Month' : 'Months' },
+    { value: 'YEARLY', label: pattern.interval === 1 ? 'Year' : 'Years' },
+  ];
+
+  // Generate day of month options
+  const dayOfMonthData = [
+    ...Array.from({ length: 31 }, (_, i) => ({
+      value: String(i + 1),
+      label: String(i + 1),
+    })),
+    { value: '-1', label: 'Last day' },
+  ];
+
+  // Generate position options
+  const positionData = [
+    { value: '1', label: '1st' },
+    { value: '2', label: '2nd' },
+    { value: '3', label: '3rd' },
+    { value: '4', label: '4th' },
+    { value: '-1', label: 'Last' },
+  ];
+
+  // Generate weekday options for select
+  const weekdayData = WEEKDAYS.map((day) => ({
+    value: day,
+    label: WEEKDAY_LABELS[day],
+  }));
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Stack gap="sm">
       {/* Frequency and Interval Row */}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-        <Typography variant="body1" sx={{ minWidth: 'fit-content' }}>
-          Every
-        </Typography>
-        <TextField
-          type="number"
-          size="small"
+      <Group gap="sm" wrap="wrap" align="center">
+        <Text size="sm">Every</Text>
+        <NumberInput
           value={pattern.interval}
-          onChange={(e) => handleIntervalChange(parseInt(e.target.value, 10) || 1)}
+          onChange={(val) => handleIntervalChange(typeof val === 'number' ? val : 1)}
           disabled={disabled}
-          inputProps={{ min: 1, max: 365 }}
-          sx={{ width: 70 }}
+          min={1}
+          max={365}
+          size="xs"
+          w={70}
         />
-        <FormControl size="small" sx={{ minWidth: 100 }}>
-          <Select
-            value={pattern.frequency}
-            onChange={(e) => handleFrequencyChange(e.target.value as Frequency)}
-            disabled={disabled}
-          >
-            <MenuItem value="DAILY">{pattern.interval === 1 ? 'Day' : 'Days'}</MenuItem>
-            <MenuItem value="WEEKLY">{pattern.interval === 1 ? 'Week' : 'Weeks'}</MenuItem>
-            <MenuItem value="MONTHLY">{pattern.interval === 1 ? 'Month' : 'Months'}</MenuItem>
-            <MenuItem value="YEARLY">{pattern.interval === 1 ? 'Year' : 'Years'}</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
+        <Select
+          value={pattern.frequency}
+          onChange={(val) => val && handleFrequencyChange(val as Frequency)}
+          disabled={disabled}
+          data={frequencyData}
+          size="xs"
+          w={100}
+        />
+      </Group>
 
       {/* Weekly: Day Selection */}
       {pattern.frequency === 'WEEKLY' && (
         <Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          <Text size="sm" c="dimmed" mb="xs">
             On these days:
-          </Typography>
-          <ToggleButtonGroup
-            value={pattern.byDay || []}
-            onChange={(_, newDays) => {
-              // Handle toggle group changes
-              if (newDays !== null) {
-                updatePattern((prev) => ({ ...prev, byDay: newDays.length > 0 ? newDays : undefined }));
-              }
-            }}
-            disabled={disabled}
-            size="small"
-            sx={{ flexWrap: 'wrap', gap: 0.5 }}
-          >
+          </Text>
+          <Group gap={4} wrap="wrap">
             {WEEKDAYS.map((day) => (
-              <ToggleButton
+              <Button
                 key={day}
-                value={day}
-                selected={pattern.byDay?.includes(day)}
+                size="xs"
+                variant={pattern.byDay?.includes(day) ? 'filled' : 'outline'}
                 onClick={() => handleWeekdayToggle(day)}
-                sx={{
-                  px: 1.5,
-                  py: 0.5,
-                  minWidth: 44,
-                  '&.Mui-selected': {
-                    backgroundColor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '&:hover': {
-                      backgroundColor: 'primary.dark',
-                    },
-                  },
-                }}
+                disabled={disabled}
+                px="xs"
+                miw={44}
               >
                 {WEEKDAY_LABELS[day]}
-              </ToggleButton>
+              </Button>
             ))}
-          </ToggleButtonGroup>
+          </Group>
         </Box>
       )}
 
       {/* Monthly: Mode Selection */}
       {pattern.frequency === 'MONTHLY' && (
-        <Box>
-          <RadioGroup
-            value={pattern.monthlyMode || 'day_of_month'}
-            onChange={(e) => handleMonthlyModeChange(e.target.value as MonthlyMode)}
-          >
-            <FormControlLabel
+        <Radio.Group
+          value={pattern.monthlyMode || 'day_of_month'}
+          onChange={(val) => handleMonthlyModeChange(val as MonthlyMode)}
+        >
+          <Stack gap="xs">
+            <Radio
               value="day_of_month"
-              control={<Radio size="small" disabled={disabled} />}
+              disabled={disabled}
               label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                  <Typography variant="body2">On day</Typography>
-                  <FormControl size="small" sx={{ minWidth: 80 }}>
-                    <Select
-                      value={pattern.byMonthDay?.[0] || 1}
-                      onChange={(e) => handleMonthDayChange(e.target.value as number)}
-                      disabled={disabled || pattern.monthlyMode !== 'day_of_month'}
-                      size="small"
-                    >
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                        <MenuItem key={day} value={day}>
-                          {day}
-                        </MenuItem>
-                      ))}
-                      <MenuItem value={-1}>Last day</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <Typography variant="body2">of the month</Typography>
-                </Box>
+                <Group gap="xs" wrap="wrap" align="center">
+                  <Text size="sm">On day</Text>
+                  <Select
+                    value={String(pattern.byMonthDay?.[0] || 1)}
+                    onChange={(val) => val && handleMonthDayChange(parseInt(val, 10))}
+                    disabled={disabled || pattern.monthlyMode !== 'day_of_month'}
+                    data={dayOfMonthData}
+                    size="xs"
+                    w={80}
+                  />
+                  <Text size="sm">of the month</Text>
+                </Group>
               }
             />
-            <FormControlLabel
+            <Radio
               value="weekday_of_month"
-              control={<Radio size="small" disabled={disabled} />}
+              disabled={disabled}
               label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                  <Typography variant="body2">On the</Typography>
-                  <FormControl size="small" sx={{ minWidth: 70 }}>
-                    <Select
-                      value={pattern.bySetPos || 1}
-                      onChange={(e) => handlePositionChange(e.target.value as WeekdayPosition)}
-                      disabled={disabled || pattern.monthlyMode !== 'weekday_of_month'}
-                      size="small"
-                    >
-                      <MenuItem value={1}>1st</MenuItem>
-                      <MenuItem value={2}>2nd</MenuItem>
-                      <MenuItem value={3}>3rd</MenuItem>
-                      <MenuItem value={4}>4th</MenuItem>
-                      <MenuItem value={-1}>Last</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small" sx={{ minWidth: 100 }}>
-                    <Select
-                      value={pattern.byWeekday || 'MO'}
-                      onChange={(e) => handleWeekdayChange(e.target.value as Weekday)}
-                      disabled={disabled || pattern.monthlyMode !== 'weekday_of_month'}
-                      size="small"
-                    >
-                      {WEEKDAYS.map((day) => (
-                        <MenuItem key={day} value={day}>
-                          {WEEKDAY_LABELS[day]}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Box>
+                <Group gap="xs" wrap="wrap" align="center">
+                  <Text size="sm">On the</Text>
+                  <Select
+                    value={String(pattern.bySetPos || 1)}
+                    onChange={(val) => val && handlePositionChange(parseInt(val, 10) as WeekdayPosition)}
+                    disabled={disabled || pattern.monthlyMode !== 'weekday_of_month'}
+                    data={positionData}
+                    size="xs"
+                    w={70}
+                  />
+                  <Select
+                    value={pattern.byWeekday || 'MO'}
+                    onChange={(val) => val && handleWeekdayChange(val as Weekday)}
+                    disabled={disabled || pattern.monthlyMode !== 'weekday_of_month'}
+                    data={weekdayData}
+                    size="xs"
+                    w={100}
+                  />
+                </Group>
               }
             />
-          </RadioGroup>
-        </Box>
+          </Stack>
+        </Radio.Group>
       )}
 
       {/* Preview */}
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 1.5,
-          backgroundColor: 'action.hover',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-        }}
-      >
-        <RepeatIcon fontSize="small" color="primary" />
-        <Typography variant="body2" color="text.primary">
-          {description}
-        </Typography>
+      <Paper p="sm" bg="gray.1" radius="sm">
+        <Group gap="xs">
+          <IconRepeat size={16} color="var(--mantine-color-blue-6)" />
+          <Text size="sm">{description}</Text>
+        </Group>
       </Paper>
-    </Box>
+    </Stack>
   );
 }
 /* v8 ignore stop */
