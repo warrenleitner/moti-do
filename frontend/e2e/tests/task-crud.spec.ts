@@ -262,8 +262,8 @@ test.describe('Task CRUD Operations', () => {
       // Switch to hidden mode
       await tasksPage.setSubtaskViewHidden();
 
-      // The button should be in pressed state (verify by aria-pressed or selected class)
-      await expect(tasksPage.subtaskHiddenButton).toHaveAttribute('aria-pressed', 'true');
+      // The button should be in active state (Mantine uses data-active instead of aria-pressed)
+      await expect(tasksPage.subtaskHiddenButton).toHaveAttribute('data-active', 'true');
     });
 
     test('should switch to inline subtask view', async ({ page }) => {
@@ -274,8 +274,8 @@ test.describe('Task CRUD Operations', () => {
       await tasksPage.setSubtaskViewHidden();
       await tasksPage.setSubtaskViewInline();
 
-      // The inline button should be pressed
-      await expect(tasksPage.subtaskInlineButton).toHaveAttribute('aria-pressed', 'true');
+      // The inline button should be active (Mantine uses data-active)
+      await expect(tasksPage.subtaskInlineButton).toHaveAttribute('data-active', 'true');
     });
 
     test('should switch to top-level subtask view', async ({ page }) => {
@@ -285,8 +285,8 @@ test.describe('Task CRUD Operations', () => {
       // Switch to top-level mode
       await tasksPage.setSubtaskViewTopLevel();
 
-      // The top-level button should be pressed
-      await expect(tasksPage.subtaskTopLevelButton).toHaveAttribute('aria-pressed', 'true');
+      // The top-level button should be active (Mantine uses data-active)
+      await expect(tasksPage.subtaskTopLevelButton).toHaveAttribute('data-active', 'true');
     });
   });
 });

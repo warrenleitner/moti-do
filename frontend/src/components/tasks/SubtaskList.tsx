@@ -1,4 +1,4 @@
-import { List, ListItem, ListItemButton, ListItemIcon, ListItemText, Checkbox } from '@mui/material';
+import { Stack, Group, Checkbox, Text, UnstyledButton } from '@mantine/core';
 import type { Subtask } from '../../types';
 
 interface SubtaskListProps {
@@ -13,49 +13,46 @@ export default function SubtaskList({ subtasks, onToggle, readOnly = false }: Su
   }
 
   return (
-    <List dense disablePadding>
+    <Stack gap="xs">
       {subtasks.map((subtask, index) => (
-        <ListItem key={index} disablePadding>
+        <Group key={index} gap="xs" wrap="nowrap">
           {onToggle && !readOnly ? (
-            <ListItemButton onClick={() => onToggle(index)} dense>
-              <ListItemIcon sx={{ minWidth: 36 }}>
-                <Checkbox
-                  edge="start"
-                  checked={subtask.complete}
-                  tabIndex={-1}
-                  disableRipple
-                  size="small"
-                />
-              </ListItemIcon>
-              <ListItemText
-                primary={subtask.text}
-                sx={{
-                  textDecoration: subtask.complete ? 'line-through' : 'none',
-                  color: subtask.complete ? 'text.secondary' : 'text.primary',
-                }}
+            <UnstyledButton onClick={() => onToggle(index)} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Checkbox
+                checked={subtask.complete}
+                readOnly
+                size="sm"
               />
-            </ListItemButton>
+              <Text
+                size="sm"
+                style={{
+                  textDecoration: subtask.complete ? 'line-through' : 'none',
+                }}
+                c={subtask.complete ? 'dimmed' : undefined}
+              >
+                {subtask.text}
+              </Text>
+            </UnstyledButton>
           ) : (
-            <>
-              <ListItemIcon sx={{ minWidth: 36 }}>
-                <Checkbox
-                  edge="start"
-                  checked={subtask.complete}
-                  disabled
-                  size="small"
-                />
-              </ListItemIcon>
-              <ListItemText
-                primary={subtask.text}
-                sx={{
-                  textDecoration: subtask.complete ? 'line-through' : 'none',
-                  color: subtask.complete ? 'text.secondary' : 'text.primary',
-                }}
+            <Group gap="xs" wrap="nowrap">
+              <Checkbox
+                checked={subtask.complete}
+                disabled
+                size="sm"
               />
-            </>
+              <Text
+                size="sm"
+                style={{
+                  textDecoration: subtask.complete ? 'line-through' : 'none',
+                }}
+                c={subtask.complete ? 'dimmed' : undefined}
+              >
+                {subtask.text}
+              </Text>
+            </Group>
           )}
-        </ListItem>
+        </Group>
       ))}
-    </List>
+    </Stack>
   );
 }

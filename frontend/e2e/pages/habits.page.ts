@@ -130,7 +130,7 @@ export class HabitsPage {
    * Get a habit card by its title.
    */
   getHabitByTitle(title: string): Locator {
-    // Habits are displayed as MuiCard elements
+    // Habits are displayed as MuiCard elements (HabitCard uses MUI)
     return this.page.locator('.MuiCard-root').filter({ hasText: title });
   }
 
@@ -230,7 +230,7 @@ export class HabitsPage {
    * Get count of visible habits.
    */
   async getHabitCount(): Promise<number> {
-    // Count cards that have the Loop icon (habit indicator)
+    // Count MuiCard elements (habit cards use MUI)
     return await this.page.locator('.MuiCard-root').count();
   }
 

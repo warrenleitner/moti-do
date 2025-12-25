@@ -1,5 +1,5 @@
-import { Card, CardContent, Box, Checkbox, Typography, Chip } from '@mui/material';
-import { SubdirectoryArrowRight } from '@mui/icons-material';
+import { Card, Checkbox, Text, Badge, Group } from '@mantine/core';
+import { IconCornerDownRight } from '@tabler/icons-react';
 import type { Subtask, Task } from '../../types';
 
 interface SubtaskCardProps {
@@ -19,47 +19,45 @@ export default function SubtaskCard({
 }: SubtaskCardProps) {
   return (
     <Card
-      sx={{
-        mb: 1,
-        ml: 4,
+      shadow="xs"
+      padding="sm"
+      radius="sm"
+      mb="xs"
+      ml="xl"
+      withBorder
+      style={{
         opacity: subtask.complete ? 0.7 : 1,
-        borderLeft: 3,
-        borderColor: subtask.complete ? 'success.light' : 'grey.400',
-        backgroundColor: 'grey.50',
+        borderLeft: `3px solid ${subtask.complete ? 'var(--mantine-color-green-4)' : 'var(--mantine-color-gray-4)'}`,
+        backgroundColor: 'var(--mantine-color-gray-0)',
         transition: 'all 0.2s ease',
-        '&:hover': {
-          boxShadow: 2,
-        },
       }}
     >
-      <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <SubdirectoryArrowRight fontSize="small" color="action" sx={{ ml: -0.5 }} />
-          <Checkbox
-            checked={subtask.complete}
-            onChange={() => onToggle?.(parentTask.id, subtaskIndex)}
-            disabled={!onToggle || parentTask.is_complete}
-            size="small"
-            sx={{ p: 0.5 }}
-          />
-          <Typography
-            variant="body2"
-            sx={{
-              flex: 1,
-              textDecoration: subtask.complete ? 'line-through' : 'none',
-              color: subtask.complete ? 'text.secondary' : 'text.primary',
-            }}
-          >
-            {subtask.text}
-          </Typography>
-          <Chip
-            label={parentTask.title}
-            size="small"
-            variant="outlined"
-            sx={{ fontSize: '0.7rem', height: 20 }}
-          />
-        </Box>
-      </CardContent>
+      <Group gap="sm" wrap="nowrap">
+        <IconCornerDownRight size={16} color="var(--mantine-color-gray-5)" style={{ marginLeft: -4 }} />
+        <Checkbox
+          checked={subtask.complete}
+          onChange={() => onToggle?.(parentTask.id, subtaskIndex)}
+          disabled={!onToggle || parentTask.is_complete}
+          size="sm"
+        />
+        <Text
+          size="sm"
+          style={{
+            flex: 1,
+            textDecoration: subtask.complete ? 'line-through' : 'none',
+          }}
+          c={subtask.complete ? 'dimmed' : undefined}
+        >
+          {subtask.text}
+        </Text>
+        <Badge
+          size="xs"
+          variant="outline"
+          style={{ fontSize: '0.65rem' }}
+        >
+          {parentTask.title}
+        </Badge>
+      </Group>
     </Card>
   );
 }

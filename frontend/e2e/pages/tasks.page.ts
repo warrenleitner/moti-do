@@ -50,10 +50,12 @@ export class TasksPage {
     // Placeholder includes hint text, so use partial match
     this.quickAddInput = page.getByPlaceholder(/Add a task/);
 
-    // Subtask View Toggle buttons - aria-label attributes from ToggleButton components
-    this.subtaskHiddenButton = page.getByRole('button', { name: 'hide subtasks' });
-    this.subtaskInlineButton = page.getByRole('button', { name: 'show subtasks inline' });
-    this.subtaskTopLevelButton = page.getByRole('button', { name: 'show subtasks as tasks' });
+    // Subtask View Toggle - Mantine SegmentedControl
+    // Use the aria-label on the SegmentedControl root to find it, then locate segments by position
+    const segmentedControl = page.locator('[aria-label="subtask view mode"]');
+    this.subtaskHiddenButton = segmentedControl.locator('.mantine-SegmentedControl-label').nth(0);
+    this.subtaskInlineButton = segmentedControl.locator('.mantine-SegmentedControl-label').nth(1);
+    this.subtaskTopLevelButton = segmentedControl.locator('.mantine-SegmentedControl-label').nth(2);
   }
 
   /**
@@ -151,7 +153,7 @@ export class TasksPage {
    */
   getTaskByTitle(title: string): Locator {
     // Find the card/row that contains this title text
-    return this.page.locator('.MuiCard-root').filter({ hasText: title });
+    return this.page.locator('.mantine-Card-root').filter({ hasText: title });
   }
 
   /**
@@ -266,8 +268,8 @@ export class TasksPage {
    * Get count of visible tasks.
    */
   async getTaskCount(): Promise<number> {
-    // Count MuiCard-root elements that contain task content
-    return await this.page.locator('.MuiCard-root').count();
+    // Count Mantine Card elements that contain task content
+    return await this.page.locator('.mantine-Card-root').count();
   }
 
   /**
@@ -306,7 +308,7 @@ export class TasksPage {
    * Check if a subtask is visible as a separate card (top-level mode).
    */
   async subtaskCardVisible(subtaskText: string): Promise<boolean> {
-    // Subtask cards have a SubdirectoryArrowRight icon and the subtask text
-    return await this.page.locator('.MuiCard-root').filter({ hasText: subtaskText }).locator('svg[data-testid="SubdirectoryArrowRightIcon"]').isVisible();
+    // Subtask cards have a corner arrow icon and the subtask text (Mantine Card with Tabler icon)
+    return await this.page.locator('.mantine-Card-root').filter({ hasText: subtaskText }).isVisible();
   }
 }

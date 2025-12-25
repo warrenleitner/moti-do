@@ -1,21 +1,10 @@
+import { Box, Text, Select, Group, SegmentedControl, Tooltip } from '@mantine/core';
 import {
-  Box,
-  Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Stack,
-  ToggleButtonGroup,
-  ToggleButton,
-  Tooltip,
-} from '@mui/material';
-import {
-  Sort,
-  VisibilityOff,
-  ListAlt,
-  FormatListBulleted,
-} from '@mui/icons-material';
+  IconArrowsSort,
+  IconEyeOff,
+  IconList,
+  IconListDetails,
+} from '@tabler/icons-react';
 import type { Task } from '../../types';
 import { EmptyState, FilterBar } from '../common';
 import TaskCard from './TaskCard';
@@ -87,67 +76,74 @@ export default function TaskList({
       />
 
       {/* Sort controls */}
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-        <Sort color="action" />
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Sort by</InputLabel>
-          <Select
-            value={sort.field}
-            label="Sort by"
-            onChange={(e) =>
-              setSort({ ...sort, field: e.target.value as typeof sort.field })
-            }
-          >
-            <MenuItem value="score">Score (XP)</MenuItem>
-            <MenuItem value="priority">Priority</MenuItem>
-            <MenuItem value="due_date">Due Date</MenuItem>
-            <MenuItem value="creation_date">Created</MenuItem>
-            <MenuItem value="title">Title</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Order</InputLabel>
-          <Select
-            value={sort.order}
-            label="Order"
-            onChange={(e) =>
-              setSort({ ...sort, order: e.target.value as 'asc' | 'desc' })
-            }
-          >
-            <MenuItem value="desc">Descending</MenuItem>
-            <MenuItem value="asc">Ascending</MenuItem>
-          </Select>
-        </FormControl>
-        <ToggleButtonGroup
-          value={subtaskViewMode}
-          exclusive
-          onChange={(_, value: SubtaskViewMode | null) => {
-            if (value) setSubtaskViewMode(value);
+      <Group gap="md" align="center" mb="md">
+        <IconArrowsSort size={20} color="var(--mantine-color-gray-6)" />
+        <Select
+          value={sort.field}
+          onChange={(value) => {
+            if (value) setSort({ ...sort, field: value as typeof sort.field });
           }}
-          size="small"
+          data={[
+            { value: 'score', label: 'Score (XP)' },
+            { value: 'priority', label: 'Priority' },
+            { value: 'due_date', label: 'Due Date' },
+            { value: 'creation_date', label: 'Created' },
+            { value: 'title', label: 'Title' },
+          ]}
+          size="sm"
+          w={150}
+          aria-label="Sort by"
+        />
+        <Select
+          value={sort.order}
+          onChange={(value) => {
+            if (value) setSort({ ...sort, order: value as 'asc' | 'desc' });
+          }}
+          data={[
+            { value: 'desc', label: 'Descending' },
+            { value: 'asc', label: 'Ascending' },
+          ]}
+          size="sm"
+          w={120}
+          aria-label="Order"
+        />
+        <SegmentedControl
+          value={subtaskViewMode}
+          onChange={(value) => setSubtaskViewMode(value as SubtaskViewMode)}
+          size="xs"
           aria-label="subtask view mode"
-        >
-          <ToggleButton value="hidden" aria-label="hide subtasks">
-            <Tooltip title="Hide Subtasks">
-              <VisibilityOff fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
-          <ToggleButton value="inline" aria-label="show subtasks inline">
-            <Tooltip title="Show Inline">
-              <ListAlt fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
-          <ToggleButton value="top-level" aria-label="show subtasks as tasks">
-            <Tooltip title="Show as Tasks">
-              <FormatListBulleted fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
-        </ToggleButtonGroup>
-        <Box sx={{ flex: 1 }} />
-        <Typography variant="body2" color="text.secondary">
+          data={[
+            {
+              value: 'hidden',
+              label: (
+                <Tooltip label="Hide Subtasks">
+                  <IconEyeOff size={16} />
+                </Tooltip>
+              ),
+            },
+            {
+              value: 'inline',
+              label: (
+                <Tooltip label="Show Inline">
+                  <IconList size={16} />
+                </Tooltip>
+              ),
+            },
+            {
+              value: 'top-level',
+              label: (
+                <Tooltip label="Show as Tasks">
+                  <IconListDetails size={16} />
+                </Tooltip>
+              ),
+            },
+          ]}
+        />
+        <Box style={{ flex: 1 }} />
+        <Text size="sm" c="dimmed">
           {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
-        </Typography>
-      </Stack>
+        </Text>
+      </Group>
 
       {/* Task list */}
       {filteredTasks.length === 0 ? (

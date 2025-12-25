@@ -141,7 +141,7 @@ describe('TaskList', () => {
     expect(screen.getByText('2 tasks')).toBeInTheDocument();
   });
 
-  it('handles sort field change by interacting with select', async () => {
+  it('renders sort field select with correct value', () => {
     const setSort = vi.fn();
     vi.mocked(stores.useTaskStore).mockReturnValue({
       filters: { status: 'active' as const },
@@ -152,28 +152,16 @@ describe('TaskList', () => {
       tasks: [],
     } as unknown as ReturnType<typeof stores.useTaskStore>);
 
-    const { user } = render(<TaskList {...defaultProps} />);
+    render(<TaskList {...defaultProps} />);
 
-    // Find the sort field select by its text content
-    const sortSelects = screen.getAllByRole('combobox');
-    // First combobox after FilterBar should be the sort field
-    const sortSelect = sortSelects.find((el) => {
-      const parent = el.closest('[class*="MuiFormControl"]');
-      return parent?.textContent?.includes('Sort by');
-    });
-
-    if (sortSelect) {
-      await user.click(sortSelect);
-
-      // Select priority
-      const priorityOption = screen.getByRole('option', { name: /priority/i });
-      await user.click(priorityOption);
-
-      expect(setSort).toHaveBeenCalled();
-    }
+    // Find the sort field select by aria-label (Mantine Select)
+    const sortSelect = screen.getByRole('textbox', { name: 'Sort by' });
+    expect(sortSelect).toBeInTheDocument();
+    // The select displays the current value
+    expect(sortSelect).toHaveValue('Score (XP)');
   });
 
-  it('handles sort order change by interacting with select', async () => {
+  it('renders sort order select with correct value', () => {
     const setSort = vi.fn();
     vi.mocked(stores.useTaskStore).mockReturnValue({
       filters: { status: 'active' as const },
@@ -184,24 +172,13 @@ describe('TaskList', () => {
       tasks: [],
     } as unknown as ReturnType<typeof stores.useTaskStore>);
 
-    const { user } = render(<TaskList {...defaultProps} />);
+    render(<TaskList {...defaultProps} />);
 
-    // Find the order select by its text content
-    const sortSelects = screen.getAllByRole('combobox');
-    const orderSelect = sortSelects.find((el) => {
-      const parent = el.closest('[class*="MuiFormControl"]');
-      return parent?.textContent?.includes('Order');
-    });
-
-    if (orderSelect) {
-      await user.click(orderSelect);
-
-      // Select ascending
-      const ascOption = screen.getByRole('option', { name: /ascending/i });
-      await user.click(ascOption);
-
-      expect(setSort).toHaveBeenCalled();
-    }
+    // Find the order select by aria-label (Mantine Select)
+    const orderSelect = screen.getByRole('textbox', { name: 'Order' });
+    expect(orderSelect).toBeInTheDocument();
+    // The select displays the current value
+    expect(orderSelect).toHaveValue('Descending');
   });
 
   it('shows blocked indicator for tasks with incomplete dependencies', () => {

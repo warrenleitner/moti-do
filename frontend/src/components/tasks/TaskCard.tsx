@@ -1,26 +1,24 @@
 import {
   Card,
-  CardContent,
-  CardActions,
-  Typography,
+  Text,
   Box,
-  IconButton,
+  ActionIcon,
   Checkbox,
   Collapse,
-  Stack,
+  Group,
   Tooltip,
-  Chip,
-} from '@mui/material';
+  Badge,
+} from '@mantine/core';
 import {
-  ExpandMore,
-  ExpandLess,
-  Edit,
-  Delete,
-  Loop,
-  Link as LinkIcon,
-  Star,
-  Undo,
-} from '@mui/icons-material';
+  IconChevronDown,
+  IconChevronUp,
+  IconEdit,
+  IconTrash,
+  IconRepeat,
+  IconLink,
+  IconStar,
+  IconArrowBackUp,
+} from '@tabler/icons-react';
 import { useState } from 'react';
 import type { Task } from '../../types';
 import type { SubtaskViewMode } from '../../store/taskStore';
@@ -63,160 +61,176 @@ export default function TaskCard({
   const showSubtasksInline = subtaskViewMode === 'inline' && hasSubtasks;
   const hasDetails = task.text_description || showSubtasksInline || task.tags.length > 0;
 
+  const borderColor = task.is_complete
+    ? 'var(--mantine-color-green-6)'
+    : isBlocked
+    ? 'var(--mantine-color-gray-5)'
+    : 'var(--mantine-color-blue-6)';
+
   return (
     <Card
-      sx={{
-        mb: 1,
+      shadow="sm"
+      padding="md"
+      radius="md"
+      mb="xs"
+      withBorder
+      style={{
         opacity: task.is_complete ? 0.7 : isBlocked ? 0.6 : 1,
-        borderLeft: 4,
-        borderColor: task.is_complete
-          ? 'success.main'
-          : isBlocked
-          ? 'grey.400'
-          : 'primary.main',
+        borderLeft: `4px solid ${borderColor}`,
         transition: 'all 0.2s ease',
-        '&:hover': {
-          boxShadow: 3,
-        },
       }}
     >
-      <CardContent sx={{ pb: 1 }}>
-        {/* Main row */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-          <Checkbox
-            checked={task.is_complete}
-            onChange={() => onComplete(task.id)}
-            disabled={isBlocked}
-            sx={{ mt: -0.5, ml: -1 }}
-          />
+      {/* Main row */}
+      <Group align="flex-start" gap="sm" wrap="nowrap">
+        <Checkbox
+          checked={task.is_complete}
+          onChange={() => onComplete(task.id)}
+          disabled={isBlocked}
+          mt={-2}
+        />
 
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            {/* Title row */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-              {task.icon && <span>{task.icon}</span>}
-              <Typography
-                variant="body1"
-                sx={{
-                  textDecoration: task.is_complete ? 'line-through' : 'none',
-                  fontWeight: 500,
-                }}
-              >
-                {task.title}
-              </Typography>
-              {task.is_habit && (
-                <Tooltip title="Recurring habit">
-                  <Loop fontSize="small" color="primary" />
-                </Tooltip>
-              )}
-              {task.dependencies.length > 0 && (
-                <Tooltip title={`${task.dependencies.length} dependencies`}>
-                  <LinkIcon fontSize="small" color="action" />
-                </Tooltip>
-              )}
-              {isBlocked && (
-                <Chip label="Blocked" size="small" color="warning" variant="outlined" />
-              )}
-            </Box>
-
-            {/* Metadata row */}
-            <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
-              <Tooltip title="XP reward for completing this task">
-                <Chip
-                  icon={<Star sx={{ fontSize: 16 }} />}
-                  label={`${task.score} XP`}
-                  size="small"
-                  color="secondary"
-                  variant="outlined"
-                  sx={{ fontWeight: 600 }}
-                />
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          {/* Title row */}
+          <Group gap="xs" wrap="wrap" align="center">
+            {task.icon && <span>{task.icon}</span>}
+            <Text
+              fw={500}
+              style={{
+                textDecoration: task.is_complete ? 'line-through' : 'none',
+              }}
+            >
+              {task.title}
+            </Text>
+            {task.is_habit && (
+              <Tooltip label="Recurring habit">
+                <IconRepeat size={16} color="var(--mantine-color-blue-6)" />
               </Tooltip>
-              <PriorityChip priority={task.priority} />
-              <DifficultyChip difficulty={task.difficulty} />
-              <DurationChip duration={task.duration} />
-              {task.due_date && <DateDisplay date={task.due_date} label="Due" />}
-              {task.is_habit && (
-                <StreakBadge current={task.streak_current} best={task.streak_best} />
-              )}
-            </Stack>
-
-            {/* Project badge */}
-            {task.project && (
-              <Chip
-                label={task.project}
-                size="small"
-                sx={{ mt: 1 }}
-                variant="outlined"
-              />
             )}
-
-            {/* Subtask progress - show in inline and top-level modes */}
-            {hasSubtasks && subtaskViewMode !== 'hidden' && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                Subtasks: {completedSubtasks}/{task.subtasks.length}
-              </Typography>
+            {task.dependencies.length > 0 && (
+              <Tooltip label={`${task.dependencies.length} dependencies`}>
+                <IconLink size={16} color="var(--mantine-color-gray-6)" />
+              </Tooltip>
             )}
-          </Box>
+            {isBlocked && (
+              <Badge size="sm" variant="outline" color="yellow">
+                Blocked
+              </Badge>
+            )}
+          </Group>
 
-          {/* Expand button */}
-          {hasDetails && (
-            <IconButton size="small" onClick={() => setExpanded(!expanded)}>
-              {expanded ? <ExpandLess /> : <ExpandMore />}
-            </IconButton>
+          {/* Metadata row */}
+          <Group gap="xs" mt="xs" wrap="wrap">
+            <Tooltip label="XP reward for completing this task">
+              <Badge
+                leftSection={<IconStar size={12} />}
+                size="sm"
+                variant="outline"
+                color="grape"
+                fw={600}
+              >
+                {task.score} XP
+              </Badge>
+            </Tooltip>
+            <PriorityChip priority={task.priority} />
+            <DifficultyChip difficulty={task.difficulty} />
+            <DurationChip duration={task.duration} />
+            {task.due_date && <DateDisplay date={task.due_date} label="Due" />}
+            {task.is_habit && (
+              <StreakBadge current={task.streak_current} best={task.streak_best} />
+            )}
+          </Group>
+
+          {/* Project badge */}
+          {task.project && (
+            <Badge size="sm" variant="outline" mt="xs">
+              {task.project}
+            </Badge>
+          )}
+
+          {/* Subtask progress - show in inline and top-level modes */}
+          {hasSubtasks && subtaskViewMode !== 'hidden' && (
+            <Text size="xs" c="dimmed" mt="xs">
+              Subtasks: {completedSubtasks}/{task.subtasks.length}
+            </Text>
           )}
         </Box>
 
-        {/* Expanded details */}
-        <Collapse in={expanded}>
-          <Box sx={{ mt: 2, pl: 4 }}>
-            {task.text_description && (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {task.text_description}
-              </Typography>
-            )}
+        {/* Expand button */}
+        {hasDetails && (
+          <ActionIcon
+            size="sm"
+            variant="subtle"
+            onClick={() => setExpanded(!expanded)}
+            aria-label={expanded ? 'Collapse details' : 'Expand details'}
+          >
+            {expanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+          </ActionIcon>
+        )}
+      </Group>
 
-            {task.tags.length > 0 && (
-              <Stack direction="row" spacing={0.5} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
-                {task.tags.map((tag) => (
-                  <TagChip key={tag} tag={tag} />
-                ))}
-              </Stack>
-            )}
+      {/* Expanded details */}
+      <Collapse in={expanded}>
+        <Box mt="md" pl={40}>
+          {task.text_description && (
+            <Text size="sm" c="dimmed" mb="sm">
+              {task.text_description}
+            </Text>
+          )}
 
-            {showSubtasksInline && (
-              <SubtaskList
-                subtasks={task.subtasks}
-                onToggle={
-                  onSubtaskToggle
-                    ? (index) => onSubtaskToggle(task.id, index)
-                    : undefined
-                }
-              />
-            )}
-          </Box>
-        </Collapse>
-      </CardContent>
+          {task.tags.length > 0 && (
+            <Group gap={4} mb="sm" wrap="wrap">
+              {task.tags.map((tag) => (
+                <TagChip key={tag} tag={tag} />
+              ))}
+            </Group>
+          )}
 
-      <CardActions sx={{ px: 2, pt: 0 }}>
-        <Box sx={{ flex: 1 }} />
+          {showSubtasksInline && (
+            <SubtaskList
+              subtasks={task.subtasks}
+              onToggle={
+                onSubtaskToggle
+                  ? (index) => onSubtaskToggle(task.id, index)
+                  : undefined
+              }
+            />
+          )}
+        </Box>
+      </Collapse>
+
+      {/* Actions */}
+      <Group justify="flex-end" gap="xs" mt="sm">
         {onUndo && task.history.length > 0 && (
-          <Tooltip title="Undo last change">
-            <IconButton size="small" onClick={() => onUndo(task.id)} color="info">
-              <Undo fontSize="small" />
-            </IconButton>
+          <Tooltip label="Undo last change">
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="blue"
+              onClick={() => onUndo(task.id)}
+              aria-label="Undo last change"
+            >
+              <IconArrowBackUp size={16} />
+            </ActionIcon>
           </Tooltip>
         )}
-        <IconButton size="small" onClick={() => onEdit(task)} title="Edit task">
-          <Edit fontSize="small" />
-        </IconButton>
-        <IconButton
-          size="small"
-          onClick={() => onDelete(task.id)}
-          color="error"
-          title="Delete task"
+        <ActionIcon
+          size="sm"
+          variant="subtle"
+          onClick={() => onEdit(task)}
+          aria-label="Edit task"
         >
-          <Delete fontSize="small" />
-        </IconButton>
-      </CardActions>
+          <IconEdit size={16} />
+        </ActionIcon>
+        <ActionIcon
+          size="sm"
+          variant="subtle"
+          color="red"
+          onClick={() => onDelete(task.id)}
+          aria-label="Delete task"
+        >
+          <IconTrash size={16} />
+        </ActionIcon>
+      </Group>
     </Card>
   );
 }
