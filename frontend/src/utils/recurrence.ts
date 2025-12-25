@@ -1,7 +1,9 @@
 /**
- * Utility functions for converting between RecurrencePattern and rrule strings.
+ * Utility functions for converting between RecurrencePattern and rrule strings,
+ * and calculating next occurrences.
  */
 
+import { RRule } from 'rrule';
 import type {
   RecurrencePattern,
   Frequency,
@@ -269,4 +271,64 @@ export function validatePattern(pattern: RecurrencePattern): string[] {
   }
 
   return errors;
+}
+
+/**
+ * Calculate the next occurrence date from an rrule string.
+ *
+ * @param rruleString - The recurrence rule string (e.g., "FREQ=DAILY;INTERVAL=2")
+ * @param baseDate - The base date to calculate from (defaults to today)
+ * @returns The next occurrence date, or null if invalid/no future occurrences
+ */
+export function getNextOccurrence(
+  rruleString: string,
+  baseDate: Date = new Date()
+): Date | null {
+  if (!rruleString) {
+    return null;
+  }
+
+  try {
+    // Parse the rrule - RRule.fromString expects just the rule part
+    const rule = RRule.fromString(rruleString);
+
+    // Override dtstart to be the base date
+    const ruleWithStart = new RRule({
+      ...rule.origOptions,
+      dtstart: baseDate,
+    });
+
+    // Get the next occurrence after the base date (exclusive)
+    const nextDate = ruleWithStart.after(baseDate, false);
+
+    return nextDate;
+  } catch {
+    // Invalid rrule string
+    return null;
+  }
+}
+
+/**
+ * Get a human-readable description of when the next occurrence will be.
+ *
+ * @param rruleString - The recurrence rule string
+ * @param baseDate - The base date to calculate from (e.g., the due date)
+ * @returns A human-readable string like "Next: Wed, Jan 15, 2025"
+ */
+export function getNextOccurrenceText(
+  rruleString: string,
+  baseDate?: Date
+): string {
+  const nextDate = getNextOccurrence(rruleString, baseDate);
+
+  if (!nextDate) {
+    return '';
+  }
+
+  return `Next: ${nextDate.toLocaleDateString(undefined, {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })}`;
 }

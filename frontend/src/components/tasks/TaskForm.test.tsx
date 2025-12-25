@@ -178,8 +178,12 @@ describe('TaskForm', () => {
 
     await user.type(screen.getByLabelText(/title/i), 'Daily Exercise');
 
-    // Enable habit - this sets default recurrence to daily
-    const habitSwitch = screen.getByLabelText(/recurring/i);
+    // Enable recurring - this sets default recurrence to daily
+    const recurringSwitch = screen.getByLabelText(/recurring task/i);
+    await user.click(recurringSwitch);
+
+    // Enable habit tracking - this appears after enabling recurring
+    const habitSwitch = screen.getByLabelText(/track as habit/i);
     await user.click(habitSwitch);
 
     // The recurrence builder defaults to FREQ=DAILY

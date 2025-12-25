@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Typography, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { Box, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import { Add, ViewList, TableChart } from '@mui/icons-material';
 import { AxiosError } from 'axios';
 import { TaskList, TaskForm } from '../components/tasks';
@@ -222,28 +222,25 @@ export default function TasksPage() {
 
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Tasks</Typography>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={handleViewModeChange}
-            size="small"
-            aria-label="view mode"
-          >
-            <ToggleButton value="list" aria-label="list view">
-              <ViewList />
-            </ToggleButton>
-            <ToggleButton value="table" aria-label="table view">
-              <TableChart />
-            </ToggleButton>
-          </ToggleButtonGroup>
-          <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew} disabled={isLoading}>
-            New Task
-          </Button>
-        </Box>
+      {/* Header actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3, gap: 2 }}>
+        <ToggleButtonGroup
+          value={viewMode}
+          exclusive
+          onChange={handleViewModeChange}
+          size="small"
+          aria-label="view mode"
+        >
+          <ToggleButton value="list" aria-label="list view">
+            <ViewList />
+          </ToggleButton>
+          <ToggleButton value="table" aria-label="table view">
+            <TableChart />
+          </ToggleButton>
+        </ToggleButtonGroup>
+        <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew} disabled={isLoading}>
+          New Task
+        </Button>
       </Box>
 
       {/* Quick-add box for rapid task creation */}

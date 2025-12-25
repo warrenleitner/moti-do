@@ -8,6 +8,8 @@ import {
   rruleToPattern,
   describePattern,
   validatePattern,
+  getNextOccurrence,
+  getNextOccurrenceText,
 } from './recurrence';
 import type { RecurrencePattern } from '../types/recurrence';
 
@@ -440,5 +442,63 @@ describe('roundtrip conversion', () => {
     expect(parsed?.monthlyMode).toBe('weekday_of_month');
     expect(parsed?.bySetPos).toBe(original.bySetPos);
     expect(parsed?.byWeekday).toBe(original.byWeekday);
+  });
+});
+
+describe('getNextOccurrence', () => {
+  it('calculates next daily occurrence', () => {
+    const baseDate = new Date('2025-01-15T10:00:00');
+    const next = getNextOccurrence('FREQ=DAILY', baseDate);
+    expect(next).not.toBeNull();
+    expect(next!.getDate()).toBe(16);
+    expect(next!.getMonth()).toBe(0); // January
+  });
+
+  it('calculates next weekly occurrence', () => {
+    const baseDate = new Date('2025-01-15T10:00:00'); // Wednesday
+    const next = getNextOccurrence('FREQ=WEEKLY', baseDate);
+    expect(next).not.toBeNull();
+    expect(next!.getDate()).toBe(22); // Next Wednesday
+  });
+
+  it('calculates next occurrence with interval', () => {
+    const baseDate = new Date('2025-01-15T10:00:00');
+    const next = getNextOccurrence('FREQ=DAILY;INTERVAL=3', baseDate);
+    expect(next).not.toBeNull();
+    expect(next!.getDate()).toBe(18); // 3 days later
+  });
+
+  it('returns null for empty rrule', () => {
+    expect(getNextOccurrence('')).toBeNull();
+  });
+
+  it('returns null for invalid rrule', () => {
+    expect(getNextOccurrence('INVALID_RRULE')).toBeNull();
+  });
+
+  it('uses today as default base date', () => {
+    const next = getNextOccurrence('FREQ=DAILY');
+    expect(next).not.toBeNull();
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    expect(next!.getDate()).toBe(tomorrow.getDate());
+  });
+});
+
+describe('getNextOccurrenceText', () => {
+  it('returns formatted text for valid rrule', () => {
+    const baseDate = new Date('2025-01-15T10:00:00');
+    const text = getNextOccurrenceText('FREQ=DAILY', baseDate);
+    expect(text).toContain('Next:');
+    expect(text).toContain('Jan');
+    expect(text).toContain('16');
+  });
+
+  it('returns empty string for empty rrule', () => {
+    expect(getNextOccurrenceText('')).toBe('');
+  });
+
+  it('returns empty string for invalid rrule', () => {
+    expect(getNextOccurrenceText('INVALID_RRULE')).toBe('');
   });
 });

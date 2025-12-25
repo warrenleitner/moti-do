@@ -52,7 +52,8 @@ describe('CalendarPage', () => {
 
   it('renders without crashing', () => {
     render(<CalendarPage />);
-    expect(screen.getByText(/Calendar/i)).toBeInTheDocument();
+    // Page renders with the calendar description
+    expect(screen.getByText(/View and manage tasks by their due dates/i)).toBeInTheDocument();
   });
 
   it('displays calendar view', () => {

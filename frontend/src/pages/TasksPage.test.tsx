@@ -97,8 +97,8 @@ describe('TasksPage', () => {
 
   it('renders without crashing', () => {
     render(<TasksPage />);
-    const headings = screen.getAllByRole('heading', { name: /Tasks/i });
-    expect(headings.length).toBeGreaterThan(0);
+    // Page renders with the New Task button
+    expect(screen.getByRole('button', { name: /new task/i })).toBeInTheDocument();
   });
 
   it('shows create task button', () => {

@@ -34,8 +34,10 @@ import {
   DifficultyLabel,
   DurationLabel,
   SubtaskRecurrenceMode,
+  RecurrenceType,
 } from '../../types';
 import RecurrenceRuleBuilder from './RecurrenceRuleBuilder';
+import { getNextOccurrenceText } from '../../utils/recurrence';
 
 interface TaskFormProps {
   open: boolean;
@@ -221,60 +223,98 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
               placeholder="e.g., Work, Personal, Side Project"
             />
 
-            {/* Habit toggle */}
+            {/* Recurring toggle - enables recurrence for any task */}
             <FormControlLabel
               control={
                 <Switch
-                  checked={formData.is_habit || false}
+                  checked={!!formData.recurrence_rule}
                   onChange={(e) => {
-                    const isHabit = e.target.checked;
+                    const isRecurring = e.target.checked;
                     setFormData((prev) => ({
                       ...prev,
-                      is_habit: isHabit,
-                      // Set default recurrence rule when enabling habit
-                      recurrence_rule: isHabit ? (prev.recurrence_rule || 'FREQ=DAILY') : prev.recurrence_rule,
+                      recurrence_rule: isRecurring ? (prev.recurrence_rule || 'FREQ=DAILY') : undefined,
                     }));
                   }}
                 />
               }
-              label="Recurring Habit"
+              label="Recurring Task"
             />
 
-            {/* Recurrence rule (only if habit) */}
-            {formData.is_habit && (
-              <Box>
-                <Typography variant="subtitle2" gutterBottom>
-                  Recurrence Pattern
-                </Typography>
-                <RecurrenceRuleBuilder
-                  value={formData.recurrence_rule || 'FREQ=DAILY'}
-                  onChange={(rrule) => handleChange('recurrence_rule', rrule)}
-                />
-              </Box>
-            )}
+            {/* Recurrence options (when recurring is enabled) */}
+            {formData.recurrence_rule && (
+              <>
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Recurrence Pattern
+                  </Typography>
+                  <RecurrenceRuleBuilder
+                    value={formData.recurrence_rule || 'FREQ=DAILY'}
+                    onChange={(rrule) => handleChange('recurrence_rule', rrule)}
+                  />
 
-            {/* Subtask recurrence mode (only if habit AND has subtasks) */}
-            {formData.is_habit && (formData.subtasks?.length ?? 0) > 0 && (
-              <FormControl fullWidth size="small">
-                <InputLabel>Subtask Recurrence</InputLabel>
-                <Select
-                  value={formData.subtask_recurrence_mode || SubtaskRecurrenceMode.DEFAULT}
-                  label="Subtask Recurrence"
-                  onChange={(e) =>
-                    handleChange('subtask_recurrence_mode', e.target.value)
+                  {/* Next occurrence preview */}
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                    {getNextOccurrenceText(
+                      formData.recurrence_rule,
+                      formData.due_date ? new Date(formData.due_date) : undefined
+                    )}
+                  </Typography>
+                </Box>
+
+                <FormControl fullWidth>
+                  <InputLabel>Recurrence Style</InputLabel>
+                  <Select
+                    value={formData.recurrence_type || RecurrenceType.FROM_DUE_DATE}
+                    label="Recurrence Style"
+                    onChange={(e) => handleChange('recurrence_type', e.target.value)}
+                  >
+                    <MenuItem value={RecurrenceType.FROM_DUE_DATE}>
+                      From Due Date - Next due = previous due + pattern
+                    </MenuItem>
+                    <MenuItem value={RecurrenceType.FROM_COMPLETION}>
+                      From Completion - Next due = completion date + pattern
+                    </MenuItem>
+                    <MenuItem value={RecurrenceType.STRICT}>
+                      Strict - Always recur on schedule regardless of completion
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+
+                {/* Habit toggle - adds streak tracking for recurring tasks */}
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.is_habit || false}
+                      onChange={(e) => handleChange('is_habit', e.target.checked)}
+                    />
                   }
-                >
-                  <MenuItem value={SubtaskRecurrenceMode.DEFAULT}>
-                    All Complete First - New recurrence only after all subtasks complete
-                  </MenuItem>
-                  <MenuItem value={SubtaskRecurrenceMode.PARTIAL}>
-                    Carry Over Completed - Copy only completed subtasks to next
-                  </MenuItem>
-                  <MenuItem value={SubtaskRecurrenceMode.ALWAYS}>
-                    Always Copy All - Full subtask list regardless of completion
-                  </MenuItem>
-                </Select>
-              </FormControl>
+                  label="Track as Habit (enables streak tracking)"
+                />
+
+                {/* Subtask recurrence mode (when recurring AND has subtasks) */}
+                {(formData.subtasks?.length ?? 0) > 0 && (
+                  <FormControl fullWidth>
+                    <InputLabel>Subtask Recurrence</InputLabel>
+                    <Select
+                      value={formData.subtask_recurrence_mode || SubtaskRecurrenceMode.DEFAULT}
+                      label="Subtask Recurrence"
+                      onChange={(e) =>
+                        handleChange('subtask_recurrence_mode', e.target.value)
+                      }
+                    >
+                      <MenuItem value={SubtaskRecurrenceMode.DEFAULT}>
+                        All Complete First - New recurrence only after all subtasks complete
+                      </MenuItem>
+                      <MenuItem value={SubtaskRecurrenceMode.PARTIAL}>
+                        Carry Over Completed - Copy only completed subtasks to next
+                      </MenuItem>
+                      <MenuItem value={SubtaskRecurrenceMode.ALWAYS}>
+                        Always Copy All - Full subtask list regardless of completion
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              </>
             )}
 
             <Divider />

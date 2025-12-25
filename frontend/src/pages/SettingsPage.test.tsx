@@ -40,7 +40,6 @@ describe('SettingsPage', () => {
     it('should render settings page with all sections', () => {
       render(<SettingsPage />);
 
-      expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(screen.getByText('Data Backup & Restore')).toBeInTheDocument();
       expect(screen.getByText('Security')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /export data/i })).toBeInTheDocument();
