@@ -6,16 +6,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Snackbar,
-  Button,
-  IconButton,
-  Paper,
-  Typography,
-  Box,
-} from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import InstallMobileIcon from '@mui/icons-material/InstallMobile';
+import { Paper, Button, CloseButton, Text, Box, Transition } from '@mantine/core';
+import { IconDeviceMobileDown } from '@tabler/icons-react';
 
 // Extended window interface for beforeinstallprompt event
 interface BeforeInstallPromptEvent extends Event {
@@ -116,43 +108,49 @@ export function InstallPrompt() {
   }
 
   return (
-    <Snackbar
-      open={isVisible}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      sx={{ mb: 2 }}
-    >
-      <Paper
-        elevation={6}
-        sx={{
-          p: 2,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          maxWidth: 400,
-          borderRadius: 2,
-        }}
-      >
-        <InstallMobileIcon color="primary" fontSize="large" />
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="subtitle1" fontWeight="bold">
-            Install Moti-Do
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Add to your home screen for quick access and offline use
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          size="small"
-          onClick={handleInstall}
-          sx={{ minWidth: 80 }}
+    <Transition mounted={isVisible} transition="slide-up" duration={300}>
+      {(styles) => (
+        <Box
+          style={{
+            ...styles,
+            position: 'fixed',
+            bottom: 16,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+          }}
         >
-          Install
-        </Button>
-        <IconButton size="small" onClick={handleDismiss} aria-label="dismiss">
-          <CloseIcon fontSize="small" />
-        </IconButton>
-      </Paper>
-    </Snackbar>
+          <Paper
+            shadow="lg"
+            p="md"
+            radius="md"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              maxWidth: 400,
+            }}
+          >
+            <IconDeviceMobileDown size={32} color="var(--mantine-color-blue-6)" />
+            <Box style={{ flex: 1 }}>
+              <Text fw={700} size="sm">
+                Install Moti-Do
+              </Text>
+              <Text size="xs" c="dimmed">
+                Add to your home screen for quick access and offline use
+              </Text>
+            </Box>
+            <Button
+              size="xs"
+              onClick={handleInstall}
+              style={{ minWidth: 80 }}
+            >
+              Install
+            </Button>
+            <CloseButton size="sm" onClick={handleDismiss} aria-label="dismiss" />
+          </Paper>
+        </Box>
+      )}
+    </Transition>
   );
 }

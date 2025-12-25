@@ -219,9 +219,10 @@ export class HabitsPage {
     const habitCard = this.getHabitByTitle(title);
     await habitCard.getByRole('button', { name: 'Delete habit' }).click();
 
-    // Confirm deletion in dialog
-    await this.page.getByRole('dialog').filter({ hasText: 'Delete Habit' }).waitFor();
-    await this.page.getByRole('button', { name: 'Delete' }).click();
+    // Confirm deletion in dialog - scope button click to dialog
+    const deleteDialog = this.page.getByRole('dialog').filter({ hasText: 'Delete Habit' });
+    await deleteDialog.waitFor();
+    await deleteDialog.getByRole('button', { name: 'Delete' }).click();
 
     await expect(this.page.getByText('Habit deleted successfully')).toBeVisible({ timeout: 5000 });
   }

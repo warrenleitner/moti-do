@@ -1,5 +1,5 @@
-import { Box, Typography, LinearProgress, Tooltip } from '@mui/material';
-import { EmojiEvents } from '@mui/icons-material';
+import { Box, Text, Progress, Tooltip, Group } from '@mantine/core';
+import { IconTrophy } from '@tabler/icons-react';
 
 interface XPDisplayProps {
   xp: number;
@@ -16,36 +16,36 @@ export default function XPDisplay({ xp, level, compact = false }: XPDisplayProps
   /* v8 ignore next 11 */
   if (compact) {
     return (
-      <Tooltip title={`${xp} XP total - ${xpToNextLevel} XP to level ${level + 1}`}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <EmojiEvents sx={{ fontSize: 16, color: 'primary.main' }} />
-          <Typography variant="body2" fontWeight="medium">
+      <Tooltip label={`${xp} XP total - ${xpToNextLevel} XP to level ${level + 1}`}>
+        <Group gap={4}>
+          <IconTrophy size={16} color="var(--mantine-color-blue-6)" />
+          <Text size="sm" fw={500}>
             Lvl {level}
-          </Typography>
-        </Box>
+          </Text>
+        </Group>
       </Tooltip>
     );
   }
 
   return (
-    <Box sx={{ minWidth: 150 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <EmojiEvents sx={{ fontSize: 20, color: 'primary.main' }} />
-          <Typography variant="subtitle2">Level {level}</Typography>
-        </Box>
-        <Typography variant="caption" color="text.secondary">
+    <Box style={{ minWidth: 150 }}>
+      <Group justify="space-between" mb={4}>
+        <Group gap={4}>
+          <IconTrophy size={20} color="var(--mantine-color-blue-6)" />
+          <Text size="sm" fw={500}>Level {level}</Text>
+        </Group>
+        <Text size="xs" c="dimmed">
           {xp} XP
-        </Typography>
-      </Box>
-      <LinearProgress
-        variant="determinate"
+        </Text>
+      </Group>
+      <Progress
         value={currentLevelXP}
-        sx={{ height: 6, borderRadius: 3 }}
+        size={6}
+        radius="xl"
       />
-      <Typography variant="caption" color="text.secondary">
+      <Text size="xs" c="dimmed">
         {xpToNextLevel} XP to next level
-      </Typography>
+      </Text>
     </Box>
   );
 }

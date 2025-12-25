@@ -27,25 +27,25 @@ describe('FilterBar', () => {
 
   it('changes status filter', async () => {
     const onStatusChange = vi.fn();
-    const { user, container } = render(<FilterBar {...defaultProps} onStatusChange={onStatusChange} />);
-    // MUI Select renders as a button
-    const statusSelect = container.querySelector('[aria-labelledby*="Status"]');
-    if (statusSelect) {
-      await user.click(statusSelect as HTMLElement);
-      await user.click(screen.getByText('Completed'));
-      expect(onStatusChange).toHaveBeenCalled();
-    }
+    const { user } = render(<FilterBar {...defaultProps} onStatusChange={onStatusChange} />);
+    // Mantine Select - click to open dropdown
+    const statusInput = screen.getByRole('textbox', { name: /status/i });
+    await user.click(statusInput);
+    // Find and click the 'Completed' option in the dropdown
+    const completedOption = await screen.findByText('Completed');
+    await user.click(completedOption);
+    expect(onStatusChange).toHaveBeenCalled();
   });
 
   it('changes priority filter', async () => {
     const onPriorityChange = vi.fn();
-    const { user, container } = render(<FilterBar {...defaultProps} onPriorityChange={onPriorityChange} />);
-    const prioritySelect = container.querySelector('[aria-labelledby*="Priority"]');
-    if (prioritySelect) {
-      await user.click(prioritySelect as HTMLElement);
-      await user.click(screen.getByText(/High/));
-      expect(onPriorityChange).toHaveBeenCalled();
-    }
+    const { user } = render(<FilterBar {...defaultProps} onPriorityChange={onPriorityChange} />);
+    const priorityInput = screen.getByRole('textbox', { name: /priority/i });
+    await user.click(priorityInput);
+    // Find and click the 'High' option in the dropdown
+    const highOption = await screen.findByText(/High/);
+    await user.click(highOption);
+    expect(onPriorityChange).toHaveBeenCalled();
   });
 
   it('shows project filter when projects available', () => {
@@ -101,11 +101,9 @@ describe('FilterBar', () => {
     const chip = screen.getByText(/Search: "test"/);
     expect(chip).toBeInTheDocument();
 
-    // Find and click the delete button (MUI Chip has a cancel icon)
-    const deleteButton = chip.parentElement?.querySelector('[data-testid="CancelIcon"]');
-    if (deleteButton) {
-      await user.click(deleteButton as HTMLElement);
-    }
+    // Find and click the delete button using aria-label
+    const deleteButton = screen.getByRole('button', { name: /clear search filter/i });
+    await user.click(deleteButton);
     expect(onSearchChange).toHaveBeenCalledWith('');
   });
 
@@ -117,10 +115,8 @@ describe('FilterBar', () => {
     const chip = screen.getByText(/Status: completed/);
     expect(chip).toBeInTheDocument();
 
-    const deleteButton = chip.parentElement?.querySelector('[data-testid="CancelIcon"]');
-    if (deleteButton) {
-      await user.click(deleteButton as HTMLElement);
-    }
+    const deleteButton = screen.getByRole('button', { name: /clear status filter/i });
+    await user.click(deleteButton);
     expect(onStatusChange).toHaveBeenCalledWith('active');
   });
 
@@ -132,10 +128,8 @@ describe('FilterBar', () => {
     const chip = screen.getByText(/Priority:/);
     expect(chip).toBeInTheDocument();
 
-    const deleteButton = chip.parentElement?.querySelector('[data-testid="CancelIcon"]');
-    if (deleteButton) {
-      await user.click(deleteButton as HTMLElement);
-    }
+    const deleteButton = screen.getByRole('button', { name: /clear priority filter/i });
+    await user.click(deleteButton);
     expect(onPriorityChange).toHaveBeenCalledWith(undefined);
   });
 
@@ -147,10 +141,8 @@ describe('FilterBar', () => {
     const chip = screen.getByText(/Project: Work/);
     expect(chip).toBeInTheDocument();
 
-    const deleteButton = chip.parentElement?.querySelector('[data-testid="CancelIcon"]');
-    if (deleteButton) {
-      await user.click(deleteButton as HTMLElement);
-    }
+    const deleteButton = screen.getByRole('button', { name: /clear project filter/i });
+    await user.click(deleteButton);
     expect(onProjectChange).toHaveBeenCalledWith(undefined);
   });
 
@@ -162,10 +154,8 @@ describe('FilterBar', () => {
     const chip = screen.getByText(/Tag: urgent/);
     expect(chip).toBeInTheDocument();
 
-    const deleteButton = chip.parentElement?.querySelector('[data-testid="CancelIcon"]');
-    if (deleteButton) {
-      await user.click(deleteButton as HTMLElement);
-    }
+    const deleteButton = screen.getByRole('button', { name: /clear tag filter/i });
+    await user.click(deleteButton);
     expect(onTagChange).toHaveBeenCalledWith(undefined);
   });
 

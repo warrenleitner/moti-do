@@ -44,6 +44,9 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// Mock scrollIntoView for Mantine Combobox
+Element.prototype.scrollIntoView = vi.fn();
+
 // Import MSW server conditionally
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let server: any = null;

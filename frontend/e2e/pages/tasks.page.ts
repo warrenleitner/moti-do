@@ -39,12 +39,12 @@ export class TasksPage {
     this.deleteConfirmDialog = page.getByRole('dialog').filter({ hasText: 'Delete Task' });
     this.snackbar = page.getByRole('alert');
 
-    // Filter controls - use FormControl container to find Select components
-    // getByLabel doesn't work reliably with MUI Select InputLabel
+    // Filter controls - Mantine Select components
+    // Use getByRole('textbox') to specifically target the input, not the dropdown
     this.searchInput = page.getByPlaceholder('Search tasks...');
-    this.statusFilter = page.locator('.MuiFormControl-root').filter({ hasText: 'Status' }).getByRole('combobox');
-    this.priorityFilter = page.locator('.MuiFormControl-root').filter({ hasText: 'Priority' }).getByRole('combobox');
-    this.projectFilter = page.locator('.MuiFormControl-root').filter({ hasText: 'Project' }).getByRole('combobox');
+    this.statusFilter = page.getByRole('textbox', { name: 'Status' });
+    this.priorityFilter = page.getByRole('textbox', { name: 'Priority' });
+    this.projectFilter = page.getByRole('textbox', { name: 'Project' });
 
     // Quick Add Box - the persistent input at the top of TasksPage
     // Placeholder includes hint text, so use partial match

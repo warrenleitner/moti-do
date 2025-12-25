@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { TextField, InputAdornment, IconButton } from '@mui/material';
-import { Search, Clear } from '@mui/icons-material';
+import { TextInput, CloseButton } from '@mantine/core';
+import { IconSearch } from '@tabler/icons-react';
 
 interface SearchInputProps {
   value: string;
@@ -41,31 +41,21 @@ export default function SearchInput({
   };
 
   return (
-    <TextField
+    <TextInput
       value={localValue}
       onChange={(e) => setLocalValue(e.target.value)}
       placeholder={placeholder}
-      size="small"
-      fullWidth={fullWidth}
-      slotProps={{
+      size="sm"
+      w={fullWidth ? '100%' : undefined}
+      leftSection={<IconSearch size={16} color="gray" />}
+      rightSection={
+        localValue ? (
+          <CloseButton size="sm" onClick={handleClear} aria-label="Clear search" />
+        ) : null
+      }
+      styles={{
         input: {
-          startAdornment: (
-            <InputAdornment position="start">
-              <Search color="action" />
-            </InputAdornment>
-          ),
-          endAdornment: localValue ? (
-            <InputAdornment position="end">
-              <IconButton size="small" onClick={handleClear} edge="end">
-                <Clear fontSize="small" />
-              </IconButton>
-            </InputAdornment>
-          ) : null,
-        },
-      }}
-      sx={{
-        '& .MuiOutlinedInput-root': {
-          borderRadius: 2,
+          borderRadius: 'var(--mantine-radius-md)',
         },
       }}
     />

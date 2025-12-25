@@ -1,5 +1,5 @@
-import { Box, FormControl, InputLabel, Select, MenuItem, Chip, Stack, Button } from '@mui/material';
-import { FilterList, Clear } from '@mui/icons-material';
+import { Box, Select, Badge, Group, Button, CloseButton } from '@mantine/core';
+import { IconFilter, IconX } from '@tabler/icons-react';
 import { Priority, PriorityEmoji } from '../../types';
 import SearchInput from './SearchInput';
 
@@ -40,136 +40,145 @@ export default function FilterBar({
     search || status !== 'active' || priority || project || tag;
 
   return (
-    <Box sx={{ mb: 3 }}>
+    <Box mb="lg">
       {/* Main filter row */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-start">
+      <Group gap="sm" align="flex-start" wrap="wrap">
         <SearchInput
           value={search}
           onChange={onSearchChange}
           placeholder="Search tasks..."
         />
 
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Status</InputLabel>
-          <Select
-            value={status}
-            label="Status"
-            onChange={(e) => onStatusChange(e.target.value as 'all' | 'active' | 'completed')}
-          >
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="completed">Completed</MenuItem>
-            <MenuItem value="all">All</MenuItem>
-          </Select>
-        </FormControl>
+        <Select
+          size="sm"
+          w={120}
+          value={status}
+          onChange={(val) => onStatusChange((val || 'active') as 'all' | 'active' | 'completed')}
+          data={[
+            { value: 'active', label: 'Active' },
+            { value: 'completed', label: 'Completed' },
+            { value: 'all', label: 'All' },
+          ]}
+          label="Status"
+        />
 
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Priority</InputLabel>
-          <Select
-            value={priority || ''}
-            label="Priority"
-            onChange={(e) =>
-              onPriorityChange(e.target.value ? (e.target.value as Priority) : undefined)
-            }
-          >
-            <MenuItem value="">All</MenuItem>
-            <MenuItem value={Priority.DEFCON_ONE}>{PriorityEmoji[Priority.DEFCON_ONE]} Defcon One</MenuItem>
-            <MenuItem value={Priority.HIGH}>{PriorityEmoji[Priority.HIGH]} High</MenuItem>
-            <MenuItem value={Priority.MEDIUM}>{PriorityEmoji[Priority.MEDIUM]} Medium</MenuItem>
-            <MenuItem value={Priority.LOW}>{PriorityEmoji[Priority.LOW]} Low</MenuItem>
-            <MenuItem value={Priority.TRIVIAL}>{PriorityEmoji[Priority.TRIVIAL]} Trivial</MenuItem>
-          </Select>
-        </FormControl>
+        <Select
+          size="sm"
+          w={140}
+          value={priority || ''}
+          onChange={(val) => onPriorityChange(val ? (val as Priority) : undefined)}
+          data={[
+            { value: '', label: 'All' },
+            { value: Priority.DEFCON_ONE, label: `${PriorityEmoji[Priority.DEFCON_ONE]} Defcon One` },
+            { value: Priority.HIGH, label: `${PriorityEmoji[Priority.HIGH]} High` },
+            { value: Priority.MEDIUM, label: `${PriorityEmoji[Priority.MEDIUM]} Medium` },
+            { value: Priority.LOW, label: `${PriorityEmoji[Priority.LOW]} Low` },
+            { value: Priority.TRIVIAL, label: `${PriorityEmoji[Priority.TRIVIAL]} Trivial` },
+          ]}
+          label="Priority"
+        />
 
         {projects.length > 0 && (
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Project</InputLabel>
-            <Select
-              value={project || ''}
-              label="Project"
-              onChange={(e) =>
-                onProjectChange(e.target.value || undefined)
-              }
-            >
-              <MenuItem value="">All</MenuItem>
-              {projects.map((p) => (
-                <MenuItem key={p} value={p}>
-                  {p}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Select
+            size="sm"
+            w={140}
+            value={project || ''}
+            onChange={(val) => onProjectChange(val || undefined)}
+            data={[
+              { value: '', label: 'All' },
+              ...projects.map((p) => ({ value: p, label: p })),
+            ]}
+            label="Project"
+          />
         )}
 
         {tags.length > 0 && (
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Tag</InputLabel>
-            <Select
-              value={tag || ''}
-              label="Tag"
-              onChange={(e) => onTagChange(e.target.value || undefined)}
-            >
-              <MenuItem value="">All</MenuItem>
-              {tags.map((t) => (
-                <MenuItem key={t} value={t}>
-                  {t}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Select
+            size="sm"
+            w={140}
+            value={tag || ''}
+            onChange={(val) => onTagChange(val || undefined)}
+            data={[
+              { value: '', label: 'All' },
+              ...tags.map((t) => ({ value: t, label: t })),
+            ]}
+            label="Tag"
+          />
         )}
 
         {hasActiveFilters && (
           <Button
-            startIcon={<Clear />}
+            leftSection={<IconX size={16} />}
             onClick={onReset}
-            size="small"
-            sx={{ whiteSpace: 'nowrap' }}
+            size="sm"
+            variant="subtle"
+            style={{ whiteSpace: 'nowrap', alignSelf: 'flex-end' }}
           >
             Clear filters
           </Button>
         )}
-      </Stack>
+      </Group>
 
       {/* Active filter chips */}
       {hasActiveFilters && (
-        <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap" useFlexGap>
-          <FilterList color="action" sx={{ mr: 1 }} />
+        <Group gap="xs" mt="sm" wrap="wrap">
+          <IconFilter size={18} color="gray" style={{ marginRight: 4 }} />
           {search && (
-            <Chip
-              label={`Search: "${search}"`}
-              size="small"
-              onDelete={() => onSearchChange('')}
-            />
+            <Badge
+              variant="light"
+              size="sm"
+              rightSection={
+                <CloseButton size="xs" onClick={() => onSearchChange('')} aria-label="Clear search filter" />
+              }
+            >
+              Search: "{search}"
+            </Badge>
           )}
           {status !== 'active' && (
-            <Chip
-              label={`Status: ${status}`}
-              size="small"
-              onDelete={() => onStatusChange('active')}
-            />
+            <Badge
+              variant="light"
+              size="sm"
+              rightSection={
+                <CloseButton size="xs" onClick={() => onStatusChange('active')} aria-label="Clear status filter" />
+              }
+            >
+              Status: {status}
+            </Badge>
           )}
           {priority && (
-            <Chip
-              label={`Priority: ${priority}`}
-              size="small"
-              onDelete={() => onPriorityChange(undefined)}
-            />
+            <Badge
+              variant="light"
+              size="sm"
+              rightSection={
+                <CloseButton size="xs" onClick={() => onPriorityChange(undefined)} aria-label="Clear priority filter" />
+              }
+            >
+              Priority: {priority}
+            </Badge>
           )}
           {project && (
-            <Chip
-              label={`Project: ${project}`}
-              size="small"
-              onDelete={() => onProjectChange(undefined)}
-            />
+            <Badge
+              variant="light"
+              size="sm"
+              rightSection={
+                <CloseButton size="xs" onClick={() => onProjectChange(undefined)} aria-label="Clear project filter" />
+              }
+            >
+              Project: {project}
+            </Badge>
           )}
           {tag && (
-            <Chip
-              label={`Tag: ${tag}`}
-              size="small"
-              onDelete={() => onTagChange(undefined)}
-            />
+            <Badge
+              variant="light"
+              size="sm"
+              rightSection={
+                <CloseButton size="xs" onClick={() => onTagChange(undefined)} aria-label="Clear tag filter" />
+              }
+            >
+              Tag: {tag}
+            </Badge>
           )}
-        </Stack>
+        </Group>
       )}
     </Box>
   );

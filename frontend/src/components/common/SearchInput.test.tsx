@@ -41,4 +41,10 @@ describe('SearchInput', () => {
     rerender(<SearchInput value="test" onChange={vi.fn()} />);
     expect(screen.getByRole('button')).toBeInTheDocument();
   });
+
+  it('renders with fullWidth prop', () => {
+    const { container } = render(<SearchInput value="" onChange={vi.fn()} fullWidth />);
+    const wrapper = container.querySelector('.mantine-TextInput-wrapper');
+    expect(wrapper).toBeInTheDocument();
+  });
 });
