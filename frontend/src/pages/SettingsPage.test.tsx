@@ -186,8 +186,8 @@ describe('SettingsPage', () => {
       // Wait for error message
       expect(await screen.findByText(/failed to export data/i)).toBeInTheDocument();
 
-      // Close the alert
-      const closeButton = screen.getByLabelText(/close/i);
+      // Close the alert - Mantine uses 'Close alert' as aria-label
+      const closeButton = screen.getByRole('button', { name: /close alert/i });
       fireEvent.click(closeButton);
 
       await waitFor(() => {

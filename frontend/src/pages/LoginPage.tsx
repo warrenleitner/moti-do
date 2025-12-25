@@ -1,17 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  CircularProgress,
-  ToggleButtonGroup,
-  ToggleButton,
-} from '@mui/material';
+import { Card, TextInput, PasswordInput, Button, Title, Text, Alert, Loader, SegmentedControl, Center } from '@mantine/core';
 import { authApi } from '../services/api';
 
 // UI component - tested via integration tests
@@ -64,113 +53,97 @@ export default function LoginPage() {
     }
   };
 
-  const handleModeChange = (_event: React.MouseEvent<HTMLElement>, newMode: 'login' | 'register' | null) => {
-    if (newMode !== null) {
-      setMode(newMode);
-      setError(null);
-      setPassword('');
-      setConfirmPassword('');
-    }
+  const handleModeChange = (newMode: string) => {
+    setMode(newMode as 'login' | 'register');
+    setError(null);
+    setPassword('');
+    setConfirmPassword('');
   };
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+    <Center
+      style={{
         minHeight: '100vh',
-        bgcolor: 'background.default',
-        p: 2,
+        backgroundColor: 'var(--mantine-color-gray-0)',
+        padding: 'var(--mantine-spacing-md)',
       }}
     >
-      <Card sx={{ maxWidth: 400, width: '100%' }}>
-        <CardContent sx={{ p: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center" fontWeight="bold">
-            Moti-Do
-          </Typography>
+      <Card shadow="md" padding="xl" radius="md" style={{ maxWidth: 400, width: '100%' }}>
+        <Title order={2} ta="center" mb="xs">
+          Moti-Do
+        </Title>
 
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-            Task and Habit Tracker
-          </Typography>
+        <Text size="sm" c="dimmed" ta="center" mb="lg">
+          Task and Habit Tracker
+        </Text>
 
-          <ToggleButtonGroup
-            value={mode}
-            exclusive
-            onChange={handleModeChange}
-            fullWidth
-            sx={{ mb: 3 }}
-          >
-            <ToggleButton value="login">Login</ToggleButton>
-            <ToggleButton value="register">Register</ToggleButton>
-          </ToggleButtonGroup>
+        <SegmentedControl
+          value={mode}
+          onChange={handleModeChange}
+          data={[
+            { value: 'login', label: 'Login' },
+            { value: 'register', label: 'Register' },
+          ]}
+          fullWidth
+          mb="lg"
+        />
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
+        {error && (
+          <Alert color="red" mb="md">
+            {error}
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <TextInput
+            label="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            mb="md"
+            required
+            disabled={loading}
+            description="Single-user mode: use 'default_user'"
+          />
+
+          <PasswordInput
+            label="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            mb="md"
+            required
+            disabled={loading}
+            description="Minimum 8 characters"
+          />
+
+          {mode === 'register' && (
+            <PasswordInput
+              label="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              mb="md"
+              required
+              disabled={loading}
+            />
           )}
 
-          <form onSubmit={handleSubmit}>
-            <TextField
-              label="Username"
-              variant="outlined"
-              fullWidth
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              sx={{ mb: 2 }}
-              required
-              disabled={loading}
-              helperText="Single-user mode: use 'default_user'"
-            />
-
-            <TextField
-              label="Password"
-              type="password"
-              variant="outlined"
-              fullWidth
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              sx={{ mb: 2 }}
-              required
-              disabled={loading}
-              helperText="Minimum 8 characters"
-            />
-
-            {mode === 'register' && (
-              <TextField
-                label="Confirm Password"
-                type="password"
-                variant="outlined"
-                fullWidth
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                sx={{ mb: 2 }}
-                required
-                disabled={loading}
-              />
+          <Button
+            type="submit"
+            fullWidth
+            size="lg"
+            disabled={loading}
+            mt="md"
+          >
+            {loading ? (
+              <Loader size="sm" color="white" />
+            ) : mode === 'login' ? (
+              'Login'
+            ) : (
+              'Register'
             )}
-
-            <Button
-              type="submit"
-              variant="contained"
-              fullWidth
-              size="large"
-              disabled={loading}
-              sx={{ mt: 2 }}
-            >
-              {loading ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : mode === 'login' ? (
-                'Login'
-              ) : (
-                'Register'
-              )}
-            </Button>
-          </form>
-        </CardContent>
+          </Button>
+        </form>
       </Card>
-    </Box>
+    </Center>
   );
 }
 /* v8 ignore stop */

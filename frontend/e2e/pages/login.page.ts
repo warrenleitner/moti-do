@@ -18,13 +18,13 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    // Typography with component="h1" creates a heading role
+    // Title component creates a heading role
     this.heading = page.getByRole('heading', { name: 'Moti-Do' });
     this.subtitle = page.getByText('Task and Habit Tracker');
-    // ToggleButton elements in the ToggleButtonGroup - use group to scope
-    this.loginTab = page.getByRole('group').getByRole('button', { name: 'Login' });
-    this.registerTab = page.getByRole('group').getByRole('button', { name: 'Register' });
-    // Form fields - use getByRole textbox for MUI TextField components
+    // Mantine SegmentedControl uses radio inputs
+    this.loginTab = page.getByRole('radio', { name: 'Login' });
+    this.registerTab = page.getByRole('radio', { name: 'Register' });
+    // Form fields - Mantine uses textbox role
     // Note: Password needs exact: true to avoid matching "Confirm Password"
     this.usernameInput = page.getByRole('textbox', { name: 'Username' });
     this.passwordInput = page.getByRole('textbox', { name: 'Password', exact: true });

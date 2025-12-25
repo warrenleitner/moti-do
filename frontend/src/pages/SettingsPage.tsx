@@ -1,50 +1,40 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Box,
-  Typography,
+  Title,
+  Text,
   Card,
-  CardContent,
   Button,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  TextField,
-  CircularProgress,
+  Modal,
+  TextInput,
+  PasswordInput,
+  NumberInput,
+  Loader,
   Divider,
   Switch,
-  FormControlLabel,
-  List,
-  ListItem,
-  ListItemText,
-  Chip,
+  Badge,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
+  ActionIcon,
   Paper,
-  InputAdornment,
-  ButtonGroup,
-} from '@mui/material';
+  Group,
+  Stack,
+  ColorInput,
+} from '@mantine/core';
 import {
-  Download as DownloadIcon,
-  Upload as UploadIcon,
-  Lock as LockIcon,
-  BeachAccess as VacationIcon,
-  Timeline as HistoryIcon,
-  Label as TagIcon,
-  Folder as ProjectIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Add as AddIcon,
-  Check as CheckIcon,
-  Close as CloseIcon,
-} from '@mui/icons-material';
+  IconDownload,
+  IconUpload,
+  IconLock,
+  IconBeach,
+  IconHistory,
+  IconTag,
+  IconFolder,
+  IconPencil,
+  IconTrash,
+  IconPlus,
+  IconCheck,
+  IconX,
+} from '@tabler/icons-react';
 import { dataApi, authApi, userApi, type XPTransaction, type TagDefinition, type ProjectDefinition } from '../services/api';
 import { useUserStore, useSystemStatus } from '../store/userStore';
 
@@ -239,16 +229,15 @@ export default function SettingsPage() {
     }
   };
 
-  const handleVacationToggle = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const enable = event.target.checked;
+  const handleVacationToggle = async (checked: boolean) => {
     setLoading(true);
     setMessage(null);
 
     try {
-      await toggleVacation(enable);
+      await toggleVacation(checked);
       setMessage({
         type: 'success',
-        text: enable ? 'Vacation mode enabled!' : 'Vacation mode disabled!',
+        text: checked ? 'Vacation mode enabled!' : 'Vacation mode disabled!',
       });
     } catch (error) {
       console.error('Vacation toggle error:', error);
@@ -374,619 +363,587 @@ export default function SettingsPage() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
+      <Title order={2} mb="md">
         Settings
-      </Typography>
+      </Title>
 
       {message && (
-        <Alert severity={message.type} sx={{ mb: 3 }} onClose={() => setMessage(null)}>
+        <Alert
+          color={message.type === 'success' ? 'green' : 'red'}
+          mb="lg"
+          withCloseButton
+          closeButtonLabel="Close alert"
+          onClose={() => setMessage(null)}
+        >
           {message.text}
         </Alert>
       )}
 
       {/* Data Backup & Restore */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Data Backup & Restore
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Export your data as a JSON backup file or restore from a previous backup.
-          </Typography>
+      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
+        <Title order={4} mb="xs">
+          Data Backup & Restore
+        </Title>
+        <Text size="sm" c="dimmed" mb="md">
+          Export your data as a JSON backup file or restore from a previous backup.
+        </Text>
 
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Group gap="md" wrap="wrap">
+          <Button
+            leftSection={loading ? <Loader size={16} color="white" /> : <IconDownload size={16} />}
+            onClick={handleExport}
+            disabled={loading}
+          >
+            Export Data
+          </Button>
+
+          <Box>
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+              ref={fileInputRef}
+            />
             <Button
-              variant="contained"
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <DownloadIcon />}
-              onClick={handleExport}
+              variant="outline"
+              leftSection={<IconUpload size={16} />}
+              onClick={() => fileInputRef.current?.click()}
               disabled={loading}
             >
-              Export Data
+              Import Data
             </Button>
-
-            <Box>
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleFileSelect}
-                style={{ display: 'none' }}
-                ref={fileInputRef}
-              />
-              <Button
-                variant="outlined"
-                startIcon={<UploadIcon />}
-                onClick={() => fileInputRef.current?.click()}
-                disabled={loading}
-              >
-                Import Data
-              </Button>
-            </Box>
           </Box>
+        </Group>
 
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            <strong>Warning:</strong> Importing data will replace ALL your current data. Make sure to export your current data before importing.
-          </Alert>
-        </CardContent>
+        <Alert color="yellow" mt="md">
+          <strong>Warning:</strong> Importing data will replace ALL your current data. Make sure to export your current data before importing.
+        </Alert>
       </Card>
 
       {/* Tags Management */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <TagIcon color="primary" />
-              <Typography variant="h6">Tags</Typography>
-            </Box>
-            <Button
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setShowAddTag(true);
-                setEditingTagId(null);
-                setTagForm({ name: '', color: '#808080', multiplier: 1.0 });
-              }}
-              disabled={loading || showAddTag}
-              size="small"
-            >
-              Add Tag
-            </Button>
-          </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Manage your tags and set score multipliers. Tags with multiplier {'>'} 1.0 will give bonus XP.
-          </Typography>
+      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
+        <Group justify="space-between" mb="md">
+          <Group gap="xs">
+            <IconTag size={20} color="var(--mantine-color-blue-6)" />
+            <Title order={4}>Tags</Title>
+          </Group>
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => {
+              setShowAddTag(true);
+              setEditingTagId(null);
+              setTagForm({ name: '', color: '#808080', multiplier: 1.0 });
+            }}
+            disabled={loading || showAddTag}
+            size="sm"
+          >
+            Add Tag
+          </Button>
+        </Group>
+        <Text size="sm" c="dimmed" mb="md">
+          Manage your tags and set score multipliers. Tags with multiplier {'>'} 1.0 will give bonus XP.
+        </Text>
 
-          {loadingTags ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : (
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Color</TableCell>
-                    <TableCell>Multiplier</TableCell>
-                    <TableCell align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {showAddTag && (
-                    <TableRow>
-                      <TableCell>
-                        <TextField
-                          size="small"
-                          placeholder="Tag name"
+        {loadingTags ? (
+          <Group justify="center" py="md">
+            <Loader size="sm" />
+          </Group>
+        ) : (
+          <Paper withBorder>
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Name</Table.Th>
+                  <Table.Th>Color</Table.Th>
+                  <Table.Th>Multiplier</Table.Th>
+                  <Table.Th style={{ textAlign: 'right' }}>Actions</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {showAddTag && (
+                  <Table.Tr>
+                    <Table.Td>
+                      <TextInput
+                        size="sm"
+                        placeholder="Tag name"
+                        value={tagForm.name}
+                        onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
+                        autoFocus
+                      />
+                    </Table.Td>
+                    <Table.Td>
+                      <ColorInput
+                        size="sm"
+                        value={tagForm.color}
+                        onChange={(color) => setTagForm({ ...tagForm, color })}
+                        w={100}
+                      />
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <NumberInput
+                          size="sm"
+                          value={tagForm.multiplier}
+                          onChange={(val) => setTagForm({ ...tagForm, multiplier: Number(val) || 1.0 })}
+                          min={0.1}
+                          max={10}
+                          step={0.1}
+                          w={80}
+                          suffix="x"
+                        />
+                        <Button.Group>
+                          <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(0.5)}>0.5x</Button>
+                          <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(1.0)}>1x</Button>
+                          <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(1.5)}>1.5x</Button>
+                          <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(2.0)}>2x</Button>
+                        </Button.Group>
+                      </Group>
+                    </Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>
+                      <ActionIcon size="sm" color="blue" onClick={handleSaveTag} mr={4}>
+                        <IconCheck size={16} />
+                      </ActionIcon>
+                      <ActionIcon size="sm" onClick={handleCancelEditTag}>
+                        <IconX size={16} />
+                      </ActionIcon>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
+                {tags.map((tag) => (
+                  <Table.Tr key={tag.id}>
+                    <Table.Td>
+                      {editingTagId === tag.id ? (
+                        <TextInput
+                          size="sm"
                           value={tagForm.name}
                           onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
-                          autoFocus
                         />
-                      </TableCell>
-                      <TableCell>
-                        <input
-                          type="color"
+                      ) : (
+                        <Badge style={{ backgroundColor: tag.color, color: 'white' }}>
+                          {tag.name}
+                        </Badge>
+                      )}
+                    </Table.Td>
+                    <Table.Td>
+                      {editingTagId === tag.id ? (
+                        <ColorInput
+                          size="sm"
                           value={tagForm.color}
-                          onChange={(e) => setTagForm({ ...tagForm, color: e.target.value })}
-                          style={{ width: 40, height: 32, border: 'none', cursor: 'pointer' }}
+                          onChange={(color) => setTagForm({ ...tagForm, color })}
+                          w={100}
                         />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <TextField
-                            size="small"
-                            type="number"
+                      ) : (
+                        <Box
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 4,
+                            backgroundColor: tag.color,
+                            border: '1px solid rgba(0,0,0,0.2)',
+                          }}
+                        />
+                      )}
+                    </Table.Td>
+                    <Table.Td>
+                      {editingTagId === tag.id ? (
+                        <Group gap="xs">
+                          <NumberInput
+                            size="sm"
                             value={tagForm.multiplier}
-                            onChange={(e) => setTagForm({ ...tagForm, multiplier: parseFloat(e.target.value) || 1.0 })}
-                            inputProps={{ min: 0.1, max: 10, step: 0.1 }}
-                            sx={{ width: 80 }}
-                            slotProps={{
-                              input: {
-                                endAdornment: <InputAdornment position="end">x</InputAdornment>,
-                              },
-                            }}
+                            onChange={(val) => setTagForm({ ...tagForm, multiplier: Number(val) || 1.0 })}
+                            min={0.1}
+                            max={10}
+                            step={0.1}
+                            w={80}
+                            suffix="x"
                           />
-                          <ButtonGroup size="small" variant="outlined">
-                            <Button onClick={() => handleSetTagMultiplier(0.5)}>0.5x</Button>
-                            <Button onClick={() => handleSetTagMultiplier(1.0)}>1x</Button>
-                            <Button onClick={() => handleSetTagMultiplier(1.5)}>1.5x</Button>
-                            <Button onClick={() => handleSetTagMultiplier(2.0)}>2x</Button>
-                          </ButtonGroup>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton size="small" onClick={handleSaveTag} color="primary">
-                          <CheckIcon />
-                        </IconButton>
-                        <IconButton size="small" onClick={handleCancelEditTag}>
-                          <CloseIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {tags.map((tag) => (
-                    <TableRow key={tag.id}>
-                      <TableCell>
-                        {editingTagId === tag.id ? (
-                          <TextField
-                            size="small"
-                            value={tagForm.name}
-                            onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
-                          />
-                        ) : (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Chip
-                              label={tag.name}
-                              size="small"
-                              sx={{ backgroundColor: tag.color, color: 'white' }}
-                            />
-                          </Box>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingTagId === tag.id ? (
-                          <input
-                            type="color"
-                            value={tagForm.color}
-                            onChange={(e) => setTagForm({ ...tagForm, color: e.target.value })}
-                            style={{ width: 40, height: 32, border: 'none', cursor: 'pointer' }}
-                          />
-                        ) : (
-                          <Box
-                            sx={{
-                              width: 24,
-                              height: 24,
-                              borderRadius: 1,
-                              backgroundColor: tag.color,
-                              border: '1px solid rgba(0,0,0,0.2)',
-                            }}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingTagId === tag.id ? (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <TextField
-                              size="small"
-                              type="number"
-                              value={tagForm.multiplier}
-                              onChange={(e) => setTagForm({ ...tagForm, multiplier: parseFloat(e.target.value) || 1.0 })}
-                              inputProps={{ min: 0.1, max: 10, step: 0.1 }}
-                              sx={{ width: 80 }}
-                              slotProps={{
-                                input: {
-                                  endAdornment: <InputAdornment position="end">x</InputAdornment>,
-                                },
-                              }}
-                            />
-                            <ButtonGroup size="small" variant="outlined">
-                              <Button onClick={() => handleSetTagMultiplier(0.5)}>0.5x</Button>
-                              <Button onClick={() => handleSetTagMultiplier(1.0)}>1x</Button>
-                              <Button onClick={() => handleSetTagMultiplier(1.5)}>1.5x</Button>
-                              <Button onClick={() => handleSetTagMultiplier(2.0)}>2x</Button>
-                            </ButtonGroup>
-                          </Box>
-                        ) : (
-                          <Chip
-                            label={`${tag.multiplier}x`}
-                            size="small"
-                            color={tag.multiplier > 1 ? 'success' : tag.multiplier < 1 ? 'warning' : 'default'}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell align="right">
-                        {editingTagId === tag.id ? (
-                          <>
-                            <IconButton size="small" onClick={handleSaveTag} color="primary">
-                              <CheckIcon />
-                            </IconButton>
-                            <IconButton size="small" onClick={handleCancelEditTag}>
-                              <CloseIcon />
-                            </IconButton>
-                          </>
-                        ) : (
-                          <>
-                            <IconButton size="small" onClick={() => handleStartEditTag(tag)}>
-                              <EditIcon />
-                            </IconButton>
-                            <IconButton size="small" onClick={() => handleDeleteTag(tag.id)} color="error">
-                              <DeleteIcon />
-                            </IconButton>
-                          </>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {tags.length === 0 && !showAddTag && (
-                    <TableRow>
-                      <TableCell colSpan={4} align="center">
-                        <Typography variant="body2" color="text.secondary">
-                          No tags defined. Click "Add Tag" to create one.
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
+                          <Button.Group>
+                            <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(0.5)}>0.5x</Button>
+                            <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(1.0)}>1x</Button>
+                            <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(1.5)}>1.5x</Button>
+                            <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(2.0)}>2x</Button>
+                          </Button.Group>
+                        </Group>
+                      ) : (
+                        <Badge
+                          color={tag.multiplier > 1 ? 'green' : tag.multiplier < 1 ? 'yellow' : 'gray'}
+                          variant="light"
+                        >
+                          {tag.multiplier}x
+                        </Badge>
+                      )}
+                    </Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>
+                      {editingTagId === tag.id ? (
+                        <>
+                          <ActionIcon size="sm" color="blue" onClick={handleSaveTag} mr={4}>
+                            <IconCheck size={16} />
+                          </ActionIcon>
+                          <ActionIcon size="sm" onClick={handleCancelEditTag}>
+                            <IconX size={16} />
+                          </ActionIcon>
+                        </>
+                      ) : (
+                        <>
+                          <ActionIcon size="sm" onClick={() => handleStartEditTag(tag)} mr={4}>
+                            <IconPencil size={16} />
+                          </ActionIcon>
+                          <ActionIcon size="sm" color="red" onClick={() => handleDeleteTag(tag.id)}>
+                            <IconTrash size={16} />
+                          </ActionIcon>
+                        </>
+                      )}
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+                {tags.length === 0 && !showAddTag && (
+                  <Table.Tr>
+                    <Table.Td colSpan={4} style={{ textAlign: 'center' }}>
+                      <Text size="sm" c="dimmed">
+                        No tags defined. Click "Add Tag" to create one.
+                      </Text>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
+              </Table.Tbody>
+            </Table>
+          </Paper>
+        )}
       </Card>
 
       {/* Projects Management */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <ProjectIcon color="secondary" />
-              <Typography variant="h6">Projects</Typography>
-            </Box>
-            <Button
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setShowAddProject(true);
-                setEditingProjectId(null);
-                setProjectForm({ name: '', color: '#4A90D9', multiplier: 1.0 });
-              }}
-              disabled={loading || showAddProject}
-              size="small"
-            >
-              Add Project
-            </Button>
-          </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Manage your projects and set score multipliers. Projects with multiplier {'>'} 1.0 will give bonus XP.
-          </Typography>
+      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
+        <Group justify="space-between" mb="md">
+          <Group gap="xs">
+            <IconFolder size={20} color="var(--mantine-color-violet-6)" />
+            <Title order={4}>Projects</Title>
+          </Group>
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => {
+              setShowAddProject(true);
+              setEditingProjectId(null);
+              setProjectForm({ name: '', color: '#4A90D9', multiplier: 1.0 });
+            }}
+            disabled={loading || showAddProject}
+            size="sm"
+          >
+            Add Project
+          </Button>
+        </Group>
+        <Text size="sm" c="dimmed" mb="md">
+          Manage your projects and set score multipliers. Projects with multiplier {'>'} 1.0 will give bonus XP.
+        </Text>
 
-          {loadingProjects ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : (
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Color</TableCell>
-                    <TableCell>Multiplier</TableCell>
-                    <TableCell align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {showAddProject && (
-                    <TableRow>
-                      <TableCell>
-                        <TextField
-                          size="small"
-                          placeholder="Project name"
+        {loadingProjects ? (
+          <Group justify="center" py="md">
+            <Loader size="sm" />
+          </Group>
+        ) : (
+          <Paper withBorder>
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Name</Table.Th>
+                  <Table.Th>Color</Table.Th>
+                  <Table.Th>Multiplier</Table.Th>
+                  <Table.Th style={{ textAlign: 'right' }}>Actions</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {showAddProject && (
+                  <Table.Tr>
+                    <Table.Td>
+                      <TextInput
+                        size="sm"
+                        placeholder="Project name"
+                        value={projectForm.name}
+                        onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                        autoFocus
+                      />
+                    </Table.Td>
+                    <Table.Td>
+                      <ColorInput
+                        size="sm"
+                        value={projectForm.color}
+                        onChange={(color) => setProjectForm({ ...projectForm, color })}
+                        w={100}
+                      />
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <NumberInput
+                          size="sm"
+                          value={projectForm.multiplier}
+                          onChange={(val) => setProjectForm({ ...projectForm, multiplier: Number(val) || 1.0 })}
+                          min={0.1}
+                          max={10}
+                          step={0.1}
+                          w={80}
+                          suffix="x"
+                        />
+                        <Button.Group>
+                          <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(0.5)}>0.5x</Button>
+                          <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(1.0)}>1x</Button>
+                          <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(1.5)}>1.5x</Button>
+                          <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(2.0)}>2x</Button>
+                        </Button.Group>
+                      </Group>
+                    </Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>
+                      <ActionIcon size="sm" color="blue" onClick={handleSaveProject} mr={4}>
+                        <IconCheck size={16} />
+                      </ActionIcon>
+                      <ActionIcon size="sm" onClick={handleCancelEditProject}>
+                        <IconX size={16} />
+                      </ActionIcon>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
+                {projects.map((project) => (
+                  <Table.Tr key={project.id}>
+                    <Table.Td>
+                      {editingProjectId === project.id ? (
+                        <TextInput
+                          size="sm"
                           value={projectForm.name}
                           onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
-                          autoFocus
                         />
-                      </TableCell>
-                      <TableCell>
-                        <input
-                          type="color"
+                      ) : (
+                        <Badge style={{ backgroundColor: project.color, color: 'white' }}>
+                          {project.name}
+                        </Badge>
+                      )}
+                    </Table.Td>
+                    <Table.Td>
+                      {editingProjectId === project.id ? (
+                        <ColorInput
+                          size="sm"
                           value={projectForm.color}
-                          onChange={(e) => setProjectForm({ ...projectForm, color: e.target.value })}
-                          style={{ width: 40, height: 32, border: 'none', cursor: 'pointer' }}
+                          onChange={(color) => setProjectForm({ ...projectForm, color })}
+                          w={100}
                         />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <TextField
-                            size="small"
-                            type="number"
+                      ) : (
+                        <Box
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 4,
+                            backgroundColor: project.color,
+                            border: '1px solid rgba(0,0,0,0.2)',
+                          }}
+                        />
+                      )}
+                    </Table.Td>
+                    <Table.Td>
+                      {editingProjectId === project.id ? (
+                        <Group gap="xs">
+                          <NumberInput
+                            size="sm"
                             value={projectForm.multiplier}
-                            onChange={(e) => setProjectForm({ ...projectForm, multiplier: parseFloat(e.target.value) || 1.0 })}
-                            inputProps={{ min: 0.1, max: 10, step: 0.1 }}
-                            sx={{ width: 80 }}
-                            slotProps={{
-                              input: {
-                                endAdornment: <InputAdornment position="end">x</InputAdornment>,
-                              },
-                            }}
+                            onChange={(val) => setProjectForm({ ...projectForm, multiplier: Number(val) || 1.0 })}
+                            min={0.1}
+                            max={10}
+                            step={0.1}
+                            w={80}
+                            suffix="x"
                           />
-                          <ButtonGroup size="small" variant="outlined">
-                            <Button onClick={() => handleSetProjectMultiplier(0.5)}>0.5x</Button>
-                            <Button onClick={() => handleSetProjectMultiplier(1.0)}>1x</Button>
-                            <Button onClick={() => handleSetProjectMultiplier(1.5)}>1.5x</Button>
-                            <Button onClick={() => handleSetProjectMultiplier(2.0)}>2x</Button>
-                          </ButtonGroup>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton size="small" onClick={handleSaveProject} color="primary">
-                          <CheckIcon />
-                        </IconButton>
-                        <IconButton size="small" onClick={handleCancelEditProject}>
-                          <CloseIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {projects.map((project) => (
-                    <TableRow key={project.id}>
-                      <TableCell>
-                        {editingProjectId === project.id ? (
-                          <TextField
-                            size="small"
-                            value={projectForm.name}
-                            onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
-                          />
-                        ) : (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Chip
-                              label={project.name}
-                              size="small"
-                              sx={{ backgroundColor: project.color, color: 'white' }}
-                            />
-                          </Box>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingProjectId === project.id ? (
-                          <input
-                            type="color"
-                            value={projectForm.color}
-                            onChange={(e) => setProjectForm({ ...projectForm, color: e.target.value })}
-                            style={{ width: 40, height: 32, border: 'none', cursor: 'pointer' }}
-                          />
-                        ) : (
-                          <Box
-                            sx={{
-                              width: 24,
-                              height: 24,
-                              borderRadius: 1,
-                              backgroundColor: project.color,
-                              border: '1px solid rgba(0,0,0,0.2)',
-                            }}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingProjectId === project.id ? (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <TextField
-                              size="small"
-                              type="number"
-                              value={projectForm.multiplier}
-                              onChange={(e) => setProjectForm({ ...projectForm, multiplier: parseFloat(e.target.value) || 1.0 })}
-                              inputProps={{ min: 0.1, max: 10, step: 0.1 }}
-                              sx={{ width: 80 }}
-                              slotProps={{
-                                input: {
-                                  endAdornment: <InputAdornment position="end">x</InputAdornment>,
-                                },
-                              }}
-                            />
-                            <ButtonGroup size="small" variant="outlined">
-                              <Button onClick={() => handleSetProjectMultiplier(0.5)}>0.5x</Button>
-                              <Button onClick={() => handleSetProjectMultiplier(1.0)}>1x</Button>
-                              <Button onClick={() => handleSetProjectMultiplier(1.5)}>1.5x</Button>
-                              <Button onClick={() => handleSetProjectMultiplier(2.0)}>2x</Button>
-                            </ButtonGroup>
-                          </Box>
-                        ) : (
-                          <Chip
-                            label={`${project.multiplier}x`}
-                            size="small"
-                            color={project.multiplier > 1 ? 'success' : project.multiplier < 1 ? 'warning' : 'default'}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell align="right">
-                        {editingProjectId === project.id ? (
-                          <>
-                            <IconButton size="small" onClick={handleSaveProject} color="primary">
-                              <CheckIcon />
-                            </IconButton>
-                            <IconButton size="small" onClick={handleCancelEditProject}>
-                              <CloseIcon />
-                            </IconButton>
-                          </>
-                        ) : (
-                          <>
-                            <IconButton size="small" onClick={() => handleStartEditProject(project)}>
-                              <EditIcon />
-                            </IconButton>
-                            <IconButton size="small" onClick={() => handleDeleteProject(project.id)} color="error">
-                              <DeleteIcon />
-                            </IconButton>
-                          </>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {projects.length === 0 && !showAddProject && (
-                    <TableRow>
-                      <TableCell colSpan={4} align="center">
-                        <Typography variant="body2" color="text.secondary">
-                          No projects defined. Click "Add Project" to create one.
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
+                          <Button.Group>
+                            <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(0.5)}>0.5x</Button>
+                            <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(1.0)}>1x</Button>
+                            <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(1.5)}>1.5x</Button>
+                            <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(2.0)}>2x</Button>
+                          </Button.Group>
+                        </Group>
+                      ) : (
+                        <Badge
+                          color={project.multiplier > 1 ? 'green' : project.multiplier < 1 ? 'yellow' : 'gray'}
+                          variant="light"
+                        >
+                          {project.multiplier}x
+                        </Badge>
+                      )}
+                    </Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>
+                      {editingProjectId === project.id ? (
+                        <>
+                          <ActionIcon size="sm" color="blue" onClick={handleSaveProject} mr={4}>
+                            <IconCheck size={16} />
+                          </ActionIcon>
+                          <ActionIcon size="sm" onClick={handleCancelEditProject}>
+                            <IconX size={16} />
+                          </ActionIcon>
+                        </>
+                      ) : (
+                        <>
+                          <ActionIcon size="sm" onClick={() => handleStartEditProject(project)} mr={4}>
+                            <IconPencil size={16} />
+                          </ActionIcon>
+                          <ActionIcon size="sm" color="red" onClick={() => handleDeleteProject(project.id)}>
+                            <IconTrash size={16} />
+                          </ActionIcon>
+                        </>
+                      )}
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+                {projects.length === 0 && !showAddProject && (
+                  <Table.Tr>
+                    <Table.Td colSpan={4} style={{ textAlign: 'center' }}>
+                      <Text size="sm" c="dimmed">
+                        No projects defined. Click "Add Project" to create one.
+                      </Text>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
+              </Table.Tbody>
+            </Table>
+          </Paper>
+        )}
       </Card>
 
       {/* Vacation Mode */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <VacationIcon color="info" />
-            <Typography variant="h6">Vacation Mode</Typography>
-          </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Enable vacation mode to pause streak penalties and task due date enforcement while you're away.
-          </Typography>
+      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
+        <Group gap="xs" mb="xs">
+          <IconBeach size={20} color="var(--mantine-color-cyan-6)" />
+          <Title order={4}>Vacation Mode</Title>
+        </Group>
+        <Text size="sm" c="dimmed" mb="md">
+          Enable vacation mode to pause streak penalties and task due date enforcement while you're away.
+        </Text>
 
-          <FormControlLabel
-            control={
-              <Switch
-                checked={systemStatus?.vacation_mode ?? false}
-                onChange={handleVacationToggle}
-                disabled={loading}
-                inputProps={{ 'aria-label': 'Vacation Mode' }}
-              />
-            }
-            label={systemStatus?.vacation_mode ? 'Vacation mode is active' : 'Enable vacation mode'}
-          />
+        <Switch
+          checked={systemStatus?.vacation_mode ?? false}
+          onChange={(e) => handleVacationToggle(e.currentTarget.checked)}
+          disabled={loading}
+          label={systemStatus?.vacation_mode ? 'Vacation mode is active' : 'Enable vacation mode'}
+          aria-label="Vacation Mode"
+        />
 
-          {systemStatus?.vacation_mode && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              Vacation mode is currently active. No penalties will be applied for overdue tasks.
-            </Alert>
-          )}
-        </CardContent>
+        {systemStatus?.vacation_mode && (
+          <Alert color="blue" mt="md">
+            Vacation mode is currently active. No penalties will be applied for overdue tasks.
+          </Alert>
+        )}
       </Card>
 
       {/* XP History */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <HistoryIcon color="primary" />
-            <Typography variant="h6">XP History</Typography>
-          </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Recent experience points earned or spent.
-          </Typography>
+      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
+        <Group gap="xs" mb="xs">
+          <IconHistory size={20} color="var(--mantine-color-blue-6)" />
+          <Title order={4}>XP History</Title>
+        </Group>
+        <Text size="sm" c="dimmed" mb="md">
+          Recent experience points earned or spent.
+        </Text>
 
-          {loadingXP ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : xpHistory.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No XP transactions yet. Complete tasks to earn experience!
-            </Typography>
-          ) : (
-            <List dense>
-              {xpHistory.map((transaction) => (
-                <ListItem key={transaction.id} divider>
-                  <ListItemText
-                    primary={transaction.description}
-                    secondary={new Date(transaction.timestamp).toLocaleDateString()}
-                  />
-                  <Chip
-                    label={`${transaction.amount > 0 ? '+' : ''}${transaction.amount} XP`}
-                    color={transaction.amount > 0 ? 'success' : 'error'}
-                    size="small"
-                  />
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </CardContent>
+        {loadingXP ? (
+          <Group justify="center" py="md">
+            <Loader size="sm" />
+          </Group>
+        ) : xpHistory.length === 0 ? (
+          <Text size="sm" c="dimmed">
+            No XP transactions yet. Complete tasks to earn experience!
+          </Text>
+        ) : (
+          <Stack gap="xs">
+            {xpHistory.map((transaction) => (
+              <Paper key={transaction.id} p="sm" withBorder>
+                <Group justify="space-between">
+                  <Box>
+                    <Text size="sm">{transaction.description}</Text>
+                    <Text size="xs" c="dimmed">
+                      {new Date(transaction.timestamp).toLocaleDateString()}
+                    </Text>
+                  </Box>
+                  <Badge
+                    color={transaction.amount > 0 ? 'green' : 'red'}
+                    variant="light"
+                  >
+                    {transaction.amount > 0 ? '+' : ''}{transaction.amount} XP
+                  </Badge>
+                </Group>
+              </Paper>
+            ))}
+          </Stack>
+        )}
       </Card>
 
       {/* Security */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Security
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Manage your account security settings.
-          </Typography>
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Title order={4} mb="xs">
+          Security
+        </Title>
+        <Text size="sm" c="dimmed" mb="md">
+          Manage your account security settings.
+        </Text>
 
-          <Button
-            variant="outlined"
-            startIcon={<LockIcon />}
-            onClick={() => setChangePasswordOpen(true)}
-          >
-            Change Password
-          </Button>
-        </CardContent>
+        <Button
+          variant="outline"
+          leftSection={<IconLock size={16} />}
+          onClick={() => setChangePasswordOpen(true)}
+        >
+          Change Password
+        </Button>
       </Card>
 
-      {/* Import Confirmation Dialog */}
-      <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)}>
-        <DialogTitle>Confirm Data Import</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to import data from <strong>{selectedFile?.name}</strong>?
-          </DialogContentText>
-          <Alert severity="error" sx={{ mt: 2 }}>
-            <strong>Warning:</strong> This will replace ALL your current data. This action cannot be undone.
-          </Alert>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setImportDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleImportConfirm} variant="contained" color="error">
+      {/* Import Confirmation Modal */}
+      <Modal
+        opened={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        title="Confirm Data Import"
+      >
+        <Text mb="md">
+          Are you sure you want to import data from <strong>{selectedFile?.name}</strong>?
+        </Text>
+        <Alert color="red" mb="lg">
+          <strong>Warning:</strong> This will replace ALL your current data. This action cannot be undone.
+        </Alert>
+        <Group justify="flex-end">
+          <Button variant="subtle" onClick={() => setImportDialogOpen(false)}>Cancel</Button>
+          <Button color="red" onClick={handleImportConfirm}>
             Import and Replace
           </Button>
-        </DialogActions>
-      </Dialog>
+        </Group>
+      </Modal>
 
-      {/* Change Password Dialog */}
-      <Dialog open={changePasswordOpen} onClose={() => setChangePasswordOpen(false)}>
-        <DialogTitle>Change Password</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
+      {/* Change Password Modal */}
+      <Modal
+        opened={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+        title="Change Password"
+      >
+        <Stack gap="md">
+          <PasswordInput
             label="Current Password"
-            type="password"
-            fullWidth
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
-            sx={{ mb: 2 }}
+            autoFocus
           />
-          <Divider sx={{ my: 2 }} />
-          <TextField
-            margin="dense"
+          <Divider />
+          <PasswordInput
             label="New Password"
-            type="password"
-            fullWidth
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            helperText="Minimum 8 characters"
-            sx={{ mb: 2 }}
+            description="Minimum 8 characters"
           />
-          <TextField
-            margin="dense"
+          <PasswordInput
             label="Confirm New Password"
-            type="password"
-            fullWidth
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setChangePasswordOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleChangePassword}
-            variant="contained"
-            disabled={loading || !currentPassword || !newPassword || !confirmPassword}
-          >
-            {loading ? <CircularProgress size={24} /> : 'Change Password'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          <Group justify="flex-end" mt="md">
+            <Button variant="subtle" onClick={() => setChangePasswordOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleChangePassword}
+              disabled={loading || !currentPassword || !newPassword || !confirmPassword}
+            >
+              {loading ? <Loader size={16} color="white" /> : 'Change Password'}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Box>
   );
 }

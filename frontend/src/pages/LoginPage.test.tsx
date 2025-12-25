@@ -59,8 +59,9 @@ describe('LoginPage', () => {
       const user = userEvent.setup();
       render(<LoginPage />);
 
-      const registerButton = screen.getByRole('button', { name: /register/i });
-      await user.click(registerButton);
+      // Mantine SegmentedControl uses radio inputs
+      const registerRadio = screen.getByRole('radio', { name: /register/i });
+      await user.click(registerRadio);
 
       expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
     });
@@ -71,13 +72,13 @@ describe('LoginPage', () => {
       const user = userEvent.setup();
       render(<LoginPage />);
 
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      // Mantine SegmentedControl uses radio inputs
+      const registerToggle = screen.getByRole('radio', { name: /register/i });
       await user.click(registerToggle);
 
       // Check that submit button exists (type="submit")
-      const buttons = screen.getAllByRole('button', { name: /register/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit');
-      expect(submitButton).toBeInTheDocument();
+      const submitButton = screen.getByRole('button', { name: /register/i });
+      expect(submitButton).toHaveAttribute('type', 'submit');
       expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
     });
 
@@ -88,7 +89,8 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'testpassword');
 
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      // Mantine SegmentedControl uses radio inputs
+      const registerToggle = screen.getByRole('radio', { name: /register/i });
       await user.click(registerToggle);
 
       expect(passwordField).toHaveValue('');
@@ -102,14 +104,13 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'short');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /login/i });
       await user.click(submitButton);
 
       expect(await screen.findByText(/password must be at least 8 characters/i)).toBeInTheDocument();
 
-      // Switch to register mode
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      // Switch to register mode - Mantine SegmentedControl uses radio inputs
+      const registerToggle = screen.getByRole('radio', { name: /register/i });
       await user.click(registerToggle);
 
       expect(screen.queryByText(/password must be at least 8 characters/i)).not.toBeInTheDocument();
@@ -124,8 +125,7 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'short');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /login/i });
       await user.click(submitButton);
 
       expect(await screen.findByText(/password must be at least 8 characters/i)).toBeInTheDocument();
@@ -136,8 +136,8 @@ describe('LoginPage', () => {
       const user = userEvent.setup();
       render(<LoginPage />);
 
-      // Switch to register mode
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      // Switch to register mode - Mantine SegmentedControl uses radio inputs
+      const registerToggle = screen.getByRole('radio', { name: /register/i });
       await user.click(registerToggle);
 
       const passwordField = screen.getAllByLabelText(/password/i)[0];
@@ -146,8 +146,7 @@ describe('LoginPage', () => {
       await user.type(passwordField, 'password123');
       await user.type(confirmField, 'password456');
 
-      const buttons = screen.getAllByRole('button', { name: /register/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /register/i });
       await user.click(submitButton);
 
       expect(await screen.findByText(/passwords do not match/i)).toBeInTheDocument();
@@ -169,8 +168,7 @@ describe('LoginPage', () => {
       await user.type(usernameField, 'testuser');
       await user.type(passwordField, 'password123');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /login/i });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -187,8 +185,7 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'password123');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /login/i });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -207,8 +204,7 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'wrongpassword');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /login/i });
       await user.click(submitButton);
 
       expect(await screen.findByText(/invalid credentials/i)).toBeInTheDocument();
@@ -223,8 +219,7 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'password123');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /login/i });
       await user.click(submitButton);
 
       expect(await screen.findByText(/login failed/i)).toBeInTheDocument();
@@ -243,8 +238,7 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'password123');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /login/i });
       await user.click(submitButton);
 
       // Form should be disabled
@@ -270,8 +264,8 @@ describe('LoginPage', () => {
 
       render(<LoginPage />);
 
-      // Switch to register mode
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      // Switch to register mode - Mantine SegmentedControl uses radio inputs
+      const registerToggle = screen.getByRole('radio', { name: /register/i });
       await user.click(registerToggle);
 
       const usernameField = screen.getByLabelText(/username/i);
@@ -283,8 +277,7 @@ describe('LoginPage', () => {
       await user.type(passwordField, 'password123');
       await user.type(confirmField, 'password123');
 
-      const buttons = screen.getAllByRole('button', { name: /register/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /register/i });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -298,8 +291,8 @@ describe('LoginPage', () => {
 
       render(<LoginPage />);
 
-      // Switch to register mode
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      // Switch to register mode - Mantine SegmentedControl uses radio inputs
+      const registerToggle = screen.getByRole('radio', { name: /register/i });
       await user.click(registerToggle);
 
       const passwordField = screen.getAllByLabelText(/password/i)[0];
@@ -308,8 +301,7 @@ describe('LoginPage', () => {
       await user.type(passwordField, 'password123');
       await user.type(confirmField, 'password123');
 
-      const buttons = screen.getAllByRole('button', { name: /register/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /register/i });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -325,8 +317,8 @@ describe('LoginPage', () => {
 
       render(<LoginPage />);
 
-      // Switch to register mode
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      // Switch to register mode - Mantine SegmentedControl uses radio inputs
+      const registerToggle = screen.getByRole('radio', { name: /register/i });
       await user.click(registerToggle);
 
       const passwordField = screen.getAllByLabelText(/password/i)[0];
@@ -335,8 +327,7 @@ describe('LoginPage', () => {
       await user.type(passwordField, 'password123');
       await user.type(confirmField, 'password123');
 
-      const buttons = screen.getAllByRole('button', { name: /register/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /register/i });
       await user.click(submitButton);
 
       expect(await screen.findByText(/username already exists/i)).toBeInTheDocument();
