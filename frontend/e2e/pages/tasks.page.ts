@@ -220,8 +220,10 @@ export class TasksPage {
    * Switch to list view.
    */
   async switchToListView(): Promise<void> {
-    // Mantine SegmentedControl has hidden radio inputs, use force
-    await this.listViewButton.click({ force: true });
+    // Click the label element for list view (first label in the segmented control)
+    const segmentedControl = this.page.locator('[aria-label="view mode"]');
+    await segmentedControl.scrollIntoViewIfNeeded();
+    await segmentedControl.locator('.mantine-SegmentedControl-label').nth(0).click();
   }
 
   /**

@@ -65,25 +65,27 @@ test.describe('Settings Page', () => {
     test('should toggle vacation mode on', async ({ page }) => {
       await page.goto('/settings');
 
-      // Find vacation mode toggle - Mantine Switch has hidden input but accessible label
-      // Click on the label text instead of the hidden input
-      const vacationToggle = page.getByRole('switch', { name: 'Vacation Mode' });
+      // Find vacation mode toggle - Mantine Switch has hidden input
+      // Click on the Switch track element which is visible
+      const vacationCard = page.locator('.mantine-Card-root').filter({ hasText: 'Vacation Mode' });
+      const switchTrack = vacationCard.locator('.mantine-Switch-track');
 
-      // Get initial state
-      const initialState = await vacationToggle.isChecked();
+      // Get initial state from the hidden input
+      const vacationInput = page.getByRole('switch', { name: 'Vacation Mode' });
+      const initialState = await vacationInput.isChecked();
 
-      // Toggle vacation mode (use force since Mantine Switch input is visually hidden)
-      await vacationToggle.click({ force: true });
+      // Toggle vacation mode by clicking the visible track element
+      await switchTrack.click();
 
       // Wait for API call and state update
       await page.waitForTimeout(500);
 
       // Verify state changed
-      const newState = await vacationToggle.isChecked();
+      const newState = await vacationInput.isChecked();
       expect(newState).not.toBe(initialState);
 
       // Toggle back to original state
-      await vacationToggle.click({ force: true });
+      await switchTrack.click();
       await page.waitForTimeout(500);
     });
 
@@ -130,7 +132,9 @@ test.describe('Settings Page', () => {
     test('should validate password change inputs', async ({ page }) => {
       await page.goto('/settings');
 
-      const changePasswordBtn = page.getByRole('button', { name: /change password/i });
+      // Find the Security card's change password button (the one that opens the form)
+      const securityCard = page.locator('.mantine-Card-root').filter({ hasText: 'Security' });
+      const changePasswordBtn = securityCard.getByRole('button', { name: /change password/i });
 
       if (await changePasswordBtn.isVisible()) {
         await changePasswordBtn.click();
@@ -142,12 +146,13 @@ test.describe('Settings Page', () => {
         await currentPasswordInput.fill('testpassword123');
         await newPasswordInput.fill('short');
 
-        // Submit
-        const submitBtn = page.getByRole('button', { name: /save|submit|change/i });
-        await submitBtn.click();
+        // Submit - the button inside the form (different from the one that opened the form)
+        // Use the disabled/enabled state to find the submit button in the form
+        const formSubmitBtn = securityCard.getByRole('button', { name: /change password/i }).last();
+        await formSubmitBtn.click();
 
         // Should show validation error
-        const error = page.getByRole('alert');
+        const error = page.getByRole('alert').first();
         if (await error.isVisible()) {
           const errorText = await error.textContent();
           expect(errorText?.toLowerCase()).toContain('8 characters');
@@ -177,9 +182,11 @@ test.describe('Settings Page', () => {
       // Wait for loading to complete
       await page.waitForTimeout(500);
 
-      // Should show either transactions list or empty state message within the card
-      const hasTransactions = await xpHistoryCard.locator('li').first().isVisible().catch(() => false);
-      const hasEmptyMessage = await xpHistoryCard.getByText('No XP transactions yet').isVisible().catch(() => false);
+      // Should show either transactions (Paper elements with borders) or empty state message
+      // XP transactions are rendered as Paper elements, not list items
+      const hasTransactions = await xpHistoryCard.locator('.mantine-Paper-root').first().isVisible().catch(() => false);
+      // The actual empty message includes the full text
+      const hasEmptyMessage = await xpHistoryCard.getByText(/No XP transactions yet/i).isVisible().catch(() => false);
 
       expect(hasTransactions || hasEmptyMessage).toBeTruthy();
     });
@@ -257,10 +264,11 @@ test.describe('Settings Page', () => {
       await nameInput.fill(tagName);
 
       // Click a quick multiplier button instead of typing
-      await page.getByRole('button', { name: '1.5x' }).click();
+      await tagsSection.getByRole('button', { name: '1.5x' }).click();
 
       // Submit form by clicking the check icon button
-      await tagsSection.getByRole('button').filter({ has: page.locator('svg[data-testid="CheckIcon"]') }).click();
+      // Find the button containing the Tabler check icon (has class tabler-icon-check)
+      await tagsSection.locator('button:has(.tabler-icon-check)').first().click();
 
       // Verify tag appears in list
       await expect(page.getByText(tagName)).toBeVisible({ timeout: 5000 });
@@ -320,7 +328,8 @@ test.describe('Settings Page', () => {
       await projectsSection.getByRole('button', { name: '2x' }).click();
 
       // Submit form by clicking the check icon button
-      await projectsSection.getByRole('button').filter({ has: page.locator('svg[data-testid="CheckIcon"]') }).click();
+      // Find the button containing the Tabler check icon (has class tabler-icon-check)
+      await projectsSection.locator('button:has(.tabler-icon-check)').first().click();
 
       // Verify project appears in list
       await expect(page.getByText(projectName)).toBeVisible({ timeout: 5000 });

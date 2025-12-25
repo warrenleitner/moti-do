@@ -17,7 +17,8 @@ export class HabitsPage {
     this.heading = page.getByRole('heading', { name: 'Habits', exact: true });
     this.newHabitButton = page.getByRole('button', { name: 'New Habit' });
     this.habitFormDialog = page.getByRole('dialog');
-    this.snackbar = page.getByRole('alert');
+    // Mantine notifications can stack, use first() for most recent
+    this.snackbar = page.getByRole('alert').first();
   }
 
   /**
