@@ -156,40 +156,39 @@ describe('TaskForm', () => {
     expect(callArgs.project).toBe('Work Project');
   });
 
-  it('shows recurrence rule field when habit is enabled', async () => {
+  it('shows recurrence pattern builder when habit is enabled', async () => {
     const { user } = render(<TaskForm {...defaultProps} />);
 
-    // Initially, recurrence rule should not be visible
-    expect(screen.queryByLabelText(/recurrence rule/i)).not.toBeInTheDocument();
+    // Initially, recurrence pattern should not be visible
+    expect(screen.queryByText(/recurrence pattern/i)).not.toBeInTheDocument();
 
     // Enable habit
     const habitSwitch = screen.getByLabelText(/recurring/i);
     await user.click(habitSwitch);
 
-    // Now recurrence rule should be visible
-    expect(screen.getByLabelText(/recurrence rule/i)).toBeInTheDocument();
+    // Now recurrence pattern builder should be visible
+    expect(screen.getByText(/recurrence pattern/i)).toBeInTheDocument();
+    // Should show the preview text with default daily pattern
+    expect(screen.getByText(/every day/i)).toBeInTheDocument();
   });
 
-  it('allows setting recurrence rule for habits', async () => {
+  it('saves habit with default daily recurrence rule', async () => {
     const onSave = vi.fn();
     const { user } = render(<TaskForm {...defaultProps} onSave={onSave} />);
 
     await user.type(screen.getByLabelText(/title/i), 'Daily Exercise');
 
-    // Enable habit
+    // Enable habit - this sets default recurrence to daily
     const habitSwitch = screen.getByLabelText(/recurring/i);
     await user.click(habitSwitch);
 
-    // Set recurrence rule
-    const recurrenceInput = screen.getByLabelText(/recurrence rule/i);
-    await user.type(recurrenceInput, 'daily');
-
+    // The recurrence builder defaults to FREQ=DAILY
     await user.click(screen.getByRole('button', { name: /create task/i }));
 
     expect(onSave).toHaveBeenCalled();
     const callArgs = onSave.mock.calls[0][0];
     expect(callArgs.is_habit).toBe(true);
-    expect(callArgs.recurrence_rule).toBe('daily');
+    expect(callArgs.recurrence_rule).toBe('FREQ=DAILY');
   });
 
   it('allows adding tags', async () => {

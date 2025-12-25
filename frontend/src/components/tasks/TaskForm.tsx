@@ -34,6 +34,7 @@ import {
   DifficultyLabel,
   DurationLabel,
 } from '../../types';
+import RecurrenceRuleBuilder from './RecurrenceRuleBuilder';
 
 interface TaskFormProps {
   open: boolean;
@@ -223,7 +224,15 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
               control={
                 <Switch
                   checked={formData.is_habit || false}
-                  onChange={(e) => handleChange('is_habit', e.target.checked)}
+                  onChange={(e) => {
+                    const isHabit = e.target.checked;
+                    setFormData((prev) => ({
+                      ...prev,
+                      is_habit: isHabit,
+                      // Set default recurrence rule when enabling habit
+                      recurrence_rule: isHabit ? (prev.recurrence_rule || 'FREQ=DAILY') : prev.recurrence_rule,
+                    }));
+                  }}
                 />
               }
               label="Recurring Habit"
@@ -231,14 +240,15 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
 
             {/* Recurrence rule (only if habit) */}
             {formData.is_habit && (
-              <TextField
-                label="Recurrence Rule"
-                value={formData.recurrence_rule || ''}
-                onChange={(e) => handleChange('recurrence_rule', e.target.value)}
-                fullWidth
-                placeholder="e.g., daily, weekly, every 3 days"
-                helperText="Simple rules: daily, weekly, monthly, or 'every N days/weeks'"
-              />
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Recurrence Pattern
+                </Typography>
+                <RecurrenceRuleBuilder
+                  value={formData.recurrence_rule || 'FREQ=DAILY'}
+                  onChange={(rrule) => handleChange('recurrence_rule', rrule)}
+                />
+              </Box>
             )}
 
             <Divider />
