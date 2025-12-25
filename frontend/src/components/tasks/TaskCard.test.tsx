@@ -383,9 +383,12 @@ describe('TaskCard', () => {
   });
 
   it('renders task with due date', () => {
+    // Use today's date so DateDisplay shows "Today"
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const taskWithDueDate: Task = {
       ...mockTask,
-      due_date: '2025-12-31',  // DateDisplay expects YYYY-MM-DD format
+      due_date: todayStr,
     };
 
     render(
@@ -397,8 +400,8 @@ describe('TaskCard', () => {
       />
     );
 
-    // Should show calendar icon (DateDisplay component renders CalendarToday icon)
-    expect(screen.getByTestId('CalendarTodayIcon')).toBeInTheDocument();
+    // Should show the date text (DateDisplay renders "Today" for today's date)
+    expect(screen.getByText('Today')).toBeInTheDocument();
   });
 
   it('shows undo button when task has history and onUndo is provided', () => {

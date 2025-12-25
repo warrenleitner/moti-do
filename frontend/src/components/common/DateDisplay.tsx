@@ -1,6 +1,5 @@
-import { Typography, Tooltip } from '@mui/material';
-import { CalendarToday, Warning } from '@mui/icons-material';
-import { Box } from '@mui/material';
+import { Text, Tooltip, Group } from '@mantine/core';
+import { IconCalendar, IconAlertTriangle } from '@tabler/icons-react';
 
 interface DateDisplayProps {
   date: string | undefined;
@@ -26,24 +25,24 @@ function formatRelativeDate(dateStr: string): { text: string; color: string; isO
     const absDays = Math.abs(diffDays);
     return {
       text: absDays === 1 ? 'Yesterday' : `${absDays} days overdue`,
-      color: 'error.main',
+      color: 'red',
       isOverdue: true,
     };
   }
   if (diffDays === 0) {
-    return { text: 'Today', color: 'warning.main', isOverdue: false };
+    return { text: 'Today', color: 'orange', isOverdue: false };
   }
   if (diffDays === 1) {
-    return { text: 'Tomorrow', color: 'info.main', isOverdue: false };
+    return { text: 'Tomorrow', color: 'blue', isOverdue: false };
   }
   if (diffDays <= 7) {
-    return { text: `In ${diffDays} days`, color: 'text.secondary', isOverdue: false };
+    return { text: `In ${diffDays} days`, color: 'dimmed', isOverdue: false };
   }
 
   // Default case for dates > 7 days away
   return {
     text: targetDate.toLocaleDateString(),
-    color: 'text.secondary',
+    color: 'dimmed',
     isOverdue: false,
   };
 }
@@ -71,18 +70,18 @@ export default function DateDisplay({
 
   const { text, color, isOverdue } = showRelative
     ? formatRelativeDate(date)
-    : { text: dateObj.toLocaleDateString(), color: 'text.secondary', isOverdue: false };
+    : { text: dateObj.toLocaleDateString(), color: 'dimmed', isOverdue: false };
 
-  const Icon = isOverdue ? Warning : CalendarToday;
+  const Icon = isOverdue ? IconAlertTriangle : IconCalendar;
 
   return (
-    <Tooltip title={`${label ? `${label}: ` : ''}${fullDate}`}>
-      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-        {showIcon && <Icon sx={{ fontSize: 16, color }} />}
-        <Typography variant="body2" sx={{ color }}>
+    <Tooltip label={`${label ? `${label}: ` : ''}${fullDate}`}>
+      <Group gap={4} style={{ display: 'inline-flex' }}>
+        {showIcon && <Icon size={16} color={`var(--mantine-color-${color === 'dimmed' ? 'gray-6' : color + '-6'})`} />}
+        <Text size="sm" c={color}>
           {text}
-        </Typography>
-      </Box>
+        </Text>
+      </Group>
     </Tooltip>
   );
 }

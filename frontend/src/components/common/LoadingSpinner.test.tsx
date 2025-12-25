@@ -3,13 +3,14 @@ import LoadingSpinner from './LoadingSpinner';
 
 describe('LoadingSpinner', () => {
   it('renders with default size', () => {
-    render(<LoadingSpinner />);
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    const { container } = render(<LoadingSpinner />);
+    // Mantine Loader renders as a span with specific class
+    expect(container.querySelector('.mantine-Loader-root')).toBeInTheDocument();
   });
 
   it('renders with custom size', () => {
-    render(<LoadingSpinner size={100} />);
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    const { container } = render(<LoadingSpinner size={100} />);
+    expect(container.querySelector('.mantine-Loader-root')).toBeInTheDocument();
   });
 
   it('renders with message', () => {
@@ -18,17 +19,17 @@ describe('LoadingSpinner', () => {
   });
 
   it('renders fullscreen variant', () => {
-    render(<LoadingSpinner fullscreen />);
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    const { container } = render(<LoadingSpinner fullScreen />);
+    expect(container.querySelector('.mantine-Loader-root')).toBeInTheDocument();
   });
 
   it('renders fullscreen with message', () => {
-    render(<LoadingSpinner fullscreen message="Please wait..." />);
+    render(<LoadingSpinner fullScreen message="Please wait..." />);
     expect(screen.getByText('Please wait...')).toBeInTheDocument();
   });
 
   it('renders inline variant', () => {
-    render(<LoadingSpinner />);
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    const { container } = render(<LoadingSpinner />);
+    expect(container.querySelector('.mantine-Loader-root')).toBeInTheDocument();
   });
 });

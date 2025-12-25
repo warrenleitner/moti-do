@@ -1,6 +1,6 @@
-import { type ReactNode } from 'react';
-import { Box, Typography, Button } from '@mui/material';
-import { InboxOutlined } from '@mui/icons-material';
+import type { ReactNode } from 'react';
+import { Stack, Text, Title, Button, Box } from '@mantine/core';
+import { IconInbox } from '@tabler/icons-react';
 
 interface EmptyStateProps {
   icon?: ReactNode;
@@ -18,39 +18,21 @@ export default function EmptyState({
   onAction,
 }: EmptyStateProps) {
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        py: 8,
-        px: 4,
-      }}
-    >
-      <Box
-        sx={{
-          color: 'text.secondary',
-          mb: 2,
-          '& svg': { fontSize: 64 },
-        }}
-      >
-        {icon || <InboxOutlined />}
+    <Stack align="center" justify="center" ta="center" py="xl" px="lg">
+      <Box c="dimmed" mb="sm">
+        {icon || <IconInbox size={64} stroke={1.5} />}
       </Box>
-      <Typography variant="h6" gutterBottom>
-        {title}
-      </Typography>
+      <Title order={4}>{title}</Title>
       {description && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400 }}>
+        <Text size="sm" c="dimmed" maw={400}>
           {description}
-        </Typography>
+        </Text>
       )}
       {actionLabel && onAction && (
-        <Button variant="contained" onClick={onAction}>
+        <Button onClick={onAction} mt="md">
           {actionLabel}
         </Button>
       )}
-    </Box>
+    </Stack>
   );
 }

@@ -1,4 +1,4 @@
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Center, Loader, Text, Stack, Box } from '@mantine/core';
 
 interface LoadingSpinnerProps {
   message?: string;
@@ -12,23 +12,16 @@ export default function LoadingSpinner({
   fullScreen = false,
 }: LoadingSpinnerProps) {
   const content = (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 2,
-        p: 4,
-      }}
-    >
-      <CircularProgress size={size} />
-      {message && (
-        <Typography variant="body2" color="text.secondary">
-          {message}
-        </Typography>
-      )}
-    </Box>
+    <Center p="xl">
+      <Stack align="center" gap="sm">
+        <Loader size={size} />
+        {message && (
+          <Text size="sm" c="dimmed">
+            {message}
+          </Text>
+        )}
+      </Stack>
+    </Center>
   );
 
   // Full screen mode tested via integration tests
@@ -36,7 +29,7 @@ export default function LoadingSpinner({
   if (fullScreen) {
     return (
       <Box
-        sx={{
+        style={{
           position: 'fixed',
           top: 0,
           left: 0,

@@ -14,8 +14,9 @@ describe('EmptyState', () => {
   });
 
   it('renders default icon when no custom icon provided', () => {
-    render(<EmptyState title="No items" />);
-    expect(screen.getByTestId('InboxOutlinedIcon')).toBeInTheDocument();
+    const { container } = render(<EmptyState title="No items" />);
+    // Tabler IconInbox renders as an SVG
+    expect(container.querySelector('svg')).toBeInTheDocument();
   });
 
   it('renders custom icon', () => {
