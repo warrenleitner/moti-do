@@ -145,12 +145,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <>
-      {/* App Bar */}
+      {/* Mobile App Bar - only shown on small screens */}
       <AppBar
         position="fixed"
         sx={{
-          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-          ml: { md: `${DRAWER_WIDTH}px` },
+          display: { xs: 'block', md: 'none' },
         }}
       >
         <Toolbar>
@@ -158,12 +157,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
             color="inherit"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
+            sx={{ mr: 2 }}
           >
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {navItems.find((item) => item.path === location.pathname)?.text || 'Moti-Do'}
+            Moti-Do
           </Typography>
         </Toolbar>
       </AppBar>
@@ -212,7 +211,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
         sx={{
           flexGrow: 1,
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-          mt: 8,
+          mt: { xs: 8, md: 0 },
+          p: { xs: 2, md: 3 },
           backgroundColor: 'background.default',
           minHeight: '100vh',
         }}

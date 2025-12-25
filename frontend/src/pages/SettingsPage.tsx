@@ -931,7 +931,7 @@ export default function SettingsPage() {
             </Alert>
           )}
 
-          {systemStatus?.pending_days && systemStatus.pending_days > 0 && (
+          {systemStatus && systemStatus.pending_days > 0 && (
             <Alert severity="warning" sx={{ mt: 2 }}>
               Processing will apply penalties for incomplete overdue tasks.
             </Alert>

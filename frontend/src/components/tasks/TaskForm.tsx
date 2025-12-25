@@ -18,6 +18,7 @@ import {
   IconButton,
   Typography,
   Divider,
+  Autocomplete,
 } from '@mui/material';
 import { Add, Delete } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
@@ -38,6 +39,7 @@ import {
 } from '../../types';
 import RecurrenceRuleBuilder from './RecurrenceRuleBuilder';
 import { getNextOccurrenceText } from '../../utils/recurrence';
+import { useDefinedTags, useDefinedProjects } from '../../store/userStore';
 
 interface TaskFormProps {
   open: boolean;
@@ -66,6 +68,12 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
   const [formData, setFormData] = useState<Partial<Task>>(getInitialFormData);
   const [newTag, setNewTag] = useState('');
   const [newSubtask, setNewSubtask] = useState('');
+
+  // Get defined tags and projects for autocomplete
+  const definedTags = useDefinedTags();
+  const definedProjects = useDefinedProjects();
+  const projectNames = definedProjects.map((p) => p.name);
+  const tagNames = definedTags.map((t) => t.name);
 
   const handleChange = (field: keyof Task, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -215,12 +223,19 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
             </Stack>
 
             {/* Project */}
-            <TextField
-              label="Project"
+            <Autocomplete
+              freeSolo
+              options={projectNames}
               value={formData.project || ''}
-              onChange={(e) => handleChange('project', e.target.value || undefined)}
-              fullWidth
-              placeholder="e.g., Work, Personal, Side Project"
+              onChange={(_e, newValue) => handleChange('project', newValue || undefined)}
+              onInputChange={(_e, newValue) => handleChange('project', newValue || undefined)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Project"
+                  placeholder="e.g., Work, Personal, Side Project"
+                />
+              )}
             />
 
             {/* Recurring toggle - enables recurrence for any task */}
@@ -334,13 +349,39 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
                   />
                 ))}
               </Stack>
-              <Stack direction="row" spacing={1}>
-                <TextField
-                  size="small"
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Autocomplete
+                  freeSolo
+                  options={tagNames.filter((t) => !formData.tags?.includes(t))}
                   value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  placeholder="Add tag..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+                  onChange={(_e, newValue) => {
+                    if (newValue && !formData.tags?.includes(newValue)) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        tags: [...(prev.tags || []), newValue],
+                      }));
+                    }
+                    setNewTag('');
+                  }}
+                  onInputChange={(_e, newValue) => setNewTag(newValue)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      size="small"
+                      placeholder="Add tag..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newTag.trim() && !formData.tags?.includes(newTag.trim())) {
+                          e.preventDefault();
+                          setFormData((prev) => ({
+                            ...prev,
+                            tags: [...(prev.tags || []), newTag.trim()],
+                          }));
+                          setNewTag('');
+                        }
+                      }}
+                    />
+                  )}
+                  sx={{ flex: 1 }}
                 />
                 <IconButton onClick={handleAddTag} size="small">
                   <Add />

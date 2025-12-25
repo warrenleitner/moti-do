@@ -74,7 +74,7 @@ export default function Dashboard() {
             <Typography variant="body2" color="text.secondary">
               Last Processed: <strong>{systemStatus?.last_processed_date || 'Never'}</strong>
             </Typography>
-            {systemStatus?.pending_days && systemStatus.pending_days > 0 && (
+            {systemStatus && systemStatus.pending_days > 0 && (
               <>
                 <Divider orientation="vertical" flexItem />
                 <Typography variant="body2" color="error.main">
