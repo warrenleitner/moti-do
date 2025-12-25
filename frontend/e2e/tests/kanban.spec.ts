@@ -16,7 +16,7 @@ test.describe('Kanban Board', () => {
       const kanbanPage = new KanbanPage(page);
       await kanbanPage.goto();
 
-      await expect(kanbanPage.heading).toBeVisible();
+      await expect(kanbanPage.page.getByText('Backlog', { exact: true })).toBeVisible();
 
       // Verify all columns are present using the helper method
       const allColumnsVisible = await kanbanPage.allColumnsVisible();

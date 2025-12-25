@@ -89,7 +89,7 @@ describe('InstallPrompt', () => {
     await vi.advanceTimersByTimeAsync(3000);
 
     // Prompt should be visible after delay
-    expect(screen.queryByText('Install Moti-Do')).toBeInTheDocument();
+    expect(screen.queryByText('Install Motodo')).toBeInTheDocument();
 
     vi.useRealTimers();
   });

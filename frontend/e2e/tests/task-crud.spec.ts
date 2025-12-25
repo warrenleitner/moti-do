@@ -14,7 +14,6 @@ test.describe('Task CRUD Operations', () => {
       const tasksPage = new TasksPage(page);
       await tasksPage.goto();
 
-      await expect(tasksPage.heading).toBeVisible();
       await expect(tasksPage.newTaskButton).toBeVisible();
     });
 

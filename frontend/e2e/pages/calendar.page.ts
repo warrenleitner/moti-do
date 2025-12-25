@@ -6,7 +6,6 @@ import { type Page, type Locator } from '@playwright/test';
 
 export class CalendarPage {
   readonly page: Page;
-  readonly heading: Locator;
   readonly description: Locator;
   readonly calendar: Locator;
   readonly projectFilter: Locator;
@@ -14,7 +13,6 @@ export class CalendarPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: 'Calendar' });
     this.description = page.getByText('View and manage tasks by their due dates');
     // FullCalendar container
     this.calendar = page.locator('.fc');
@@ -29,7 +27,7 @@ export class CalendarPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/calendar');
-    await this.heading.waitFor({ timeout: 10000 });
+    await this.calendar.waitFor({ timeout: 10000 });
   }
 
   /**
