@@ -1,4 +1,4 @@
-# MotiDo
+# Motodo
 
 A gamified task and habit tracker with XP, streaks, and badges. Built with FastAPI (Python) backend and React (TypeScript) frontend.
 

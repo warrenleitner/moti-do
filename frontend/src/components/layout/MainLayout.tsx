@@ -83,8 +83,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Logo/Brand */}
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <img src="/pwa-192x192.png" alt="Motodo" style={{ width: 32, height: 32, borderRadius: 4 }} />
         <Typography variant="h5" fontWeight="bold" color="primary">
-          Moti-Do
+          Motodo
         </Typography>
       </Box>
 
@@ -137,7 +138,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             size="small"
             color="primary"
             variant="outlined"
-          />
+            />
         </Box>
       )}
     </Box>
@@ -162,7 +163,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Moti-Do
+            Motodo
           </Typography>
         </Toolbar>
       </AppBar>

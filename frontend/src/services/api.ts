@@ -1,5 +1,5 @@
 /**
- * API client for communicating with the Moti-Do backend.
+ * API client for communicating with the Motodo backend.
  */
 
 import axios, { type AxiosInstance } from 'axios';

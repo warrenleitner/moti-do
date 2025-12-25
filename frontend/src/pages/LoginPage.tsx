@@ -86,8 +86,11 @@ export default function LoginPage() {
     >
       <Card sx={{ maxWidth: 400, width: '100%' }}>
         <CardContent sx={{ p: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+            <img src="/logo-large.png" alt="Motodo Logo" style={{ width: 120, height: 120, objectFit: 'contain' }} />
+          </Box>
           <Typography variant="h4" component="h1" gutterBottom align="center" fontWeight="bold">
-            Moti-Do
+            Motodo
           </Typography>
 
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
