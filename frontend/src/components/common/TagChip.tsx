@@ -1,5 +1,5 @@
-import { Chip } from '@mui/material';
-import { LocalOffer } from '@mui/icons-material';
+import { Badge, CloseButton } from '@mantine/core';
+import { IconTag } from '@tabler/icons-react';
 
 interface TagChipProps {
   tag: string;
@@ -16,21 +16,33 @@ export default function TagChip({
   onDelete,
   onClick,
 }: TagChipProps) {
+  const mantineSize = size === 'small' ? 'sm' : 'md';
+
   return (
-    <Chip
-      icon={<LocalOffer sx={{ fontSize: size === 'small' ? 14 : 18 }} />}
-      label={tag}
-      size={size}
+    <Badge
+      size={mantineSize}
+      variant="light"
+      color={color ? undefined : 'gray'}
+      leftSection={<IconTag size={size === 'small' ? 12 : 14} />}
+      rightSection={
+        onDelete ? (
+          <CloseButton
+            size="xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            aria-label={`Remove ${tag}`}
+          />
+        ) : undefined
+      }
       onClick={onClick}
-      onDelete={onDelete}
-      sx={{
-        backgroundColor: color ? `${color}20` : 'action.selected',
-        color: color || 'text.primary',
+      style={{
         cursor: onClick ? 'pointer' : 'default',
-        // Conditional hover style tested via integration tests
-        /* v8 ignore next 1 */
-        '&:hover': onClick ? { backgroundColor: color ? `${color}30` : 'action.hover' } : {},
+        ...(color ? { backgroundColor: `${color}20`, color: color } : {}),
       }}
-    />
+    >
+      {tag}
+    </Badge>
   );
 }

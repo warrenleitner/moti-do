@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '../../test/utils';
 import TaskTable from './TaskTable';
 import { Task, Priority, Difficulty, Duration } from '../../types/models';
 import { useTaskStore } from '../../store/taskStore';

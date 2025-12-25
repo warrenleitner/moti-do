@@ -1,4 +1,4 @@
-import { Chip } from '@mui/material';
+import { Badge } from '@mantine/core';
 import { type Difficulty, Difficulty as DifficultyValues, DifficultyLabel, DifficultyEmoji } from '../../types';
 
 interface DifficultyChipProps {
@@ -20,17 +20,19 @@ export default function DifficultyChip({
 }: DifficultyChipProps) {
   const label = `${DifficultyEmoji[difficulty]} ${DifficultyLabel[difficulty]}`;
   const color = difficultyColors[difficulty];
+  const mantineSize = size === 'small' ? 'sm' : 'md';
 
   return (
-    <Chip
-      label={label}
-      size={size}
-      variant="outlined"
-      sx={{
+    <Badge
+      size={mantineSize}
+      variant="outline"
+      style={{
         borderColor: color,
         color: color,
         fontWeight: 500,
       }}
-    />
+    >
+      {label}
+    </Badge>
   );
 }

@@ -1,4 +1,4 @@
-import { Chip } from '@mui/material';
+import { Badge } from '@mantine/core';
 import { type Priority, Priority as PriorityValues, PriorityEmoji } from '../../types';
 
 interface PriorityChipProps {
@@ -31,19 +31,19 @@ export default function PriorityChip({
   const emoji = PriorityEmoji[priority];
   const label = showLabel ? `${emoji} ${priorityLabels[priority]}` : emoji;
   const color = priorityColors[priority];
+  const mantineSize = size === 'small' ? 'sm' : 'md';
 
   return (
-    <Chip
-      label={label}
-      size={size}
-      sx={{
+    <Badge
+      size={mantineSize}
+      variant="light"
+      style={{
         backgroundColor: `${color}20`,
         color: color,
         fontWeight: 500,
-        '& .MuiChip-label': {
-          px: showLabel ? 1 : 0.5,
-        },
       }}
-    />
+    >
+      {label}
+    </Badge>
   );
 }

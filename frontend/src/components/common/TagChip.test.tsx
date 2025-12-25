@@ -33,7 +33,8 @@ describe('TagChip', () => {
   it('calls onDelete when delete clicked', async () => {
     const onDelete = vi.fn();
     const { user } = render(<TagChip tag="test" onDelete={onDelete} />);
-    await user.click(screen.getByTestId('CancelIcon'));
+    // Mantine CloseButton has aria-label "Remove {tag}"
+    await user.click(screen.getByLabelText('Remove test'));
     expect(onDelete).toHaveBeenCalled();
   });
 
@@ -44,6 +45,7 @@ describe('TagChip', () => {
 
   it('renders without onDelete handler', () => {
     render(<TagChip tag="test" />);
-    expect(screen.queryByTestId('CancelIcon')).not.toBeInTheDocument();
+    // No close button when no onDelete
+    expect(screen.queryByLabelText(/Remove/)).not.toBeInTheDocument();
   });
 });

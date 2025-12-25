@@ -1,4 +1,4 @@
-import { Chip } from '@mui/material';
+import { Badge } from '@mantine/core';
 import { type Duration, DurationLabel, DurationEmoji } from '../../types';
 
 interface DurationChipProps {
@@ -7,15 +7,15 @@ interface DurationChipProps {
 }
 
 export default function DurationChip({ duration, size = 'small' }: DurationChipProps) {
+  const mantineSize = size === 'small' ? 'sm' : 'md';
+
   return (
-    <Chip
-      label={`${DurationEmoji[duration]} ${DurationLabel[duration]}`}
-      size={size}
-      variant="outlined"
-      sx={{
-        color: 'text.secondary',
-        borderColor: 'divider',
-      }}
-    />
+    <Badge
+      size={mantineSize}
+      variant="outline"
+      color="gray"
+    >
+      {DurationEmoji[duration]} {DurationLabel[duration]}
+    </Badge>
   );
 }

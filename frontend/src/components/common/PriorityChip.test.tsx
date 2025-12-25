@@ -40,7 +40,8 @@ describe('PriorityChip', () => {
 
   it('applies correct size', () => {
     const { container } = render(<PriorityChip priority={Priority.HIGH} size="medium" />);
-    const chip = container.querySelector('.MuiChip-sizeMedium');
-    expect(chip).toBeInTheDocument();
+    // Mantine Badge uses mantine-Badge-root class
+    const badge = container.querySelector('.mantine-Badge-root');
+    expect(badge).toBeInTheDocument();
   });
 });

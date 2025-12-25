@@ -1,5 +1,5 @@
-import { Box, Typography, Tooltip } from '@mui/material';
-import { LocalFireDepartment } from '@mui/icons-material';
+import { Text, Tooltip, Box } from '@mantine/core';
+import { IconFlame } from '@tabler/icons-react';
 
 interface StreakBadgeProps {
   current: number;
@@ -20,26 +20,28 @@ export default function StreakBadge({ current, best, showBest = true }: StreakBa
   const color = getStreakColor(current);
 
   return (
-    <Tooltip title={showBest ? `Current: ${current} | Best: ${best}` : `${current} day streak`}>
+    <Tooltip label={showBest ? `Current: ${current} | Best: ${best}` : `${current} day streak`}>
       <Box
-        sx={{
+        style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 0.5,
-          px: 1,
-          py: 0.25,
-          borderRadius: 1,
+          gap: 4,
+          paddingLeft: 8,
+          paddingRight: 8,
+          paddingTop: 2,
+          paddingBottom: 2,
+          borderRadius: 4,
           backgroundColor: `${color}20`,
         }}
       >
-        <LocalFireDepartment sx={{ fontSize: 18, color }} />
-        <Typography variant="body2" fontWeight="medium" sx={{ color }}>
+        <IconFlame size={18} color={color} />
+        <Text size="sm" fw={500} style={{ color }}>
           {current}
-        </Typography>
+        </Text>
         {showBest && current < best && (
-          <Typography variant="caption" color="text.secondary">
+          <Text size="xs" c="dimmed">
             / {best}
-          </Typography>
+          </Text>
         )}
       </Box>
     </Tooltip>
