@@ -244,7 +244,12 @@ export const useUserStore = create<UserState>()(
               user: state.user
                 ? {
                     ...state.user,
-                    defined_tags: tags.map((t) => ({ name: t.name, color: t.color })),
+                    defined_tags: tags.map((t) => ({
+                      id: t.id,
+                      name: t.name,
+                      color: t.color,
+                      multiplier: t.multiplier,
+                    })),
                   }
                 : null,
             }));
@@ -261,7 +266,12 @@ export const useUserStore = create<UserState>()(
               user: state.user
                 ? {
                     ...state.user,
-                    defined_projects: projects.map((p) => ({ name: p.name, color: p.color })),
+                    defined_projects: projects.map((p) => ({
+                      id: p.id,
+                      name: p.name,
+                      color: p.color,
+                      multiplier: p.multiplier,
+                    })),
                   }
                 : null,
             }));
@@ -344,8 +354,18 @@ export const useUserStore = create<UserState>()(
                   glyph: b.glyph,
                   earned_date: b.earned_date || '',
                 })),
-                defined_tags: tags.map((t) => ({ name: t.name, color: t.color })),
-                defined_projects: projects.map((p) => ({ name: p.name, color: p.color })),
+                defined_tags: tags.map((t) => ({
+                  id: t.id,
+                  name: t.name,
+                  color: t.color,
+                  multiplier: t.multiplier,
+                })),
+                defined_projects: projects.map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  color: p.color,
+                  multiplier: p.multiplier,
+                })),
               },
               stats,
               systemStatus,

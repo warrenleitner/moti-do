@@ -24,10 +24,15 @@ from motido.core.models import (
     Duration,
     Priority,
     RecurrenceType,
+    SubtaskRecurrenceMode,
     Task,
     User,
 )
-from motido.core.scoring import calculate_score, load_scoring_config
+from motido.core.scoring import (
+    build_scoring_config_with_user_multipliers,
+    calculate_score,
+    load_scoring_config,
+)
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -62,6 +67,7 @@ def task_to_response(
         recurrence_rule=task.recurrence_rule,
         recurrence_type=task.recurrence_type.value if task.recurrence_type else None,
         habit_start_delta=task.habit_start_delta,
+        subtask_recurrence_mode=task.subtask_recurrence_mode.value,
         subtasks=[SubtaskSchema(**s) for s in task.subtasks],
         dependencies=task.dependencies,
         history=[HistoryEntrySchema(**h) for h in task.history],
@@ -106,6 +112,16 @@ def parse_recurrence_type(value: str | None) -> RecurrenceType | None:
     return RecurrenceType.STRICT  # pragma: no cover
 
 
+def parse_subtask_recurrence_mode(value: str | None) -> SubtaskRecurrenceMode:
+    """Parse subtask recurrence mode string to enum."""
+    if value is None:
+        return SubtaskRecurrenceMode.DEFAULT
+    for m in SubtaskRecurrenceMode:
+        if m.value.lower() == value.lower():
+            return m
+    return SubtaskRecurrenceMode.DEFAULT
+
+
 @router.get("", response_model=list[TaskResponse])
 async def list_tasks(
     user: CurrentUser,
@@ -146,6 +162,8 @@ async def list_tasks(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    # Merge user's tag/project multipliers into config
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -178,6 +196,9 @@ async def create_task(
         recurrence_rule=task_data.recurrence_rule,
         recurrence_type=parse_recurrence_type(task_data.recurrence_type),
         habit_start_delta=task_data.habit_start_delta,
+        subtask_recurrence_mode=parse_subtask_recurrence_mode(
+            task_data.subtask_recurrence_mode
+        ),
         subtasks=[{"text": s.text, "complete": False} for s in task_data.subtasks],
         dependencies=task_data.dependencies,
     )
@@ -199,6 +220,7 @@ async def create_task(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -222,6 +244,7 @@ async def get_task(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -314,6 +337,14 @@ def apply_task_updates(  # pylint: disable=too-many-branches,too-many-statements
         record_history(
             task, "recurrence_type", old_recurrence_type, task.recurrence_type
         )
+    if task_data.subtask_recurrence_mode is not None:  # pragma: no cover
+        old_mode = task.subtask_recurrence_mode
+        task.subtask_recurrence_mode = parse_subtask_recurrence_mode(
+            task_data.subtask_recurrence_mode
+        )
+        record_history(
+            task, "subtask_recurrence_mode", old_mode, task.subtask_recurrence_mode
+        )
 
     # Fields with side effects
     if task_data.tags is not None:
@@ -348,6 +379,7 @@ async def update_task(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -439,6 +471,7 @@ async def undo_task_change(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -479,6 +512,7 @@ async def complete_task(
     from motido.core.scoring import check_badges
 
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
     xp_earned = int(calculate_score(task, all_tasks, config, effective_date))
@@ -535,6 +569,7 @@ async def uncomplete_task(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -566,6 +601,7 @@ async def add_subtask(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -604,6 +640,7 @@ async def update_subtask(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -638,6 +675,7 @@ async def delete_subtask(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -677,6 +715,7 @@ async def add_dependency(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 
@@ -707,6 +746,7 @@ async def remove_dependency(
 
     # Load scoring context for score calculation
     config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
     all_tasks = {t.id: t for t in user.tasks}
     effective_date = date_type.today()
 

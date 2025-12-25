@@ -56,6 +56,7 @@ class TaskBase(BaseModel):
     recurrence_rule: str | None = None
     recurrence_type: str | None = None
     habit_start_delta: int | None = None
+    subtask_recurrence_mode: str | None = None
 
 
 class TaskCreate(TaskBase):
@@ -82,6 +83,7 @@ class TaskUpdate(BaseModel):
     recurrence_rule: str | None = None
     recurrence_type: str | None = None
     habit_start_delta: int | None = None
+    subtask_recurrence_mode: str | None = None
     is_complete: bool | None = None
 
 
@@ -97,6 +99,7 @@ class TaskResponse(TaskBase):
     streak_current: int = 0
     streak_best: int = 0
     parent_habit_id: str | None = None
+    subtask_recurrence_mode: str = "default"
     score: int = 0  # Calculated XP value for this task
 
     model_config = ConfigDict(from_attributes=True)

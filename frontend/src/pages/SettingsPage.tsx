@@ -20,6 +20,16 @@ import {
   ListItem,
   ListItemText,
   Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Paper,
+  InputAdornment,
+  ButtonGroup,
 } from '@mui/material';
 import {
   Download as DownloadIcon,
@@ -27,8 +37,15 @@ import {
   Lock as LockIcon,
   BeachAccess as VacationIcon,
   Timeline as HistoryIcon,
+  Label as TagIcon,
+  Folder as ProjectIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  Check as CheckIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
-import { dataApi, authApi, userApi, type XPTransaction } from '../services/api';
+import { dataApi, authApi, userApi, type XPTransaction, type TagDefinition, type ProjectDefinition } from '../services/api';
 import { useUserStore, useSystemStatus } from '../store/userStore';
 
 // UI orchestration component - tested via integration tests
@@ -48,7 +65,21 @@ export default function SettingsPage() {
   const [xpHistory, setXPHistory] = useState<XPTransaction[]>([]);
   const [loadingXP, setLoadingXP] = useState(false);
 
-  // Fetch XP history on mount
+  // Tags state
+  const [tags, setTags] = useState<TagDefinition[]>([]);
+  const [loadingTags, setLoadingTags] = useState(false);
+  const [editingTagId, setEditingTagId] = useState<string | null>(null);
+  const [tagForm, setTagForm] = useState({ name: '', color: '#808080', multiplier: 1.0 });
+  const [showAddTag, setShowAddTag] = useState(false);
+
+  // Projects state
+  const [projects, setProjects] = useState<ProjectDefinition[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [projectForm, setProjectForm] = useState({ name: '', color: '#4A90D9', multiplier: 1.0 });
+  const [showAddProject, setShowAddProject] = useState(false);
+
+  // Fetch XP history, tags, and projects on mount
   useEffect(() => {
     const fetchXPHistory = async () => {
       setLoadingXP(true);
@@ -61,7 +92,34 @@ export default function SettingsPage() {
         setLoadingXP(false);
       }
     };
+
+    const fetchTags = async () => {
+      setLoadingTags(true);
+      try {
+        const fetchedTags = await userApi.getTags();
+        setTags(fetchedTags);
+      } catch (error) {
+        console.error('Failed to fetch tags:', error);
+      } finally {
+        setLoadingTags(false);
+      }
+    };
+
+    const fetchProjects = async () => {
+      setLoadingProjects(true);
+      try {
+        const fetchedProjects = await userApi.getProjects();
+        setProjects(fetchedProjects);
+      } catch (error) {
+        console.error('Failed to fetch projects:', error);
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+
     fetchXPHistory();
+    fetchTags();
+    fetchProjects();
   }, []);
 
   const handleExport = async () => {
@@ -200,6 +258,120 @@ export default function SettingsPage() {
     }
   };
 
+  // === Tag Handlers ===
+  const handleStartEditTag = (tag: TagDefinition) => {
+    setEditingTagId(tag.id);
+    setTagForm({ name: tag.name, color: tag.color, multiplier: tag.multiplier });
+    setShowAddTag(false);
+  };
+
+  const handleCancelEditTag = () => {
+    setEditingTagId(null);
+    setShowAddTag(false);
+    setTagForm({ name: '', color: '#808080', multiplier: 1.0 });
+  };
+
+  const handleSaveTag = async () => {
+    if (!tagForm.name.trim()) {
+      setMessage({ type: 'error', text: 'Tag name is required' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (editingTagId) {
+        const updated = await userApi.updateTag(editingTagId, tagForm.name, tagForm.color, tagForm.multiplier);
+        setTags(tags.map((t) => (t.id === editingTagId ? updated : t)));
+        setMessage({ type: 'success', text: 'Tag updated successfully!' });
+      } else {
+        const created = await userApi.createTag(tagForm.name, tagForm.color, tagForm.multiplier);
+        setTags([...tags, created]);
+        setMessage({ type: 'success', text: 'Tag created successfully!' });
+      }
+      handleCancelEditTag();
+    } catch (error) {
+      console.error('Save tag error:', error);
+      setMessage({ type: 'error', text: 'Failed to save tag' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteTag = async (tagId: string) => {
+    setLoading(true);
+    try {
+      await userApi.deleteTag(tagId);
+      setTags(tags.filter((t) => t.id !== tagId));
+      setMessage({ type: 'success', text: 'Tag deleted successfully!' });
+    } catch (error) {
+      console.error('Delete tag error:', error);
+      setMessage({ type: 'error', text: 'Failed to delete tag' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetTagMultiplier = (value: number) => {
+    setTagForm({ ...tagForm, multiplier: value });
+  };
+
+  // === Project Handlers ===
+  const handleStartEditProject = (project: ProjectDefinition) => {
+    setEditingProjectId(project.id);
+    setProjectForm({ name: project.name, color: project.color, multiplier: project.multiplier });
+    setShowAddProject(false);
+  };
+
+  const handleCancelEditProject = () => {
+    setEditingProjectId(null);
+    setShowAddProject(false);
+    setProjectForm({ name: '', color: '#4A90D9', multiplier: 1.0 });
+  };
+
+  const handleSaveProject = async () => {
+    if (!projectForm.name.trim()) {
+      setMessage({ type: 'error', text: 'Project name is required' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (editingProjectId) {
+        const updated = await userApi.updateProject(editingProjectId, projectForm.name, projectForm.color, projectForm.multiplier);
+        setProjects(projects.map((p) => (p.id === editingProjectId ? updated : p)));
+        setMessage({ type: 'success', text: 'Project updated successfully!' });
+      } else {
+        const created = await userApi.createProject(projectForm.name, projectForm.color, projectForm.multiplier);
+        setProjects([...projects, created]);
+        setMessage({ type: 'success', text: 'Project created successfully!' });
+      }
+      handleCancelEditProject();
+    } catch (error) {
+      console.error('Save project error:', error);
+      setMessage({ type: 'error', text: 'Failed to save project' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    setLoading(true);
+    try {
+      await userApi.deleteProject(projectId);
+      setProjects(projects.filter((p) => p.id !== projectId));
+      setMessage({ type: 'success', text: 'Project deleted successfully!' });
+    } catch (error) {
+      console.error('Delete project error:', error);
+      setMessage({ type: 'error', text: 'Failed to delete project' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetProjectMultiplier = (value: number) => {
+    setProjectForm({ ...projectForm, multiplier: value });
+  };
+
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
@@ -254,6 +426,410 @@ export default function SettingsPage() {
           <Alert severity="warning" sx={{ mt: 2 }}>
             <strong>Warning:</strong> Importing data will replace ALL your current data. Make sure to export your current data before importing.
           </Alert>
+        </CardContent>
+      </Card>
+
+      {/* Tags Management */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <TagIcon color="primary" />
+              <Typography variant="h6">Tags</Typography>
+            </Box>
+            <Button
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setShowAddTag(true);
+                setEditingTagId(null);
+                setTagForm({ name: '', color: '#808080', multiplier: 1.0 });
+              }}
+              disabled={loading || showAddTag}
+              size="small"
+            >
+              Add Tag
+            </Button>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Manage your tags and set score multipliers. Tags with multiplier {'>'} 1.0 will give bonus XP.
+          </Typography>
+
+          {loadingTags ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Color</TableCell>
+                    <TableCell>Multiplier</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {showAddTag && (
+                    <TableRow>
+                      <TableCell>
+                        <TextField
+                          size="small"
+                          placeholder="Tag name"
+                          value={tagForm.name}
+                          onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
+                          autoFocus
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <input
+                          type="color"
+                          value={tagForm.color}
+                          onChange={(e) => setTagForm({ ...tagForm, color: e.target.value })}
+                          style={{ width: 40, height: 32, border: 'none', cursor: 'pointer' }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <TextField
+                            size="small"
+                            type="number"
+                            value={tagForm.multiplier}
+                            onChange={(e) => setTagForm({ ...tagForm, multiplier: parseFloat(e.target.value) || 1.0 })}
+                            inputProps={{ min: 0.1, max: 10, step: 0.1 }}
+                            sx={{ width: 80 }}
+                            slotProps={{
+                              input: {
+                                endAdornment: <InputAdornment position="end">x</InputAdornment>,
+                              },
+                            }}
+                          />
+                          <ButtonGroup size="small" variant="outlined">
+                            <Button onClick={() => handleSetTagMultiplier(0.5)}>0.5x</Button>
+                            <Button onClick={() => handleSetTagMultiplier(1.0)}>1x</Button>
+                            <Button onClick={() => handleSetTagMultiplier(1.5)}>1.5x</Button>
+                            <Button onClick={() => handleSetTagMultiplier(2.0)}>2x</Button>
+                          </ButtonGroup>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="right">
+                        <IconButton size="small" onClick={handleSaveTag} color="primary">
+                          <CheckIcon />
+                        </IconButton>
+                        <IconButton size="small" onClick={handleCancelEditTag}>
+                          <CloseIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {tags.map((tag) => (
+                    <TableRow key={tag.id}>
+                      <TableCell>
+                        {editingTagId === tag.id ? (
+                          <TextField
+                            size="small"
+                            value={tagForm.name}
+                            onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
+                          />
+                        ) : (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip
+                              label={tag.name}
+                              size="small"
+                              sx={{ backgroundColor: tag.color, color: 'white' }}
+                            />
+                          </Box>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingTagId === tag.id ? (
+                          <input
+                            type="color"
+                            value={tagForm.color}
+                            onChange={(e) => setTagForm({ ...tagForm, color: e.target.value })}
+                            style={{ width: 40, height: 32, border: 'none', cursor: 'pointer' }}
+                          />
+                        ) : (
+                          <Box
+                            sx={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: 1,
+                              backgroundColor: tag.color,
+                              border: '1px solid rgba(0,0,0,0.2)',
+                            }}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingTagId === tag.id ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <TextField
+                              size="small"
+                              type="number"
+                              value={tagForm.multiplier}
+                              onChange={(e) => setTagForm({ ...tagForm, multiplier: parseFloat(e.target.value) || 1.0 })}
+                              inputProps={{ min: 0.1, max: 10, step: 0.1 }}
+                              sx={{ width: 80 }}
+                              slotProps={{
+                                input: {
+                                  endAdornment: <InputAdornment position="end">x</InputAdornment>,
+                                },
+                              }}
+                            />
+                            <ButtonGroup size="small" variant="outlined">
+                              <Button onClick={() => handleSetTagMultiplier(0.5)}>0.5x</Button>
+                              <Button onClick={() => handleSetTagMultiplier(1.0)}>1x</Button>
+                              <Button onClick={() => handleSetTagMultiplier(1.5)}>1.5x</Button>
+                              <Button onClick={() => handleSetTagMultiplier(2.0)}>2x</Button>
+                            </ButtonGroup>
+                          </Box>
+                        ) : (
+                          <Chip
+                            label={`${tag.multiplier}x`}
+                            size="small"
+                            color={tag.multiplier > 1 ? 'success' : tag.multiplier < 1 ? 'warning' : 'default'}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        {editingTagId === tag.id ? (
+                          <>
+                            <IconButton size="small" onClick={handleSaveTag} color="primary">
+                              <CheckIcon />
+                            </IconButton>
+                            <IconButton size="small" onClick={handleCancelEditTag}>
+                              <CloseIcon />
+                            </IconButton>
+                          </>
+                        ) : (
+                          <>
+                            <IconButton size="small" onClick={() => handleStartEditTag(tag)}>
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton size="small" onClick={() => handleDeleteTag(tag.id)} color="error">
+                              <DeleteIcon />
+                            </IconButton>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {tags.length === 0 && !showAddTag && (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center">
+                        <Typography variant="body2" color="text.secondary">
+                          No tags defined. Click "Add Tag" to create one.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Projects Management */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ProjectIcon color="secondary" />
+              <Typography variant="h6">Projects</Typography>
+            </Box>
+            <Button
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setShowAddProject(true);
+                setEditingProjectId(null);
+                setProjectForm({ name: '', color: '#4A90D9', multiplier: 1.0 });
+              }}
+              disabled={loading || showAddProject}
+              size="small"
+            >
+              Add Project
+            </Button>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Manage your projects and set score multipliers. Projects with multiplier {'>'} 1.0 will give bonus XP.
+          </Typography>
+
+          {loadingProjects ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Color</TableCell>
+                    <TableCell>Multiplier</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {showAddProject && (
+                    <TableRow>
+                      <TableCell>
+                        <TextField
+                          size="small"
+                          placeholder="Project name"
+                          value={projectForm.name}
+                          onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                          autoFocus
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <input
+                          type="color"
+                          value={projectForm.color}
+                          onChange={(e) => setProjectForm({ ...projectForm, color: e.target.value })}
+                          style={{ width: 40, height: 32, border: 'none', cursor: 'pointer' }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <TextField
+                            size="small"
+                            type="number"
+                            value={projectForm.multiplier}
+                            onChange={(e) => setProjectForm({ ...projectForm, multiplier: parseFloat(e.target.value) || 1.0 })}
+                            inputProps={{ min: 0.1, max: 10, step: 0.1 }}
+                            sx={{ width: 80 }}
+                            slotProps={{
+                              input: {
+                                endAdornment: <InputAdornment position="end">x</InputAdornment>,
+                              },
+                            }}
+                          />
+                          <ButtonGroup size="small" variant="outlined">
+                            <Button onClick={() => handleSetProjectMultiplier(0.5)}>0.5x</Button>
+                            <Button onClick={() => handleSetProjectMultiplier(1.0)}>1x</Button>
+                            <Button onClick={() => handleSetProjectMultiplier(1.5)}>1.5x</Button>
+                            <Button onClick={() => handleSetProjectMultiplier(2.0)}>2x</Button>
+                          </ButtonGroup>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="right">
+                        <IconButton size="small" onClick={handleSaveProject} color="primary">
+                          <CheckIcon />
+                        </IconButton>
+                        <IconButton size="small" onClick={handleCancelEditProject}>
+                          <CloseIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {projects.map((project) => (
+                    <TableRow key={project.id}>
+                      <TableCell>
+                        {editingProjectId === project.id ? (
+                          <TextField
+                            size="small"
+                            value={projectForm.name}
+                            onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                          />
+                        ) : (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip
+                              label={project.name}
+                              size="small"
+                              sx={{ backgroundColor: project.color, color: 'white' }}
+                            />
+                          </Box>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingProjectId === project.id ? (
+                          <input
+                            type="color"
+                            value={projectForm.color}
+                            onChange={(e) => setProjectForm({ ...projectForm, color: e.target.value })}
+                            style={{ width: 40, height: 32, border: 'none', cursor: 'pointer' }}
+                          />
+                        ) : (
+                          <Box
+                            sx={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: 1,
+                              backgroundColor: project.color,
+                              border: '1px solid rgba(0,0,0,0.2)',
+                            }}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingProjectId === project.id ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <TextField
+                              size="small"
+                              type="number"
+                              value={projectForm.multiplier}
+                              onChange={(e) => setProjectForm({ ...projectForm, multiplier: parseFloat(e.target.value) || 1.0 })}
+                              inputProps={{ min: 0.1, max: 10, step: 0.1 }}
+                              sx={{ width: 80 }}
+                              slotProps={{
+                                input: {
+                                  endAdornment: <InputAdornment position="end">x</InputAdornment>,
+                                },
+                              }}
+                            />
+                            <ButtonGroup size="small" variant="outlined">
+                              <Button onClick={() => handleSetProjectMultiplier(0.5)}>0.5x</Button>
+                              <Button onClick={() => handleSetProjectMultiplier(1.0)}>1x</Button>
+                              <Button onClick={() => handleSetProjectMultiplier(1.5)}>1.5x</Button>
+                              <Button onClick={() => handleSetProjectMultiplier(2.0)}>2x</Button>
+                            </ButtonGroup>
+                          </Box>
+                        ) : (
+                          <Chip
+                            label={`${project.multiplier}x`}
+                            size="small"
+                            color={project.multiplier > 1 ? 'success' : project.multiplier < 1 ? 'warning' : 'default'}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        {editingProjectId === project.id ? (
+                          <>
+                            <IconButton size="small" onClick={handleSaveProject} color="primary">
+                              <CheckIcon />
+                            </IconButton>
+                            <IconButton size="small" onClick={handleCancelEditProject}>
+                              <CloseIcon />
+                            </IconButton>
+                          </>
+                        ) : (
+                          <>
+                            <IconButton size="small" onClick={() => handleStartEditProject(project)}>
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton size="small" onClick={() => handleDeleteProject(project.id)} color="error">
+                              <DeleteIcon />
+                            </IconButton>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {projects.length === 0 && !showAddProject && (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center">
+                        <Typography variant="body2" color="text.secondary">
+                          No projects defined. Click "Add Project" to create one.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </CardContent>
       </Card>
 

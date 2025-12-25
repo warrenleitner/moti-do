@@ -1,4 +1,5 @@
 # core/scoring.py
+# pylint: disable=too-many-lines
 """
 Provides functionality for task scoring and XP calculation.
 """
@@ -9,7 +10,7 @@ import os
 from datetime import date, timedelta
 from typing import Any, Dict, Optional
 
-from motido.core.models import Task
+from motido.core.models import Task, User
 
 
 def get_scoring_config_path() -> str:
@@ -354,6 +355,42 @@ def load_scoring_config() -> Dict[str, Any]:
         raise ValueError(f"Invalid JSON in scoring config file: {e}") from e
     except IOError as e:
         raise ValueError(f"Error reading scoring config file: {e}") from e
+
+
+def build_scoring_config_with_user_multipliers(
+    config: Dict[str, Any], user: User
+) -> Dict[str, Any]:
+    """
+    Build a scoring config with user's tag and project multipliers merged in.
+
+    User-defined multipliers take precedence over config file multipliers.
+
+    Args:
+        config: The base scoring configuration
+        user: The user whose multipliers should be applied
+
+    Returns:
+        A copy of the config with user multipliers merged into tag_multipliers
+        and project_multipliers
+    """
+    # Create a shallow copy of the config
+    merged_config = dict(config)
+
+    # Merge tag multipliers from user's defined_tags
+    tag_multipliers = dict(config.get("tag_multipliers", {}))
+    for tag in user.defined_tags:
+        # User-defined multipliers override config file multipliers
+        tag_multipliers[tag.name] = tag.multiplier
+    merged_config["tag_multipliers"] = tag_multipliers
+
+    # Merge project multipliers from user's defined_projects
+    project_multipliers = dict(config.get("project_multipliers", {}))
+    for project in user.defined_projects:
+        # User-defined multipliers override config file multipliers
+        project_multipliers[project.name] = project.multiplier
+    merged_config["project_multipliers"] = project_multipliers
+
+    return merged_config
 
 
 def calculate_due_date_multiplier(

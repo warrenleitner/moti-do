@@ -19,6 +19,7 @@ from motido.core.models import (
     Priority,
     Project,
     RecurrenceType,
+    SubtaskRecurrenceMode,
     Tag,
     User,
 )
@@ -455,3 +456,79 @@ def test_row_to_task_with_null_fields() -> None:
     assert task.dependencies == []
     assert task.history == []
     assert task.recurrence_type is None
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_parse_subtask_recurrence_mode_valid() -> None:
+    """Test _parse_subtask_recurrence_mode with valid values."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    manager = PostgresDataManager("postgresql://test")
+
+    assert (
+        manager._parse_subtask_recurrence_mode("default")
+        == SubtaskRecurrenceMode.DEFAULT
+    )
+    assert (
+        manager._parse_subtask_recurrence_mode("always") == SubtaskRecurrenceMode.ALWAYS
+    )
+    assert (
+        manager._parse_subtask_recurrence_mode("partial")
+        == SubtaskRecurrenceMode.PARTIAL
+    )
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_parse_subtask_recurrence_mode_invalid() -> None:
+    """Test _parse_subtask_recurrence_mode with invalid values returns DEFAULT."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    manager = PostgresDataManager("postgresql://test")
+
+    assert manager._parse_subtask_recurrence_mode(None) == SubtaskRecurrenceMode.DEFAULT
+    assert manager._parse_subtask_recurrence_mode("") == SubtaskRecurrenceMode.DEFAULT
+    assert (
+        manager._parse_subtask_recurrence_mode("invalid")
+        == SubtaskRecurrenceMode.DEFAULT
+    )
+    assert (
+        manager._parse_subtask_recurrence_mode("ALWAYS")  # Case sensitive
+        == SubtaskRecurrenceMode.DEFAULT
+    )
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_row_to_task_with_subtask_recurrence_mode() -> None:
+    """Test _row_to_task with subtask_recurrence_mode field."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    row = {
+        "id": "task1",
+        "title": "Habit Task",
+        "priority": "Low",
+        "difficulty": "Trivial",
+        "duration": "Minuscule",
+        "is_complete": False,
+        "creation_date": datetime.now(),
+        "due_date": None,
+        "start_date": None,
+        "icon": None,
+        "tags": None,
+        "project": None,
+        "subtasks": None,
+        "dependencies": None,
+        "history": None,
+        "is_habit": True,
+        "recurrence_rule": "daily",
+        "recurrence_type": None,
+        "streak_current": 0,
+        "streak_best": 0,
+        "parent_habit_id": None,
+        "habit_start_delta": None,
+        "subtask_recurrence_mode": "always",
+    }
+
+    manager = PostgresDataManager("postgresql://test")
+    task = manager._row_to_task(row)
+
+    assert task.subtask_recurrence_mode == SubtaskRecurrenceMode.ALWAYS

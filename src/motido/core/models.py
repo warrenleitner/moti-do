@@ -262,6 +262,9 @@ class Task:  # pylint: disable=too-many-instance-attributes
     parent_habit_id: str | None = (
         None  # Links to original habit for auto-generated instances
     )
+    subtask_recurrence_mode: SubtaskRecurrenceMode = field(
+        default=SubtaskRecurrenceMode.DEFAULT
+    )
 
     def __str__(self) -> str:
         """String representation for simple display."""

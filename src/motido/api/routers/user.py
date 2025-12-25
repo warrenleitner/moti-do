@@ -164,7 +164,10 @@ async def get_badges(user: CurrentUser) -> list[BadgeSchema]:
 @router.get("/tags", response_model=list[TagResponse])
 async def get_tags(user: CurrentUser) -> list[TagResponse]:
     """Get all defined tags."""
-    return [TagResponse(id=t.id, name=t.name, color=t.color) for t in user.defined_tags]
+    return [
+        TagResponse(id=t.id, name=t.name, color=t.color, multiplier=t.multiplier)
+        for t in user.defined_tags
+    ]
 
 
 @router.post("/tags", response_model=TagResponse, status_code=status.HTTP_201_CREATED)
@@ -184,11 +187,13 @@ async def create_tag(
 
     from motido.core.models import Tag
 
-    tag = Tag(name=tag_data.name, color=tag_data.color)
+    tag = Tag(name=tag_data.name, color=tag_data.color, multiplier=tag_data.multiplier)
     user.defined_tags.append(tag)
     manager.save_user(user)
 
-    return TagResponse(id=tag.id, name=tag.name, color=tag.color)
+    return TagResponse(
+        id=tag.id, name=tag.name, color=tag.color, multiplier=tag.multiplier
+    )
 
 
 @router.put("/tags/{tag_id}", response_model=TagResponse)
@@ -208,9 +213,12 @@ async def update_tag(
 
     tag.name = tag_data.name
     tag.color = tag_data.color
+    tag.multiplier = tag_data.multiplier
     manager.save_user(user)
 
-    return TagResponse(id=tag.id, name=tag.name, color=tag.color)
+    return TagResponse(
+        id=tag.id, name=tag.name, color=tag.color, multiplier=tag.multiplier
+    )
 
 
 @router.delete("/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -238,7 +246,7 @@ async def delete_tag(
 async def get_projects(user: CurrentUser) -> list[ProjectResponse]:
     """Get all defined projects."""
     return [
-        ProjectResponse(id=p.id, name=p.name, color=p.color)
+        ProjectResponse(id=p.id, name=p.name, color=p.color, multiplier=p.multiplier)
         for p in user.defined_projects
     ]
 
@@ -261,11 +269,20 @@ async def create_project(
 
     from motido.core.models import Project
 
-    project = Project(name=project_data.name, color=project_data.color)
+    project = Project(
+        name=project_data.name,
+        color=project_data.color,
+        multiplier=project_data.multiplier,
+    )
     user.defined_projects.append(project)
     manager.save_user(user)
 
-    return ProjectResponse(id=project.id, name=project.name, color=project.color)
+    return ProjectResponse(
+        id=project.id,
+        name=project.name,
+        color=project.color,
+        multiplier=project.multiplier,
+    )
 
 
 @router.put("/projects/{project_id}", response_model=ProjectResponse)
@@ -285,9 +302,15 @@ async def update_project(
 
     project.name = project_data.name
     project.color = project_data.color
+    project.multiplier = project_data.multiplier
     manager.save_user(user)
 
-    return ProjectResponse(id=project.id, name=project.name, color=project.color)
+    return ProjectResponse(
+        id=project.id,
+        name=project.name,
+        color=project.color,
+        multiplier=project.multiplier,
+    )
 
 
 @router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -398,6 +421,7 @@ async def export_user_data(user: CurrentUser) -> Response:
                 "id": tag.id,
                 "name": tag.name,
                 "color": tag.color,
+                "multiplier": tag.multiplier,
             }
             for tag in getattr(user, "defined_tags", [])
         ],
@@ -406,6 +430,7 @@ async def export_user_data(user: CurrentUser) -> Response:
                 "id": proj.id,
                 "name": proj.name,
                 "color": proj.color,
+                "multiplier": proj.multiplier,
             }
             for proj in getattr(user, "defined_projects", [])
         ],

@@ -92,12 +92,14 @@ export interface TagDefinition {
   id: string;
   name: string;
   color: string;
+  multiplier: number;
 }
 
 export interface ProjectDefinition {
   id: string;
   name: string;
   color: string;
+  multiplier: number;
 }
 
 export interface CalendarEvent {
@@ -367,13 +369,13 @@ export const userApi = {
     return response.data;
   },
 
-  createTag: async (name: string, color: string): Promise<TagDefinition> => {
-    const response = await apiClient.post<TagDefinition>('/user/tags', { name, color });
+  createTag: async (name: string, color: string, multiplier: number = 1.0): Promise<TagDefinition> => {
+    const response = await apiClient.post<TagDefinition>('/user/tags', { name, color, multiplier });
     return response.data;
   },
 
-  updateTag: async (id: string, name: string, color: string): Promise<TagDefinition> => {
-    const response = await apiClient.put<TagDefinition>(`/user/tags/${id}`, { name, color });
+  updateTag: async (id: string, name: string, color: string, multiplier: number = 1.0): Promise<TagDefinition> => {
+    const response = await apiClient.put<TagDefinition>(`/user/tags/${id}`, { name, color, multiplier });
     return response.data;
   },
 
@@ -387,13 +389,13 @@ export const userApi = {
     return response.data;
   },
 
-  createProject: async (name: string, color: string): Promise<ProjectDefinition> => {
-    const response = await apiClient.post<ProjectDefinition>('/user/projects', { name, color });
+  createProject: async (name: string, color: string, multiplier: number = 1.0): Promise<ProjectDefinition> => {
+    const response = await apiClient.post<ProjectDefinition>('/user/projects', { name, color, multiplier });
     return response.data;
   },
 
-  updateProject: async (id: string, name: string, color: string): Promise<ProjectDefinition> => {
-    const response = await apiClient.put<ProjectDefinition>(`/user/projects/${id}`, { name, color });
+  updateProject: async (id: string, name: string, color: string, multiplier: number = 1.0): Promise<ProjectDefinition> => {
+    const response = await apiClient.put<ProjectDefinition>(`/user/projects/${id}`, { name, color, multiplier });
     return response.data;
   },
 

@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 
-from motido.core.models import Priority, RecurrenceType, Task
+from motido.core.models import Priority, RecurrenceType, SubtaskRecurrenceMode, Task
 from motido.core.recurrence import (
     _normalize_rule,
     calculate_next_occurrence,
@@ -265,3 +265,92 @@ def test_create_next_habit_instance_dependencies_reset() -> None:
     new_instance = create_next_habit_instance(task)
     assert new_instance is not None
     assert new_instance.dependencies == []  # Dependencies reset
+
+
+def test_create_next_habit_instance_subtasks_always_mode() -> None:
+    """Test ALWAYS mode copies all subtasks regardless of completion status."""
+    task = Task(
+        id="parent-id",
+        title="Task with subtasks",
+        creation_date=datetime.now(),
+        due_date=datetime.now(),
+        is_habit=True,
+        recurrence_rule="daily",
+        subtasks=[
+            {"text": "Subtask 1", "complete": True},
+            {"text": "Subtask 2", "complete": False},
+        ],
+        subtask_recurrence_mode=SubtaskRecurrenceMode.ALWAYS,
+    )
+
+    new_instance = create_next_habit_instance(task)
+    assert new_instance is not None
+    assert len(new_instance.subtasks) == 2
+    # All subtasks should be reset to incomplete
+    assert new_instance.subtasks[0] == {"text": "Subtask 1", "complete": False}
+    assert new_instance.subtasks[1] == {"text": "Subtask 2", "complete": False}
+
+
+def test_create_next_habit_instance_subtasks_partial_mode() -> None:
+    """Test PARTIAL mode only copies completed subtasks."""
+    task = Task(
+        id="parent-id",
+        title="Task with subtasks",
+        creation_date=datetime.now(),
+        due_date=datetime.now(),
+        is_habit=True,
+        recurrence_rule="daily",
+        subtasks=[
+            {"text": "Subtask 1", "complete": True},
+            {"text": "Subtask 2", "complete": False},
+            {"text": "Subtask 3", "complete": True},
+        ],
+        subtask_recurrence_mode=SubtaskRecurrenceMode.PARTIAL,
+    )
+
+    new_instance = create_next_habit_instance(task)
+    assert new_instance is not None
+    # Only completed subtasks should be copied
+    assert len(new_instance.subtasks) == 2
+    assert new_instance.subtasks[0] == {"text": "Subtask 1", "complete": False}
+    assert new_instance.subtasks[1] == {"text": "Subtask 3", "complete": False}
+
+
+def test_create_next_habit_instance_subtasks_default_mode() -> None:
+    """Test DEFAULT mode does not copy any subtasks."""
+    task = Task(
+        id="parent-id",
+        title="Task with subtasks",
+        creation_date=datetime.now(),
+        due_date=datetime.now(),
+        is_habit=True,
+        recurrence_rule="daily",
+        subtasks=[
+            {"text": "Subtask 1", "complete": True},
+            {"text": "Subtask 2", "complete": False},
+        ],
+        subtask_recurrence_mode=SubtaskRecurrenceMode.DEFAULT,
+    )
+
+    new_instance = create_next_habit_instance(task)
+    assert new_instance is not None
+    assert new_instance.subtasks == []
+
+
+def test_create_next_habit_instance_empty_subtasks_all_modes() -> None:
+    """Test that empty subtasks list works for all modes."""
+    for mode in SubtaskRecurrenceMode:
+        task = Task(
+            id="parent-id",
+            title="Task without subtasks",
+            creation_date=datetime.now(),
+            due_date=datetime.now(),
+            is_habit=True,
+            recurrence_rule="daily",
+            subtasks=[],
+            subtask_recurrence_mode=mode,
+        )
+
+        new_instance = create_next_habit_instance(task)
+        assert new_instance is not None
+        assert new_instance.subtasks == []

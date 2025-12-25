@@ -5,7 +5,8 @@ Tests for the task API endpoints.
 
 from fastapi.testclient import TestClient
 
-from motido.core.models import User
+from motido.api.routers.tasks import parse_subtask_recurrence_mode
+from motido.core.models import SubtaskRecurrenceMode, User
 
 
 class TestTaskList:
@@ -613,3 +614,68 @@ class TestDependencies:
         task_id = test_user.tasks[0].id
         response = client.post(f"/api/tasks/{task_id}/dependencies/nonexistent")
         assert response.status_code == 404
+
+
+class TestParseSubtaskRecurrenceMode:
+    """Tests for parse_subtask_recurrence_mode function."""
+
+    def test_parse_subtask_recurrence_mode_none(self) -> None:
+        """Test parsing None value returns DEFAULT."""
+        result = parse_subtask_recurrence_mode(None)
+        assert result == SubtaskRecurrenceMode.DEFAULT
+
+    def test_parse_subtask_recurrence_mode_valid(self) -> None:
+        """Test parsing valid mode values."""
+        assert parse_subtask_recurrence_mode("default") == SubtaskRecurrenceMode.DEFAULT
+        assert parse_subtask_recurrence_mode("always") == SubtaskRecurrenceMode.ALWAYS
+        assert parse_subtask_recurrence_mode("partial") == SubtaskRecurrenceMode.PARTIAL
+
+    def test_parse_subtask_recurrence_mode_case_insensitive(self) -> None:
+        """Test parsing is case-insensitive."""
+        assert parse_subtask_recurrence_mode("DEFAULT") == SubtaskRecurrenceMode.DEFAULT
+        assert parse_subtask_recurrence_mode("ALWAYS") == SubtaskRecurrenceMode.ALWAYS
+        assert parse_subtask_recurrence_mode("Partial") == SubtaskRecurrenceMode.PARTIAL
+
+    def test_parse_subtask_recurrence_mode_invalid(self) -> None:
+        """Test parsing invalid mode returns DEFAULT."""
+        assert parse_subtask_recurrence_mode("invalid") == SubtaskRecurrenceMode.DEFAULT
+        assert parse_subtask_recurrence_mode("foobar") == SubtaskRecurrenceMode.DEFAULT
+
+
+class TestSubtaskRecurrenceModeAPI:
+    """Tests for subtask_recurrence_mode in API endpoints."""
+
+    def test_create_task_with_subtask_recurrence_mode(self, client: TestClient) -> None:
+        """Test creating a task with subtask_recurrence_mode."""
+        task_data = {
+            "title": "Test Habit",
+            "is_habit": True,
+            "recurrence_rule": "daily",
+            "subtask_recurrence_mode": "always",
+        }
+        response = client.post("/api/tasks", json=task_data)
+        assert response.status_code == 201  # POST returns 201 Created
+        data = response.json()
+        assert data["subtask_recurrence_mode"] == "always"
+
+    def test_update_task_subtask_recurrence_mode(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Test updating a task's subtask_recurrence_mode."""
+        task_id = test_user.tasks[0].id
+        response = client.put(
+            f"/api/tasks/{task_id}", json={"subtask_recurrence_mode": "partial"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["subtask_recurrence_mode"] == "partial"
+
+    def test_task_response_includes_subtask_recurrence_mode(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Test that task response includes subtask_recurrence_mode."""
+        task_id = test_user.tasks[0].id
+        response = client.get(f"/api/tasks/{task_id}")
+        assert response.status_code == 200
+        data = response.json()
+        assert "subtask_recurrence_mode" in data

@@ -33,6 +33,7 @@ import {
   DurationEmoji,
   DifficultyLabel,
   DurationLabel,
+  SubtaskRecurrenceMode,
 } from '../../types';
 import RecurrenceRuleBuilder from './RecurrenceRuleBuilder';
 
@@ -249,6 +250,30 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
                   onChange={(rrule) => handleChange('recurrence_rule', rrule)}
                 />
               </Box>
+            )}
+
+            {/* Subtask recurrence mode (only if habit AND has subtasks) */}
+            {formData.is_habit && (formData.subtasks?.length ?? 0) > 0 && (
+              <FormControl fullWidth size="small">
+                <InputLabel>Subtask Recurrence</InputLabel>
+                <Select
+                  value={formData.subtask_recurrence_mode || SubtaskRecurrenceMode.DEFAULT}
+                  label="Subtask Recurrence"
+                  onChange={(e) =>
+                    handleChange('subtask_recurrence_mode', e.target.value)
+                  }
+                >
+                  <MenuItem value={SubtaskRecurrenceMode.DEFAULT}>
+                    All Complete First - New recurrence only after all subtasks complete
+                  </MenuItem>
+                  <MenuItem value={SubtaskRecurrenceMode.PARTIAL}>
+                    Carry Over Completed - Copy only completed subtasks to next
+                  </MenuItem>
+                  <MenuItem value={SubtaskRecurrenceMode.ALWAYS}>
+                    Always Copy All - Full subtask list regardless of completion
+                  </MenuItem>
+                </Select>
+              </FormControl>
             )}
 
             <Divider />

@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from motido.core.models import SubtaskRecurrenceMode
 from motido.data.json_manager import JsonDataManager
 
 # pylint: disable=redefined-outer-name
@@ -282,3 +283,67 @@ def test_deserialize_badge_with_defaults(
     assert badge.glyph == "🏆"
     assert badge.earned_date is None
     assert badge.id is not None  # UUID generated
+
+
+def test_parse_subtask_recurrence_mode_invalid(manager: JsonDataManager) -> None:
+    """Test _parse_subtask_recurrence_mode with invalid values returns DEFAULT."""
+    # pylint: disable=protected-access
+    assert manager._parse_subtask_recurrence_mode(None) == SubtaskRecurrenceMode.DEFAULT
+    assert manager._parse_subtask_recurrence_mode("") == SubtaskRecurrenceMode.DEFAULT
+    assert (
+        manager._parse_subtask_recurrence_mode("invalid")
+        == SubtaskRecurrenceMode.DEFAULT
+    )
+    assert (
+        manager._parse_subtask_recurrence_mode("ALWAYS")  # Case sensitive
+        == SubtaskRecurrenceMode.DEFAULT
+    )
+
+
+def test_parse_subtask_recurrence_mode_valid(manager: JsonDataManager) -> None:
+    """Test _parse_subtask_recurrence_mode with valid values."""
+    # pylint: disable=protected-access
+    assert (
+        manager._parse_subtask_recurrence_mode("default")
+        == SubtaskRecurrenceMode.DEFAULT
+    )
+    assert (
+        manager._parse_subtask_recurrence_mode("always") == SubtaskRecurrenceMode.ALWAYS
+    )
+    assert (
+        manager._parse_subtask_recurrence_mode("partial")
+        == SubtaskRecurrenceMode.PARTIAL
+    )
+
+
+def test_load_user_with_subtask_recurrence_mode(
+    manager: JsonDataManager,
+    mocker: Any,
+) -> None:
+    """Test loading a user with tasks containing subtask_recurrence_mode."""
+    user_data = {
+        "default_user": {
+            "username": "default_user",
+            "total_xp": 0,
+            "tasks": [
+                {
+                    "id": "test-id",
+                    "title": "Test Task",
+                    "priority": "Low",
+                    "difficulty": "Trivial",
+                    "duration": "Minuscule",
+                    "is_complete": False,
+                    "creation_date": "2023-01-01 12:00:00",
+                    "is_habit": True,
+                    "subtask_recurrence_mode": "always",
+                }
+            ],
+        }
+    }
+    mocker.patch.object(manager, "_read_data", return_value=user_data)
+
+    user = manager.load_user("default_user")
+
+    assert user is not None
+    assert len(user.tasks) == 1
+    assert user.tasks[0].subtask_recurrence_mode == SubtaskRecurrenceMode.ALWAYS

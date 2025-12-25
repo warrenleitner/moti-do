@@ -38,6 +38,14 @@ export const RecurrenceType = {
 } as const;
 export type RecurrenceType = typeof RecurrenceType[keyof typeof RecurrenceType];
 
+export const SubtaskRecurrenceMode = {
+  DEFAULT: "default",
+  PARTIAL: "partial",
+  ALWAYS: "always",
+} as const;
+export type SubtaskRecurrenceMode =
+  (typeof SubtaskRecurrenceMode)[keyof typeof SubtaskRecurrenceMode];
+
 export interface Subtask {
   text: string;
   complete: boolean;
@@ -86,6 +94,7 @@ export interface Task {
   history: HistoryEntry[];
   status?: TaskStatus; // For Kanban board
   score: number; // Calculated XP value for this task
+  subtask_recurrence_mode?: SubtaskRecurrenceMode;
 }
 
 export interface XPTransaction {
@@ -104,16 +113,20 @@ export interface Badge {
 }
 
 export interface TagDefinition {
+  id: string;
   name: string;
   color?: string;
   icon?: string;
+  multiplier?: number;
 }
 
 export interface ProjectDefinition {
+  id: string;
   name: string;
   color?: string;
   icon?: string;
   description?: string;
+  multiplier?: number;
 }
 
 export interface User {
