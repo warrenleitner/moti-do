@@ -9,15 +9,23 @@ The tests verify that:
 - Invalid configurations raise appropriate errors
 """
 
-from typing import Any
+from typing import Any, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 # Import the factory function and the classes it might return
-from motido.data.backend_factory import get_data_manager
+from motido.data.backend_factory import get_data_manager, reset_data_manager
 from motido.data.database_manager import DatabaseDataManager
 from motido.data.json_manager import JsonDataManager
+
+
+@pytest.fixture(autouse=True)
+def reset_singleton() -> Generator[None, None, None]:
+    """Reset the singleton data manager before each test."""
+    reset_data_manager()
+    yield
+    reset_data_manager()
 
 
 @patch("motido.data.backend_factory.os.getenv")
@@ -199,3 +207,32 @@ def test_get_data_manager_postgres_via_config(
     mock_postgres_manager.assert_called_once_with()
     assert manager == mock_postgres_instance
     mock_print.assert_called_once_with("Using PostgreSQL backend (config).")
+
+
+@patch("motido.data.backend_factory.os.getenv")
+@patch("motido.data.backend_factory.load_config")
+@patch("motido.data.backend_factory.JsonDataManager")
+@patch("motido.data.backend_factory.print")
+def test_get_data_manager_returns_cached_instance(
+    mock_print: Any,
+    mock_json_manager: Any,
+    mock_load_config: Any,
+    mock_getenv: Any,
+) -> None:
+    """Test factory returns the same cached instance on subsequent calls."""
+    # Configure mocks
+    mock_getenv.return_value = None  # No DATABASE_URL
+    mock_load_config.return_value = {"backend": "json"}
+    mock_json_instance = MagicMock(spec=JsonDataManager)
+    mock_json_manager.return_value = mock_json_instance
+
+    # Call the factory twice
+    manager1 = get_data_manager()
+    manager2 = get_data_manager()
+
+    # Assertions - both calls return the same instance
+    assert manager1 is manager2
+    # JsonDataManager constructor should only be called once (singleton pattern)
+    mock_json_manager.assert_called_once()
+    # Backend message should only be printed once
+    mock_print.assert_called_once_with("Using JSON backend.")

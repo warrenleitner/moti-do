@@ -90,12 +90,17 @@ export default function TaskCalendar({
       });
   }, [tasks, filterProject]);
 
-  // Handle event click
+  // Handle event click - directly open edit form via callback
   const handleEventClick = (info: EventClickArg) => {
     const task = info.event.extendedProps.task as Task;
-    setSelectedTask(task);
-    setDetailsOpen(true);
-    onSelectTask?.(task);
+    // If onSelectTask is provided, use it to open the edit form
+    // Otherwise fall back to the built-in details dialog
+    if (onSelectTask) {
+      onSelectTask(task);
+    } else {
+      setSelectedTask(task);
+      setDetailsOpen(true);
+    }
   };
 
   // Handle date selection for creating new tasks

@@ -5,7 +5,6 @@ import {
   Typography,
   Box,
   IconButton,
-  Checkbox,
   Collapse,
   Stack,
   Tooltip,
@@ -20,6 +19,8 @@ import {
   Link as LinkIcon,
   Star,
   Undo,
+  CheckCircle,
+  RadioButtonUnchecked,
 } from '@mui/icons-material';
 import { useState } from 'react';
 import type { Task } from '../../types';
@@ -83,13 +84,6 @@ export default function TaskCard({
       <CardContent sx={{ pb: 1 }}>
         {/* Main row */}
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-          <Checkbox
-            checked={task.is_complete}
-            onChange={() => onComplete(task.id)}
-            disabled={isBlocked}
-            sx={{ mt: -0.5, ml: -1 }}
-          />
-
           <Box sx={{ flex: 1, minWidth: 0 }}>
             {/* Title row */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -196,6 +190,23 @@ export default function TaskCard({
 
       <CardActions sx={{ px: 2, pt: 0 }}>
         <Box sx={{ flex: 1 }} />
+        <Tooltip title={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}>
+          <span>
+            <IconButton
+              size="small"
+              onClick={() => onComplete(task.id)}
+              disabled={isBlocked}
+              color={task.is_complete ? 'success' : 'default'}
+              aria-label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
+            >
+              {task.is_complete ? (
+                <CheckCircle fontSize="small" />
+              ) : (
+                <RadioButtonUnchecked fontSize="small" />
+              )}
+            </IconButton>
+          </span>
+        </Tooltip>
         {onUndo && task.history.length > 0 && (
           <Tooltip title="Undo last change">
             <IconButton size="small" onClick={() => onUndo(task.id)} color="info">

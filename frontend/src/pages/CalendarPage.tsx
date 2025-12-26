@@ -9,8 +9,9 @@ import { Priority, Difficulty, Duration } from '../types';
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
 export default function CalendarPage() {
-  const { tasks, updateTask, addTask } = useTaskStore();
+  const { tasks, updateTask, addTask, saveTask } = useTaskStore();
   const [formOpen, setFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTaskDate, setNewTaskDate] = useState<Date | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
@@ -19,37 +20,53 @@ export default function CalendarPage() {
   });
 
   const handleCreateTask = (date: Date) => {
+    setEditingTask(null);
     setNewTaskDate(date);
     setFormOpen(true);
   };
 
-  const handleSelectTask = () => {
-    // Task selection is handled by the calendar's built-in dialog
+  const handleSelectTask = (task: Task) => {
+    // Open the task in the edit form
+    setEditingTask(task);
+    setNewTaskDate(null);
+    setFormOpen(true);
   };
 
-  const handleSave = (taskData: Partial<Task>) => {
-    const newTask: Task = {
-      id: crypto.randomUUID(),
-      title: taskData.title || 'Untitled',
-      creation_date: new Date().toISOString(),
-      priority: taskData.priority || Priority.MEDIUM,
-      difficulty: taskData.difficulty || Difficulty.MEDIUM,
-      duration: taskData.duration || Duration.SHORT,
-      is_complete: false,
-      is_habit: false,
-      tags: taskData.tags || [],
-      subtasks: [],
-      dependencies: [],
-      streak_current: 0,
-      streak_best: 0,
-      history: [],
-      due_date: newTaskDate?.toISOString(),
-      score: 0,
-      ...taskData,
-    };
-    addTask(newTask);
-    setSnackbar({ open: true, message: 'Task created successfully', severity: 'success' });
+  const handleSave = async (taskData: Partial<Task>) => {
+    if (editingTask) {
+      // Update existing task
+      try {
+        await saveTask(editingTask.id, taskData);
+        setSnackbar({ open: true, message: 'Task updated successfully', severity: 'success' });
+      } catch {
+        setSnackbar({ open: true, message: 'Failed to update task', severity: 'error' });
+      }
+    } else {
+      // Create new task
+      const newTask: Task = {
+        id: crypto.randomUUID(),
+        title: taskData.title || 'Untitled',
+        creation_date: new Date().toISOString(),
+        priority: taskData.priority || Priority.MEDIUM,
+        difficulty: taskData.difficulty || Difficulty.MEDIUM,
+        duration: taskData.duration || Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: taskData.tags || [],
+        subtasks: [],
+        dependencies: [],
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        due_date: newTaskDate?.toISOString(),
+        score: 0,
+        ...taskData,
+      };
+      addTask(newTask);
+      setSnackbar({ open: true, message: 'Task created successfully', severity: 'success' });
+    }
     setFormOpen(false);
+    setEditingTask(null);
     setNewTaskDate(null);
   };
 
@@ -62,8 +79,8 @@ export default function CalendarPage() {
     });
   };
 
-  // Create a default task with the selected date pre-filled
-  const defaultTask: Task = {
+  // Create a default task with the selected date pre-filled (for new tasks only)
+  const defaultTask: Task | null = editingTask || (newTaskDate ? {
     id: '',
     title: '',
     creation_date: new Date().toISOString(),
@@ -78,14 +95,14 @@ export default function CalendarPage() {
     streak_current: 0,
     streak_best: 0,
     history: [],
-    due_date: newTaskDate?.toISOString(),
+    due_date: newTaskDate.toISOString(),
     score: 0,
-  };
+  } : null);
 
   return (
     <Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        View and manage tasks by their due dates. Click on a date to create a new task. Drag tasks to reschedule.
+        View and manage tasks by their due dates. Click on a task to edit it, or click on a date to create a new task. Drag tasks to reschedule.
       </Typography>
 
       <TaskCalendar
@@ -95,13 +112,15 @@ export default function CalendarPage() {
         onCreateTask={handleCreateTask}
       />
 
-      {/* Task form dialog for creating new tasks */}
+      {/* Task form dialog for creating/editing tasks */}
       <TaskForm
+        key={editingTask?.id ?? 'new'}
         open={formOpen}
         task={defaultTask}
         onSave={handleSave}
         onClose={() => {
           setFormOpen(false);
+          setEditingTask(null);
           setNewTaskDate(null);
         }}
       />

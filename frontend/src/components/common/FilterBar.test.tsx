@@ -1,7 +1,7 @@
 import { render, screen } from '../../test/utils';
 import { vi } from 'vitest';
 import FilterBar from './FilterBar';
-import { Priority } from '../../types';
+import { Priority, Difficulty, Duration } from '../../types';
 
 describe('FilterBar', () => {
   const defaultProps = {
@@ -9,12 +9,16 @@ describe('FilterBar', () => {
     onSearchChange: vi.fn(),
     status: 'active' as const,
     onStatusChange: vi.fn(),
-    priority: undefined,
-    onPriorityChange: vi.fn(),
-    project: undefined,
-    onProjectChange: vi.fn(),
-    tag: undefined,
-    onTagChange: vi.fn(),
+    priorities: [] as Priority[],
+    onPrioritiesChange: vi.fn(),
+    difficulties: [] as Difficulty[],
+    onDifficultiesChange: vi.fn(),
+    durations: [] as Duration[],
+    onDurationsChange: vi.fn(),
+    selectedProjects: [] as string[],
+    onProjectsChange: vi.fn(),
+    selectedTags: [] as string[],
+    onTagsChange: vi.fn(),
     projects: [],
     tags: [],
     onReset: vi.fn(),
@@ -38,13 +42,13 @@ describe('FilterBar', () => {
   });
 
   it('changes priority filter', async () => {
-    const onPriorityChange = vi.fn();
-    const { user, container } = render(<FilterBar {...defaultProps} onPriorityChange={onPriorityChange} />);
+    const onPrioritiesChange = vi.fn();
+    const { user, container } = render(<FilterBar {...defaultProps} onPrioritiesChange={onPrioritiesChange} />);
     const prioritySelect = container.querySelector('[aria-labelledby*="Priority"]');
     if (prioritySelect) {
       await user.click(prioritySelect as HTMLElement);
       await user.click(screen.getByText(/High/));
-      expect(onPriorityChange).toHaveBeenCalled();
+      expect(onPrioritiesChange).toHaveBeenCalled();
     }
   });
 
@@ -78,9 +82,11 @@ describe('FilterBar', () => {
         {...defaultProps}
         search="test"
         status="completed"
-        priority={Priority.HIGH}
-        project="Work"
-        tag="urgent"
+        priorities={[Priority.HIGH]}
+        difficulties={[Difficulty.HIGH]}
+        durations={[Duration.LONG]}
+        selectedProjects={['Work']}
+        selectedTags={['urgent']}
         projects={['Work']}
         tags={['urgent']}
       />
@@ -88,6 +94,8 @@ describe('FilterBar', () => {
     expect(screen.getByText(/Search: "test"/)).toBeInTheDocument();
     expect(screen.getByText(/Status: completed/)).toBeInTheDocument();
     expect(screen.getByText(/Priority:/)).toBeInTheDocument();
+    expect(screen.getByText(/Difficulty:/)).toBeInTheDocument();
+    expect(screen.getByText(/Duration:/)).toBeInTheDocument();
     expect(screen.getByText(/Project: Work/)).toBeInTheDocument();
     expect(screen.getByText(/Tag: urgent/)).toBeInTheDocument();
   });
@@ -125,9 +133,9 @@ describe('FilterBar', () => {
   });
 
   it('removes priority chip when delete clicked', async () => {
-    const onPriorityChange = vi.fn();
+    const onPrioritiesChange = vi.fn();
     const { user } = render(
-      <FilterBar {...defaultProps} priority={Priority.HIGH} onPriorityChange={onPriorityChange} />
+      <FilterBar {...defaultProps} priorities={[Priority.HIGH]} onPrioritiesChange={onPrioritiesChange} />
     );
     const chip = screen.getByText(/Priority:/);
     expect(chip).toBeInTheDocument();
@@ -136,13 +144,13 @@ describe('FilterBar', () => {
     if (deleteButton) {
       await user.click(deleteButton as HTMLElement);
     }
-    expect(onPriorityChange).toHaveBeenCalledWith(undefined);
+    expect(onPrioritiesChange).toHaveBeenCalledWith([]);
   });
 
   it('removes project chip when delete clicked', async () => {
-    const onProjectChange = vi.fn();
+    const onProjectsChange = vi.fn();
     const { user } = render(
-      <FilterBar {...defaultProps} project="Work" projects={['Work']} onProjectChange={onProjectChange} />
+      <FilterBar {...defaultProps} selectedProjects={['Work']} projects={['Work']} onProjectsChange={onProjectsChange} />
     );
     const chip = screen.getByText(/Project: Work/);
     expect(chip).toBeInTheDocument();
@@ -151,13 +159,13 @@ describe('FilterBar', () => {
     if (deleteButton) {
       await user.click(deleteButton as HTMLElement);
     }
-    expect(onProjectChange).toHaveBeenCalledWith(undefined);
+    expect(onProjectsChange).toHaveBeenCalledWith([]);
   });
 
   it('removes tag chip when delete clicked', async () => {
-    const onTagChange = vi.fn();
+    const onTagsChange = vi.fn();
     const { user } = render(
-      <FilterBar {...defaultProps} tag="urgent" tags={['urgent']} onTagChange={onTagChange} />
+      <FilterBar {...defaultProps} selectedTags={['urgent']} tags={['urgent']} onTagsChange={onTagsChange} />
     );
     const chip = screen.getByText(/Tag: urgent/);
     expect(chip).toBeInTheDocument();
@@ -166,13 +174,13 @@ describe('FilterBar', () => {
     if (deleteButton) {
       await user.click(deleteButton as HTMLElement);
     }
-    expect(onTagChange).toHaveBeenCalledWith(undefined);
+    expect(onTagsChange).toHaveBeenCalledWith([]);
   });
 
   it('changes project filter', () => {
-    const onProjectChange = vi.fn();
+    const onProjectsChange = vi.fn();
     render(
-      <FilterBar {...defaultProps} projects={['Work', 'Personal']} onProjectChange={onProjectChange} />
+      <FilterBar {...defaultProps} projects={['Work', 'Personal']} onProjectsChange={onProjectsChange} />
     );
     // Component has v8 ignore - just verify projects are displayed
     const projectLabels = screen.getAllByText('Project');
@@ -180,9 +188,9 @@ describe('FilterBar', () => {
   });
 
   it('changes tag filter', () => {
-    const onTagChange = vi.fn();
+    const onTagsChange = vi.fn();
     render(
-      <FilterBar {...defaultProps} tags={['urgent', 'later']} onTagChange={onTagChange} />
+      <FilterBar {...defaultProps} tags={['urgent', 'later']} onTagsChange={onTagsChange} />
     );
     // Component has v8 ignore - just verify tags are displayed
     const tagLabels = screen.getAllByText('Tag');
@@ -202,5 +210,27 @@ describe('FilterBar', () => {
   it('hides tag filter when no tags', () => {
     render(<FilterBar {...defaultProps} tags={[]} />);
     expect(screen.queryByLabelText('Tag')).not.toBeInTheDocument();
+  });
+
+  it('changes difficulty filter', async () => {
+    const onDifficultiesChange = vi.fn();
+    const { user, container } = render(<FilterBar {...defaultProps} onDifficultiesChange={onDifficultiesChange} />);
+    const difficultySelect = container.querySelector('[aria-labelledby*="Difficulty"]');
+    if (difficultySelect) {
+      await user.click(difficultySelect as HTMLElement);
+      await user.click(screen.getByText(/High/));
+      expect(onDifficultiesChange).toHaveBeenCalled();
+    }
+  });
+
+  it('changes duration filter', async () => {
+    const onDurationsChange = vi.fn();
+    const { user, container } = render(<FilterBar {...defaultProps} onDurationsChange={onDurationsChange} />);
+    const durationSelect = container.querySelector('[aria-labelledby*="Duration"]');
+    if (durationSelect) {
+      await user.click(durationSelect as HTMLElement);
+      await user.click(screen.getByText(/Long/));
+      expect(onDurationsChange).toHaveBeenCalled();
+    }
   });
 });

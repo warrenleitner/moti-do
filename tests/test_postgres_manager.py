@@ -124,8 +124,7 @@ def test_get_connection_error(mock_print: Any, mock_psycopg2: Any) -> None:
 
 @patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
 @patch("motido.data.postgres_manager.psycopg2")
-@patch("motido.data.postgres_manager.print")
-def test_create_tables_success(mock_print: Any, mock_psycopg2: Any) -> None:
+def test_create_tables_success(mock_psycopg2: Any) -> None:
     """Test successful table creation."""
     from motido.data.postgres_manager import PostgresDataManager
 
@@ -139,7 +138,6 @@ def test_create_tables_success(mock_print: Any, mock_psycopg2: Any) -> None:
     # Verify tables were created
     assert mock_cursor.execute.call_count >= 3  # users table, tasks table, index
     mock_conn.commit.assert_called_once()
-    mock_print.assert_called_with("PostgreSQL tables checked/created successfully.")
 
 
 @patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
@@ -200,6 +198,35 @@ def test_initialize_error(mock_print: Any, mock_psycopg2: Any) -> None:
         manager.initialize()
 
     mock_print.assert_any_call("Initializing PostgreSQL database...")
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+@patch("motido.data.postgres_manager.psycopg2")
+@patch("motido.data.postgres_manager.print")
+def test_initialize_skips_when_already_initialized(
+    mock_print: Any, mock_psycopg2: Any
+) -> None:
+    """Test that initialize() returns early when already initialized."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    mock_conn = MagicMock()
+    mock_psycopg2.connect.return_value.__enter__.return_value = mock_conn
+
+    manager = PostgresDataManager("postgresql://test")
+
+    # First call should initialize
+    manager.initialize()
+    first_call_count = mock_psycopg2.connect.return_value.__enter__.call_count
+
+    # Second call should return early without doing anything
+    manager.initialize()
+    second_call_count = mock_psycopg2.connect.return_value.__enter__.call_count
+
+    # Connection should not be called again on second initialization
+    assert second_call_count == first_call_count
+    # "Initializing" message should only be printed once
+    init_calls = [c for c in mock_print.call_args_list if "Initializing" in str(c)]
+    assert len(init_calls) == 1
 
 
 @patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)

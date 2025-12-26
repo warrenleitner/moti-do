@@ -45,7 +45,7 @@ async function generateIcons() {
     .resize(32, 32)
     .png()
     .toFile(faviconPath.replace('.ico', '.png'));
-  console.log('  Generated: favicon.png');
+  console.log('  Generated: favicon.ico');
 
   console.log('Done! All icons generated successfully.');
 }

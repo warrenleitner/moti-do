@@ -30,6 +30,19 @@ describe('KanbanPage', () => {
 
   const mockUpdateTask = vi.fn();
   const mockAddTask = vi.fn();
+  const mockSetFilters = vi.fn();
+  const mockResetFilters = vi.fn();
+
+  const defaultFilters = {
+    status: 'active' as const,
+    priorities: [] as Priority[],
+    difficulties: [] as Difficulty[],
+    durations: [] as Duration[],
+    projects: [] as string[],
+    tags: [] as string[],
+    search: '',
+    includeBlocked: false,
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -37,6 +50,9 @@ describe('KanbanPage', () => {
       tasks: [mockTask],
       updateTask: mockUpdateTask,
       addTask: mockAddTask,
+      filters: defaultFilters,
+      setFilters: mockSetFilters,
+      resetFilters: mockResetFilters,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
   });
 

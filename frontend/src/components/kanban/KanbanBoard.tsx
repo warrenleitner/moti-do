@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react';
-import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Chip } from '@mui/material';
+import { useMemo } from 'react';
+import { Box, Typography } from '@mui/material';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
 import type { Task } from '../../types';
 import { Priority } from '../../types';
 import KanbanColumn, { type KanbanStatus } from './KanbanColumn';
+import { useTaskStore } from '../../store';
+import { FilterBar } from '../common';
 
 interface KanbanBoardProps {
   tasks: Task[];
@@ -38,10 +40,9 @@ function getTaskStatus(task: Task): KanbanStatus {
 // UI component - tested via integration tests
 /* v8 ignore start */
 export default function KanbanBoard({ tasks, onUpdateTask, onEditTask }: KanbanBoardProps) {
-  const [filterProject, setFilterProject] = useState<string>('all');
-  const [filterTag, setFilterTag] = useState<string>('all');
+  const { filters, setFilters, resetFilters } = useTaskStore();
 
-  // Get unique projects and tags
+  // Get unique projects and tags from all tasks
   const projects = useMemo(() => {
     const set = new Set<string>();
     tasks.forEach((t) => t.project && set.add(t.project));
@@ -54,18 +55,54 @@ export default function KanbanBoard({ tasks, onUpdateTask, onEditTask }: KanbanB
     return Array.from(set);
   }, [tasks]);
 
-  // Filter tasks
+  // Filter tasks using global store filters
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       // Exclude habits (they have their own view)
       if (task.is_habit) return false;
-      // Filter by project
-      if (filterProject !== 'all' && task.project !== filterProject) return false;
-      // Filter by tag
-      if (filterTag !== 'all' && !task.tags?.includes(filterTag)) return false;
+
+      // Search filter
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        if (
+          !task.title.toLowerCase().includes(searchLower) &&
+          !task.text_description?.toLowerCase().includes(searchLower)
+        ) {
+          return false;
+        }
+      }
+
+      // Priority filter (multi-select)
+      if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) {
+        return false;
+      }
+
+      // Difficulty filter (multi-select)
+      if (filters.difficulties.length > 0 && !filters.difficulties.includes(task.difficulty)) {
+        return false;
+      }
+
+      // Duration filter (multi-select)
+      if (filters.durations.length > 0 && !filters.durations.includes(task.duration)) {
+        return false;
+      }
+
+      // Project filter (multi-select)
+      if (filters.projects.length > 0 && (!task.project || !filters.projects.includes(task.project))) {
+        return false;
+      }
+
+      // Tag filter (multi-select - task must have at least one of the selected tags)
+      if (filters.tags.length > 0 && !filters.tags.some((tag) => task.tags.includes(tag))) {
+        return false;
+      }
+
+      // Note: Status filter is ignored in Kanban - we show all statuses in columns
+      // Blocked filter is also ignored - blocked status is a column
+
       return true;
     });
-  }, [tasks, filterProject, filterTag]);
+  }, [tasks, filters]);
 
   // Group tasks by status
   const tasksByStatus = useMemo(() => {
@@ -128,60 +165,26 @@ export default function KanbanBoard({ tasks, onUpdateTask, onEditTask }: KanbanB
 
   return (
     <Box>
-      {/* Filters */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Project</InputLabel>
-          <Select
-            value={filterProject}
-            label="Project"
-            onChange={(e) => setFilterProject(e.target.value)}
-          >
-            <MenuItem value="all">All Projects</MenuItem>
-            {projects.map((project) => (
-              <MenuItem key={project} value={project}>
-                {project}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Tag</InputLabel>
-          <Select
-            value={filterTag}
-            label="Tag"
-            onChange={(e) => setFilterTag(e.target.value)}
-          >
-            <MenuItem value="all">All Tags</MenuItem>
-            {tags.map((tag) => (
-              <MenuItem key={tag} value={tag}>
-                {tag}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* Active filters */}
-        {(filterProject !== 'all' || filterTag !== 'all') && (
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            {filterProject !== 'all' && (
-              <Chip
-                label={`Project: ${filterProject}`}
-                size="small"
-                onDelete={() => setFilterProject('all')}
-              />
-            )}
-            {filterTag !== 'all' && (
-              <Chip
-                label={`Tag: ${filterTag}`}
-                size="small"
-                onDelete={() => setFilterTag('all')}
-              />
-            )}
-          </Box>
-        )}
-      </Box>
+      {/* Filters - using global FilterBar */}
+      <FilterBar
+        search={filters.search || ''}
+        onSearchChange={(search) => setFilters({ search: search || undefined })}
+        status={filters.status}
+        onStatusChange={(status) => setFilters({ status })}
+        priorities={filters.priorities}
+        onPrioritiesChange={(priorities) => setFilters({ priorities })}
+        difficulties={filters.difficulties}
+        onDifficultiesChange={(difficulties) => setFilters({ difficulties })}
+        durations={filters.durations}
+        onDurationsChange={(durations) => setFilters({ durations })}
+        selectedProjects={filters.projects}
+        onProjectsChange={(projects) => setFilters({ projects })}
+        selectedTags={filters.tags}
+        onTagsChange={(tags) => setFilters({ tags })}
+        projects={projects}
+        tags={tags}
+        onReset={resetFilters}
+      />
 
       {/* Task count */}
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>

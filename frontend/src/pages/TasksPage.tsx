@@ -222,8 +222,12 @@ export default function TasksPage() {
 
   return (
     <Box>
-      {/* Header actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3, gap: 2 }}>
+      {/* Header actions with quick-add on the same line */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+        {/* Quick-add box takes available space */}
+        <Box sx={{ flex: 1 }}>
+          <QuickAddBox />
+        </Box>
         <ToggleButtonGroup
           value={viewMode}
           exclusive
@@ -242,9 +246,6 @@ export default function TasksPage() {
           New Task
         </Button>
       </Box>
-
-      {/* Quick-add box for rapid task creation */}
-      <QuickAddBox />
 
       {/* Task list or table based on view mode */}
       {viewMode === 'list' ? (

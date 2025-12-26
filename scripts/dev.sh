@@ -69,6 +69,31 @@ done
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
+# Lock file configuration
+LOCK_DIR="$PROJECT_ROOT/.run"
+DEV_LOCK="$LOCK_DIR/dev.lock"
+E2E_LOCK="$LOCK_DIR/e2e.lock"
+
+# Create lock directory if needed
+mkdir -p "$LOCK_DIR"
+
+# Check for conflicting E2E tests
+if [ -f "$E2E_LOCK" ]; then
+    E2E_PID=$(cat "$E2E_LOCK" 2>/dev/null)
+    if kill -0 "$E2E_PID" 2>/dev/null; then
+        echo -e "${RED}ERROR: E2E tests are currently running (PID: $E2E_PID)${NC}"
+        echo -e "${YELLOW}Wait for E2E tests to finish, or stop them first.${NC}"
+        echo -e "${YELLOW}To stop E2E tests: kill $E2E_PID${NC}"
+        exit 1
+    else
+        # Stale lock file, remove it
+        rm -f "$E2E_LOCK"
+    fi
+fi
+
+# Create our lock file
+echo $$ > "$DEV_LOCK"
+
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  Moti-Do Development Server${NC}"
 echo -e "${GREEN}========================================${NC}"
@@ -77,6 +102,9 @@ echo ""
 # Cleanup function
 cleanup() {
     echo -e "\n${YELLOW}Shutting down...${NC}"
+
+    # Remove lock file
+    rm -f "$DEV_LOCK" 2>/dev/null || true
 
     # Kill backend if running
     if [ ! -z "$BACKEND_PID" ]; then

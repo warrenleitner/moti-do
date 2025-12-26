@@ -49,6 +49,31 @@ echo -e "${GREEN}Starting E2E test suite...${NC}"
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
+# Lock file configuration
+LOCK_DIR="$PROJECT_ROOT/.run"
+E2E_LOCK="$LOCK_DIR/e2e.lock"
+DEV_LOCK="$LOCK_DIR/dev.lock"
+
+# Create lock directory if needed
+mkdir -p "$LOCK_DIR"
+
+# Check for conflicting dev server
+if [ -f "$DEV_LOCK" ]; then
+    DEV_PID=$(cat "$DEV_LOCK" 2>/dev/null)
+    if kill -0 "$DEV_PID" 2>/dev/null; then
+        echo -e "${RED}ERROR: dev.sh is currently running (PID: $DEV_PID)${NC}"
+        echo -e "${YELLOW}Stop the dev server first, or run E2E tests in a separate environment.${NC}"
+        echo -e "${YELLOW}To stop dev server: kill $DEV_PID${NC}"
+        exit 1
+    else
+        # Stale lock file, remove it
+        rm -f "$DEV_LOCK"
+    fi
+fi
+
+# Create our lock file
+echo $$ > "$E2E_LOCK"
+
 # Test database configuration
 TEST_DB_PORT=5433
 TEST_DB_USER=motido_test
@@ -71,6 +96,9 @@ fi
 # Cleanup function
 cleanup() {
     echo -e "\n${YELLOW}Cleaning up...${NC}"
+
+    # Remove lock file
+    rm -f "$E2E_LOCK" 2>/dev/null || true
 
     # Kill backend if running
     if [ ! -z "$BACKEND_PID" ]; then
