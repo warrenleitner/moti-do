@@ -18,8 +18,8 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    // Typography with component="h1" creates a heading role
-    this.heading = page.getByRole('heading', { name: 'Motodo' });
+    // Logo image with alt text "Motodo"
+    this.heading = page.getByRole('img', { name: 'Motodo' });
     this.subtitle = page.getByText('Task and Habit Tracker');
     // ToggleButton elements in the ToggleButtonGroup - use group to scope
     this.loginTab = page.getByRole('group').getByRole('button', { name: 'Login' });

@@ -98,12 +98,14 @@ export class GraphPage {
    */
   async clickNode(title: string): Promise<void> {
     const node = this.getNodeByTitle(title);
-    // Ensure the node is scrolled into view and visible
+    // Wait for React Flow to stabilize (animations, layout)
+    await this.page.waitForTimeout(500);
+    // Ensure the node is visible and scrolled into view
     await node.scrollIntoViewIfNeeded();
-    // Wait for node to be stable before clicking
+    // Wait for animations to complete
     await this.page.waitForTimeout(200);
-    // Click the node - use regular click, not force click, to ensure event handlers fire
-    await node.click();
+    // Click the node - use force: true to bypass viewport checks in React Flow
+    await node.click({ force: true });
     // Wait for drawer to open
     await this.taskDrawer.waitFor({ timeout: 5000 });
   }
@@ -137,8 +139,10 @@ export class GraphPage {
    * Toggle task completion from the drawer.
    */
   async toggleTaskCompleteInDrawer(): Promise<void> {
-    // Use first checkbox (main task completion checkbox, not subtask checkboxes)
-    await this.taskDrawer.getByRole('checkbox').first().click();
+    // The completion button has aria-label="Mark Complete" or "Mark Incomplete"
+    // Use .first() to select the main task completion button (not subtask buttons)
+    const completeButton = this.taskDrawer.getByRole('button', { name: /Mark Complete|Mark Incomplete/ }).first();
+    await completeButton.click();
   }
 
   /**

@@ -1,6 +1,26 @@
-import { Box, FormControl, InputLabel, Select, MenuItem, Chip, Stack, Button } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material';
+import {
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  Stack,
+  Button,
+  Checkbox,
+  ListItemText,
+  OutlinedInput,
+} from '@mui/material';
 import { FilterList, Clear } from '@mui/icons-material';
-import { Priority, PriorityEmoji } from '../../types';
+import {
+  Priority,
+  PriorityEmoji,
+  Difficulty,
+  DifficultyEmoji,
+  Duration,
+  DurationEmoji,
+} from '../../types';
 import SearchInput from './SearchInput';
 
 interface FilterBarProps {
@@ -8,16 +28,47 @@ interface FilterBarProps {
   onSearchChange: (value: string) => void;
   status: 'all' | 'active' | 'completed';
   onStatusChange: (status: 'all' | 'active' | 'completed') => void;
-  priority?: Priority;
-  onPriorityChange: (priority: Priority | undefined) => void;
-  project?: string;
-  onProjectChange: (project: string | undefined) => void;
-  tag?: string;
-  onTagChange: (tag: string | undefined) => void;
+  priorities: Priority[];
+  onPrioritiesChange: (priorities: Priority[]) => void;
+  difficulties: Difficulty[];
+  onDifficultiesChange: (difficulties: Difficulty[]) => void;
+  durations: Duration[];
+  onDurationsChange: (durations: Duration[]) => void;
+  selectedProjects: string[];
+  onProjectsChange: (projects: string[]) => void;
+  selectedTags: string[];
+  onTagsChange: (tags: string[]) => void;
   projects: string[];
   tags: string[];
   onReset: () => void;
 }
+
+// Priority options in display order
+const priorityOptions: { value: Priority; label: string }[] = [
+  { value: Priority.DEFCON_ONE, label: `${PriorityEmoji[Priority.DEFCON_ONE]} Defcon One` },
+  { value: Priority.HIGH, label: `${PriorityEmoji[Priority.HIGH]} High` },
+  { value: Priority.MEDIUM, label: `${PriorityEmoji[Priority.MEDIUM]} Medium` },
+  { value: Priority.LOW, label: `${PriorityEmoji[Priority.LOW]} Low` },
+  { value: Priority.TRIVIAL, label: `${PriorityEmoji[Priority.TRIVIAL]} Trivial` },
+];
+
+// Difficulty options in display order
+const difficultyOptions: { value: Difficulty; label: string }[] = [
+  { value: Difficulty.HERCULEAN, label: `${DifficultyEmoji[Difficulty.HERCULEAN]} Herculean` },
+  { value: Difficulty.HIGH, label: `${DifficultyEmoji[Difficulty.HIGH]} High` },
+  { value: Difficulty.MEDIUM, label: `${DifficultyEmoji[Difficulty.MEDIUM]} Medium` },
+  { value: Difficulty.LOW, label: `${DifficultyEmoji[Difficulty.LOW]} Low` },
+  { value: Difficulty.TRIVIAL, label: `${DifficultyEmoji[Difficulty.TRIVIAL]} Trivial` },
+];
+
+// Duration options in display order
+const durationOptions: { value: Duration; label: string }[] = [
+  { value: Duration.ODYSSEYAN, label: `${DurationEmoji[Duration.ODYSSEYAN]} Odysseyan` },
+  { value: Duration.LONG, label: `${DurationEmoji[Duration.LONG]} Long` },
+  { value: Duration.MEDIUM, label: `${DurationEmoji[Duration.MEDIUM]} Medium` },
+  { value: Duration.SHORT, label: `${DurationEmoji[Duration.SHORT]} Short` },
+  { value: Duration.MINUSCULE, label: `${DurationEmoji[Duration.MINUSCULE]} Minuscule` },
+];
 
 // UI component - tested via integration tests
 /* v8 ignore start */
@@ -26,23 +77,91 @@ export default function FilterBar({
   onSearchChange,
   status,
   onStatusChange,
-  priority,
-  onPriorityChange,
-  project,
-  onProjectChange,
-  tag,
-  onTagChange,
+  priorities,
+  onPrioritiesChange,
+  difficulties,
+  onDifficultiesChange,
+  durations,
+  onDurationsChange,
+  selectedProjects,
+  onProjectsChange,
+  selectedTags,
+  onTagsChange,
   projects,
   tags,
   onReset,
 }: FilterBarProps) {
   const hasActiveFilters =
-    search || status !== 'active' || priority || project || tag;
+    search ||
+    status !== 'active' ||
+    priorities.length > 0 ||
+    difficulties.length > 0 ||
+    durations.length > 0 ||
+    selectedProjects.length > 0 ||
+    selectedTags.length > 0;
+
+  const handlePriorityChange = (event: SelectChangeEvent<Priority[]>) => {
+    const value = event.target.value;
+    onPrioritiesChange(typeof value === 'string' ? (value.split(',') as Priority[]) : value);
+  };
+
+  const handleDifficultyChange = (event: SelectChangeEvent<Difficulty[]>) => {
+    const value = event.target.value;
+    onDifficultiesChange(typeof value === 'string' ? (value.split(',') as Difficulty[]) : value);
+  };
+
+  const handleDurationChange = (event: SelectChangeEvent<Duration[]>) => {
+    const value = event.target.value;
+    onDurationsChange(typeof value === 'string' ? (value.split(',') as Duration[]) : value);
+  };
+
+  const handleProjectChange = (event: SelectChangeEvent<string[]>) => {
+    const value = event.target.value;
+    onProjectsChange(typeof value === 'string' ? value.split(',') : value);
+  };
+
+  const handleTagChange = (event: SelectChangeEvent<string[]>) => {
+    const value = event.target.value;
+    onTagsChange(typeof value === 'string' ? value.split(',') : value);
+  };
+
+  const renderPriorityValue = (selected: Priority[]) => {
+    if (selected.length === 0) return '';
+    if (selected.length === 1) {
+      const option = priorityOptions.find((o) => o.value === selected[0]);
+      return option?.label || selected[0];
+    }
+    return `${selected.length} selected`;
+  };
+
+  const renderDifficultyValue = (selected: Difficulty[]) => {
+    if (selected.length === 0) return '';
+    if (selected.length === 1) {
+      const option = difficultyOptions.find((o) => o.value === selected[0]);
+      return option?.label || selected[0];
+    }
+    return `${selected.length} selected`;
+  };
+
+  const renderDurationValue = (selected: Duration[]) => {
+    if (selected.length === 0) return '';
+    if (selected.length === 1) {
+      const option = durationOptions.find((o) => o.value === selected[0]);
+      return option?.label || selected[0];
+    }
+    return `${selected.length} selected`;
+  };
+
+  const renderMultiValue = (selected: string[]) => {
+    if (selected.length === 0) return '';
+    if (selected.length === 1) return selected[0];
+    return `${selected.length} selected`;
+  };
 
   return (
     <Box sx={{ mb: 3 }}>
       {/* Main filter row */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-start">
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-start" flexWrap="wrap" useFlexGap>
         <SearchInput
           value={search}
           onChange={onSearchChange}
@@ -62,38 +181,74 @@ export default function FilterBar({
           </Select>
         </FormControl>
 
-        <FormControl size="small" sx={{ minWidth: 120 }}>
+        <FormControl size="small" sx={{ minWidth: 140 }}>
           <InputLabel>Priority</InputLabel>
           <Select
-            value={priority || ''}
-            label="Priority"
-            onChange={(e) =>
-              onPriorityChange(e.target.value ? (e.target.value as Priority) : undefined)
-            }
+            multiple
+            value={priorities}
+            onChange={handlePriorityChange}
+            input={<OutlinedInput label="Priority" />}
+            renderValue={renderPriorityValue}
           >
-            <MenuItem value="">All</MenuItem>
-            <MenuItem value={Priority.DEFCON_ONE}>{PriorityEmoji[Priority.DEFCON_ONE]} Defcon One</MenuItem>
-            <MenuItem value={Priority.HIGH}>{PriorityEmoji[Priority.HIGH]} High</MenuItem>
-            <MenuItem value={Priority.MEDIUM}>{PriorityEmoji[Priority.MEDIUM]} Medium</MenuItem>
-            <MenuItem value={Priority.LOW}>{PriorityEmoji[Priority.LOW]} Low</MenuItem>
-            <MenuItem value={Priority.TRIVIAL}>{PriorityEmoji[Priority.TRIVIAL]} Trivial</MenuItem>
+            {priorityOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                <Checkbox checked={priorities.includes(option.value)} size="small" />
+                <ListItemText primary={option.label} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel>Difficulty</InputLabel>
+          <Select
+            multiple
+            value={difficulties}
+            onChange={handleDifficultyChange}
+            input={<OutlinedInput label="Difficulty" />}
+            renderValue={renderDifficultyValue}
+          >
+            {difficultyOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                <Checkbox checked={difficulties.includes(option.value)} size="small" />
+                <ListItemText primary={option.label} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel>Duration</InputLabel>
+          <Select
+            multiple
+            value={durations}
+            onChange={handleDurationChange}
+            input={<OutlinedInput label="Duration" />}
+            renderValue={renderDurationValue}
+          >
+            {durationOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                <Checkbox checked={durations.includes(option.value)} size="small" />
+                <ListItemText primary={option.label} />
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
 
         {projects.length > 0 && (
-          <FormControl size="small" sx={{ minWidth: 120 }}>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>Project</InputLabel>
             <Select
-              value={project || ''}
-              label="Project"
-              onChange={(e) =>
-                onProjectChange(e.target.value || undefined)
-              }
+              multiple
+              value={selectedProjects}
+              onChange={handleProjectChange}
+              input={<OutlinedInput label="Project" />}
+              renderValue={renderMultiValue}
             >
-              <MenuItem value="">All</MenuItem>
               {projects.map((p) => (
                 <MenuItem key={p} value={p}>
-                  {p}
+                  <Checkbox checked={selectedProjects.includes(p)} size="small" />
+                  <ListItemText primary={p} />
                 </MenuItem>
               ))}
             </Select>
@@ -101,17 +256,19 @@ export default function FilterBar({
         )}
 
         {tags.length > 0 && (
-          <FormControl size="small" sx={{ minWidth: 120 }}>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>Tag</InputLabel>
             <Select
-              value={tag || ''}
-              label="Tag"
-              onChange={(e) => onTagChange(e.target.value || undefined)}
+              multiple
+              value={selectedTags}
+              onChange={handleTagChange}
+              input={<OutlinedInput label="Tag" />}
+              renderValue={renderMultiValue}
             >
-              <MenuItem value="">All</MenuItem>
               {tags.map((t) => (
                 <MenuItem key={t} value={t}>
-                  {t}
+                  <Checkbox checked={selectedTags.includes(t)} size="small" />
+                  <ListItemText primary={t} />
                 </MenuItem>
               ))}
             </Select>
@@ -148,27 +305,46 @@ export default function FilterBar({
               onDelete={() => onStatusChange('active')}
             />
           )}
-          {priority && (
+          {priorities.map((p) => (
             <Chip
-              label={`Priority: ${priority}`}
+              key={p}
+              label={`Priority: ${p}`}
               size="small"
-              onDelete={() => onPriorityChange(undefined)}
+              onDelete={() => onPrioritiesChange(priorities.filter((x) => x !== p))}
             />
-          )}
-          {project && (
+          ))}
+          {difficulties.map((d) => (
             <Chip
-              label={`Project: ${project}`}
+              key={d}
+              label={`Difficulty: ${d}`}
               size="small"
-              onDelete={() => onProjectChange(undefined)}
+              onDelete={() => onDifficultiesChange(difficulties.filter((x) => x !== d))}
             />
-          )}
-          {tag && (
+          ))}
+          {durations.map((d) => (
             <Chip
-              label={`Tag: ${tag}`}
+              key={d}
+              label={`Duration: ${d}`}
               size="small"
-              onDelete={() => onTagChange(undefined)}
+              onDelete={() => onDurationsChange(durations.filter((x) => x !== d))}
             />
-          )}
+          ))}
+          {selectedProjects.map((p) => (
+            <Chip
+              key={p}
+              label={`Project: ${p}`}
+              size="small"
+              onDelete={() => onProjectsChange(selectedProjects.filter((x) => x !== p))}
+            />
+          ))}
+          {selectedTags.map((t) => (
+            <Chip
+              key={t}
+              label={`Tag: ${t}`}
+              size="small"
+              onDelete={() => onTagsChange(selectedTags.filter((x) => x !== t))}
+            />
+          ))}
         </Stack>
       )}
     </Box>

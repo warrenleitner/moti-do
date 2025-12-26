@@ -55,3 +55,6 @@ scripts/convert_clickup_to_motido.py
 *.bak
 frontend/playwright/.auth/user.json
 # Note: frontend/e2e/snapshots/ is NOT ignored - visual regression baselines must be committed
+
+# Script lock files (prevent dev/e2e conflicts)
+.run/

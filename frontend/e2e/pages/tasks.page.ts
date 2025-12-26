@@ -162,11 +162,13 @@ export class TasksPage {
   }
 
   /**
-   * Click the checkbox to toggle task completion.
+   * Click the completion button to toggle task completion.
    */
   async toggleTaskComplete(title: string): Promise<void> {
     const taskCard = this.getTaskByTitle(title);
-    await taskCard.getByRole('checkbox').click();
+    // The completion button has title="Mark Complete" or "Mark Incomplete"
+    const completeButton = taskCard.getByRole('button', { name: /Mark Complete|Mark Incomplete/ });
+    await completeButton.click();
   }
 
   /**

@@ -29,6 +29,17 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
 
+const defaultFilters = {
+  status: 'active' as const,
+  search: undefined,
+  priorities: [] as Priority[],
+  difficulties: [] as Difficulty[],
+  durations: [] as Duration[],
+  projects: [] as string[],
+  tags: [] as string[],
+  includeBlocked: false,
+};
+
 describe('TasksPage', () => {
   const mockTask: Task = {
     id: 'task-1',
@@ -66,7 +77,7 @@ describe('TasksPage', () => {
     const mockUseTaskStore = vi.mocked(stores.useTaskStore);
     mockUseTaskStore.mockReturnValue({
       tasks: [mockTask],
-      filters: { status: 'active' as const },
+      filters: { ...defaultFilters },
       sort: { field: 'score' as const, order: 'desc' as const },
       setFilters: vi.fn(),
       resetFilters: vi.fn(),

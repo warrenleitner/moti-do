@@ -5,14 +5,16 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import type { Task } from '../types';
-import { Priority } from '../types';
+import { Priority, Difficulty, Duration } from '../types';
 import { taskApi } from '../services/api';
 
 interface TaskFilters {
   status: 'all' | 'active' | 'completed';
-  priority?: Priority;
-  project?: string;
-  tag?: string;
+  priorities: Priority[];
+  difficulties: Difficulty[];
+  durations: Duration[];
+  projects: string[];
+  tags: string[];
   search?: string;
   includeBlocked: boolean;
 }
@@ -65,6 +67,11 @@ interface TaskState {
 
 const defaultFilters: TaskFilters = {
   status: 'active',
+  priorities: [],
+  difficulties: [],
+  durations: [],
+  projects: [],
+  tags: [],
   includeBlocked: false,
 };
 
@@ -76,7 +83,7 @@ const defaultSort: TaskSort = {
 export const useTaskStore = create<TaskState>()(
   devtools(
     persist(
-      (set, get) => ({
+      (set, get): TaskState => ({
         // Initial state
         tasks: [],
         selectedTaskId: null,
@@ -299,11 +306,43 @@ export const useTaskStore = create<TaskState>()(
       }),
       {
         name: 'motido-task-store',
+        version: 2, // Increment version to trigger migration
         partialize: (state) => ({
           filters: state.filters,
           sort: state.sort,
           subtaskViewMode: state.subtaskViewMode,
         }),
+        // Migrate old single-value filters to new array-based filters
+        migrate: (persistedState, version) => {
+          if (version < 2) {
+            // Old state had single values, new state has arrays
+            const state = persistedState as { filters?: Record<string, unknown> };
+            if (state.filters) {
+              // Reset to default filters since structure changed
+              state.filters = { ...defaultFilters };
+            }
+          }
+          return persistedState as TaskState;
+        },
+        // Merge persisted state with defaults to ensure all required fields exist
+        merge: (persistedState, currentState) => {
+          const persisted = persistedState as Partial<TaskState>;
+          return {
+            ...currentState,
+            ...persisted,
+            // Ensure filters has all required array fields with defaults
+            filters: {
+              ...defaultFilters,
+              ...(persisted.filters || {}),
+              // Explicitly ensure arrays exist (in case of partial migration)
+              priorities: persisted.filters?.priorities ?? defaultFilters.priorities,
+              difficulties: persisted.filters?.difficulties ?? defaultFilters.difficulties,
+              durations: persisted.filters?.durations ?? defaultFilters.durations,
+              projects: persisted.filters?.projects ?? defaultFilters.projects,
+              tags: persisted.filters?.tags ?? defaultFilters.tags,
+            },
+          };
+        },
       }
     ),
     { name: 'TaskStore' }
@@ -320,14 +359,30 @@ export const useFilteredTasks = () => {
     if (filters.status === 'active' && task.is_complete) return false;
     if (filters.status === 'completed' && !task.is_complete) return false;
 
-    // Priority filter
-    if (filters.priority && task.priority !== filters.priority) return false;
+    // Priority filter (multi-select)
+    if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) {
+      return false;
+    }
 
-    // Project filter
-    if (filters.project && task.project !== filters.project) return false;
+    // Difficulty filter (multi-select)
+    if (filters.difficulties.length > 0 && !filters.difficulties.includes(task.difficulty)) {
+      return false;
+    }
 
-    // Tag filter
-    if (filters.tag && !task.tags.includes(filters.tag)) return false;
+    // Duration filter (multi-select)
+    if (filters.durations.length > 0 && !filters.durations.includes(task.duration)) {
+      return false;
+    }
+
+    // Project filter (multi-select)
+    if (filters.projects.length > 0 && (!task.project || !filters.projects.includes(task.project))) {
+      return false;
+    }
+
+    // Tag filter (multi-select - task must have at least one of the selected tags)
+    if (filters.tags.length > 0 && !filters.tags.some((tag) => task.tags.includes(tag))) {
+      return false;
+    }
 
     // Search filter
     if (filters.search) {

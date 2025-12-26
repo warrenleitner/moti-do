@@ -63,6 +63,10 @@ class PostgresDataManager(DataManager):
                 "DATABASE_URL environment variable is required for PostgreSQL backend"
             )
 
+        # Track initialization state to prevent duplicate logging
+        self._initialized = False
+        self._loaded_users: set[str] = set()
+
     def _get_connection(self) -> "psycopg2.connection":
         """Establishes a connection to the PostgreSQL database."""
         try:
@@ -151,7 +155,6 @@ class PostgresDataManager(DataManager):
                 )
 
                 conn.commit()
-                print("PostgreSQL tables checked/created successfully.")
         except psycopg2.Error as e:
             conn.rollback()
             print(f"Error creating PostgreSQL tables: {e}")
@@ -159,18 +162,26 @@ class PostgresDataManager(DataManager):
 
     def initialize(self) -> None:
         """Initializes the database by creating tables if needed."""
+        # Skip if already initialized to reduce duplicate logging
+        if self._initialized:
+            return
+
         print("Initializing PostgreSQL database...")
         try:
             with self._get_connection() as conn:
                 self._create_tables(conn)
                 print("PostgreSQL tables created/verified successfully.")
+            self._initialized = True
         except psycopg2.Error as e:
             print(f"PostgreSQL initialization failed: {e}")
             raise  # Re-raise to fail fast if database can't be initialized
 
     def load_user(self, username: str = DEFAULT_USERNAME) -> User | None:
         """Loads user data and their tasks from the PostgreSQL database."""
-        print(f"Loading user '{username}' from PostgreSQL...")
+        # Only print loading message on first load per user
+        if username not in self._loaded_users:
+            print(f"Loading user '{username}' from PostgreSQL...")
+            self._loaded_users.add(username)
         try:
             with self._get_connection() as conn:
                 with conn.cursor() as cursor:

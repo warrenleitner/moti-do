@@ -9,6 +9,17 @@ vi.mock('../../store', () => ({
   useFilteredTasks: vi.fn(),
 }));
 
+const defaultFilters = {
+  status: 'active' as const,
+  search: undefined,
+  priorities: [] as Priority[],
+  difficulties: [] as ('low' | 'medium' | 'high')[],
+  durations: [] as ('short' | 'medium' | 'long')[],
+  projects: [] as string[],
+  tags: [] as string[],
+  includeBlocked: false,
+};
+
 describe('TaskList', () => {
   const defaultProps = {
     onEdit: vi.fn(),
@@ -18,7 +29,7 @@ describe('TaskList', () => {
 
   beforeEach(() => {
     vi.mocked(stores.useTaskStore).mockReturnValue({
-      filters: { status: 'active' as const, search: undefined, priority: undefined, project: undefined, tag: undefined },
+      filters: { ...defaultFilters },
       sort: { field: 'score' as const, order: 'desc' as const },
       setFilters: vi.fn(),
       resetFilters: vi.fn(),
@@ -74,7 +85,7 @@ describe('TaskList', () => {
   it('changes sort field', () => {
     const setSort = vi.fn();
     vi.mocked(stores.useTaskStore).mockReturnValue({
-      filters: { status: 'active' as const },
+      filters: { ...defaultFilters },
       sort: { field: 'score' as const, order: 'desc' as const },
       setFilters: vi.fn(),
       resetFilters: vi.fn(),
@@ -90,7 +101,7 @@ describe('TaskList', () => {
   it('changes sort order', () => {
     const setSort = vi.fn();
     vi.mocked(stores.useTaskStore).mockReturnValue({
-      filters: { status: 'active' as const },
+      filters: { ...defaultFilters },
       sort: { field: 'score' as const, order: 'desc' as const },
       setFilters: vi.fn(),
       resetFilters: vi.fn(),
@@ -144,7 +155,7 @@ describe('TaskList', () => {
   it('handles sort field change by interacting with select', async () => {
     const setSort = vi.fn();
     vi.mocked(stores.useTaskStore).mockReturnValue({
-      filters: { status: 'active' as const },
+      filters: { ...defaultFilters },
       sort: { field: 'score' as const, order: 'desc' as const },
       setFilters: vi.fn(),
       resetFilters: vi.fn(),
@@ -176,7 +187,7 @@ describe('TaskList', () => {
   it('handles sort order change by interacting with select', async () => {
     const setSort = vi.fn();
     vi.mocked(stores.useTaskStore).mockReturnValue({
-      filters: { status: 'active' as const },
+      filters: { ...defaultFilters },
       sort: { field: 'score' as const, order: 'desc' as const },
       setFilters: vi.fn(),
       resetFilters: vi.fn(),
@@ -237,7 +248,7 @@ describe('TaskList', () => {
     ];
 
     vi.mocked(stores.useTaskStore).mockReturnValue({
-      filters: { status: 'active' as const },
+      filters: { ...defaultFilters },
       sort: { field: 'score' as const, order: 'desc' as const },
       setFilters: vi.fn(),
       resetFilters: vi.fn(),
@@ -287,7 +298,7 @@ describe('TaskList', () => {
     ];
 
     vi.mocked(stores.useTaskStore).mockReturnValue({
-      filters: { status: 'active' as const },
+      filters: { ...defaultFilters },
       sort: { field: 'score' as const, order: 'desc' as const },
       setFilters: vi.fn(),
       resetFilters: vi.fn(),
@@ -386,7 +397,7 @@ describe('TaskList', () => {
     ];
 
     vi.mocked(stores.useTaskStore).mockReturnValue({
-      filters: { status: 'active' as const },
+      filters: { ...defaultFilters },
       sort: { field: 'score' as const, order: 'desc' as const },
       setFilters: vi.fn(),
       resetFilters: vi.fn(),
@@ -421,7 +432,7 @@ describe('TaskList', () => {
     ];
 
     vi.mocked(stores.useTaskStore).mockReturnValue({
-      filters: { status: 'active' as const },
+      filters: { ...defaultFilters },
       sort: { field: 'score' as const, order: 'desc' as const },
       setFilters: vi.fn(),
       resetFilters: vi.fn(),

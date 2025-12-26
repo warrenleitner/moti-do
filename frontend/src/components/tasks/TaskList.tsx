@@ -75,12 +75,16 @@ export default function TaskList({
         onSearchChange={(search) => setFilters({ search: search || undefined })}
         status={filters.status}
         onStatusChange={(status) => setFilters({ status })}
-        priority={filters.priority}
-        onPriorityChange={(priority) => setFilters({ priority })}
-        project={filters.project}
-        onProjectChange={(project) => setFilters({ project })}
-        tag={filters.tag}
-        onTagChange={(tag) => setFilters({ tag })}
+        priorities={filters.priorities}
+        onPrioritiesChange={(priorities) => setFilters({ priorities })}
+        difficulties={filters.difficulties}
+        onDifficultiesChange={(difficulties) => setFilters({ difficulties })}
+        durations={filters.durations}
+        onDurationsChange={(durations) => setFilters({ durations })}
+        selectedProjects={filters.projects}
+        onProjectsChange={(projects) => setFilters({ projects })}
+        selectedTags={filters.tags}
+        onTagsChange={(tags) => setFilters({ tags })}
         projects={projects}
         tags={tags}
         onReset={resetFilters}
@@ -154,7 +158,12 @@ export default function TaskList({
         <EmptyState
           title="No tasks found"
           description={
-            filters.search || filters.priority || filters.project || filters.tag
+            filters.search ||
+            filters.priorities.length > 0 ||
+            filters.difficulties.length > 0 ||
+            filters.durations.length > 0 ||
+            filters.projects.length > 0 ||
+            filters.tags.length > 0
               ? 'Try adjusting your filters to see more tasks.'
               : "You're all caught up! Create a new task to get started."
           }

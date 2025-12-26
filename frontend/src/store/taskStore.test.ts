@@ -121,23 +121,23 @@ describe('TaskStore', () => {
       const { result } = renderHook(() => useTaskStore());
 
       act(() => {
-        result.current.setFilters({ status: 'completed', priority: Priority.HIGH });
+        result.current.setFilters({ status: 'completed', priorities: [Priority.HIGH] });
       });
 
       expect(result.current.filters.status).toBe('completed');
-      expect(result.current.filters.priority).toBe(Priority.HIGH);
+      expect(result.current.filters.priorities).toEqual([Priority.HIGH]);
     });
 
     it('should reset filters', () => {
       const { result } = renderHook(() => useTaskStore());
 
       act(() => {
-        result.current.setFilters({ status: 'completed', priority: Priority.HIGH });
+        result.current.setFilters({ status: 'completed', priorities: [Priority.HIGH] });
         result.current.resetFilters();
       });
 
       expect(result.current.filters.status).toBe('active');
-      expect(result.current.filters.priority).toBeUndefined();
+      expect(result.current.filters.priorities).toEqual([]);
     });
 
     it('should set sort', () => {
@@ -403,7 +403,7 @@ describe('useFilteredTasks', () => {
 
   it('should filter by tag', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all', tag: 'work' });
+    store.setFilters({ status: 'all', tags: ['work'] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current).toHaveLength(1);
@@ -565,7 +565,7 @@ describe('useFilteredTasks', () => {
 
   it('should filter by priority', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all', priority: Priority.HIGH });
+    store.setFilters({ status: 'all', priorities: [Priority.HIGH] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current.every((t) => t.priority === Priority.HIGH)).toBe(true);
@@ -595,10 +595,47 @@ describe('useFilteredTasks', () => {
     ];
     const store = useTaskStore.getState();
     store.setTasks(tasksWithProjects);
-    store.setFilters({ status: 'all', project: 'work' });
+    store.setFilters({ status: 'all', projects: ['work'] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current.every((t) => t.project === 'work')).toBe(true);
+  });
+
+  it('should filter by difficulty', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all', difficulties: [Difficulty.HIGH] });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.every((t) => t.difficulty === Difficulty.HIGH)).toBe(true);
+  });
+
+  it('should filter by duration', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all', durations: [Duration.LONG] });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current.every((t) => t.duration === Duration.LONG)).toBe(true);
+  });
+
+  it('should filter by multiple priorities', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all', priorities: [Priority.HIGH, Priority.MEDIUM] });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(
+      result.current.every((t) => t.priority === Priority.HIGH || t.priority === Priority.MEDIUM)
+    ).toBe(true);
+  });
+
+  it('should filter by multiple tags', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all', tags: ['work', 'urgent'] });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    // Each task must have at least one of the selected tags
+    expect(
+      result.current.every((t) => t.tags.includes('work') || t.tags.includes('urgent'))
+    ).toBe(true);
   });
 
   it('should filter by search in description', () => {

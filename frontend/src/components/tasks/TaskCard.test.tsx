@@ -106,7 +106,7 @@ describe('TaskCard', () => {
     expect(screen.getByText(/Subtasks: 1\/2/)).toBeInTheDocument();
   });
 
-  it('calls onComplete when checkbox is clicked', async () => {
+  it('calls onComplete when complete button is clicked', async () => {
     const user = userEvent.setup();
     render(
       <TaskCard
@@ -117,8 +117,12 @@ describe('TaskCard', () => {
       />
     );
 
-    const checkbox = screen.getByRole('checkbox');
-    await user.click(checkbox);
+    // Find the complete button by the RadioButtonUnchecked icon (uncompleted task)
+    const completeButton = screen.getByTestId('RadioButtonUncheckedIcon').closest('button');
+    expect(completeButton).toBeInTheDocument();
+    if (completeButton) {
+      await user.click(completeButton);
+    }
     expect(mockOnComplete).toHaveBeenCalledWith('test-task-1');
   });
 
@@ -197,7 +201,7 @@ describe('TaskCard', () => {
     expect(screen.getByText('Blocked')).toBeInTheDocument();
   });
 
-  it('disables checkbox when blocked', () => {
+  it('disables complete button when blocked', () => {
     render(
       <TaskCard
         task={mockTask}
@@ -207,8 +211,8 @@ describe('TaskCard', () => {
         isBlocked={true}
       />
     );
-    const checkbox = screen.getByRole('checkbox');
-    expect(checkbox).toBeDisabled();
+    const completeButton = screen.getByTestId('RadioButtonUncheckedIcon').closest('button');
+    expect(completeButton).toBeDisabled();
   });
 
   it('shows strikethrough for completed tasks', () => {
@@ -223,6 +227,20 @@ describe('TaskCard', () => {
     );
     const title = screen.getByText('Test Task');
     expect(title).toHaveStyle('text-decoration: line-through');
+  });
+
+  it('shows CheckCircle icon for completed tasks', () => {
+    const completedTask = { ...mockTask, is_complete: true };
+    render(
+      <TaskCard
+        task={completedTask}
+        onComplete={mockOnComplete}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    );
+    expect(screen.getByTestId('CheckCircleIcon')).toBeInTheDocument();
+    expect(screen.queryByTestId('RadioButtonUncheckedIcon')).not.toBeInTheDocument();
   });
 
   it('expands to show description when expand button clicked', async () => {
@@ -291,11 +309,10 @@ describe('TaskCard', () => {
       await user.click(expandButton);
     }
 
-    // Find and click a subtask checkbox
+    // Find and click a subtask checkbox (only subtask checkboxes exist now)
     const subtaskCheckboxes = screen.getAllByRole('checkbox');
-    // First checkbox is the main task, subsequent ones are subtasks
-    if (subtaskCheckboxes.length > 1) {
-      await user.click(subtaskCheckboxes[1]);
+    if (subtaskCheckboxes.length > 0) {
+      await user.click(subtaskCheckboxes[0]);
       expect(mockOnSubtaskToggle).toHaveBeenCalledWith('test-task-1', 0);
     }
   });
