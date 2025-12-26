@@ -82,11 +82,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Logo/Brand */}
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <img src="/pwa-192x192.png" alt="Motodo" style={{ width: 32, height: 32, borderRadius: 4 }} />
-        <Typography variant="h5" fontWeight="bold" color="primary">
-          Motodo
-        </Typography>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <img src="/logo-wordmark.png" alt="Motodo" style={{ height: 128, objectFit: 'contain' }} />
       </Box>
 
       {/* Navigation */}
@@ -138,7 +135,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             size="small"
             color="primary"
             variant="outlined"
-            />
+          />
         </Box>
       )}
     </Box>
@@ -162,9 +159,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Motodo
-          </Typography>
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+            <img src="/logo-wordmark.png" alt="Motodo" style={{ height: 128, objectFit: 'contain' }} />
+          </Box>
         </Toolbar>
       </AppBar>
 

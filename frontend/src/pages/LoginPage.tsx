@@ -86,12 +86,9 @@ export default function LoginPage() {
     >
       <Card sx={{ maxWidth: 400, width: '100%' }}>
         <CardContent sx={{ p: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-            <img src="/logo-large.png" alt="Motodo Logo" style={{ width: 120, height: 120, objectFit: 'contain' }} />
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+            <img src="/logo-wordmark.png" alt="Motodo" style={{ width: 280, height: 'auto', objectFit: 'contain' }} />
           </Box>
-          <Typography variant="h4" component="h1" gutterBottom align="center" fontWeight="bold">
-            Motodo
-          </Typography>
 
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
             Task and Habit Tracker
