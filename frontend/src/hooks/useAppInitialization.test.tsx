@@ -4,6 +4,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { useAppInitialization } from './useAppInitialization';
 import { useTaskStore } from '../store/taskStore';
 import { useUserStore } from '../store/userStore';
@@ -24,6 +26,11 @@ vi.mock('../services/api', () => ({
     isAuthenticated: vi.fn(),
   },
 }));
+
+// Wrapper with Router context for the hook
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <MemoryRouter>{children}</MemoryRouter>
+);
 
 describe('useAppInitialization', () => {
   const mockFetchTasks = vi.fn();
@@ -49,7 +56,7 @@ describe('useAppInitialization', () => {
   it('should not initialize if user is not authenticated', async () => {
     vi.mocked(authApi.isAuthenticated).mockReturnValue(false);
 
-    const { result } = renderHook(() => useAppInitialization());
+    const { result } = renderHook(() => useAppInitialization(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.isInitialized).toBe(false);
@@ -65,7 +72,7 @@ describe('useAppInitialization', () => {
     mockFetchTasks.mockResolvedValue(undefined);
     mockInitializeUser.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useAppInitialization());
+    const { result } = renderHook(() => useAppInitialization(), { wrapper });
 
     // Initially loading
     expect(result.current.isLoading).toBe(true);
@@ -87,7 +94,7 @@ describe('useAppInitialization', () => {
     mockFetchTasks.mockRejectedValue(error);
     mockInitializeUser.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useAppInitialization());
+    const { result } = renderHook(() => useAppInitialization(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -104,7 +111,7 @@ describe('useAppInitialization', () => {
     const error = new Error('Failed to initialize user');
     mockInitializeUser.mockRejectedValue(error);
 
-    const { result } = renderHook(() => useAppInitialization());
+    const { result } = renderHook(() => useAppInitialization(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -120,7 +127,7 @@ describe('useAppInitialization', () => {
     mockFetchTasks.mockRejectedValue('String error');
     mockInitializeUser.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useAppInitialization());
+    const { result } = renderHook(() => useAppInitialization(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -134,7 +141,7 @@ describe('useAppInitialization', () => {
     mockFetchTasks.mockRejectedValueOnce(error).mockResolvedValueOnce(undefined);
     mockInitializeUser.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useAppInitialization());
+    const { result } = renderHook(() => useAppInitialization(), { wrapper });
 
     // Wait for initial error
     await waitFor(() => {
@@ -165,7 +172,7 @@ describe('useAppInitialization', () => {
     mockFetchTasks.mockReturnValue(initPromise);
     mockInitializeUser.mockResolvedValue(undefined);
 
-    renderHook(() => useAppInitialization());
+    renderHook(() => useAppInitialization(), { wrapper });
 
     // Wait a bit to ensure initialization started
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -186,7 +193,7 @@ describe('useAppInitialization', () => {
     mockFetchTasks.mockResolvedValue(undefined);
     mockInitializeUser.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useAppInitialization());
+    const { result } = renderHook(() => useAppInitialization(), { wrapper });
 
     const retryFn1 = result.current.retry;
 
@@ -205,7 +212,7 @@ describe('useAppInitialization', () => {
     mockFetchTasks.mockResolvedValue(undefined);
     mockInitializeUser.mockResolvedValue(undefined);
 
-    const { result, rerender } = renderHook(() => useAppInitialization());
+    const { result, rerender } = renderHook(() => useAppInitialization(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.isInitialized).toBe(true);

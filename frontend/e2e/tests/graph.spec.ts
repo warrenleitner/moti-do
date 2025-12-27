@@ -5,10 +5,25 @@
  */
 import { test, expect } from '@playwright/test';
 import { GraphPage } from '../pages/graph.page';
-import { seedTasksWithDependencies, seedSimpleDependency } from '../fixtures/task-data.fixture';
+import {
+  seedTasksWithDependencies,
+  seedSimpleDependency,
+  cleanupTasks,
+} from '../fixtures/task-data.fixture';
 
 test.describe('Dependency Graph', () => {
   // No login needed - tests use pre-authenticated state from auth.setup.ts
+
+  // Track created task IDs for cleanup
+  let createdTaskIds: string[] = [];
+
+  test.afterEach(async ({ page }) => {
+    // Clean up tasks created during this test to avoid accumulation
+    if (createdTaskIds.length > 0) {
+      await cleanupTasks(page, createdTaskIds);
+      createdTaskIds = [];
+    }
+  });
 
   test.describe('Graph Display', () => {
     test('should display graph page correctly', async ({ page }) => {
@@ -36,6 +51,7 @@ test.describe('Dependency Graph', () => {
     test('should display tasks as nodes on the graph when they have dependencies', async ({ page }) => {
       // Seed tasks with dependencies
       const { parentTask, childTask } = await seedSimpleDependency(page);
+      createdTaskIds.push(parentTask.id, childTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -53,7 +69,8 @@ test.describe('Dependency Graph', () => {
   test.describe('Node Interactions', () => {
     test('should click on node to select it', async ({ page }) => {
       // Seed tasks with dependencies
-      const { parentTask } = await seedSimpleDependency(page);
+      const { parentTask, childTask } = await seedSimpleDependency(page);
+      createdTaskIds.push(parentTask.id, childTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -69,7 +86,8 @@ test.describe('Dependency Graph', () => {
 
     test('should open task drawer when clicking node', async ({ page }) => {
       // Seed tasks with dependencies
-      const { parentTask } = await seedSimpleDependency(page);
+      const { parentTask, childTask } = await seedSimpleDependency(page);
+      createdTaskIds.push(parentTask.id, childTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -85,7 +103,8 @@ test.describe('Dependency Graph', () => {
 
     test('should toggle task completion from drawer', async ({ page }) => {
       // Seed tasks with dependencies
-      const { parentTask } = await seedSimpleDependency(page);
+      const { parentTask, childTask } = await seedSimpleDependency(page);
+      createdTaskIds.push(parentTask.id, childTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -105,6 +124,7 @@ test.describe('Dependency Graph', () => {
     test('should show edges between dependent tasks', async ({ page }) => {
       // Seed tasks with dependencies
       const { parentTask, childTask } = await seedSimpleDependency(page);
+      createdTaskIds.push(parentTask.id, childTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -123,6 +143,7 @@ test.describe('Dependency Graph', () => {
     test('should show multiple levels of dependencies', async ({ page }) => {
       // Seed tasks with chain of dependencies (parent -> child -> grandchild)
       const { parentTask, childTask, grandchildTask } = await seedTasksWithDependencies(page);
+      createdTaskIds.push(parentTask.id, childTask.id, grandchildTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -143,7 +164,8 @@ test.describe('Dependency Graph', () => {
   test.describe('Graph Controls', () => {
     test('should zoom in and out', async ({ page }) => {
       // Seed tasks with dependencies
-      await seedSimpleDependency(page);
+      const { parentTask, childTask } = await seedSimpleDependency(page);
+      createdTaskIds.push(parentTask.id, childTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -163,7 +185,8 @@ test.describe('Dependency Graph', () => {
 
     test('should fit view to content', async ({ page }) => {
       // Seed tasks with dependencies
-      await seedSimpleDependency(page);
+      const { parentTask, childTask } = await seedSimpleDependency(page);
+      createdTaskIds.push(parentTask.id, childTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -182,7 +205,8 @@ test.describe('Dependency Graph', () => {
   test.describe('Graph Statistics', () => {
     test('should count nodes correctly', async ({ page }) => {
       // Seed tasks with dependencies (creates 3 nodes)
-      await seedTasksWithDependencies(page);
+      const { parentTask, childTask, grandchildTask } = await seedTasksWithDependencies(page);
+      createdTaskIds.push(parentTask.id, childTask.id, grandchildTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -196,7 +220,8 @@ test.describe('Dependency Graph', () => {
 
     test('should count edges correctly', async ({ page }) => {
       // Seed tasks with chain of dependencies
-      await seedTasksWithDependencies(page);
+      const { parentTask, childTask, grandchildTask } = await seedTasksWithDependencies(page);
+      createdTaskIds.push(parentTask.id, childTask.id, grandchildTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -212,7 +237,8 @@ test.describe('Dependency Graph', () => {
   test.describe('Direction Filter', () => {
     test('should show direction toggle when task is selected', async ({ page }) => {
       // Seed tasks with dependencies
-      const { parentTask } = await seedSimpleDependency(page);
+      const { parentTask, childTask } = await seedSimpleDependency(page);
+      createdTaskIds.push(parentTask.id, childTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -228,7 +254,8 @@ test.describe('Dependency Graph', () => {
 
     test('should filter to upstream only', async ({ page }) => {
       // Seed tasks with chain: parent -> child -> grandchild
-      const { parentTask, childTask } = await seedTasksWithDependencies(page);
+      const { parentTask, childTask, grandchildTask } = await seedTasksWithDependencies(page);
+      createdTaskIds.push(parentTask.id, childTask.id, grandchildTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -248,7 +275,8 @@ test.describe('Dependency Graph', () => {
 
     test('should filter to downstream only', async ({ page }) => {
       // Seed tasks with chain: parent -> child -> grandchild
-      const { childTask, grandchildTask } = await seedTasksWithDependencies(page);
+      const { parentTask, childTask, grandchildTask } = await seedTasksWithDependencies(page);
+      createdTaskIds.push(parentTask.id, childTask.id, grandchildTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -269,6 +297,7 @@ test.describe('Dependency Graph', () => {
     test('should filter to isolated mode (connected tree only)', async ({ page }) => {
       // Seed tasks with chain: parent -> child -> grandchild
       const { parentTask, childTask, grandchildTask } = await seedTasksWithDependencies(page);
+      createdTaskIds.push(parentTask.id, childTask.id, grandchildTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);
@@ -291,6 +320,7 @@ test.describe('Dependency Graph', () => {
     test('should show all nodes when direction is set to all', async ({ page }) => {
       // Seed tasks with dependencies
       const { parentTask, childTask, grandchildTask } = await seedTasksWithDependencies(page);
+      createdTaskIds.push(parentTask.id, childTask.id, grandchildTask.id);
 
       // Navigate to graph
       const graphPage = new GraphPage(page);

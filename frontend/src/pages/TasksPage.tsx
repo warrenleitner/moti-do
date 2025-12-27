@@ -5,7 +5,7 @@ import { AxiosError } from 'axios';
 import { TaskList, TaskForm } from '../components/tasks';
 import TaskTable from '../components/tasks/TaskTable';
 import QuickAddBox from '../components/tasks/QuickAddBox';
-import { ConfirmDialog } from '../components/common';
+import { ConfirmDialog, FilterBar } from '../components/common';
 import { useTaskStore } from '../store';
 import { useFilteredTasks } from '../store/taskStore';
 import { useUserStore } from '../store/userStore';
@@ -36,9 +36,25 @@ function getErrorMessage(error: unknown, fallback: string): string {
 }
 export default function TasksPage() {
   // Use API actions from the store
-  const { createTask, saveTask, deleteTask, completeTask, uncompleteTask, undoTask, isLoading } = useTaskStore();
+  const {
+    createTask,
+    saveTask,
+    deleteTask,
+    completeTask,
+    uncompleteTask,
+    undoTask,
+    isLoading,
+    tasks: allTasks,
+    filters,
+    setFilters,
+    resetFilters,
+  } = useTaskStore();
   const { fetchStats } = useUserStore();
   const filteredTasks = useFilteredTasks();
+
+  // Get unique projects and tags from tasks for filter dropdowns
+  const projects = [...new Set(allTasks.map((t) => t.project).filter(Boolean))] as string[];
+  const tags = [...new Set(allTasks.flatMap((t) => t.tags))];
 
   const [viewMode, setViewMode] = useState<'list' | 'table'>(() => {
     const saved = localStorage.getItem('taskViewMode');
@@ -258,17 +274,39 @@ export default function TasksPage() {
           onCreateNew={handleCreateNew}
         />
       ) : (
-        <TaskTable
-          tasks={filteredTasks}
-          onEdit={handleEdit}
-          onDelete={handleDeleteClick}
-          onComplete={handleComplete}
-          selectedTasks={selectedTasks}
-          onSelectTask={handleSelectTask}
-          onSelectAll={handleSelectAll}
-          onBulkComplete={handleBulkComplete}
-          onBulkDelete={handleBulkDeleteClick}
-        />
+        <>
+          {/* Filter bar for table view */}
+          <FilterBar
+            search={filters.search || ''}
+            onSearchChange={(search) => setFilters({ search: search || undefined })}
+            status={filters.status}
+            onStatusChange={(status) => setFilters({ status })}
+            priorities={filters.priorities}
+            onPrioritiesChange={(priorities) => setFilters({ priorities })}
+            difficulties={filters.difficulties}
+            onDifficultiesChange={(difficulties) => setFilters({ difficulties })}
+            durations={filters.durations}
+            onDurationsChange={(durations) => setFilters({ durations })}
+            selectedProjects={filters.projects}
+            onProjectsChange={(projects) => setFilters({ projects })}
+            selectedTags={filters.tags}
+            onTagsChange={(tags) => setFilters({ tags })}
+            projects={projects}
+            tags={tags}
+            onReset={resetFilters}
+          />
+          <TaskTable
+            tasks={filteredTasks}
+            onEdit={handleEdit}
+            onDelete={handleDeleteClick}
+            onComplete={handleComplete}
+            selectedTasks={selectedTasks}
+            onSelectTask={handleSelectTask}
+            onSelectAll={handleSelectAll}
+            onBulkComplete={handleBulkComplete}
+            onBulkDelete={handleBulkDeleteClick}
+          />
+        </>
       )}
 
       {/* Task form dialog */}

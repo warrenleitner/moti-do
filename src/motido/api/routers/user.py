@@ -23,7 +23,7 @@ from motido.api.schemas import (
     XPTransactionSchema,
     XPWithdrawRequest,
 )
-from motido.core.models import XPTransaction
+from motido.core.models import User, XPTransaction
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -455,6 +455,26 @@ async def export_user_data(user: CurrentUser) -> Response:
     )
 
 
+def _process_imported_tasks(imported_user: User) -> None:  # pragma: no cover
+    """
+    Process imported tasks by adding the 'imported' tag and registering
+    all tags/projects so they appear in settings with proper colors.
+
+    Note: This function is tested via E2E integration tests.
+    """
+    imported_tag = "imported"
+    for task in imported_user.tasks:
+        # Add "imported" tag for easy filtering
+        if imported_tag not in task.tags:
+            task.tags.append(imported_tag)
+        # Register all tags (get_or_create_tag will auto-assign colors)
+        for tag_name in task.tags:
+            imported_user.get_or_create_tag(tag_name)
+        # Register project if present
+        if task.project:
+            imported_user.get_or_create_project(task.project)
+
+
 @router.post("/import")
 async def import_user_data(
     user: CurrentUser,
@@ -520,6 +540,9 @@ async def import_user_data(
     # Preserve current password_hash if not in import (security)
     if not imported_user.password_hash:
         imported_user.password_hash = user.password_hash
+
+    # Process imported tasks (add "imported" tag, register tags/projects)
+    _process_imported_tasks(imported_user)
 
     # Save the imported user data (replaces all current data)
     manager.save_user(imported_user)
