@@ -7,6 +7,7 @@ export { default as PriorityChip } from './PriorityChip';
 export { default as DifficultyChip } from './DifficultyChip';
 export { default as DurationChip } from './DurationChip';
 export { default as TagChip } from './TagChip';
+export { default as ProjectChip } from './ProjectChip';
 export { default as SearchInput } from './SearchInput';
 export { default as FilterBar } from './FilterBar';
 export { default as XPDisplay } from './XPDisplay';

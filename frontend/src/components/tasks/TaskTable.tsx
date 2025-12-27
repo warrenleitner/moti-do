@@ -30,6 +30,7 @@ import { useTaskStore } from '../../store/taskStore';
 import PriorityChip from '../common/PriorityChip';
 import DifficultyChip from '../common/DifficultyChip';
 import DurationChip from '../common/DurationChip';
+import ProjectChip from '../common/ProjectChip';
 import { format } from 'date-fns';
 import ColumnConfigDialog from './ColumnConfigDialog';
 
@@ -277,7 +278,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
         return format(new Date(task.creation_date), 'MMM d, yyyy');
 
       case 'project':
-        return task.project ? <Chip label={task.project} size="small" variant="outlined" /> : '-';
+        return task.project ? <ProjectChip project={task.project} /> : '-';
 
       case 'tags':
         return task.tags.length > 0 ? (
