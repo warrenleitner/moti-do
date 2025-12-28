@@ -26,7 +26,6 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 import type { Task } from '../../types/models';
-import { useTaskStore } from '../../store/taskStore';
 import PriorityChip from '../common/PriorityChip';
 import DifficultyChip from '../common/DifficultyChip';
 import DurationChip from '../common/DurationChip';
@@ -108,9 +107,6 @@ const TaskTable: React.FC<TaskTableProps> = ({
   onBulkComplete,
   onBulkDelete,
 }) => {
-  const completeTask = useTaskStore((state) => state.completeTask);
-  const uncompleteTask = useTaskStore((state) => state.uncompleteTask);
-
   // Load saved column config from localStorage
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     const saved = localStorage.getItem('taskTableColumns');
@@ -330,14 +326,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
             <Tooltip title={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}>
               <IconButton
                 size="small"
-                onClick={() => {
-                  if (task.is_complete) {
-                    uncompleteTask(task.id);
-                  } else {
-                    completeTask(task.id);
-                  }
-                  onComplete(task.id);
-                }}
+                onClick={() => onComplete(task.id)}
               >
                 {task.is_complete ? (
                   <RadioButtonUncheckedIcon fontSize="small" />
