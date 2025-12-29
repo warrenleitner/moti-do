@@ -160,7 +160,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <MenuIcon />
           </IconButton>
           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-            <img src="/logo-wordmark.png" alt="Motodo" style={{ height: 128, objectFit: 'contain' }} />
+            <img src="/logo-wordmark.png" alt="Motodo" style={{ height: 64, objectFit: 'contain' }} />
           </Box>
         </Toolbar>
       </AppBar>

@@ -22,7 +22,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { Add, Delete, InfoOutlined } from '@mui/icons-material';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import type { Task, Subtask } from '../../types';
@@ -286,19 +286,19 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
 
             {/* Dates row */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <DateTimePicker
-                label="Due Date"
-                value={formData.due_date ? new Date(formData.due_date) : null}
+              <DatePicker
+                label="Start Date"
+                value={formData.start_date ? new Date(formData.start_date.includes('T') ? formData.start_date : formData.start_date + 'T00:00:00') : null}
                 onChange={(date) =>
-                  handleChange('due_date', date ? date.toISOString() : undefined)
+                  handleChange('start_date', date ? date.toISOString().split('T')[0] : undefined)
                 }
                 slotProps={{ textField: { fullWidth: true } }}
               />
-              <DateTimePicker
-                label="Start Date"
-                value={formData.start_date ? new Date(formData.start_date) : null}
+              <DatePicker
+                label="Due Date"
+                value={formData.due_date ? new Date(formData.due_date.includes('T') ? formData.due_date : formData.due_date + 'T00:00:00') : null}
                 onChange={(date) =>
-                  handleChange('start_date', date ? date.toISOString() : undefined)
+                  handleChange('due_date', date ? date.toISOString().split('T')[0] : undefined)
                 }
                 slotProps={{ textField: { fullWidth: true } }}
               />

@@ -251,6 +251,19 @@ async def get_task(
     return task_to_response(task, all_tasks, config, effective_date)
 
 
+def _serialize_value(value: Any) -> Any:
+    """Convert a value to a JSON-serializable format."""
+    if value is None:
+        return None
+    if hasattr(value, "value"):
+        # Enum values
+        return value.value
+    if isinstance(value, datetime):
+        # datetime objects -> ISO string
+        return value.isoformat()
+    return value
+
+
 def record_history(
     task: Task,
     field: str,
@@ -258,9 +271,9 @@ def record_history(
     new_value: Any,
 ) -> None:
     """Record a change in the task's history for undo support."""
-    # Convert enum values to strings for comparison and storage
-    old_str = old_value.value if hasattr(old_value, "value") else old_value
-    new_str = new_value.value if hasattr(new_value, "value") else new_value
+    # Convert values to JSON-serializable format
+    old_str = _serialize_value(old_value)
+    new_str = _serialize_value(new_value)
 
     # Only record if value actually changed
     if old_str != new_str:

@@ -24,6 +24,10 @@ brew install python@3.11 node@18 poetry
 
 # Install Docker Desktop (optional, for E2E tests)
 brew install --cask docker
+
+# OR use Colima (lightweight Docker alternative)
+brew install colima docker
+colima start
 ```
 
 **Other platforms:**

@@ -184,12 +184,18 @@ const TaskTable: React.FC<TaskTableProps> = ({
             comparison = durationOrder[a.duration] - durationOrder[b.duration];
             break;
           }
-          case 'due_date':
+          case 'due_date': {
             if (!a.due_date && !b.due_date) comparison = 0;
             else if (!a.due_date) comparison = 1;
             else if (!b.due_date) comparison = -1;
-            else comparison = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+            else {
+              // Handle both date-only (YYYY-MM-DD) and datetime formats
+              const aDate = a.due_date.includes('T') ? a.due_date : a.due_date + 'T00:00:00';
+              const bDate = b.due_date.includes('T') ? b.due_date : b.due_date + 'T00:00:00';
+              comparison = new Date(aDate).getTime() - new Date(bDate).getTime();
+            }
             break;
+          }
           case 'creation_date':
             comparison = new Date(a.creation_date).getTime() - new Date(b.creation_date).getTime();
             break;
@@ -261,14 +267,20 @@ const TaskTable: React.FC<TaskTableProps> = ({
       case 'duration':
         return <DurationChip duration={task.duration} />;
 
-      case 'due_date':
-        return task.due_date ? (
-          <span style={{ color: new Date(task.due_date) < new Date() ? '#f44336' : 'inherit' }}>
-            {format(new Date(task.due_date), 'MMM d, yyyy')}
+      case 'due_date': {
+        if (!task.due_date) return '-';
+        // Handle both date-only (YYYY-MM-DD) and datetime formats
+        const dueDateStr = task.due_date.includes('T')
+          ? task.due_date
+          : task.due_date + 'T23:59:59';
+        const dueDate = new Date(dueDateStr);
+        const isOverdue = dueDate < new Date();
+        return (
+          <span style={{ color: isOverdue ? '#f44336' : 'inherit' }}>
+            {format(dueDate, 'MMM d, yyyy')}
           </span>
-        ) : (
-          '-'
         );
+      }
 
       case 'creation_date':
         return format(new Date(task.creation_date), 'MMM d, yyyy');
