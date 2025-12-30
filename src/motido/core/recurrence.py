@@ -53,7 +53,9 @@ def calculate_next_occurrence(
 
 
 def create_next_habit_instance(
-    task: Task, completion_date: Optional[datetime] = None
+    task: Task,
+    completion_date: Optional[datetime] = None,
+    current_date: Optional[datetime] = None,
 ) -> Optional[Task]:
     """
     Creates the next occurrence of a habit task.
@@ -61,6 +63,9 @@ def create_next_habit_instance(
     Args:
         task: The completed habit task to generate next instance from.
         completion_date: When the task was completed. Defaults to now.
+        current_date: The current real date for minimum start date validation.
+            Defaults to now. For FROM_DUE_DATE recurrence, ensures the new
+            instance's start_date (or due_date if no start_date) is not in the past.
 
     Returns:
         A new Task instance for the next occurrence, or None if not applicable.
@@ -71,14 +76,21 @@ def create_next_habit_instance(
     if completion_date is None:
         completion_date = datetime.now()
 
+    if current_date is None:
+        current_date = datetime.now()
+
     next_due = calculate_next_occurrence(task, completion_date)
     if not next_due:
         return None
 
     # Calculate start_date based on habit_start_delta if set
-    start_date = None
-    if task.habit_start_delta is not None and task.habit_start_delta > 0:
-        start_date = next_due - timedelta(days=task.habit_start_delta)
+    start_date = _calculate_start_date(next_due, task.habit_start_delta)
+
+    # For FROM_DUE_DATE recurrence, ensure start_date (or due_date) is not in the past
+    if task.recurrence_type == RecurrenceType.FROM_DUE_DATE:
+        next_due, start_date = _advance_to_future_start(
+            task, next_due, start_date, current_date
+        )
 
     # Calculate subtasks based on subtask_recurrence_mode
     new_subtasks = _calculate_recurring_subtasks(task)
@@ -112,6 +124,75 @@ def create_next_habit_instance(
     )
 
     return new_task
+
+
+def _calculate_start_date(
+    due_date: datetime, habit_start_delta: Optional[int]
+) -> Optional[datetime]:
+    """
+    Calculate start_date based on due_date and habit_start_delta.
+
+    Args:
+        due_date: The due date for the task.
+        habit_start_delta: Days before due date when task should start.
+
+    Returns:
+        The calculated start_date, or None if no delta is set.
+    """
+    if habit_start_delta is not None and habit_start_delta > 0:
+        return due_date - timedelta(days=habit_start_delta)
+    return None
+
+
+def _advance_to_future_start(
+    task: Task,
+    next_due: datetime,
+    start_date: Optional[datetime],
+    current_date: datetime,
+) -> tuple[datetime, Optional[datetime]]:
+    """
+    Advance due_date/start_date forward until start_date is not in the past.
+
+    For FROM_DUE_DATE recurrence, if the calculated start_date (or due_date
+    if no start_date) is before current_date, keep advancing by the recurrence
+    interval until it's in the future.
+
+    Args:
+        task: The task with recurrence rule.
+        next_due: The initially calculated next due date.
+        start_date: The initially calculated start date (may be None).
+        current_date: The current real date to compare against.
+
+    Returns:
+        Tuple of (adjusted_due_date, adjusted_start_date).
+    """
+    # Determine which date to use for comparison
+    effective_start = start_date if start_date is not None else next_due
+
+    # If already in the future, no adjustment needed
+    if effective_start >= current_date:
+        return next_due, start_date
+
+    # Need to advance - parse the recurrence rule
+    try:
+        rule_str = _normalize_rule(task.recurrence_rule or "")
+        rule = rrulestr(rule_str, dtstart=next_due)
+
+        # Keep advancing until effective_start is in the future
+        while effective_start < current_date:
+            next_occurrence = rule.after(next_due)
+            if next_occurrence is None:
+                # No more occurrences - return what we have
+                break
+            next_due = next_occurrence
+            start_date = _calculate_start_date(next_due, task.habit_start_delta)
+            effective_start = start_date if start_date is not None else next_due
+
+    except (ValueError, TypeError):
+        # If rule parsing fails, return original values
+        pass
+
+    return next_due, start_date
 
 
 def _calculate_recurring_subtasks(task: Task) -> list:
