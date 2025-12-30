@@ -5,6 +5,7 @@ import type { Task } from '../../types';
 import { Priority } from '../../types';
 import KanbanColumn, { type KanbanStatus } from './KanbanColumn';
 import { useTaskStore } from '../../store';
+import { useDefinedProjects } from '../../store/userStore';
 import { FilterBar } from '../common';
 
 interface KanbanBoardProps {
@@ -41,13 +42,10 @@ function getTaskStatus(task: Task): KanbanStatus {
 /* v8 ignore start */
 export default function KanbanBoard({ tasks, onUpdateTask, onEditTask }: KanbanBoardProps) {
   const { filters, setFilters, resetFilters } = useTaskStore();
+  const definedProjects = useDefinedProjects();
 
-  // Get unique projects and tags from all tasks
-  const projects = useMemo(() => {
-    const set = new Set<string>();
-    tasks.forEach((t) => t.project && set.add(t.project));
-    return Array.from(set);
-  }, [tasks]);
+  // Get projects from defined projects, and tags from tasks
+  const projects = definedProjects.map((p) => p.name);
 
   const tags = useMemo(() => {
     const set = new Set<string>();

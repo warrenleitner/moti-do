@@ -23,11 +23,13 @@ import {
 } from '../../types';
 import SearchInput from './SearchInput';
 
+type StatusFilter = 'all' | 'active' | 'completed' | 'blocked' | 'future';
+
 interface FilterBarProps {
   search: string;
   onSearchChange: (value: string) => void;
-  status: 'all' | 'active' | 'completed';
-  onStatusChange: (status: 'all' | 'active' | 'completed') => void;
+  status: StatusFilter;
+  onStatusChange: (status: StatusFilter) => void;
   priorities: Priority[];
   onPrioritiesChange: (priorities: Priority[]) => void;
   difficulties: Difficulty[];
@@ -173,9 +175,11 @@ export default function FilterBar({
           <Select
             value={status}
             label="Status"
-            onChange={(e) => onStatusChange(e.target.value as 'all' | 'active' | 'completed')}
+            onChange={(e) => onStatusChange(e.target.value as StatusFilter)}
           >
             <MenuItem value="active">Active</MenuItem>
+            <MenuItem value="blocked">Blocked</MenuItem>
+            <MenuItem value="future">Future</MenuItem>
             <MenuItem value="completed">Completed</MenuItem>
             <MenuItem value="all">All</MenuItem>
           </Select>

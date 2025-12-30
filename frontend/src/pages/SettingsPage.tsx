@@ -290,17 +290,18 @@ export default function SettingsPage() {
     }
   };
 
-  const handleAdvanceDate = async () => {
-    if (!systemStatus?.pending_days || systemStatus.pending_days <= 0) return;
+  const handleAdvanceDate = async (days?: number) => {
+    const daysToProcess = days ?? systemStatus?.pending_days ?? 0;
+    if (daysToProcess <= 0) return;
 
     setAdvancingDate(true);
     setMessage(null);
 
     try {
-      await advanceDate({ days: systemStatus.pending_days });
+      await advanceDate({ days: daysToProcess });
       setMessage({
         type: 'success',
-        text: `Successfully processed ${systemStatus.pending_days} day${systemStatus.pending_days > 1 ? 's' : ''}! Penalties have been applied.`,
+        text: `Successfully processed ${daysToProcess} day${daysToProcess > 1 ? 's' : ''}! Penalties have been applied.`,
       });
       // Refetch XP history to show new penalty transactions
       const transactions = await userApi.getXPLog(10);
@@ -1332,15 +1333,28 @@ export default function SettingsPage() {
           </Box>
 
           {systemStatus?.pending_days && systemStatus.pending_days > 0 ? (
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleAdvanceDate}
-              disabled={advancingDate || loading}
-              startIcon={advancingDate ? <CircularProgress size={20} color="inherit" /> : <CalendarIcon />}
-            >
-              Process {systemStatus.pending_days} Pending Day{systemStatus.pending_days > 1 ? 's' : ''}
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => handleAdvanceDate(1)}
+                disabled={advancingDate || loading}
+                startIcon={advancingDate ? <CircularProgress size={20} color="inherit" /> : <CalendarIcon />}
+              >
+                Process Next Day
+              </Button>
+              {systemStatus.pending_days > 1 && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => handleAdvanceDate()}
+                  disabled={advancingDate || loading}
+                  startIcon={advancingDate ? <CircularProgress size={20} color="inherit" /> : <CalendarIcon />}
+                >
+                  Process All {systemStatus.pending_days} Days
+                </Button>
+              )}
+            </Box>
           ) : (
             <Alert severity="success" sx={{ mt: 1 }}>
               All caught up! No pending days to process.

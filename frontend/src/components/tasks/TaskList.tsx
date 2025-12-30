@@ -21,6 +21,7 @@ import { EmptyState, FilterBar } from '../common';
 import TaskCard from './TaskCard';
 import SubtaskCard from './SubtaskCard';
 import { useTaskStore, useFilteredTasks } from '../../store';
+import { useSystemStatus, useDefinedProjects } from '../../store/userStore';
 import type { SubtaskViewMode } from '../../store/taskStore';
 
 interface TaskListProps {
@@ -52,10 +53,12 @@ export default function TaskList({
     subtaskViewMode,
     setSubtaskViewMode,
   } = useTaskStore();
-  const filteredTasks = useFilteredTasks();
+  const systemStatus = useSystemStatus();
+  const filteredTasks = useFilteredTasks(systemStatus?.last_processed_date);
+  const definedProjects = useDefinedProjects();
 
-  // Get unique projects and tags from tasks
-  const projects = [...new Set(allTasks.map((t) => t.project).filter(Boolean))] as string[];
+  // Get projects from defined projects, and tags from tasks
+  const projects = definedProjects.map((p) => p.name);
   const tags = [...new Set(allTasks.flatMap((t) => t.tags))];
 
   // Check if task is blocked

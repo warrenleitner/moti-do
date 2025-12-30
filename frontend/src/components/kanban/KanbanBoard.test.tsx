@@ -4,6 +4,18 @@ import KanbanBoard from './KanbanBoard';
 import type { Task } from '../../types';
 import { Priority } from '../../types';
 
+// Mock useDefinedProjects to return test projects
+vi.mock('../../store/userStore', async () => {
+  const actual = await vi.importActual('../../store/userStore');
+  return {
+    ...actual,
+    useDefinedProjects: () => [
+      { name: 'Work', color: '#2196f3' },
+      { name: 'Personal', color: '#4caf50' },
+    ],
+  };
+});
+
 // Mock @hello-pangea/dnd
 vi.mock('@hello-pangea/dnd', () => ({
   DragDropContext: ({ children, onDragEnd }: { children: React.ReactNode; onDragEnd: (result: unknown) => void }) => {

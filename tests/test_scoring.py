@@ -710,7 +710,12 @@ def test_apply_penalties_basic(
 
     # Verify add_xp was called once for the incomplete task created yesterday
     # Penalty should be score (20) / (1.0 * 1.0) = 20
-    mock_add_xp.assert_called_once_with(mock_user, mock_manager, -20)
+    mock_add_xp.assert_called_once()
+    call_args = mock_add_xp.call_args
+    assert call_args[0] == (mock_user, mock_manager, -20)
+    assert call_args[1]["source"] == "penalty"
+    assert call_args[1]["task_id"] == task1.id
+    assert "Penalty for incomplete" in call_args[1]["description"]
 
     # Verify set_last_penalty_check_date was called with today's date
     mock_set.assert_called_once_with(today)
@@ -759,7 +764,11 @@ def test_apply_penalties_multiple_days(
 
     # Verify add_xp was called 3 times (-15 points each day for 3 days)
     assert mock_add_xp.call_count == 3
-    mock_add_xp.assert_called_with(mock_user, mock_manager, -15)
+    # Check the last call has the expected args
+    call_args = mock_add_xp.call_args
+    assert call_args[0] == (mock_user, mock_manager, -15)
+    assert call_args[1]["source"] == "penalty"
+    assert call_args[1]["task_id"] == task.id
 
     # Verify set_last_penalty_check_date was called with today's date
     mock_set.assert_called_once_with(today)

@@ -1006,7 +1006,14 @@ def apply_penalties(
                 if current_score > 0:
                     penalty = int(current_score / (difficulty_mult * duration_mult))
                     if penalty > 0:
-                        add_xp(user, manager, -penalty)
+                        add_xp(
+                            user,
+                            manager,
+                            -penalty,
+                            source="penalty",
+                            task_id=task.id,
+                            description=f"Penalty for incomplete: {task.title}",
+                        )
 
         # Move to next day
         current_date += timedelta(days=1)

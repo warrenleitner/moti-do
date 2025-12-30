@@ -9,14 +9,13 @@ import { Priority, Difficulty, Duration } from '../types';
 import { taskApi } from '../services/api';
 
 interface TaskFilters {
-  status: 'all' | 'active' | 'completed';
+  status: 'all' | 'active' | 'completed' | 'blocked' | 'future';
   priorities: Priority[];
   difficulties: Difficulty[];
   durations: Duration[];
   projects: string[];
   tags: string[];
   search?: string;
-  includeBlocked: boolean;
 }
 
 export type SubtaskViewMode = 'hidden' | 'inline' | 'top-level';
@@ -72,7 +71,6 @@ const defaultFilters: TaskFilters = {
   durations: [],
   projects: [],
   tags: [],
-  includeBlocked: false,
 };
 
 const defaultSort: TaskSort = {
@@ -306,40 +304,43 @@ export const useTaskStore = create<TaskState>()(
       }),
       {
         name: 'motido-task-store',
-        version: 2, // Increment version to trigger migration
+        version: 3, // Merged startDateFilter into status, removed includeBlocked
         partialize: (state) => ({
           filters: state.filters,
           sort: state.sort,
           subtaskViewMode: state.subtaskViewMode,
         }),
-        // Migrate old single-value filters to new array-based filters
+        // Migrate old filter structure to new unified status
         migrate: (persistedState, version) => {
-          if (version < 2) {
-            // Old state had single values, new state has arrays
-            const state = persistedState as { filters?: Record<string, unknown> };
-            if (state.filters) {
-              // Reset to default filters since structure changed
-              state.filters = { ...defaultFilters };
-            }
+          const state = persistedState as { filters?: Record<string, unknown> };
+          if (version < 3 && state.filters) {
+            // Reset to default filters since structure changed (merged availability into status)
+            state.filters = { ...defaultFilters };
           }
           return persistedState as TaskState;
         },
         // Merge persisted state with defaults to ensure all required fields exist
         merge: (persistedState, currentState) => {
           const persisted = persistedState as Partial<TaskState>;
+          // Validate that status is one of the valid options
+          const validStatuses = ['all', 'active', 'completed', 'blocked', 'future'];
+          const persistedStatus = persisted.filters?.status;
+          const status = validStatuses.includes(persistedStatus as string)
+            ? persistedStatus
+            : defaultFilters.status;
           return {
             ...currentState,
             ...persisted,
-            // Ensure filters has all required array fields with defaults
+            // Ensure filters has all required fields with defaults
             filters: {
               ...defaultFilters,
-              ...(persisted.filters || {}),
-              // Explicitly ensure arrays exist (in case of partial migration)
+              status: status as TaskFilters['status'],
               priorities: persisted.filters?.priorities ?? defaultFilters.priorities,
               difficulties: persisted.filters?.difficulties ?? defaultFilters.difficulties,
               durations: persisted.filters?.durations ?? defaultFilters.durations,
               projects: persisted.filters?.projects ?? defaultFilters.projects,
               tags: persisted.filters?.tags ?? defaultFilters.tags,
+              search: persisted.filters?.search,
             },
           };
         },
@@ -350,14 +351,51 @@ export const useTaskStore = create<TaskState>()(
 );
 
 // Selector hooks for computed values
-export const useFilteredTasks = () => {
+export const useFilteredTasks = (lastProcessedDate?: string) => {
   const { tasks, filters, sort } = useTaskStore();
+
+  // Helper: check if a task is blocked (has incomplete dependencies)
+  const isBlocked = (task: Task): boolean => {
+    if (task.dependencies.length === 0) return false;
+    return task.dependencies.some((depId) => {
+      const dep = tasks.find((t) => t.id === depId);
+      return dep && !dep.is_complete;
+    });
+  };
+
+  // Helper: check if a task is in the future (start_date > last_processed_date)
+  const isFuture = (task: Task): boolean => {
+    if (!lastProcessedDate || !task.start_date) return false;
+    const processedDate = new Date(lastProcessedDate + 'T23:59:59');
+    const taskStartDate = new Date(
+      task.start_date.includes('T') ? task.start_date : task.start_date + 'T00:00:00'
+    );
+    return taskStartDate > processedDate;
+  };
 
   // Apply filters
   const filtered = tasks.filter((task) => {
-    // Status filter
-    if (filters.status === 'active' && task.is_complete) return false;
-    if (filters.status === 'completed' && !task.is_complete) return false;
+    // Status filter (unified: active, completed, blocked, future, all)
+    switch (filters.status) {
+      case 'completed':
+        if (!task.is_complete) return false;
+        break;
+      case 'blocked':
+        // Show only blocked tasks (not completed)
+        if (task.is_complete || !isBlocked(task)) return false;
+        break;
+      case 'future':
+        // Show only future tasks (not completed)
+        if (task.is_complete || !isFuture(task)) return false;
+        break;
+      case 'active':
+        // Show tasks that are not completed, not blocked, and not future
+        if (task.is_complete) return false;
+        if (isBlocked(task)) return false;
+        if (isFuture(task)) return false;
+        break;
+      // 'all' shows everything
+    }
 
     // Priority filter (multi-select)
     if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) {
@@ -393,15 +431,6 @@ export const useFilteredTasks = () => {
       ) {
         return false;
       }
-    }
-
-    // Blocked filter
-    if (!filters.includeBlocked && task.dependencies.length > 0) {
-      const hasIncompleteDepencies = task.dependencies.some((depId) => {
-        const dep = tasks.find((t) => t.id === depId);
-        return dep && !dep.is_complete;
-      });
-      if (hasIncompleteDepencies) return false;
     }
 
     return true;

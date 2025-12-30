@@ -79,6 +79,7 @@ export default function KanbanPage() {
           setFormOpen(false);
           setEditingTask(null);
         }}
+        allTasks={tasks}
       />
 
       {/* Snackbar for notifications */}

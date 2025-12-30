@@ -80,6 +80,7 @@ interface TaskFormProps {
   task?: Task | null;
   onSave: (task: Partial<Task>) => void;
   onClose: () => void;
+  allTasks?: Task[];  // For dependency selection
 }
 
 const defaultTask: Partial<Task> = {
@@ -95,7 +96,7 @@ const defaultTask: Partial<Task> = {
 
 // UI component - tested via integration tests
 /* v8 ignore start */
-export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps) {
+export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }: TaskFormProps) {
   // Initialize form data based on task prop
   // Note: Parent must use key={task?.id ?? 'new'} to reset state when task changes
   const getInitialFormData = () => (task ? { ...task } : { ...defaultTask });
@@ -319,6 +320,36 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
                 />
               )}
             />
+
+            {/* Dependencies */}
+            {allTasks.length > 0 && (
+              <Autocomplete
+                multiple
+                options={allTasks.filter(t => t.id !== task?.id && !t.is_complete)}
+                getOptionLabel={(option) => `${option.icon || ''} ${option.title}`.trim()}
+                value={allTasks.filter(t => formData.dependencies?.includes(t.id))}
+                onChange={(_e, newValue) => handleChange('dependencies', newValue.map(t => t.id))}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Dependencies (blocked by)"
+                    placeholder="Select tasks that must be completed first"
+                    helperText="This task will be blocked until all dependencies are complete"
+                  />
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip
+                      {...getTagProps({ index })}
+                      key={option.id}
+                      label={`${option.icon || ''} ${option.title}`.trim()}
+                      size="small"
+                    />
+                  ))
+                }
+              />
+            )}
 
             {/* Recurring toggle - enables recurrence for any task */}
             <FormControlLabel

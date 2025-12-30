@@ -8,7 +8,7 @@ import QuickAddBox from '../components/tasks/QuickAddBox';
 import { ConfirmDialog, FilterBar } from '../components/common';
 import { useTaskStore } from '../store';
 import { useFilteredTasks } from '../store/taskStore';
-import { useUserStore } from '../store/userStore';
+import { useUserStore, useSystemStatus, useDefinedProjects } from '../store/userStore';
 import type { Task } from '../types';
 
 // UI orchestration component - tested via integration tests
@@ -50,10 +50,12 @@ export default function TasksPage() {
     resetFilters,
   } = useTaskStore();
   const { fetchStats } = useUserStore();
-  const filteredTasks = useFilteredTasks();
+  const systemStatus = useSystemStatus();
+  const filteredTasks = useFilteredTasks(systemStatus?.last_processed_date);
+  const definedProjects = useDefinedProjects();
 
-  // Get unique projects and tags from tasks for filter dropdowns
-  const projects = [...new Set(allTasks.map((t) => t.project).filter(Boolean))] as string[];
+  // Get projects from defined projects, and tags from tasks
+  const projects = definedProjects.map((p) => p.name);
   const tags = [...new Set(allTasks.flatMap((t) => t.tags))];
 
   const [viewMode, setViewMode] = useState<'list' | 'table'>(() => {
@@ -319,6 +321,7 @@ export default function TasksPage() {
           setFormOpen(false);
           setEditingTask(null);
         }}
+        allTasks={allTasks}
       />
 
       {/* Delete confirmation dialog */}

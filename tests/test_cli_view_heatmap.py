@@ -10,7 +10,7 @@ import pytest
 from rich.console import Console
 
 from motido.cli.main import handle_view
-from motido.cli.views import _render_heatmap_row, render_heatmap
+from motido.cli.views import _build_week_labels, _render_heatmap_row, render_heatmap
 from motido.core.models import Task, User
 from motido.data.abstraction import DataManager
 
@@ -223,3 +223,49 @@ def test_render_heatmap_row_future_dates() -> None:
     row_str = str(row)
     assert "Sun" in row_str
     assert "·" in row_str  # Future date shows as dim dot
+
+
+# --- _build_week_labels function tests ---
+
+
+def test_build_week_labels_shows_month_at_start() -> None:
+    """Test _build_week_labels shows month name when week starts in first 7 days."""
+    # Start from Jan 1, 2025 (a Wednesday)
+    # Week starting Monday Dec 30, 2024 has day <= 7, so should show "Dec"
+    # Week starting Monday Jan 6, 2025 has day <= 7, so should show "Jan"
+    start_date = date(2025, 1, 1)
+    labels = _build_week_labels(start_date, weeks=4)
+
+    # Should have 4 labels
+    assert len(labels) == 4
+    # At least one label should be a month abbreviation (not spaces)
+    month_labels = [lbl for lbl in labels if lbl.strip()]
+    assert len(month_labels) > 0
+    # Check that month abbreviations are valid
+    valid_months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+    ]
+    for lbl in month_labels:
+        assert lbl in valid_months
+
+
+def test_build_week_labels_empty_for_mid_month() -> None:
+    """Test _build_week_labels shows spaces when week starts mid-month."""
+    # Start from Jan 15, 2025 - the week starting here has day > 7
+    start_date = date(2025, 1, 15)
+    labels = _build_week_labels(start_date, weeks=1)
+
+    assert len(labels) == 1
+    # Week starting around Jan 13 has day > 7, so should be spaces
+    assert labels[0] == "   "
