@@ -152,7 +152,18 @@ export const handlers = [
     if (task.is_complete) {
       return HttpResponse.json({ detail: 'Task is already complete' }, { status: 400 });
     }
-    return HttpResponse.json({ ...task, is_complete: true });
+    // Return TaskCompletionResponse format
+    const completedTask = { ...task, is_complete: true };
+    return HttpResponse.json({
+      task: completedTask,
+      xp_earned: task.score || 50,
+      next_instance: task.is_habit && task.recurrence_rule ? {
+        ...completedTask,
+        id: `${task.id}-next`,
+        is_complete: false,
+        due_date: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+      } : null,
+    });
   }),
 
   http.post(`${API_BASE}/tasks/:taskId/uncomplete`, ({ params }) => {

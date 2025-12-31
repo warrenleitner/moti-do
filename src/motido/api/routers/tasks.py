@@ -15,6 +15,7 @@ from motido.api.schemas import (
     HistoryEntrySchema,
     SubtaskCreate,
     SubtaskSchema,
+    TaskCompletionResponse,
     TaskCreate,
     TaskResponse,
     TaskUpdate,
@@ -251,6 +252,19 @@ async def get_task(
     return task_to_response(task, all_tasks, config, effective_date)
 
 
+def _serialize_value(value: Any) -> Any:
+    """Convert a value to a JSON-serializable format."""
+    if value is None:
+        return None
+    if hasattr(value, "value"):
+        # Enum values
+        return value.value
+    if isinstance(value, datetime):
+        # datetime objects -> ISO string
+        return value.isoformat()
+    return value
+
+
 def record_history(
     task: Task,
     field: str,
@@ -258,9 +272,9 @@ def record_history(
     new_value: Any,
 ) -> None:
     """Record a change in the task's history for undo support."""
-    # Convert enum values to strings for comparison and storage
-    old_str = old_value.value if hasattr(old_value, "value") else old_value
-    new_str = new_value.value if hasattr(new_value, "value") else new_value
+    # Convert values to JSON-serializable format
+    old_str = _serialize_value(old_value)
+    new_str = _serialize_value(new_value)
 
     # Only record if value actually changed
     if old_str != new_str:
@@ -478,14 +492,16 @@ async def undo_task_change(
     return task_to_response(task, all_tasks, config, effective_date)
 
 
-@router.post("/{task_id}/complete", response_model=TaskResponse)
+@router.post("/{task_id}/complete", response_model=TaskCompletionResponse)
 async def complete_task(
     task_id: str,
     user: CurrentUser,
     manager: ManagerDep,
-) -> TaskResponse:
+) -> TaskCompletionResponse:
     """
     Mark a task as complete and award XP.
+
+    For recurring habit tasks, also creates the next instance and returns it.
     """
     task = user.find_task_by_id(task_id)
     if not task:  # pragma: no cover
@@ -533,8 +549,28 @@ async def complete_task(
     # Check for badges
     check_badges(user, manager, config)
 
+    # Create next instance for recurring habits
+    next_instance = None
+    next_instance_response = None
+    if task.is_habit and task.recurrence_rule:
+        from motido.core.recurrence import create_next_habit_instance
+
+        next_instance = create_next_habit_instance(task, datetime.now())
+        if next_instance:
+            user.add_task(next_instance)
+            # Update all_tasks to include the new instance for scoring
+            all_tasks[next_instance.id] = next_instance
+            next_instance_response = task_to_response(
+                next_instance, all_tasks, config, effective_date
+            )
+
     manager.save_user(user)
-    return task_to_response(task, all_tasks, config, effective_date)
+
+    return TaskCompletionResponse(
+        task=task_to_response(task, all_tasks, config, effective_date),
+        xp_earned=xp_earned,
+        next_instance=next_instance_response,
+    )
 
 
 @router.post("/{task_id}/uncomplete", response_model=TaskResponse)

@@ -20,6 +20,7 @@ from motido.core.models import (
     Tag,
     Task,
     User,
+    XPTransaction,
 )
 from motido.core.utils import (
     parse_difficulty_safely,
@@ -154,6 +155,31 @@ class PostgresDataManager(DataManager):
                 """
                 )
 
+                # XP Transactions table
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS xp_transactions (
+                        id TEXT PRIMARY KEY,
+                        user_username TEXT NOT NULL REFERENCES users(username)
+                            ON DELETE CASCADE ON UPDATE CASCADE,
+                        amount INTEGER NOT NULL,
+                        source TEXT NOT NULL,
+                        timestamp TIMESTAMP NOT NULL,
+                        task_id TEXT,
+                        description TEXT,
+                        game_date DATE
+                    )
+                """
+                )
+
+                # Create index on user_username for faster transaction queries
+                cursor.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_xp_transactions_user
+                    ON xp_transactions(user_username)
+                """
+                )
+
                 conn.commit()
         except psycopg2.Error as e:
             conn.rollback()
@@ -251,6 +277,19 @@ class PostgresDataManager(DataManager):
                     task_rows = cursor.fetchall()
                     tasks = [self._row_to_task(row) for row in task_rows]
 
+                    # Load XP transactions for the user
+                    cursor.execute(
+                        """
+                        SELECT * FROM xp_transactions WHERE user_username = %s
+                        ORDER BY timestamp DESC
+                        """,
+                        (username,),
+                    )
+                    transaction_rows = cursor.fetchall()
+                    xp_transactions = [
+                        self._row_to_xp_transaction(row) for row in transaction_rows
+                    ]
+
                     user = User(
                         username=username,
                         total_xp=total_xp,
@@ -260,6 +299,7 @@ class PostgresDataManager(DataManager):
                         vacation_mode=vacation_mode,
                         defined_tags=defined_tags,
                         defined_projects=defined_projects,
+                        xp_transactions=xp_transactions,
                     )
                     print(f"User '{username}' loaded with {len(tasks)} tasks.")
                     return user
@@ -302,6 +342,7 @@ class PostgresDataManager(DataManager):
         subtasks = row.get("subtasks", [])
         if isinstance(subtasks, str):
             subtasks = json.loads(subtasks)
+        subtasks = self._normalize_subtasks(subtasks)
 
         dependencies = row.get("dependencies", [])
         if isinstance(dependencies, str):
@@ -359,6 +400,45 @@ class PostgresDataManager(DataManager):
             return SubtaskRecurrenceMode(mode_str)
         except ValueError:
             return SubtaskRecurrenceMode.DEFAULT
+
+    @staticmethod
+    def _normalize_subtasks(subtasks: list) -> list:
+        """
+        Normalize subtasks to ensure they're in dict format.
+
+        Handles legacy format where subtasks were strings instead of dicts.
+        """
+        if not subtasks:
+            return []
+        normalized = []
+        for item in subtasks:
+            if isinstance(item, str):
+                # Legacy format: convert string to dict
+                normalized.append({"text": item, "complete": False})
+            elif isinstance(item, dict):
+                normalized.append(item)
+            # Skip any other types
+        return normalized
+
+    def _row_to_xp_transaction(self, row: dict) -> XPTransaction:
+        """Converts a database row to an XPTransaction object."""
+        timestamp = row.get("timestamp", datetime.now())
+        if isinstance(timestamp, str):
+            timestamp = datetime.fromisoformat(timestamp)
+
+        game_date = row.get("game_date")
+        if isinstance(game_date, str):
+            game_date = date.fromisoformat(game_date)
+
+        return XPTransaction(
+            id=row.get("id", ""),
+            amount=row.get("amount", 0),
+            source=row.get("source", "task_completion"),
+            timestamp=timestamp,
+            task_id=row.get("task_id"),
+            description=row.get("description", ""),
+            game_date=game_date,
+        )
 
     def save_user(self, user: User) -> None:
         """Saves the user and their tasks to the PostgreSQL database."""
@@ -470,6 +550,33 @@ class PostgresDataManager(DataManager):
                                 task.parent_habit_id,
                                 task.habit_start_delta,
                                 task.subtask_recurrence_mode.value,
+                            ),
+                        )
+
+                    # Delete existing XP transactions and insert new ones
+                    cursor.execute(
+                        "DELETE FROM xp_transactions WHERE user_username = %s",
+                        (user.username,),
+                    )
+
+                    # Insert XP transactions
+                    for trans in getattr(user, "xp_transactions", []):
+                        cursor.execute(
+                            """
+                            INSERT INTO xp_transactions (
+                                id, user_username, amount, source, timestamp,
+                                task_id, description, game_date
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            """,
+                            (
+                                trans.id,
+                                user.username,
+                                trans.amount,
+                                trans.source,
+                                trans.timestamp,
+                                trans.task_id,
+                                trans.description,
+                                trans.game_date,
                             ),
                         )
 

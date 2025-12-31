@@ -17,6 +17,8 @@ XPSource = Literal[
     "withdrawal",
     "habit_completion",
     "manual_adjustment",
+    "daily_earned",  # Aggregated daily earned XP
+    "daily_lost",  # Aggregated daily lost XP (penalties)
 ]
 
 # Default colors for tags and projects
@@ -189,6 +191,7 @@ class XPTransaction:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     task_id: str | None = None
     description: str = ""
+    game_date: date | None = None  # The game day this transaction belongs to
 
 
 @dataclass

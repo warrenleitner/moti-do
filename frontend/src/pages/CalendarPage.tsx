@@ -123,6 +123,7 @@ export default function CalendarPage() {
           setEditingTask(null);
           setNewTaskDate(null);
         }}
+        allTasks={tasks}
       />
 
       {/* Snackbar for notifications */}

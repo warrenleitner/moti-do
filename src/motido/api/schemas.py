@@ -105,6 +105,14 @@ class TaskResponse(TaskBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TaskCompletionResponse(BaseModel):
+    """Schema for task completion response with next instance info."""
+
+    task: TaskResponse
+    xp_earned: int
+    next_instance: TaskResponse | None = None
+
+
 # === Tag Schemas ===
 class TagBase(BaseModel):
     """Base schema for tag data."""
@@ -157,6 +165,7 @@ class XPTransactionSchema(BaseModel):
     timestamp: datetime
     task_id: str | None = None
     description: str = ""
+    game_date: date | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

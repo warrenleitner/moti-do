@@ -139,6 +139,7 @@ export default function HabitsPage() {
           setFormOpen(false);
           setEditingHabit(null);
         }}
+        allTasks={tasks}
       />
 
       {/* Confirm delete dialog */}

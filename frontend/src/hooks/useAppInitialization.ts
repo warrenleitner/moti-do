@@ -3,6 +3,7 @@
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTaskStore } from '../store/taskStore';
 import { useUserStore } from '../store/userStore';
 import { authApi } from '../services/api';
@@ -17,19 +18,23 @@ interface InitializationState {
 /**
  * Hook that initializes the app by fetching tasks and user data from the API.
  * Should be called once at the app root level.
+ * Re-initializes when auth state changes (e.g., after login).
  */
 export function useAppInitialization(): InitializationState {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const initializingRef = useRef(false);
+  const location = useLocation();
 
   const fetchTasks = useTaskStore((state) => state.fetchTasks);
   const initializeUser = useUserStore((state) => state.initializeUser);
 
-  const initialize = async () => {
+  const initialize = useCallback(async () => {
+    const isAuthenticated = authApi.isAuthenticated();
+
     // Don't initialize if not authenticated - let routing handle redirect to login
-    if (!authApi.isAuthenticated()) {
+    if (!isAuthenticated) {
       setIsInitialized(false);
       setIsLoading(false);
       return;
@@ -61,22 +66,26 @@ export function useAppInitialization(): InitializationState {
       setIsLoading(false);
       initializingRef.current = false;
     }
-  };
+  }, [fetchTasks, initializeUser]);
 
   useEffect(() => {
-    // Only initialize once - ref check tested via integration tests
-    /* v8 ignore next 3 */
-    if (!initializingRef.current) {
+    const isAuthenticated = authApi.isAuthenticated();
+
+    // Initialize if authenticated but not yet initialized
+    // This handles the case where user logs in and navigates to a protected route
+    if (isAuthenticated && !isInitialized && !initializingRef.current) {
       initialize();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Handle case where user is not authenticated
+    else if (!isAuthenticated && !isInitialized) {
+      setIsLoading(false);
+    }
+  }, [location.pathname, isInitialized, initialize]);
 
   const retry = useCallback(() => {
     initializingRef.current = false;
     initialize();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialize]);
 
   return {
     isInitialized,

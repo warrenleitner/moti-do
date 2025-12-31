@@ -7,7 +7,7 @@ Tests use mocks to avoid requiring an actual database connection.
 
 # pylint: disable=import-outside-toplevel,protected-access,unused-argument
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -22,6 +22,7 @@ from motido.core.models import (
     SubtaskRecurrenceMode,
     Tag,
     User,
+    XPTransaction,
 )
 
 
@@ -278,8 +279,20 @@ def test_load_user_success(mock_print: Any, mock_psycopg2: Any) -> None:
         "habit_start_delta": None,
     }
 
+    # Mock XP transaction data
+    transaction_row = {
+        "id": "trans1",
+        "amount": 50,
+        "source": "daily_earned",
+        "timestamp": "2025-01-01 10:00:00",
+        "task_id": None,
+        "description": "Earned 50 XP on 2025-01-01",
+        "game_date": "2025-01-01",
+    }
+
     mock_cursor.fetchone.return_value = user_row
-    mock_cursor.fetchall.return_value = [task_row]
+    # First fetchall returns tasks, second returns xp_transactions
+    mock_cursor.fetchall.side_effect = [[task_row], [transaction_row]]
 
     manager = PostgresDataManager("postgresql://test")
     user = manager.load_user("testuser")
@@ -290,6 +303,9 @@ def test_load_user_success(mock_print: Any, mock_psycopg2: Any) -> None:
     assert len(user.tasks) == 1
     assert len(user.defined_tags) == 1
     assert len(user.defined_projects) == 1
+    assert len(user.xp_transactions) == 1
+    assert user.xp_transactions[0].amount == 50
+    assert user.xp_transactions[0].source == "daily_earned"
 
 
 @patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
@@ -345,20 +361,29 @@ def test_save_user_success(mock_print: Any, mock_psycopg2: Any) -> None:
     mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
     mock_psycopg2.connect.return_value.__enter__.return_value = mock_conn
 
-    # Create test user without tasks (simpler for this test)
+    # Create test user with XP transactions
+    xp_trans = XPTransaction(
+        id="trans1",
+        amount=50,
+        source="daily_earned",
+        timestamp=datetime.now(),
+        description="Earned 50 XP",
+        game_date=date(2025, 1, 1),
+    )
     user = User(
         username="testuser",
         total_xp=100,
         tasks=[],
         defined_tags=[Tag(id="1", name="work", color="#ff0000")],
         defined_projects=[Project(id="1", name="Project1", color="#00ff00")],
+        xp_transactions=[xp_trans],
     )
 
     manager = PostgresDataManager("postgresql://test")
     manager.save_user(user)
 
-    # Verify user was inserted and tasks were deleted
-    assert mock_cursor.execute.call_count >= 2  # User insert, task delete
+    # Verify user insert, task delete, xp delete, and xp insert
+    assert mock_cursor.execute.call_count >= 4
     mock_conn.commit.assert_called_once()
 
 
@@ -559,3 +584,99 @@ def test_row_to_task_with_subtask_recurrence_mode() -> None:
     task = manager._row_to_task(row)
 
     assert task.subtask_recurrence_mode == SubtaskRecurrenceMode.ALWAYS
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_normalize_subtasks_empty() -> None:
+    """Test _normalize_subtasks with empty list."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    manager = PostgresDataManager("postgresql://test")
+    assert not manager._normalize_subtasks([])
+    assert not manager._normalize_subtasks(None)  # type: ignore[arg-type]
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_normalize_subtasks_dict_format() -> None:
+    """Test _normalize_subtasks with proper dict format passes through."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    manager = PostgresDataManager("postgresql://test")
+    subtasks = [
+        {"text": "Task 1", "complete": False},
+        {"text": "Task 2", "complete": True},
+    ]
+    result = manager._normalize_subtasks(subtasks)
+    assert result == subtasks
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_normalize_subtasks_string_format() -> None:
+    """Test _normalize_subtasks converts legacy string format to dict."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    manager = PostgresDataManager("postgresql://test")
+    subtasks = ["Day 1", "Day 2", "Day 3"]
+    result = manager._normalize_subtasks(subtasks)
+    assert result == [
+        {"text": "Day 1", "complete": False},
+        {"text": "Day 2", "complete": False},
+        {"text": "Day 3", "complete": False},
+    ]
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_normalize_subtasks_mixed_format() -> None:
+    """Test _normalize_subtasks handles mixed string and dict format."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    manager = PostgresDataManager("postgresql://test")
+    subtasks = [
+        "Legacy string subtask",
+        {"text": "Proper dict subtask", "complete": True},
+    ]
+    result = manager._normalize_subtasks(subtasks)
+    assert result == [
+        {"text": "Legacy string subtask", "complete": False},
+        {"text": "Proper dict subtask", "complete": True},
+    ]
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_row_to_task_with_string_subtasks() -> None:
+    """Test _row_to_task normalizes legacy string subtasks to dict format."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    row = {
+        "id": "task1",
+        "title": "Task with legacy subtasks",
+        "priority": "Low",
+        "difficulty": "Trivial",
+        "duration": "Minuscule",
+        "is_complete": False,
+        "creation_date": datetime.now(),
+        "due_date": None,
+        "start_date": None,
+        "icon": None,
+        "tags": None,
+        "project": None,
+        "subtasks": '["Day 1", "Day 2", "Day 3"]',  # Legacy string format
+        "dependencies": None,
+        "history": None,
+        "is_habit": True,
+        "recurrence_rule": "daily",
+        "recurrence_type": None,
+        "streak_current": 0,
+        "streak_best": 0,
+        "parent_habit_id": None,
+        "habit_start_delta": None,
+    }
+
+    manager = PostgresDataManager("postgresql://test")
+    task = manager._row_to_task(row)
+
+    assert task.subtasks == [
+        {"text": "Day 1", "complete": False},
+        {"text": "Day 2", "complete": False},
+        {"text": "Day 3", "complete": False},
+    ]

@@ -30,6 +30,7 @@ import {
   DifficultyChip,
   DurationChip,
   TagChip,
+  ProjectChip,
   DateDisplay,
   StreakBadge,
 } from '../common';
@@ -132,13 +133,7 @@ export default function TaskCard({
                 <StreakBadge current={task.streak_current} best={task.streak_best} />
               )}
               {/* Project badge - inline with other metadata */}
-              {task.project && (
-                <Chip
-                  label={task.project}
-                  size="small"
-                  variant="outlined"
-                />
-              )}
+              {task.project && <ProjectChip project={task.project} />}
             </Stack>
 
             {/* Subtask progress - show in inline and top-level modes */}

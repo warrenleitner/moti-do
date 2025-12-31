@@ -23,7 +23,7 @@ from motido.api.schemas import (
     XPTransactionSchema,
     XPWithdrawRequest,
 )
-from motido.core.models import XPTransaction
+from motido.core.models import User, XPTransaction
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -103,6 +103,7 @@ async def get_xp_log(
             timestamp=t.timestamp,
             task_id=t.task_id,
             description=t.description,
+            game_date=getattr(t, "game_date", None),
         )
         for t in transactions
     ]
@@ -385,11 +386,9 @@ async def export_user_data(user: CurrentUser) -> Response:
         for task in user.tasks
     ]
 
-    # Prepare complete user data
+    # Prepare complete user data (username/password_hash excluded - import uses current user)
     user_data = {
-        "username": user.username,
         "total_xp": user.total_xp,
-        "password_hash": user.password_hash,
         "tasks": tasks_data,
         "last_processed_date": user.last_processed_date.isoformat(),
         "vacation_mode": user.vacation_mode,
@@ -438,21 +437,38 @@ async def export_user_data(user: CurrentUser) -> Response:
         ],
     }
 
-    # Wrap in the same format as JsonDataManager (username as key)
-    export_data = {user.username: user_data}
-
     # Generate filename with timestamp
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     filename = f"motido-backup-{timestamp}.json"
 
-    # Return as downloadable JSON file
+    # Return as downloadable JSON file (user data directly, no username wrapper)
     return Response(
-        content=json.dumps(export_data, indent=2),
+        content=json.dumps(user_data, indent=2),
         media_type="application/json",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
         },
     )
+
+
+def _process_imported_tasks(imported_user: User) -> None:  # pragma: no cover
+    """
+    Process imported tasks by adding the 'imported' tag and registering
+    all tags/projects so they appear in settings with proper colors.
+
+    Note: This function is tested via E2E integration tests.
+    """
+    imported_tag = "imported"
+    for task in imported_user.tasks:
+        # Add "imported" tag for easy filtering
+        if imported_tag not in task.tags:
+            task.tags.append(imported_tag)
+        # Register all tags (get_or_create_tag will auto-assign colors)
+        for tag_name in task.tags:
+            imported_user.get_or_create_tag(tag_name)
+        # Register project if present
+        if task.project:
+            imported_user.get_or_create_project(task.project)
 
 
 @router.post("/import")
@@ -465,7 +481,8 @@ async def import_user_data(
     Import user data from JSON backup file.
 
     Replaces all current user data with data from the backup file.
-    Preserves the current password_hash for security unless explicitly included in import.
+    Data is imported into the current user's account (username/password preserved).
+    Supports both new format (direct user data) and legacy format (username-wrapped).
 
     Returns a summary of imported data.
     """
@@ -486,18 +503,27 @@ async def import_user_data(
             detail=f"Invalid JSON file: {e}",
         ) from e
 
-    # Validate structure - expect {username: user_data} format
+    # Validate structure - expect dict
     if not isinstance(import_data, dict):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid file structure: expected dictionary with username as key",
+            detail="Invalid file structure: expected JSON object",
         )
 
-    # Get user data (should be keyed by username)
-    user_data = import_data.get(user.username)
-    if not user_data:
-        # Check if there's only one user in the file and use that
-        if len(import_data) == 1:
+    # Determine user data format:
+    # New format: user data directly (has "tasks" key)
+    # Old format: wrapped as {username: user_data}
+    user_data: dict = {}
+    if "tasks" in import_data:
+        # New format - user data directly (no username wrapper)
+        user_data = import_data
+    else:
+        # Old format - try to extract user data from username key
+        extracted_data = import_data.get(user.username)
+        if extracted_data:
+            user_data = extracted_data
+        elif len(import_data) == 1:
+            # Check if there's only one user in the file and use that
             user_data = list(import_data.values())[0]
         else:
             raise HTTPException(
@@ -520,6 +546,9 @@ async def import_user_data(
     # Preserve current password_hash if not in import (security)
     if not imported_user.password_hash:
         imported_user.password_hash = user.password_hash
+
+    # Process imported tasks (add "imported" tag, register tags/projects)
+    _process_imported_tasks(imported_user)
 
     # Save the imported user data (replaces all current data)
     manager.save_user(imported_user)

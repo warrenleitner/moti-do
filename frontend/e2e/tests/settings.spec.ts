@@ -70,14 +70,17 @@ test.describe('Settings Page', () => {
       const vacationToggle = page.getByRole('switch');
       await expect(vacationToggle).toBeVisible();
 
+      // Wait for the switch to be enabled (loading to complete)
+      await expect(vacationToggle).toBeEnabled({ timeout: 5000 });
+
       // Get initial state
       const initialState = await vacationToggle.isChecked();
 
       // Toggle vacation mode
       await vacationToggle.click();
 
-      // Wait for API call and state update
-      await page.waitForTimeout(500);
+      // Wait for the switch to be enabled again after API call
+      await expect(vacationToggle).toBeEnabled({ timeout: 5000 });
 
       // Verify state changed
       const newState = await vacationToggle.isChecked();
@@ -85,7 +88,7 @@ test.describe('Settings Page', () => {
 
       // Toggle back to original state
       await vacationToggle.click();
-      await page.waitForTimeout(500);
+      await expect(vacationToggle).toBeEnabled({ timeout: 5000 });
     });
 
     test('should show vacation mode status', async ({ page }) => {
@@ -125,7 +128,7 @@ test.describe('Settings Page', () => {
 
         // Should show form with current and new password fields
         await expect(page.getByLabel(/current password/i)).toBeVisible();
-        await expect(page.getByLabel(/new password/i)).toBeVisible();
+        await expect(page.getByLabel('New Password', { exact: true })).toBeVisible();
       }
     });
 
@@ -139,7 +142,7 @@ test.describe('Settings Page', () => {
 
         // Try to submit with short password
         const currentPasswordInput = page.getByLabel(/current password/i);
-        const newPasswordInput = page.getByLabel(/new password/i);
+        const newPasswordInput = page.getByLabel('New Password', { exact: true });
 
         await currentPasswordInput.fill('testpassword123');
         await newPasswordInput.fill('short');
@@ -173,17 +176,13 @@ test.describe('Settings Page', () => {
       const xpHistoryHeading = page.getByRole('heading', { name: 'XP History' });
       await expect(xpHistoryHeading).toBeVisible();
 
-      // Get the XP History card (parent container of the heading)
-      const xpHistoryCard = page.locator('.MuiCard-root').filter({ has: xpHistoryHeading });
+      // Wait for loading to complete - check for either transactions or empty message
+      // The page should show either list items (transactions) or the empty state message
+      const transactionsList = page.locator('li').filter({ hasText: /XP$/ });
+      const emptyMessage = page.getByText('No XP transactions yet');
 
-      // Wait for loading to complete
-      await page.waitForTimeout(500);
-
-      // Should show either transactions list or empty state message within the card
-      const hasTransactions = await xpHistoryCard.locator('li').first().isVisible().catch(() => false);
-      const hasEmptyMessage = await xpHistoryCard.getByText('No XP transactions yet').isVisible().catch(() => false);
-
-      expect(hasTransactions || hasEmptyMessage).toBeTruthy();
+      // Wait for one of the states to appear
+      await expect(transactionsList.first().or(emptyMessage)).toBeVisible({ timeout: 5000 });
     });
   });
 

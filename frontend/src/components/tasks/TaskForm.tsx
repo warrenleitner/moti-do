@@ -22,7 +22,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { Add, Delete, InfoOutlined } from '@mui/icons-material';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import type { Task, Subtask } from '../../types';
@@ -80,6 +80,7 @@ interface TaskFormProps {
   task?: Task | null;
   onSave: (task: Partial<Task>) => void;
   onClose: () => void;
+  allTasks?: Task[];  // For dependency selection
 }
 
 const defaultTask: Partial<Task> = {
@@ -95,7 +96,7 @@ const defaultTask: Partial<Task> = {
 
 // UI component - tested via integration tests
 /* v8 ignore start */
-export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps) {
+export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }: TaskFormProps) {
   // Initialize form data based on task prop
   // Note: Parent must use key={task?.id ?? 'new'} to reset state when task changes
   const getInitialFormData = () => (task ? { ...task } : { ...defaultTask });
@@ -286,19 +287,19 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
 
             {/* Dates row */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <DateTimePicker
-                label="Due Date"
-                value={formData.due_date ? new Date(formData.due_date) : null}
+              <DatePicker
+                label="Start Date"
+                value={formData.start_date ? new Date(formData.start_date.includes('T') ? formData.start_date : formData.start_date + 'T00:00:00') : null}
                 onChange={(date) =>
-                  handleChange('due_date', date ? date.toISOString() : undefined)
+                  handleChange('start_date', date ? date.toISOString().split('T')[0] : undefined)
                 }
                 slotProps={{ textField: { fullWidth: true } }}
               />
-              <DateTimePicker
-                label="Start Date"
-                value={formData.start_date ? new Date(formData.start_date) : null}
+              <DatePicker
+                label="Due Date"
+                value={formData.due_date ? new Date(formData.due_date.includes('T') ? formData.due_date : formData.due_date + 'T00:00:00') : null}
                 onChange={(date) =>
-                  handleChange('start_date', date ? date.toISOString() : undefined)
+                  handleChange('due_date', date ? date.toISOString().split('T')[0] : undefined)
                 }
                 slotProps={{ textField: { fullWidth: true } }}
               />
@@ -319,6 +320,36 @@ export default function TaskForm({ open, task, onSave, onClose }: TaskFormProps)
                 />
               )}
             />
+
+            {/* Dependencies */}
+            {allTasks.length > 0 && (
+              <Autocomplete
+                multiple
+                options={allTasks.filter(t => t.id !== task?.id && !t.is_complete)}
+                getOptionLabel={(option) => `${option.icon || ''} ${option.title}`.trim()}
+                value={allTasks.filter(t => formData.dependencies?.includes(t.id))}
+                onChange={(_e, newValue) => handleChange('dependencies', newValue.map(t => t.id))}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Dependencies (blocked by)"
+                    placeholder="Select tasks that must be completed first"
+                    helperText="This task will be blocked until all dependencies are complete"
+                  />
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip
+                      {...getTagProps({ index })}
+                      key={option.id}
+                      label={`${option.icon || ''} ${option.title}`.trim()}
+                      size="small"
+                    />
+                  ))
+                }
+              />
+            )}
 
             {/* Recurring toggle - enables recurrence for any task */}
             <FormControlLabel

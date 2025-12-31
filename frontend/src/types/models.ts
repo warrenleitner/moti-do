@@ -97,6 +97,12 @@ export interface Task {
   subtask_recurrence_mode?: SubtaskRecurrenceMode;
 }
 
+export interface TaskCompletionResponse {
+  task: Task;
+  xp_earned: number;
+  next_instance: Task | null;
+}
+
 export interface XPTransaction {
   date: string; // ISO datetime string
   amount: number;

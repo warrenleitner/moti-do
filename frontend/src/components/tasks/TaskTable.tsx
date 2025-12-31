@@ -24,12 +24,15 @@ import {
   CheckCircle as CheckCircleIcon,
   RadioButtonUnchecked as RadioButtonUncheckedIcon,
   Settings as SettingsIcon,
+  Block as BlockIcon,
+  Repeat as RepeatIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import type { Task } from '../../types/models';
-import { useTaskStore } from '../../store/taskStore';
 import PriorityChip from '../common/PriorityChip';
 import DifficultyChip from '../common/DifficultyChip';
 import DurationChip from '../common/DurationChip';
+import ProjectChip from '../common/ProjectChip';
 import { format } from 'date-fns';
 import ColumnConfigDialog from './ColumnConfigDialog';
 
@@ -41,6 +44,7 @@ export type ColumnId =
   | 'priority'
   | 'difficulty'
   | 'duration'
+  | 'start_date'
   | 'due_date'
   | 'creation_date'
   | 'project'
@@ -84,6 +88,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: 'priority', label: 'Priority', visible: true, sortable: true, width: 120 },
   { id: 'difficulty', label: 'Difficulty', visible: true, sortable: true, width: 120 },
   { id: 'duration', label: 'Duration', visible: true, sortable: true, width: 120 },
+  { id: 'start_date', label: 'Start Date', visible: false, sortable: true, width: 120 },
   { id: 'due_date', label: 'Due Date', visible: true, sortable: true, width: 120 },
   { id: 'creation_date', label: 'Created', visible: false, sortable: true, width: 120 },
   { id: 'project', label: 'Project', visible: true, sortable: true, width: 120 },
@@ -107,13 +112,39 @@ const TaskTable: React.FC<TaskTableProps> = ({
   onBulkComplete,
   onBulkDelete,
 }) => {
-  const completeTask = useTaskStore((state) => state.completeTask);
-  const uncompleteTask = useTaskStore((state) => state.uncompleteTask);
-
-  // Load saved column config from localStorage
+  // Load saved column config from localStorage, merging in any new columns
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     const saved = localStorage.getItem('taskTableColumns');
-    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+    if (!saved) return DEFAULT_COLUMNS;
+
+    const savedColumns: ColumnConfig[] = JSON.parse(saved);
+    const savedIds = new Set(savedColumns.map((c) => c.id));
+
+    // Find new columns that aren't in saved config
+    const newColumns = DEFAULT_COLUMNS.filter((c) => !savedIds.has(c.id));
+
+    if (newColumns.length === 0) return savedColumns;
+
+    // Insert new columns at their default positions
+    const merged = [...savedColumns];
+    for (const newCol of newColumns) {
+      const defaultIndex = DEFAULT_COLUMNS.findIndex((c) => c.id === newCol.id);
+      // Find the best insertion point based on surrounding columns
+      let insertIndex = merged.length;
+      for (let i = defaultIndex - 1; i >= 0; i--) {
+        const prevColId = DEFAULT_COLUMNS[i].id;
+        const prevIndex = merged.findIndex((c) => c.id === prevColId);
+        if (prevIndex !== -1) {
+          insertIndex = prevIndex + 1;
+          break;
+        }
+      }
+      merged.splice(insertIndex, 0, newCol);
+    }
+
+    // Save the merged config
+    localStorage.setItem('taskTableColumns', JSON.stringify(merged));
+    return merged;
   });
 
   // Load saved sort config from localStorage
@@ -187,12 +218,30 @@ const TaskTable: React.FC<TaskTableProps> = ({
             comparison = durationOrder[a.duration] - durationOrder[b.duration];
             break;
           }
-          case 'due_date':
+          case 'start_date': {
+            if (!a.start_date && !b.start_date) comparison = 0;
+            else if (!a.start_date) comparison = 1;
+            else if (!b.start_date) comparison = -1;
+            else {
+              // Handle both date-only (YYYY-MM-DD) and datetime formats
+              const aDate = a.start_date.includes('T') ? a.start_date : a.start_date + 'T00:00:00';
+              const bDate = b.start_date.includes('T') ? b.start_date : b.start_date + 'T00:00:00';
+              comparison = new Date(aDate).getTime() - new Date(bDate).getTime();
+            }
+            break;
+          }
+          case 'due_date': {
             if (!a.due_date && !b.due_date) comparison = 0;
             else if (!a.due_date) comparison = 1;
             else if (!b.due_date) comparison = -1;
-            else comparison = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+            else {
+              // Handle both date-only (YYYY-MM-DD) and datetime formats
+              const aDate = a.due_date.includes('T') ? a.due_date : a.due_date + 'T00:00:00';
+              const bDate = b.due_date.includes('T') ? b.due_date : b.due_date + 'T00:00:00';
+              comparison = new Date(aDate).getTime() - new Date(bDate).getTime();
+            }
             break;
+          }
           case 'creation_date':
             comparison = new Date(a.creation_date).getTime() - new Date(b.creation_date).getTime();
             break;
@@ -224,6 +273,80 @@ const TaskTable: React.FC<TaskTableProps> = ({
   const allSelected = tasks.length > 0 && selectedTasks.length === tasks.length;
   const someSelected = selectedTasks.length > 0 && selectedTasks.length < tasks.length;
 
+  const handleExportCSV = () => {
+    // Get visible columns excluding 'select' and 'actions'
+    const exportColumns = visibleColumns.filter(
+      (col) => col.id !== 'select' && col.id !== 'actions' && col.id !== 'icon'
+    );
+
+    // Helper to escape CSV values
+    const escapeCSV = (value: string): string => {
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+
+    // Helper to get cell value as string
+    const getCellValue = (task: Task, columnId: ColumnId): string => {
+      switch (columnId) {
+        case 'title':
+          return task.title;
+        case 'score':
+          return String(task.score);
+        case 'priority':
+          return task.priority;
+        case 'difficulty':
+          return task.difficulty;
+        case 'duration':
+          return task.duration;
+        case 'start_date':
+          return task.start_date
+            ? format(new Date(task.start_date.includes('T') ? task.start_date : task.start_date + 'T00:00:00'), 'yyyy-MM-dd')
+            : '';
+        case 'due_date':
+          return task.due_date
+            ? format(new Date(task.due_date.includes('T') ? task.due_date : task.due_date + 'T00:00:00'), 'yyyy-MM-dd')
+            : '';
+        case 'creation_date':
+          return format(new Date(task.creation_date), 'yyyy-MM-dd');
+        case 'project':
+          return task.project || '';
+        case 'tags':
+          return task.tags.join('; ');
+        case 'streak':
+          return task.is_habit ? String(task.streak_current) : '';
+        case 'subtasks': {
+          const completed = task.subtasks.filter((st) => st.complete).length;
+          const total = task.subtasks.length;
+          return total > 0 ? `${completed}/${total}` : '';
+        }
+        case 'status':
+          return task.status ? task.status.replace('_', ' ') : '';
+        default:
+          return '';
+      }
+    };
+
+    // Build CSV content
+    const headers = exportColumns.map((col) => escapeCSV(col.label)).join(',');
+    const rows = sortedTasks.map((task) =>
+      exportColumns.map((col) => escapeCSV(getCellValue(task, col.id))).join(',')
+    );
+    const csvContent = [headers, ...rows].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tasks_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const renderCellContent = (task: Task, columnId: ColumnId) => {
     switch (columnId) {
       case 'select':
@@ -236,7 +359,21 @@ const TaskTable: React.FC<TaskTableProps> = ({
         );
 
       case 'icon':
-        return task.icon ? <span style={{ fontSize: '1.5rem' }}>{task.icon}</span> : null;
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            {task.icon && <span style={{ fontSize: '1.5rem' }}>{task.icon}</span>}
+            {task.status === 'blocked' && (
+              <Tooltip title="Blocked">
+                <BlockIcon fontSize="small" color="error" />
+              </Tooltip>
+            )}
+            {(task.is_habit || task.recurrence_rule) && (
+              <Tooltip title="Recurring">
+                <RepeatIcon fontSize="small" color="primary" />
+              </Tooltip>
+            )}
+          </Box>
+        );
 
       case 'title':
         return (
@@ -264,20 +401,41 @@ const TaskTable: React.FC<TaskTableProps> = ({
       case 'duration':
         return <DurationChip duration={task.duration} />;
 
-      case 'due_date':
-        return task.due_date ? (
-          <span style={{ color: new Date(task.due_date) < new Date() ? '#f44336' : 'inherit' }}>
-            {format(new Date(task.due_date), 'MMM d, yyyy')}
+      case 'start_date': {
+        if (!task.start_date) return '-';
+        // Handle both date-only (YYYY-MM-DD) and datetime formats
+        const startDateStr = task.start_date.includes('T')
+          ? task.start_date
+          : task.start_date + 'T00:00:00';
+        const startDate = new Date(startDateStr);
+        const isFuture = startDate > new Date();
+        return (
+          <span style={{ color: isFuture ? '#9e9e9e' : 'inherit' }}>
+            {format(startDate, 'MMM d, yyyy')}
           </span>
-        ) : (
-          '-'
         );
+      }
+
+      case 'due_date': {
+        if (!task.due_date) return '-';
+        // Handle both date-only (YYYY-MM-DD) and datetime formats
+        const dueDateStr = task.due_date.includes('T')
+          ? task.due_date
+          : task.due_date + 'T23:59:59';
+        const dueDate = new Date(dueDateStr);
+        const isOverdue = dueDate < new Date();
+        return (
+          <span style={{ color: isOverdue ? '#f44336' : 'inherit' }}>
+            {format(dueDate, 'MMM d, yyyy')}
+          </span>
+        );
+      }
 
       case 'creation_date':
         return format(new Date(task.creation_date), 'MMM d, yyyy');
 
       case 'project':
-        return task.project ? <Chip label={task.project} size="small" variant="outlined" /> : '-';
+        return task.project ? <ProjectChip project={task.project} /> : '-';
 
       case 'tags':
         return task.tags.length > 0 ? (
@@ -329,14 +487,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
             <Tooltip title={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}>
               <IconButton
                 size="small"
-                onClick={() => {
-                  if (task.is_complete) {
-                    uncompleteTask(task.id);
-                  } else {
-                    completeTask(task.id);
-                  }
-                  onComplete(task.id);
-                }}
+                onClick={() => onComplete(task.id)}
               >
                 {task.is_complete ? (
                   <RadioButtonUncheckedIcon fontSize="small" />
@@ -418,7 +569,12 @@ const TaskTable: React.FC<TaskTableProps> = ({
         </Toolbar>
       )}
 
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Tooltip title="Export to CSV">
+          <IconButton onClick={handleExportCSV}>
+            <DownloadIcon />
+          </IconButton>
+        </Tooltip>
         <Tooltip title="Configure Columns">
           <IconButton onClick={() => setConfigDialogOpen(true)}>
             <SettingsIcon />

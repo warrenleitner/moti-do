@@ -103,22 +103,33 @@ export class GraphPage {
     // Wait for React Flow to stabilize (animations, layout)
     await this.page.waitForTimeout(500);
 
+    // Ensure the node exists
+    await node.waitFor({ state: 'attached', timeout: 5000 });
+
     // Use ReactFlow's fit view to ensure all nodes are visible in the canvas
-    // Wait for fitView button to be available first
     const fitViewButton = this.page.locator('.react-flow__controls-fitview');
     await fitViewButton.waitFor({ state: 'visible', timeout: 5000 });
     await fitViewButton.click();
 
     // Wait for fitView animation to complete
-    await this.page.waitForTimeout(500);
-
-    // Ensure the node exists and is visible
-    await node.waitFor({ state: 'visible', timeout: 5000 });
+    await this.page.waitForTimeout(800);
 
     // Retry clicking up to 3 times if drawer doesn't open
     for (let attempt = 0; attempt < 3; attempt++) {
-      // Click the node - force: true to bypass actionability checks in ReactFlow
-      await node.click({ force: true });
+      try {
+        // Try clicking with force to bypass actionability checks
+        await node.click({ force: true, timeout: 2000 });
+      } catch {
+        // If click fails, try scrolling the node into view and clicking again
+        await node.scrollIntoViewIfNeeded();
+        await this.page.waitForTimeout(200);
+        try {
+          await node.click({ force: true, timeout: 2000 });
+        } catch {
+          // Last resort: click via dispatchEvent
+          await node.dispatchEvent('click');
+        }
+      }
 
       // Wait for drawer to open with a shorter timeout for retries
       try {
@@ -128,6 +139,9 @@ export class GraphPage {
         // Drawer didn't open, wait and retry
         if (attempt < 2) {
           await this.page.waitForTimeout(300);
+          // Try fitView again before next attempt
+          await fitViewButton.click();
+          await this.page.waitForTimeout(500);
         }
       }
     }

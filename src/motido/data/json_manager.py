@@ -173,7 +173,7 @@ class JsonDataManager(DataManager):
             icon=task_dict.get("icon"),
             tags=task_dict.get("tags", []),
             project=task_dict.get("project"),
-            subtasks=task_dict.get("subtasks", []),
+            subtasks=self._normalize_subtasks(task_dict.get("subtasks", [])),
             dependencies=task_dict.get("dependencies", []),
             history=task_dict.get("history", []),
             is_habit=task_dict.get("is_habit", False),
@@ -198,6 +198,25 @@ class JsonDataManager(DataManager):
         except ValueError:
             return SubtaskRecurrenceMode.DEFAULT
 
+    @staticmethod
+    def _normalize_subtasks(subtasks: list) -> list:
+        """
+        Normalize subtasks to ensure they're in dict format.
+
+        Handles legacy format where subtasks were strings instead of dicts.
+        """
+        if not subtasks:
+            return []
+        normalized = []
+        for item in subtasks:
+            if isinstance(item, str):
+                # Legacy format: convert string to dict
+                normalized.append({"text": item, "complete": False})
+            elif isinstance(item, dict):
+                normalized.append(item)
+            # Skip any other types
+        return normalized
+
     def _deserialize_xp_transaction(self, trans_dict: Dict[str, Any]) -> XPTransaction:
         """Deserialize an XP transaction dictionary."""
         timestamp_str = trans_dict.get("timestamp")
@@ -205,6 +224,14 @@ class JsonDataManager(DataManager):
             self._parse_datetime_field(timestamp_str, "timestamp", None)
             or datetime.now()
         )
+        # Parse game_date if present
+        game_date_str = trans_dict.get("game_date")
+        game_date = None
+        if game_date_str:
+            try:
+                game_date = date.fromisoformat(game_date_str)
+            except ValueError:
+                game_date = None
         return XPTransaction(
             id=trans_dict.get("id", str(uuid.uuid4())),
             amount=trans_dict.get("amount", 0),
@@ -212,6 +239,7 @@ class JsonDataManager(DataManager):
             timestamp=timestamp,
             task_id=trans_dict.get("task_id"),
             description=trans_dict.get("description", ""),
+            game_date=game_date,
         )
 
     def _deserialize_badge(self, badge_dict: Dict[str, Any]) -> Badge:
@@ -403,6 +431,11 @@ class JsonDataManager(DataManager):
                     "timestamp": trans.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                     "task_id": trans.task_id,
                     "description": trans.description,
+                    "game_date": (
+                        trans.game_date.isoformat()
+                        if getattr(trans, "game_date", None)
+                        else None
+                    ),
                 }
                 for trans in getattr(user, "xp_transactions", [])
             ],

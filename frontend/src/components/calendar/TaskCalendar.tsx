@@ -112,10 +112,15 @@ export default function TaskCalendar({
   const handleEventDrop = (info: EventDropArg) => {
     const taskId = info.event.id;
     const newDate = info.event.start;
+    const wasAllDay = info.event.allDay;
 
     if (newDate) {
+      // Preserve date-only format for all-day events
+      const dateValue = wasAllDay
+        ? newDate.toISOString().split('T')[0]
+        : newDate.toISOString();
       onUpdateTask(taskId, {
-        due_date: newDate.toISOString(),
+        due_date: dateValue,
       });
     }
   };
@@ -267,7 +272,9 @@ export default function TaskCalendar({
 
                 {selectedTask.due_date && (
                   <Typography variant="body2" color="text.secondary">
-                    Due: {new Date(selectedTask.due_date).toLocaleString()}
+                    Due: {selectedTask.due_date.includes('T')
+                      ? new Date(selectedTask.due_date).toLocaleString()
+                      : new Date(selectedTask.due_date + 'T00:00:00').toLocaleDateString()}
                   </Typography>
                 )}
 

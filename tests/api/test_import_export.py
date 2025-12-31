@@ -130,15 +130,15 @@ class TestExport:
         assert "motido-backup-" in response.headers["content-disposition"]
         assert ".json" in response.headers["content-disposition"]
 
-        # Parse exported data
-        data = response.json()
-        assert DEFAULT_USERNAME in data
-        user_data = data[DEFAULT_USERNAME]
+        # Parse exported data - new format is user data directly (no username wrapper)
+        user_data = response.json()
+
+        # Verify username and password_hash are NOT included
+        assert "username" not in user_data
+        assert "password_hash" not in user_data
 
         # Verify user data
-        assert user_data["username"] == DEFAULT_USERNAME
         assert user_data["total_xp"] == 500
-        assert user_data["password_hash"] is not None
 
         # Verify tasks
         assert len(user_data["tasks"]) == 1
@@ -194,8 +194,11 @@ class TestExport:
         app.dependency_overrides.clear()
 
         assert response.status_code == 200
-        data = response.json()
-        user_data = data[DEFAULT_USERNAME]
+        user_data = response.json()
+
+        # Verify username and password_hash are NOT included
+        assert "username" not in user_data
+        assert "password_hash" not in user_data
 
         # Verify empty collections
         assert user_data["tasks"] == []
@@ -208,14 +211,83 @@ class TestExport:
 class TestImport:
     """Tests for /api/user/import endpoint."""
 
-    def test_import_success(
+    def test_import_success_new_format(
         self,
         authenticated_client: TestClient,
         test_user_with_data: User,
         auth_manager: MockDataManager,
     ) -> None:
-        """Test successful data import."""
-        # Create import data
+        """Test successful data import with new format (no username wrapper)."""
+        # Create import data - new format without username wrapper
+        import_data = {
+            "total_xp": 1000,
+            "tasks": [
+                {
+                    "id": "imported-task",
+                    "title": "Imported Task",
+                    "text_description": None,
+                    "priority": "high",
+                    "difficulty": "hard",
+                    "duration": "long",
+                    "is_complete": False,
+                    "creation_date": "2024-02-01 12:00:00",
+                    "due_date": None,
+                    "start_date": None,
+                    "icon": None,
+                    "tags": [],
+                    "project": None,
+                    "subtasks": [],
+                    "dependencies": [],
+                    "history": [],
+                    "is_habit": False,
+                    "recurrence_rule": None,
+                    "recurrence_type": None,
+                    "streak_current": 0,
+                    "streak_best": 0,
+                    "parent_habit_id": None,
+                }
+            ],
+            "last_processed_date": "2024-02-01",
+            "vacation_mode": False,
+            "xp_transactions": [],
+            "badges": [],
+            "defined_tags": [],
+            "defined_projects": [],
+        }
+
+        # Create file
+        file_content = json.dumps(import_data).encode()
+        files = {"file": ("backup.json", BytesIO(file_content), "application/json")}
+
+        response = authenticated_client.post(
+            "/api/user/import",
+            files=files,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "successfully" in data["message"]
+        assert data["summary"]["tasks_count"] == 1
+        assert data["summary"]["total_xp"] == 1000
+
+        # Verify data was imported
+        imported_user = auth_manager.load_user(DEFAULT_USERNAME)
+        assert imported_user is not None
+        assert imported_user.total_xp == 1000
+        assert len(imported_user.tasks) == 1
+        assert imported_user.tasks[0].title == "Imported Task"
+
+        # Verify password was preserved
+        assert imported_user.password_hash == test_user_with_data.password_hash
+
+    def test_import_success_legacy_format(
+        self,
+        authenticated_client: TestClient,
+        test_user_with_data: User,
+        auth_manager: MockDataManager,
+    ) -> None:
+        """Test successful data import with legacy format (username wrapper)."""
+        # Create import data - legacy format with username wrapper
         import_data = {
             DEFAULT_USERNAME: {
                 "username": DEFAULT_USERNAME,

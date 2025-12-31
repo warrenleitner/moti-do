@@ -3,7 +3,7 @@
  */
 
 import axios, { type AxiosInstance } from 'axios';
-import type { Task } from '../types';
+import type { Task, TaskCompletionResponse } from '../types';
 
 // API base URL - configurable via environment variable
 // In production, use relative URL (/api) for same-origin requests
@@ -78,6 +78,7 @@ export interface XPTransaction {
   timestamp: string;
   task_id?: string;
   description: string;
+  game_date?: string; // The game day this transaction belongs to (ISO date string)
 }
 
 export interface Badge {
@@ -342,9 +343,9 @@ export const taskApi = {
     await apiClient.delete(`/tasks/${id}`);
   },
 
-  // Complete task
-  completeTask: async (id: string): Promise<Task> => {
-    const response = await apiClient.post<Task>(`/tasks/${id}/complete`);
+  // Complete task (returns completion response with next instance for recurring tasks)
+  completeTask: async (id: string): Promise<TaskCompletionResponse> => {
+    const response = await apiClient.post<TaskCompletionResponse>(`/tasks/${id}/complete`);
     return response.data;
   },
 

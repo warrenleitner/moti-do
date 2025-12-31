@@ -296,6 +296,7 @@ class DatabaseDataManager(DataManager):
                     if "subtasks" in row.keys() and row["subtasks"]:
                         try:
                             subtasks = json.loads(row["subtasks"])
+                            subtasks = self._normalize_subtasks(subtasks)
                         except json.JSONDecodeError:
                             print(
                                 f"Warning: Invalid JSON in subtasks for task {row['id']}, using empty list."
@@ -444,6 +445,25 @@ class DatabaseDataManager(DataManager):
         except sqlite3.Error as e:
             print(f"Error loading user '{username}' from motido.database: {e}")
             return None
+
+    @staticmethod
+    def _normalize_subtasks(subtasks: list) -> list:
+        """
+        Normalize subtasks to ensure they're in dict format.
+
+        Handles legacy format where subtasks were strings instead of dicts.
+        """
+        if not subtasks:
+            return []
+        normalized = []
+        for item in subtasks:
+            if isinstance(item, str):
+                # Legacy format: convert string to dict
+                normalized.append({"text": item, "complete": False})
+            elif isinstance(item, dict):
+                normalized.append(item)
+            # Skip any other types
+        return normalized
 
     def _ensure_user_exists(self, conn: sqlite3.Connection, user: User) -> None:
         """Ensures the user exists in the users table, inserting if necessary."""

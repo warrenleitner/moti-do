@@ -2,12 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TaskTable from './TaskTable';
 import { Task, Priority, Difficulty, Duration } from '../../types/models';
-import { useTaskStore } from '../../store/taskStore';
-
-// Mock the task store
-vi.mock('../../store/taskStore', () => ({
-  useTaskStore: vi.fn(),
-}));
 
 const mockTask: Task = {
   id: '1',
@@ -43,21 +37,10 @@ describe('TaskTable', () => {
   const mockOnEdit = vi.fn();
   const mockOnDelete = vi.fn();
   const mockOnComplete = vi.fn();
-  const mockCompleteTask = vi.fn();
-  const mockUncompleteTask = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-
-    // Mock the store
-    (useTaskStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector: (state: unknown) => unknown) => {
-      const mockState = {
-        completeTask: mockCompleteTask,
-        uncompleteTask: mockUncompleteTask,
-      };
-      return selector(mockState);
-    });
   });
 
   it('renders task table with tasks', () => {
@@ -127,7 +110,7 @@ describe('TaskTable', () => {
     expect(mockOnDelete).toHaveBeenCalledWith('1');
   });
 
-  it('toggles task completion when complete button is clicked', () => {
+  it('calls onComplete when complete button is clicked', () => {
     render(
       <TaskTable
         tasks={[mockTask]}
@@ -140,7 +123,6 @@ describe('TaskTable', () => {
     const completeButtons = screen.getAllByRole('button', { name: /mark complete/i });
     fireEvent.click(completeButtons[0]);
 
-    expect(mockCompleteTask).toHaveBeenCalledWith('1');
     expect(mockOnComplete).toHaveBeenCalledWith('1');
   });
 
@@ -362,7 +344,7 @@ describe('TaskTable', () => {
     // This test verifies the reset button exists and can be clicked
   });
 
-  it('toggles task completion for completed task', () => {
+  it('calls onComplete when mark incomplete button is clicked', () => {
     const completedTask = { ...mockTask, is_complete: true };
 
     render(
@@ -377,7 +359,6 @@ describe('TaskTable', () => {
     const completeButtons = screen.getAllByRole('button', { name: /mark incomplete/i });
     fireEvent.click(completeButtons[0]);
 
-    expect(mockUncompleteTask).toHaveBeenCalledWith('1');
     expect(mockOnComplete).toHaveBeenCalledWith('1');
   });
 

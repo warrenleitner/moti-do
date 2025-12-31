@@ -157,8 +157,19 @@ if [ "$MODE" = "local" ]; then
 
     # Check if Docker daemon is running
     if ! docker info &> /dev/null; then
-        echo -e "${RED}Docker daemon is not running. Start Docker or use --supabase mode.${NC}"
-        exit 1
+        # Try to start Colima if available
+        if command -v colima &> /dev/null; then
+            echo -e "${YELLOW}Docker daemon not running. Starting Colima...${NC}"
+            colima start
+            if ! docker info &> /dev/null; then
+                echo -e "${RED}Failed to start Colima. Please start Docker manually or use --supabase mode.${NC}"
+                exit 1
+            fi
+            echo -e "${GREEN}Colima started successfully!${NC}"
+        else
+            echo -e "${RED}Docker daemon is not running. Start Docker/Colima or use --supabase mode.${NC}"
+            exit 1
+        fi
     fi
 
     # Check if test database container is already running

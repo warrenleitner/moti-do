@@ -217,8 +217,9 @@ describe('TaskStore', () => {
 
       // Complete the first incomplete task
       await act(async () => {
-        const completed = await result.current.completeTask('task-1');
-        expect(completed.is_complete).toBe(true);
+        const response = await result.current.completeTask('task-1');
+        expect(response.task.is_complete).toBe(true);
+        expect(response.xp_earned).toBeGreaterThan(0);
       });
     });
 
@@ -652,7 +653,7 @@ describe('useFilteredTasks', () => {
     expect(result.current[0].id).toBe('task-1');
   });
 
-  it('should filter out blocked tasks when includeBlocked is false', () => {
+  it('should filter out blocked tasks when status is active', () => {
     const tasksWithDeps = [
       ...mockTasks,
       {
@@ -675,13 +676,13 @@ describe('useFilteredTasks', () => {
     ];
     const store = useTaskStore.getState();
     store.setTasks(tasksWithDeps);
-    store.setFilters({ status: 'active', includeBlocked: false });
+    store.setFilters({ status: 'active' });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current.find((t) => t.id === 'task-blocked')).toBeUndefined();
   });
 
-  it('should include blocked tasks when includeBlocked is true', () => {
+  it('should show blocked tasks when status is blocked', () => {
     const tasksWithDeps = [
       ...mockTasks,
       {
@@ -704,10 +705,109 @@ describe('useFilteredTasks', () => {
     ];
     const store = useTaskStore.getState();
     store.setTasks(tasksWithDeps);
-    store.setFilters({ status: 'active', includeBlocked: true });
+    store.setFilters({ status: 'blocked' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    // Only the blocked task should be shown
+    expect(result.current.find((t) => t.id === 'task-blocked')).toBeDefined();
+    expect(result.current.length).toBe(1);
+  });
+
+  it('should show blocked tasks when status is all', () => {
+    const tasksWithDeps = [
+      ...mockTasks,
+      {
+        id: 'task-blocked',
+        title: 'Blocked Task',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: ['task-1'],
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithDeps);
+    store.setFilters({ status: 'all' });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current.find((t) => t.id === 'task-blocked')).toBeDefined();
+  });
+
+  it('should show future tasks when status is future', () => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 30);
+    const tasksWithFuture = [
+      ...mockTasks,
+      {
+        id: 'task-future',
+        title: 'Future Task',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        start_date: futureDate.toISOString().split('T')[0],
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithFuture);
+    store.setFilters({ status: 'future' });
+
+    // Pass a lastProcessedDate that's before the future task's start_date
+    const lastProcessedDate = new Date().toISOString().split('T')[0];
+    const { result } = renderHook(() => useFilteredTasks(lastProcessedDate));
+    expect(result.current.find((t) => t.id === 'task-future')).toBeDefined();
+  });
+
+  it('should filter out future tasks when status is active', () => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 30);
+    const tasksWithFuture = [
+      ...mockTasks,
+      {
+        id: 'task-future',
+        title: 'Future Task',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        start_date: futureDate.toISOString().split('T')[0],
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithFuture);
+    store.setFilters({ status: 'active' });
+
+    // Pass a lastProcessedDate that's before the future task's start_date
+    const lastProcessedDate = new Date().toISOString().split('T')[0];
+    const { result } = renderHook(() => useFilteredTasks(lastProcessedDate));
+    expect(result.current.find((t) => t.id === 'task-future')).toBeUndefined();
   });
 });
 
