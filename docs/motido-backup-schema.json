@@ -1,0 +1,310 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://moti-do.app/schemas/backup-v1.json",
+  "title": "Moti-Do Backup",
+  "description": "Schema for Moti-Do user data export/import files",
+  "type": "object",
+  "required": ["tasks"],
+  "properties": {
+    "total_xp": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Total experience points earned by the user"
+    },
+    "last_processed_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Last date the system processed tasks (ISO 8601 date format: YYYY-MM-DD)"
+    },
+    "vacation_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether vacation mode is enabled (pauses XP penalties)"
+    },
+    "tasks": {
+      "type": "array",
+      "description": "List of all tasks including habits",
+      "items": {
+        "$ref": "#/$defs/task"
+      }
+    },
+    "xp_transactions": {
+      "type": "array",
+      "description": "History of XP gains and losses",
+      "items": {
+        "$ref": "#/$defs/xp_transaction"
+      }
+    },
+    "badges": {
+      "type": "array",
+      "description": "Earned achievement badges",
+      "items": {
+        "$ref": "#/$defs/badge"
+      }
+    },
+    "defined_tags": {
+      "type": "array",
+      "description": "Custom tag definitions with colors and multipliers",
+      "items": {
+        "$ref": "#/$defs/tag"
+      }
+    },
+    "defined_projects": {
+      "type": "array",
+      "description": "Custom project definitions with colors and multipliers",
+      "items": {
+        "$ref": "#/$defs/project"
+      }
+    }
+  },
+  "$defs": {
+    "task": {
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the task"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Task title/name"
+        },
+        "text_description": {
+          "type": ["string", "null"],
+          "description": "Optional detailed description"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["Trivial", "Low", "Medium", "High", "Defcon One"],
+          "default": "Medium",
+          "description": "Task priority level"
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["Trivial", "Low", "Medium", "High", "Herculean"],
+          "default": "Medium",
+          "description": "Task difficulty level"
+        },
+        "duration": {
+          "type": "string",
+          "enum": ["Minuscule", "Short", "Medium", "Long", "Odysseyan"],
+          "default": "Medium",
+          "description": "Estimated task duration"
+        },
+        "is_complete": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the task is completed"
+        },
+        "creation_date": {
+          "type": ["string", "null"],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+          "description": "When the task was created (YYYY-MM-DD HH:MM:SS)"
+        },
+        "due_date": {
+          "type": ["string", "null"],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+          "description": "Task due date (YYYY-MM-DD HH:MM:SS)"
+        },
+        "start_date": {
+          "type": ["string", "null"],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+          "description": "When to start showing the task (YYYY-MM-DD HH:MM:SS)"
+        },
+        "icon": {
+          "type": ["string", "null"],
+          "description": "Emoji icon for the task"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of tag names applied to this task"
+        },
+        "project": {
+          "type": ["string", "null"],
+          "description": "Project name this task belongs to"
+        },
+        "subtasks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of subtask descriptions"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of task IDs this task depends on"
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "description": "Date of the history entry"
+              },
+              "action": {
+                "type": "string",
+                "description": "Action that was performed"
+              }
+            }
+          },
+          "default": [],
+          "description": "History of actions on this task"
+        },
+        "is_habit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this task is a recurring habit"
+        },
+        "recurrence_rule": {
+          "type": ["string", "null"],
+          "description": "iCalendar RRULE string for habit recurrence (e.g., 'FREQ=DAILY;INTERVAL=1')"
+        },
+        "recurrence_type": {
+          "type": ["string", "null"],
+          "enum": ["Strict", "From Due Date", "From Completion", null],
+          "description": "How the next occurrence is calculated"
+        },
+        "streak_current": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Current streak count for habits"
+        },
+        "streak_best": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Best streak ever achieved for habits"
+        },
+        "parent_habit_id": {
+          "type": ["string", "null"],
+          "description": "ID of parent habit if this is a generated instance"
+        }
+      }
+    },
+    "xp_transaction": {
+      "type": "object",
+      "required": ["id", "amount", "source", "timestamp"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the transaction"
+        },
+        "amount": {
+          "type": "integer",
+          "description": "XP amount (positive for gains, negative for losses)"
+        },
+        "source": {
+          "type": "string",
+          "description": "Source of the XP (e.g., 'task_completion', 'streak_bonus')"
+        },
+        "timestamp": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+          "description": "When the transaction occurred (YYYY-MM-DD HH:MM:SS)"
+        },
+        "task_id": {
+          "type": ["string", "null"],
+          "description": "Related task ID if applicable"
+        },
+        "description": {
+          "type": ["string", "null"],
+          "description": "Human-readable description of the transaction"
+        }
+      }
+    },
+    "badge": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the badge"
+        },
+        "name": {
+          "type": "string",
+          "description": "Badge name"
+        },
+        "description": {
+          "type": ["string", "null"],
+          "description": "What the badge is awarded for"
+        },
+        "glyph": {
+          "type": ["string", "null"],
+          "description": "Emoji glyph for the badge"
+        },
+        "earned_date": {
+          "type": ["string", "null"],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+          "description": "When the badge was earned (YYYY-MM-DD HH:MM:SS)"
+        }
+      }
+    },
+    "tag": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the tag"
+        },
+        "name": {
+          "type": "string",
+          "description": "Tag name"
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "default": "#4A90D9",
+          "description": "Hex color code for the tag"
+        },
+        "multiplier": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1.0,
+          "description": "XP multiplier for tasks with this tag"
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the project"
+        },
+        "name": {
+          "type": "string",
+          "description": "Project name"
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "default": "#4A90D9",
+          "description": "Hex color code for the project"
+        },
+        "multiplier": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1.0,
+          "description": "XP multiplier for tasks in this project"
+        }
+      }
+    }
+  }
+}

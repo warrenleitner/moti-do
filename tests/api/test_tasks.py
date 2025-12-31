@@ -207,7 +207,8 @@ class TestTaskComplete:
         response = client.post(f"/api/tasks/{task_id}/complete")
         assert response.status_code == 200
         data = response.json()
-        assert data["is_complete"] is True
+        assert data["task"]["is_complete"] is True
+        assert data["xp_earned"] > 0
 
     def test_complete_already_complete_task(
         self, client: TestClient, test_user: User
@@ -227,7 +228,11 @@ class TestTaskComplete:
         response = client.post(f"/api/tasks/{habit.id}/complete")
         assert response.status_code == 200
         data = response.json()
-        assert data["streak_current"] == original_streak + 1
+        assert data["task"]["streak_current"] == original_streak + 1
+        # Recurring habits should create next instance
+        if habit.recurrence_rule:
+            assert data["next_instance"] is not None
+            assert data["next_instance"]["is_complete"] is False
 
     def test_complete_task_not_found(self, client: TestClient) -> None:
         """Test completing a non-existent task."""

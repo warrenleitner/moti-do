@@ -217,8 +217,9 @@ describe('TaskStore', () => {
 
       // Complete the first incomplete task
       await act(async () => {
-        const completed = await result.current.completeTask('task-1');
-        expect(completed.is_complete).toBe(true);
+        const response = await result.current.completeTask('task-1');
+        expect(response.task.is_complete).toBe(true);
+        expect(response.xp_earned).toBeGreaterThan(0);
       });
     });
 

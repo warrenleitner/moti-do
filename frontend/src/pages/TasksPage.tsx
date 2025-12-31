@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { Box, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton, Link as MuiLink } from '@mui/material';
 import { Add, ViewList, TableChart } from '@mui/icons-material';
 import { AxiosError } from 'axios';
 import { TaskList, TaskForm } from '../components/tasks';
@@ -66,7 +66,13 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+    nextInstanceId?: string;
+    nextDueDate?: string;
+  }>({
     open: false,
     message: '',
     severity: 'success',
@@ -120,10 +126,22 @@ export default function TasksPage() {
         await uncompleteTask(taskId);
         setSnackbar({ open: true, message: 'Task marked as incomplete', severity: 'success' });
       } else {
-        await completeTask(taskId);
+        const response = await completeTask(taskId);
         // Refresh user stats to update XP display
         await fetchStats();
-        setSnackbar({ open: true, message: 'Task completed! XP earned.', severity: 'success' });
+
+        // Show next instance info for recurring tasks
+        if (response.next_instance && response.next_instance.due_date) {
+          setSnackbar({
+            open: true,
+            message: 'Task completed! XP earned.',
+            severity: 'success',
+            nextInstanceId: response.next_instance.id,
+            nextDueDate: response.next_instance.due_date,
+          });
+        } else {
+          setSnackbar({ open: true, message: 'Task completed! XP earned.', severity: 'success' });
+        }
       }
     } catch (error) {
       setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to update task'), severity: 'error' });
@@ -173,6 +191,23 @@ export default function TasksPage() {
     } catch (error) {
       setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to undo change'), severity: 'error' });
     }
+  };
+
+  const handleOpenNextInstance = () => {
+    if (snackbar.nextInstanceId) {
+      const { tasks } = useTaskStore.getState();
+      const nextTask = tasks.find((t) => t.id === snackbar.nextInstanceId);
+      if (nextTask) {
+        setEditingTask(nextTask);
+        setFormOpen(true);
+        setSnackbar((prev) => ({ ...prev, open: false }));
+      }
+    }
+  };
+
+  const formatNextDueDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
   // Selection handlers for bulk actions
@@ -355,11 +390,24 @@ export default function TasksPage() {
       {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={3000}
+        autoHideDuration={snackbar.nextDueDate ? 6000 : 3000}
         onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
       >
         <Alert severity={snackbar.severity} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}>
           {snackbar.message}
+          {snackbar.nextDueDate && (
+            <>
+              {' Next due: '}
+              <MuiLink
+                component="button"
+                variant="body2"
+                onClick={handleOpenNextInstance}
+                sx={{ verticalAlign: 'baseline', fontWeight: 'bold' }}
+              >
+                {formatNextDueDate(snackbar.nextDueDate)}
+              </MuiLink>
+            </>
+          )}
         </Alert>
       </Snackbar>
     </Box>

@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import type { Task } from '../types';
+import type { Task, TaskCompletionResponse } from '../types';
 import { Priority, Difficulty, Duration } from '../types';
 import { taskApi } from '../services/api';
 
@@ -59,7 +59,7 @@ interface TaskState {
   createTask: (task: Partial<Task>) => Promise<Task>;
   saveTask: (id: string, updates: Partial<Task>) => Promise<Task>;
   deleteTask: (id: string) => Promise<void>;
-  completeTask: (id: string) => Promise<Task>;
+  completeTask: (id: string) => Promise<TaskCompletionResponse>;
   uncompleteTask: (id: string) => Promise<Task>;
   undoTask: (id: string) => Promise<Task>;
 }
@@ -228,13 +228,18 @@ export const useTaskStore = create<TaskState>()(
           }));
 
           try {
-            const completedTask = await taskApi.completeTask(id);
-            set((state) => ({
-              tasks: state.tasks.map((t) =>
-                t.id === id ? completedTask : t
-              ),
-            }));
-            return completedTask;
+            const response = await taskApi.completeTask(id);
+            set((state) => {
+              // Update completed task and add next instance if present
+              let updatedTasks = state.tasks.map((t) =>
+                t.id === id ? response.task : t
+              );
+              if (response.next_instance) {
+                updatedTasks = [...updatedTasks, response.next_instance];
+              }
+              return { tasks: updatedTasks };
+            });
+            return response;
           } catch (error) {
             // Revert on error - tested via error injection in integration tests
             /* v8 ignore start */

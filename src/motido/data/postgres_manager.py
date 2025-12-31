@@ -342,6 +342,7 @@ class PostgresDataManager(DataManager):
         subtasks = row.get("subtasks", [])
         if isinstance(subtasks, str):
             subtasks = json.loads(subtasks)
+        subtasks = self._normalize_subtasks(subtasks)
 
         dependencies = row.get("dependencies", [])
         if isinstance(dependencies, str):
@@ -399,6 +400,25 @@ class PostgresDataManager(DataManager):
             return SubtaskRecurrenceMode(mode_str)
         except ValueError:
             return SubtaskRecurrenceMode.DEFAULT
+
+    @staticmethod
+    def _normalize_subtasks(subtasks: list) -> list:
+        """
+        Normalize subtasks to ensure they're in dict format.
+
+        Handles legacy format where subtasks were strings instead of dicts.
+        """
+        if not subtasks:
+            return []
+        normalized = []
+        for item in subtasks:
+            if isinstance(item, str):
+                # Legacy format: convert string to dict
+                normalized.append({"text": item, "complete": False})
+            elif isinstance(item, dict):
+                normalized.append(item)
+            # Skip any other types
+        return normalized
 
     def _row_to_xp_transaction(self, row: dict) -> XPTransaction:
         """Converts a database row to an XPTransaction object."""

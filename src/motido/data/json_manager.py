@@ -173,7 +173,7 @@ class JsonDataManager(DataManager):
             icon=task_dict.get("icon"),
             tags=task_dict.get("tags", []),
             project=task_dict.get("project"),
-            subtasks=task_dict.get("subtasks", []),
+            subtasks=self._normalize_subtasks(task_dict.get("subtasks", [])),
             dependencies=task_dict.get("dependencies", []),
             history=task_dict.get("history", []),
             is_habit=task_dict.get("is_habit", False),
@@ -197,6 +197,25 @@ class JsonDataManager(DataManager):
             return SubtaskRecurrenceMode(mode_str)
         except ValueError:
             return SubtaskRecurrenceMode.DEFAULT
+
+    @staticmethod
+    def _normalize_subtasks(subtasks: list) -> list:
+        """
+        Normalize subtasks to ensure they're in dict format.
+
+        Handles legacy format where subtasks were strings instead of dicts.
+        """
+        if not subtasks:
+            return []
+        normalized = []
+        for item in subtasks:
+            if isinstance(item, str):
+                # Legacy format: convert string to dict
+                normalized.append({"text": item, "complete": False})
+            elif isinstance(item, dict):
+                normalized.append(item)
+            # Skip any other types
+        return normalized
 
     def _deserialize_xp_transaction(self, trans_dict: Dict[str, Any]) -> XPTransaction:
         """Deserialize an XP transaction dictionary."""

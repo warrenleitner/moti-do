@@ -444,3 +444,100 @@ def test_load_user_with_subtask_recurrence_mode(
     assert user is not None
     assert len(user.tasks) == 1
     assert user.tasks[0].subtask_recurrence_mode == SubtaskRecurrenceMode.ALWAYS
+
+
+def test_normalize_subtasks_empty(manager: JsonDataManager) -> None:
+    """Test _normalize_subtasks with empty list."""
+    # pylint: disable=protected-access
+    assert not manager._normalize_subtasks([])
+    assert not manager._normalize_subtasks(None)  # type: ignore[arg-type]
+
+
+def test_normalize_subtasks_dict_format(manager: JsonDataManager) -> None:
+    """Test _normalize_subtasks with proper dict format passes through."""
+    # pylint: disable=protected-access
+    subtasks = [
+        {"text": "Task 1", "complete": False},
+        {"text": "Task 2", "complete": True},
+    ]
+    result = manager._normalize_subtasks(subtasks)
+    assert result == subtasks
+
+
+def test_normalize_subtasks_string_format(manager: JsonDataManager) -> None:
+    """Test _normalize_subtasks converts legacy string format to dict."""
+    # pylint: disable=protected-access
+    subtasks = ["Day 1", "Day 2", "Day 3"]
+    result = manager._normalize_subtasks(subtasks)
+    assert result == [
+        {"text": "Day 1", "complete": False},
+        {"text": "Day 2", "complete": False},
+        {"text": "Day 3", "complete": False},
+    ]
+
+
+def test_normalize_subtasks_mixed_format(manager: JsonDataManager) -> None:
+    """Test _normalize_subtasks handles mixed string and dict format."""
+    # pylint: disable=protected-access
+    subtasks = [
+        "Legacy string subtask",
+        {"text": "Proper dict subtask", "complete": True},
+    ]
+    result = manager._normalize_subtasks(subtasks)
+    assert result == [
+        {"text": "Legacy string subtask", "complete": False},
+        {"text": "Proper dict subtask", "complete": True},
+    ]
+
+
+def test_normalize_subtasks_skips_invalid_types(manager: JsonDataManager) -> None:
+    """Test _normalize_subtasks skips invalid types like integers."""
+    # pylint: disable=protected-access
+    subtasks = [
+        "Valid string",
+        {"text": "Valid dict", "complete": False},
+        123,  # Invalid: integer
+        None,  # Invalid: None
+        ["list"],  # Invalid: list
+    ]
+    result = manager._normalize_subtasks(subtasks)  # type: ignore[arg-type]
+    assert result == [
+        {"text": "Valid string", "complete": False},
+        {"text": "Valid dict", "complete": False},
+    ]
+
+
+def test_load_user_with_string_subtasks(
+    manager: JsonDataManager,
+    mocker: Any,
+) -> None:
+    """Test loading a user with legacy string subtasks normalizes them."""
+    user_data = {
+        "default_user": {
+            "username": "default_user",
+            "total_xp": 0,
+            "tasks": [
+                {
+                    "id": "test-id",
+                    "title": "Test Task",
+                    "priority": "Low",
+                    "difficulty": "Trivial",
+                    "duration": "Minuscule",
+                    "is_complete": False,
+                    "creation_date": "2023-01-01 12:00:00",
+                    "subtasks": ["Day 1", "Day 2", "Day 3"],  # Legacy string format
+                }
+            ],
+        }
+    }
+    mocker.patch.object(manager, "_read_data", return_value=user_data)
+
+    user = manager.load_user("default_user")
+
+    assert user is not None
+    assert len(user.tasks) == 1
+    assert user.tasks[0].subtasks == [
+        {"text": "Day 1", "complete": False},
+        {"text": "Day 2", "complete": False},
+        {"text": "Day 3", "complete": False},
+    ]

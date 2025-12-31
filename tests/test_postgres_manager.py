@@ -584,3 +584,99 @@ def test_row_to_task_with_subtask_recurrence_mode() -> None:
     task = manager._row_to_task(row)
 
     assert task.subtask_recurrence_mode == SubtaskRecurrenceMode.ALWAYS
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_normalize_subtasks_empty() -> None:
+    """Test _normalize_subtasks with empty list."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    manager = PostgresDataManager("postgresql://test")
+    assert not manager._normalize_subtasks([])
+    assert not manager._normalize_subtasks(None)  # type: ignore[arg-type]
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_normalize_subtasks_dict_format() -> None:
+    """Test _normalize_subtasks with proper dict format passes through."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    manager = PostgresDataManager("postgresql://test")
+    subtasks = [
+        {"text": "Task 1", "complete": False},
+        {"text": "Task 2", "complete": True},
+    ]
+    result = manager._normalize_subtasks(subtasks)
+    assert result == subtasks
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_normalize_subtasks_string_format() -> None:
+    """Test _normalize_subtasks converts legacy string format to dict."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    manager = PostgresDataManager("postgresql://test")
+    subtasks = ["Day 1", "Day 2", "Day 3"]
+    result = manager._normalize_subtasks(subtasks)
+    assert result == [
+        {"text": "Day 1", "complete": False},
+        {"text": "Day 2", "complete": False},
+        {"text": "Day 3", "complete": False},
+    ]
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_normalize_subtasks_mixed_format() -> None:
+    """Test _normalize_subtasks handles mixed string and dict format."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    manager = PostgresDataManager("postgresql://test")
+    subtasks = [
+        "Legacy string subtask",
+        {"text": "Proper dict subtask", "complete": True},
+    ]
+    result = manager._normalize_subtasks(subtasks)
+    assert result == [
+        {"text": "Legacy string subtask", "complete": False},
+        {"text": "Proper dict subtask", "complete": True},
+    ]
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+def test_row_to_task_with_string_subtasks() -> None:
+    """Test _row_to_task normalizes legacy string subtasks to dict format."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    row = {
+        "id": "task1",
+        "title": "Task with legacy subtasks",
+        "priority": "Low",
+        "difficulty": "Trivial",
+        "duration": "Minuscule",
+        "is_complete": False,
+        "creation_date": datetime.now(),
+        "due_date": None,
+        "start_date": None,
+        "icon": None,
+        "tags": None,
+        "project": None,
+        "subtasks": '["Day 1", "Day 2", "Day 3"]',  # Legacy string format
+        "dependencies": None,
+        "history": None,
+        "is_habit": True,
+        "recurrence_rule": "daily",
+        "recurrence_type": None,
+        "streak_current": 0,
+        "streak_best": 0,
+        "parent_habit_id": None,
+        "habit_start_delta": None,
+    }
+
+    manager = PostgresDataManager("postgresql://test")
+    task = manager._row_to_task(row)
+
+    assert task.subtasks == [
+        {"text": "Day 1", "complete": False},
+        {"text": "Day 2", "complete": False},
+        {"text": "Day 3", "complete": False},
+    ]

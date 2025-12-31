@@ -837,3 +837,88 @@ def test_load_user_with_invalid_projects_json(
 
     assert loaded_user is not None
     assert len(loaded_user.defined_projects) == 0
+
+
+def test_normalize_subtasks_empty(manager: DatabaseDataManager) -> None:
+    """Test _normalize_subtasks with empty list."""
+    assert not manager._normalize_subtasks([])
+    assert not manager._normalize_subtasks(None)  # type: ignore[arg-type]
+
+
+def test_normalize_subtasks_dict_format(manager: DatabaseDataManager) -> None:
+    """Test _normalize_subtasks with proper dict format passes through."""
+    subtasks = [
+        {"text": "Task 1", "complete": False},
+        {"text": "Task 2", "complete": True},
+    ]
+    result = manager._normalize_subtasks(subtasks)
+    assert result == subtasks
+
+
+def test_normalize_subtasks_string_format(manager: DatabaseDataManager) -> None:
+    """Test _normalize_subtasks converts legacy string format to dict."""
+    subtasks = ["Day 1", "Day 2", "Day 3"]
+    result = manager._normalize_subtasks(subtasks)
+    assert result == [
+        {"text": "Day 1", "complete": False},
+        {"text": "Day 2", "complete": False},
+        {"text": "Day 3", "complete": False},
+    ]
+
+
+def test_normalize_subtasks_mixed_format(manager: DatabaseDataManager) -> None:
+    """Test _normalize_subtasks handles mixed string and dict format."""
+    subtasks = [
+        "Legacy string subtask",
+        {"text": "Proper dict subtask", "complete": True},
+    ]
+    result = manager._normalize_subtasks(subtasks)
+    assert result == [
+        {"text": "Legacy string subtask", "complete": False},
+        {"text": "Proper dict subtask", "complete": True},
+    ]
+
+
+def test_load_user_with_string_subtasks(
+    manager: DatabaseDataManager,
+    mock_conn_fixture: Tuple[Any, Any, Any],
+) -> None:
+    """Test loading a task with legacy string subtasks normalizes them."""
+    _, _, cursor = mock_conn_fixture
+    username = DEFAULT_USERNAME
+
+    cursor.fetchone.return_value = {
+        "username": username,
+        "total_xp": 100,
+        "last_processed_date": "2025-01-01",
+        "vacation_mode": 0,
+        "defined_tags": None,
+        "defined_projects": None,
+    }
+    # Return a task with string subtasks (legacy format)
+    cursor.fetchall.return_value = [
+        {
+            "id": "task1",
+            "title": "Task with legacy subtasks",
+            "priority": "Low",
+            "difficulty": "Trivial",
+            "duration": "Minuscule",
+            "is_complete": 0,
+            "creation_date": "2025-01-01 12:00:00",
+            "subtasks": json.dumps(["Day 1", "Day 2", "Day 3"]),  # Legacy string format
+            "tags": None,
+            "project": None,
+            "dependencies": None,
+            "history": None,
+        }
+    ]
+
+    loaded_user = manager.load_user(username)
+
+    assert loaded_user is not None
+    assert len(loaded_user.tasks) == 1
+    assert loaded_user.tasks[0].subtasks == [
+        {"text": "Day 1", "complete": False},
+        {"text": "Day 2", "complete": False},
+        {"text": "Day 3", "complete": False},
+    ]
