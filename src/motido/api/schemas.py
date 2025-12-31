@@ -157,6 +157,7 @@ class XPTransactionSchema(BaseModel):
     timestamp: datetime
     task_id: str | None = None
     description: str = ""
+    game_date: date | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

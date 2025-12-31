@@ -205,6 +205,14 @@ class JsonDataManager(DataManager):
             self._parse_datetime_field(timestamp_str, "timestamp", None)
             or datetime.now()
         )
+        # Parse game_date if present
+        game_date_str = trans_dict.get("game_date")
+        game_date = None
+        if game_date_str:
+            try:
+                game_date = date.fromisoformat(game_date_str)
+            except ValueError:
+                game_date = None
         return XPTransaction(
             id=trans_dict.get("id", str(uuid.uuid4())),
             amount=trans_dict.get("amount", 0),
@@ -212,6 +220,7 @@ class JsonDataManager(DataManager):
             timestamp=timestamp,
             task_id=trans_dict.get("task_id"),
             description=trans_dict.get("description", ""),
+            game_date=game_date,
         )
 
     def _deserialize_badge(self, badge_dict: Dict[str, Any]) -> Badge:
@@ -403,6 +412,11 @@ class JsonDataManager(DataManager):
                     "timestamp": trans.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                     "task_id": trans.task_id,
                     "description": trans.description,
+                    "game_date": (
+                        trans.game_date.isoformat()
+                        if getattr(trans, "game_date", None)
+                        else None
+                    ),
                 }
                 for trans in getattr(user, "xp_transactions", [])
             ],

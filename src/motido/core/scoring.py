@@ -7,7 +7,7 @@ Provides functionality for task scoring and XP calculation.
 import json
 import math
 import os
-from datetime import date, timedelta
+from datetime import date
 from typing import Any, Dict, Optional
 
 from motido.core.models import Task, User
@@ -837,7 +837,7 @@ def set_last_penalty_check_date(check_date: date) -> None:
         raise IOError(f"Error saving last penalty check date: {e}") from e
 
 
-# pylint: disable=too-many-arguments,too-many-positional-arguments
+# pylint: disable=too-many-arguments,too-many-positional-arguments,unused-argument
 def add_xp(
     user: Any,
     manager: Any,
@@ -845,17 +845,23 @@ def add_xp(
     source: str = "task_completion",
     task_id: str | None = None,
     description: str = "",
+    game_date: Optional[date] = None,
 ) -> None:
     """
-    Add XP points to the user's total and persist to storage.
+    Add XP points to the user's total, aggregating into daily entries.
+
+    All XP changes are aggregated into daily entries:
+    - Positive XP (completions) → daily_earned entry for that date
+    - Negative XP (penalties) → daily_lost entry for that date
 
     Args:
         user: The User object to update
         manager: The DataManager instance to persist changes
         points: The number of XP points to add (can be negative for penalties).
         source: The source of XP (task_completion, penalty, withdrawal, etc.)
-        task_id: Optional associated task ID
+        task_id: Optional associated task ID (not used for aggregated entries)
         description: Optional description of the transaction
+        game_date: The game day this XP applies to (defaults to today)
     """
     # Import XPTransaction here to avoid circular import
     # pylint: disable=import-outside-toplevel
@@ -866,22 +872,63 @@ def add_xp(
     # Update user's total XP
     user.total_xp += points
 
-    # Create transaction record
-    # Cast source to valid type - the caller should ensure it's valid
-    valid_source: Any = source
-    transaction = XPTransaction(
-        amount=points,
-        source=valid_source,
-        timestamp=dt.now(),
-        task_id=task_id,
-        description=description
-        or f"{'Added' if points > 0 else 'Deducted'} {abs(points)} XP",
-    )
-
     # Ensure xp_transactions list exists (for backward compatibility)
     if not hasattr(user, "xp_transactions"):
         user.xp_transactions = []
-    user.xp_transactions.append(transaction)
+
+    # Determine the game date (default to today)
+    effective_game_date = game_date if game_date is not None else date.today()
+
+    # Determine aggregate source type based on points direction
+    # Cast to Any to satisfy mypy - these are valid XPSource literal values
+    aggregate_source: Any = "daily_earned" if points > 0 else "daily_lost"
+
+    # Look for existing daily entry for this date and source type
+    existing_entry = None
+    for transaction in user.xp_transactions:
+        if (
+            hasattr(transaction, "game_date")
+            and transaction.game_date == effective_game_date
+            and transaction.source == aggregate_source
+        ):
+            existing_entry = transaction
+            break
+
+    if existing_entry:
+        # Update existing entry
+        existing_entry.amount += points
+        existing_entry.timestamp = dt.now()
+        # Update description to reflect the aggregate
+        if points > 0:
+            existing_entry.description = (
+                f"Earned {existing_entry.amount} XP on "
+                f"{effective_game_date.strftime('%Y-%m-%d')}"
+            )
+        else:
+            existing_entry.description = (
+                f"Lost {abs(existing_entry.amount)} XP on "
+                f"{effective_game_date.strftime('%Y-%m-%d')}"
+            )
+    else:
+        # Create new daily aggregate entry
+        if points > 0:
+            entry_description = (
+                f"Earned {points} XP on {effective_game_date.strftime('%Y-%m-%d')}"
+            )
+        else:
+            entry_description = (
+                f"Lost {abs(points)} XP on {effective_game_date.strftime('%Y-%m-%d')}"
+            )
+
+        transaction = XPTransaction(
+            amount=points,
+            source=aggregate_source,
+            timestamp=dt.now(),
+            task_id=None,  # Aggregate entries don't track individual tasks
+            description=entry_description,
+            game_date=effective_game_date,
+        )
+        user.xp_transactions.append(transaction)
 
     # Persist the change to backend
     manager.save_user(user)
@@ -946,12 +993,15 @@ def apply_penalties(
     all_tasks: list[Task],
 ) -> None:
     """
-    Apply daily penalties for incomplete tasks.
+    Apply daily penalties for incomplete tasks for a single day.
+
+    This function applies penalties for the specific effective_date.
+    The caller is responsible for iterating over multiple days if needed.
 
     Args:
         user: The User object to update
         manager: The DataManager instance to persist changes
-        effective_date: The date to calculate penalties for
+        effective_date: The specific date to apply penalties for
         config: The scoring configuration
         all_tasks: List of all tasks to check for penalties
     """
@@ -962,64 +1012,38 @@ def apply_penalties(
     # Check if user is in vacation mode
     if getattr(user, "vacation_mode", False):
         print("Vacation mode enabled. Skipping penalties.")
-        # Still update the last check date so we don't accumulate penalties while away
-        set_last_penalty_check_date(effective_date)
         return
-
-    # Get the last penalty check date
-    last_check = get_last_penalty_check_date()
-
-    # If no previous check, use yesterday as the start date
-    if last_check is None:
-        start_date = effective_date - timedelta(days=1)
-    else:
-        # If last check is already today or in the future, nothing to do
-        if last_check >= effective_date:
-            return
-        start_date = last_check
-
-    # Get penalty points from config
-    # penalty_points = config["daily_penalty"]["penalty_points"] # Deprecated in favor of dynamic calculation
 
     # Create a dict of tasks for dependency resolution in calculate_score
     task_map = {t.id: t for t in all_tasks}
 
-    # Iterate through dates from start_date + 1 to effective_date
-    current_date = start_date + timedelta(days=1)
-    while current_date <= effective_date:
-        # Check each task
-        for task in all_tasks:
-            if not task.is_complete and task.creation_date.date() < current_date:
-                # Calculate current score
-                current_score = calculate_score(task, task_map, config, current_date)
+    # Apply penalties for each incomplete task on this specific date
+    for task in all_tasks:
+        # Only penalize tasks created before this date
+        if not task.is_complete and task.creation_date.date() < effective_date:
+            # Calculate current score
+            current_score = calculate_score(task, task_map, config, effective_date)
 
-                # Get multipliers to dampen the penalty
-                difficulty_key = task.difficulty.name
-                difficulty_mult = config["difficulty_multiplier"].get(
-                    difficulty_key, 1.0
-                )
+            # Get multipliers to dampen the penalty
+            difficulty_key = task.difficulty.name
+            difficulty_mult = config["difficulty_multiplier"].get(difficulty_key, 1.0)
 
-                duration_key = task.duration.name
-                duration_mult = config["duration_multiplier"].get(duration_key, 1.0)
+            duration_key = task.duration.name
+            duration_mult = config["duration_multiplier"].get(duration_key, 1.0)
 
-                # Dampen penalty: penalty = score / (diff * dur)
-                if current_score > 0:
-                    penalty = int(current_score / (difficulty_mult * duration_mult))
-                    if penalty > 0:
-                        add_xp(
-                            user,
-                            manager,
-                            -penalty,
-                            source="penalty",
-                            task_id=task.id,
-                            description=f"Penalty for incomplete: {task.title}",
-                        )
-
-        # Move to next day
-        current_date += timedelta(days=1)
-
-    # Update the last penalty check date
-    set_last_penalty_check_date(effective_date)
+            # Dampen penalty: penalty = score / (diff * dur)
+            if current_score > 0:
+                penalty = int(current_score / (difficulty_mult * duration_mult))
+                if penalty > 0:
+                    add_xp(
+                        user,
+                        manager,
+                        -penalty,
+                        source="penalty",
+                        task_id=task.id,
+                        description=f"Penalty for incomplete: {task.title}",
+                        game_date=effective_date,
+                    )
 
 
 def check_badges(user: Any, manager: Any, config: Dict[str, Any]) -> list[Any]:

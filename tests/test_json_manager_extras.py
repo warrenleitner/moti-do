@@ -1,5 +1,6 @@
 """Additional tests for JsonDataManager to improve code coverage."""
 
+from datetime import date
 from typing import Any
 
 from motido.core.models import SubtaskRecurrenceMode
@@ -250,6 +251,102 @@ def test_deserialize_xp_transaction_with_defaults(
     assert trans.task_id is None
     assert trans.id is not None  # UUID generated
     assert trans.timestamp is not None  # Now() used as default
+
+
+def test_deserialize_xp_transaction_with_game_date(
+    manager: JsonDataManager,
+    mocker: Any,
+) -> None:
+    """Test deserializing XP transaction with game_date field."""
+    user_data = {
+        "default_user": {
+            "username": "default_user",
+            "total_xp": 100,
+            "tasks": [],
+            "xp_transactions": [
+                {
+                    "id": "test-id",
+                    "amount": 50,
+                    "source": "daily_earned",
+                    "timestamp": "2025-01-15 10:00:00",
+                    "description": "Earned 50 XP on 2025-01-15",
+                    "game_date": "2025-01-15",
+                }
+            ],
+        }
+    }
+    mocker.patch.object(manager, "_read_data", return_value=user_data)
+
+    user = manager.load_user("default_user")
+
+    assert user is not None
+    assert len(user.xp_transactions) == 1
+    trans = user.xp_transactions[0]
+    assert trans.amount == 50
+    assert trans.source == "daily_earned"
+    assert trans.game_date == date(2025, 1, 15)
+
+
+def test_deserialize_xp_transaction_with_invalid_game_date(
+    manager: JsonDataManager,
+    mocker: Any,
+) -> None:
+    """Test deserializing XP transaction with invalid game_date returns None."""
+    user_data = {
+        "default_user": {
+            "username": "default_user",
+            "total_xp": 100,
+            "tasks": [],
+            "xp_transactions": [
+                {
+                    "id": "test-id",
+                    "amount": 50,
+                    "source": "daily_earned",
+                    "timestamp": "2025-01-15 10:00:00",
+                    "game_date": "invalid-date",
+                }
+            ],
+        }
+    }
+    mocker.patch.object(manager, "_read_data", return_value=user_data)
+
+    user = manager.load_user("default_user")
+
+    assert user is not None
+    assert len(user.xp_transactions) == 1
+    trans = user.xp_transactions[0]
+    assert trans.game_date is None  # Invalid date defaults to None
+
+
+def test_deserialize_xp_transaction_without_game_date(
+    manager: JsonDataManager,
+    mocker: Any,
+) -> None:
+    """Test deserializing XP transaction without game_date field."""
+    user_data = {
+        "default_user": {
+            "username": "default_user",
+            "total_xp": 50,
+            "tasks": [],
+            "xp_transactions": [
+                {
+                    "id": "test-id",
+                    "amount": 50,
+                    "source": "task_completion",
+                    "timestamp": "2025-01-15 10:00:00",
+                    # No game_date field
+                }
+            ],
+        }
+    }
+    mocker.patch.object(manager, "_read_data", return_value=user_data)
+
+    user = manager.load_user("default_user")
+
+    assert user is not None
+    assert len(user.xp_transactions) == 1
+    trans = user.xp_transactions[0]
+    assert trans.game_date is None  # Missing game_date defaults to None
 
 
 def test_deserialize_badge_with_defaults(

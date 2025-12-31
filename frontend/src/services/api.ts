@@ -78,6 +78,7 @@ export interface XPTransaction {
   timestamp: string;
   task_id?: string;
   description: string;
+  game_date?: string; // The game day this transaction belongs to (ISO date string)
 }
 
 export interface Badge {

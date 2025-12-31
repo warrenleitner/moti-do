@@ -103,6 +103,7 @@ async def get_xp_log(
             timestamp=t.timestamp,
             task_id=t.task_id,
             description=t.description,
+            game_date=getattr(t, "game_date", None),
         )
         for t in transactions
     ]
