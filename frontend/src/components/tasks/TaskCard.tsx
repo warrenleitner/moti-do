@@ -23,6 +23,8 @@ import {
   Undo,
   CheckCircle,
   RadioButtonUnchecked,
+  Add,
+  Remove,
 } from '@mui/icons-material';
 import { useState, useCallback } from 'react';
 import { useSwipeable } from 'react-swipeable';
@@ -46,6 +48,8 @@ interface TaskCardProps {
   onDelete: (id: string) => void;
   onSubtaskToggle?: (taskId: string, subtaskIndex: number) => void;
   onUndo?: (id: string) => void;
+  onIncrement?: (id: string) => void;
+  onDecrement?: (id: string) => void;
   isBlocked?: boolean;
   subtaskViewMode?: SubtaskViewMode;
 }
@@ -60,6 +64,8 @@ export default function TaskCard({
   onDelete,
   onSubtaskToggle,
   onUndo,
+  onIncrement,
+  onDecrement,
   isBlocked = false,
   subtaskViewMode = 'inline',
 }: TaskCardProps) {
@@ -208,6 +214,48 @@ export default function TaskCard({
                   sx={{ fontWeight: 600 }}
                 />
               </Tooltip>
+              {/* Counter controls for counter tasks */}
+              {task.target_count !== undefined && task.target_count > 0 && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Tooltip title="Decrease count">
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDecrement?.(task.id);
+                        }}
+                        disabled={task.current_count <= 0 || task.is_complete}
+                        sx={{ p: 0.25 }}
+                      >
+                        <Remove fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Chip
+                    label={`${task.current_count}/${task.target_count}`}
+                    size="small"
+                    color={task.current_count >= task.target_count ? 'success' : 'default'}
+                    variant="outlined"
+                    sx={{ minWidth: 50, fontWeight: 600 }}
+                  />
+                  <Tooltip title="Increase count">
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onIncrement?.(task.id);
+                        }}
+                        disabled={task.is_complete}
+                        sx={{ p: 0.25 }}
+                      >
+                        <Add fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
+              )}
               {/* Show full metadata on desktop, minimal on mobile */}
               {!isMobile && (
                 <>

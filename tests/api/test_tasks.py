@@ -684,3 +684,113 @@ class TestSubtaskRecurrenceModeAPI:
         assert response.status_code == 200
         data = response.json()
         assert "subtask_recurrence_mode" in data
+
+
+class TestCounterTasks:
+    """Tests for counter task functionality."""
+
+    def test_create_counter_task(self, client: TestClient) -> None:
+        """Test creating a counter task with target_count."""
+        response = client.post(
+            "/api/tasks", json={"title": "Drink Water", "target_count": 8}
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["target_count"] == 8
+        assert data["current_count"] == 0
+
+    def test_increment_counter(self, client: TestClient) -> None:
+        """Test incrementing a counter task."""
+        # Create counter task
+        create_response = client.post(
+            "/api/tasks", json={"title": "Exercise", "target_count": 5}
+        )
+        task_id = create_response.json()["id"]
+
+        # Increment counter
+        response = client.post(f"/api/tasks/{task_id}/counter/increment")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["current_count"] == 1
+
+        # Increment again
+        response = client.post(f"/api/tasks/{task_id}/counter/increment")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["current_count"] == 2
+
+    def test_decrement_counter(self, client: TestClient) -> None:
+        """Test decrementing a counter task."""
+        # Create counter task
+        create_response = client.post(
+            "/api/tasks", json={"title": "Steps", "target_count": 10}
+        )
+        task_id = create_response.json()["id"]
+
+        # Increment to 3
+        client.post(f"/api/tasks/{task_id}/counter/increment")
+        client.post(f"/api/tasks/{task_id}/counter/increment")
+        client.post(f"/api/tasks/{task_id}/counter/increment")
+
+        # Decrement
+        response = client.post(f"/api/tasks/{task_id}/counter/decrement")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["current_count"] == 2
+
+    def test_decrement_counter_minimum_zero(self, client: TestClient) -> None:
+        """Test that decrementing below zero stays at zero."""
+        # Create counter task
+        create_response = client.post(
+            "/api/tasks", json={"title": "Meditate", "target_count": 3}
+        )
+        task_id = create_response.json()["id"]
+
+        # Decrement from zero
+        response = client.post(f"/api/tasks/{task_id}/counter/decrement")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["current_count"] == 0
+
+    def test_counter_invalid_action(self, client: TestClient) -> None:
+        """Test that invalid counter actions return error."""
+        # Create counter task
+        create_response = client.post(
+            "/api/tasks", json={"title": "Count", "target_count": 5}
+        )
+        task_id = create_response.json()["id"]
+
+        # Try invalid action
+        response = client.post(f"/api/tasks/{task_id}/counter/invalid")
+        assert response.status_code == 400
+        assert "Invalid action" in response.json()["detail"]
+
+    def test_counter_on_non_counter_task(self, client: TestClient) -> None:
+        """Test that counter operations fail on non-counter tasks."""
+        # Create regular task (no target_count)
+        create_response = client.post("/api/tasks", json={"title": "Regular Task"})
+        task_id = create_response.json()["id"]
+
+        # Try to increment
+        response = client.post(f"/api/tasks/{task_id}/counter/increment")
+        assert response.status_code == 400
+        assert "not a counter task" in response.json()["detail"]
+
+    def test_update_current_count(self, client: TestClient) -> None:
+        """Test updating current_count via task update."""
+        # Create counter task
+        create_response = client.post(
+            "/api/tasks", json={"title": "Update Test", "target_count": 5}
+        )
+        task_id = create_response.json()["id"]
+
+        # Update current_count directly
+        response = client.put(f"/api/tasks/{task_id}", json={"current_count": 3})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["current_count"] == 3
+
+    def test_counter_not_found(self, client: TestClient) -> None:
+        """Test counter operation on non-existent task."""
+        response = client.post("/api/tasks/nonexistent-id/counter/increment")
+        assert response.status_code == 404

@@ -83,6 +83,8 @@ def task_to_response(
         score=score,
         penalty_score=penalty_score,
         net_score=net_score,
+        target_count=task.target_count,
+        current_count=task.current_count,
     )
 
 
@@ -209,6 +211,7 @@ async def create_task(
         ),
         subtasks=[{"text": s.text, "complete": False} for s in task_data.subtasks],
         dependencies=task_data.dependencies,
+        target_count=task_data.target_count,
     )
 
     # Auto-generate icon if not provided
@@ -378,6 +381,16 @@ def apply_task_updates(  # pylint: disable=too-many-branches,too-many-statements
         task.project = task_data.project
         if task.project:
             user.get_or_create_project(task.project)
+
+    # Counter task fields
+    if task_data.target_count is not None:  # pragma: no cover
+        record_history(task, "target_count", task.target_count, task_data.target_count)
+        task.target_count = task_data.target_count
+    if task_data.current_count is not None:
+        record_history(
+            task, "current_count", task.current_count, task_data.current_count
+        )
+        task.current_count = task_data.current_count
 
 
 @router.put("/{task_id}", response_model=TaskResponse)
@@ -786,6 +799,54 @@ async def remove_dependency(
     if dep_task and dep_task.id in task.dependencies:
         task.dependencies.remove(dep_task.id)
         manager.save_user(user)
+
+    # Load scoring context for score calculation
+    config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return task_to_response(task, all_tasks, config, effective_date)
+
+
+@router.post("/{task_id}/counter/{action}", response_model=TaskResponse)
+async def update_counter(
+    task_id: str,
+    action: str,
+    user: CurrentUser,
+    manager: ManagerDep,
+) -> TaskResponse:
+    """
+    Increment or decrement a counter task's current count.
+
+    Actions:
+    - increment: Add 1 to current_count
+    - decrement: Subtract 1 from current_count (minimum 0)
+    """
+    task = user.find_task_by_id(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task with ID {task_id} not found",
+        )
+
+    if task.target_count is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Task is not a counter task",
+        )
+
+    if action == "increment":
+        task.current_count += 1
+    elif action == "decrement":
+        task.current_count = max(0, task.current_count - 1)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid action: {action}. Must be 'increment' or 'decrement'",
+        )
+
+    manager.save_user(user)
 
     # Load scoring context for score calculation
     config = load_scoring_config()

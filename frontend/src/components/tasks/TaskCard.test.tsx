@@ -43,6 +43,7 @@ const mockTask: Task = {
   score: 25,
   penalty_score: 5,
   net_score: 30,
+  current_count: 0,
 };
 
 const mockHabit: Task = {
@@ -64,6 +65,7 @@ const mockHabit: Task = {
   score: 15,
   penalty_score: 0,
   net_score: 15,
+  current_count: 0,
 };
 
 describe('TaskCard', () => {

@@ -62,6 +62,7 @@ export default function CalendarPage() {
         score: 0,
         penalty_score: 0,
         net_score: 0,
+        current_count: 0,
         ...taskData,
       };
       addTask(newTask);
@@ -101,6 +102,7 @@ export default function CalendarPage() {
     score: 0,
     penalty_score: 0,
     net_score: 0,
+    current_count: 0,
   } : null);
 
   return (
