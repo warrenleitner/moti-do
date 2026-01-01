@@ -24,7 +24,8 @@ import {
   CheckCircle,
   RadioButtonUnchecked,
 } from '@mui/icons-material';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useSwipeable } from 'react-swipeable';
 import type { Task } from '../../types';
 import type { SubtaskViewMode } from '../../store/taskStore';
 import {
@@ -49,6 +50,9 @@ interface TaskCardProps {
   subtaskViewMode?: SubtaskViewMode;
 }
 
+// Threshold for completing a swipe action (in pixels)
+const SWIPE_THRESHOLD = 100;
+
 export default function TaskCard({
   task,
   onComplete,
@@ -60,8 +64,46 @@ export default function TaskCard({
   subtaskViewMode = 'inline',
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Handle swipe completion
+  const handleSwipeComplete = useCallback(() => {
+    if (!isBlocked && !task.is_complete) {
+      onComplete(task.id);
+    }
+    setSwipeOffset(0);
+  }, [isBlocked, task.is_complete, task.id, onComplete]);
+
+  // Swipe handlers for mobile
+  const swipeHandlers = useSwipeable({
+    onSwiping: (eventData) => {
+      // Only track right swipes on mobile
+      if (isMobile && eventData.dir === 'Right' && !isBlocked && !task.is_complete) {
+        setSwipeOffset(Math.min(eventData.deltaX, SWIPE_THRESHOLD * 1.5));
+      }
+    },
+    onSwipedRight: (eventData) => {
+      if (isMobile && eventData.deltaX >= SWIPE_THRESHOLD) {
+        handleSwipeComplete();
+      } else {
+        setSwipeOffset(0);
+      }
+    },
+    onTouchEndOrOnMouseUp: () => {
+      // Reset if swipe wasn't completed
+      if (swipeOffset < SWIPE_THRESHOLD) {
+        setSwipeOffset(0);
+      }
+    },
+    trackMouse: false,
+    trackTouch: true,
+    preventScrollOnSwipe: false,
+  });
+
+  // Calculate swipe progress (0 to 1)
+  const swipeProgress = Math.min(swipeOffset / SWIPE_THRESHOLD, 1);
 
   const completedSubtasks = task.subtasks.filter((s) => s.complete).length;
   const hasSubtasks = task.subtasks.length > 0;
@@ -71,22 +113,58 @@ export default function TaskCard({
   const hasDetails = isMobile || task.text_description || showSubtasksInline || task.tags.length > 0;
 
   return (
-    <Card
+    <Box
+      {...swipeHandlers}
       sx={{
+        position: 'relative',
+        overflow: 'hidden',
         mb: 1,
-        opacity: task.is_complete ? 0.7 : isBlocked ? 0.6 : 1,
-        borderLeft: 4,
-        borderColor: task.is_complete
-          ? 'success.main'
-          : isBlocked
-          ? 'grey.400'
-          : 'primary.main',
-        transition: 'all 0.2s ease',
-        '&:hover': {
-          boxShadow: 3,
-        },
+        borderRadius: 1,
       }}
     >
+      {/* Swipe indicator background - only show on mobile when swiping incomplete tasks */}
+      {isMobile && !task.is_complete && !isBlocked && swipeOffset > 0 && (
+        <Box
+          sx={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: swipeOffset,
+            bgcolor: swipeProgress >= 1 ? 'success.main' : 'success.light',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            pl: 2,
+            transition: swipeProgress >= 1 ? 'background-color 0.2s' : 'none',
+          }}
+        >
+          <CheckCircle
+            sx={{
+              color: 'white',
+              opacity: swipeProgress,
+              transform: `scale(${0.5 + swipeProgress * 0.5})`,
+              transition: 'transform 0.1s',
+            }}
+          />
+        </Box>
+      )}
+      <Card
+        sx={{
+          opacity: task.is_complete ? 0.7 : isBlocked ? 0.6 : 1,
+          borderLeft: 4,
+          borderColor: task.is_complete
+            ? 'success.main'
+            : isBlocked
+            ? 'grey.400'
+            : 'primary.main',
+          transition: swipeOffset > 0 ? 'none' : 'all 0.2s ease',
+          transform: isMobile ? `translateX(${swipeOffset}px)` : 'none',
+          '&:hover': {
+            boxShadow: 3,
+          },
+        }}
+      >
       <CardContent sx={{ pb: 1 }}>
         {/* Main row */}
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -252,5 +330,6 @@ export default function TaskCard({
         </IconButton>
       </CardActions>
     </Card>
+    </Box>
   );
 }

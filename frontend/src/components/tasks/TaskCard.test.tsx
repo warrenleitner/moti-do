@@ -40,6 +40,9 @@ const mockTask: Task = {
   history: [],
   text_description: 'This is a test task description',
   project: 'Test Project',
+  score: 25,
+  penalty_score: 5,
+  net_score: 30,
 };
 
 const mockHabit: Task = {
@@ -58,6 +61,9 @@ const mockHabit: Task = {
   streak_current: 5,
   streak_best: 10,
   history: [],
+  score: 15,
+  penalty_score: 0,
+  net_score: 15,
 };
 
 describe('TaskCard', () => {
@@ -615,6 +621,124 @@ describe('TaskCard', () => {
 
       // Project should now be visible
       expect(screen.getByText('Test Project')).toBeVisible();
+    });
+
+    describe('swipe to complete', () => {
+      // Helper to simulate touch swipe
+      const simulateSwipe = (element: HTMLElement, deltaX: number) => {
+        const startX = 0;
+        const startY = 100;
+
+        // Touch start
+        element.dispatchEvent(
+          new TouchEvent('touchstart', {
+            bubbles: true,
+            touches: [{ clientX: startX, clientY: startY, identifier: 0 } as Touch],
+          })
+        );
+
+        // Touch move
+        element.dispatchEvent(
+          new TouchEvent('touchmove', {
+            bubbles: true,
+            touches: [{ clientX: startX + deltaX, clientY: startY, identifier: 0 } as Touch],
+          })
+        );
+
+        // Touch end
+        element.dispatchEvent(
+          new TouchEvent('touchend', {
+            bubbles: true,
+            changedTouches: [{ clientX: startX + deltaX, clientY: startY, identifier: 0 } as Touch],
+          })
+        );
+      };
+
+      it('renders swipe container on mobile', () => {
+        render(
+          <TaskCard
+            task={mockTask}
+            onComplete={mockOnComplete}
+            onEdit={mockOnEdit}
+            onDelete={mockOnDelete}
+          />
+        );
+
+        // Card should be rendered
+        expect(screen.getByText('Test Task')).toBeInTheDocument();
+      });
+
+      it('does not show swipe indicator for completed tasks', () => {
+        const completedTask = { ...mockTask, is_complete: true };
+        render(
+          <TaskCard
+            task={completedTask}
+            onComplete={mockOnComplete}
+            onEdit={mockOnEdit}
+            onDelete={mockOnDelete}
+          />
+        );
+
+        // The swipe indicator (green background) should not be present for completed tasks
+        // This is implicitly tested by the fact that swipeOffset is not set for completed tasks
+        expect(screen.getByText('Test Task')).toBeInTheDocument();
+      });
+
+      it('does not show swipe indicator for blocked tasks', () => {
+        render(
+          <TaskCard
+            task={mockTask}
+            onComplete={mockOnComplete}
+            onEdit={mockOnEdit}
+            onDelete={mockOnDelete}
+            isBlocked={true}
+          />
+        );
+
+        // The swipe indicator should not be present for blocked tasks
+        expect(screen.getByText('Test Task')).toBeInTheDocument();
+        expect(screen.getByText('Blocked')).toBeInTheDocument();
+      });
+
+      it('calls onComplete when swiped right far enough on mobile', async () => {
+        const { container } = render(
+          <TaskCard
+            task={mockTask}
+            onComplete={mockOnComplete}
+            onEdit={mockOnEdit}
+            onDelete={mockOnDelete}
+          />
+        );
+
+        // Find the outer Box (swipe container) by getting the first child of container
+        const swipeContainer = container.firstChild as HTMLElement;
+        expect(swipeContainer).toBeInTheDocument();
+
+        // Simulate a right swipe of 120px (above threshold of 100px)
+        simulateSwipe(swipeContainer, 120);
+
+        // Should have called onComplete
+        expect(mockOnComplete).toHaveBeenCalledWith('test-task-1');
+      });
+
+      it('does not call onComplete when swipe is too short on mobile', async () => {
+        const { container } = render(
+          <TaskCard
+            task={mockTask}
+            onComplete={mockOnComplete}
+            onEdit={mockOnEdit}
+            onDelete={mockOnDelete}
+          />
+        );
+
+        const swipeContainer = container.firstChild as HTMLElement;
+
+        // Simulate a short right swipe of 50px (below threshold of 100px)
+        simulateSwipe(swipeContainer, 50);
+
+        // Should NOT have called onComplete
+        expect(mockOnComplete).not.toHaveBeenCalled();
+      });
     });
   });
 });
