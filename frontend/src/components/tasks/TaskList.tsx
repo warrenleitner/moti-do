@@ -90,6 +90,8 @@ export default function TaskList({
         onTagsChange={(tags) => setFilters({ tags })}
         projects={projects}
         tags={tags}
+        maxDueDate={filters.maxDueDate}
+        onMaxDueDateChange={(maxDueDate) => setFilters({ maxDueDate })}
         onReset={resetFilters}
       />
 

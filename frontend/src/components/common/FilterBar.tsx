@@ -13,6 +13,10 @@ import {
   OutlinedInput,
 } from '@mui/material';
 import { FilterList, Clear } from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { format } from 'date-fns';
 import {
   Priority,
   PriorityEmoji,
@@ -42,6 +46,8 @@ interface FilterBarProps {
   onTagsChange: (tags: string[]) => void;
   projects: string[];
   tags: string[];
+  maxDueDate?: string;
+  onMaxDueDateChange: (date: string | undefined) => void;
   onReset: () => void;
 }
 
@@ -91,6 +97,8 @@ export default function FilterBar({
   onTagsChange,
   projects,
   tags,
+  maxDueDate,
+  onMaxDueDateChange,
   onReset,
 }: FilterBarProps) {
   const hasActiveFilters =
@@ -100,7 +108,8 @@ export default function FilterBar({
     difficulties.length > 0 ||
     durations.length > 0 ||
     selectedProjects.length > 0 ||
-    selectedTags.length > 0;
+    selectedTags.length > 0 ||
+    maxDueDate;
 
   const handlePriorityChange = (event: SelectChangeEvent<Priority[]>) => {
     const value = event.target.value;
@@ -279,6 +288,30 @@ export default function FilterBar({
           </FormControl>
         )}
 
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="Due before"
+            value={maxDueDate ? new Date(maxDueDate + 'T00:00:00') : null}
+            onChange={(date) => {
+              if (date && !isNaN(date.getTime())) {
+                onMaxDueDateChange(format(date, 'yyyy-MM-dd'));
+              } else {
+                onMaxDueDateChange(undefined);
+              }
+            }}
+            slotProps={{
+              textField: {
+                size: 'small',
+                sx: { minWidth: 150 },
+              },
+              field: {
+                clearable: true,
+                onClear: () => onMaxDueDateChange(undefined),
+              },
+            }}
+          />
+        </LocalizationProvider>
+
         {hasActiveFilters && (
           <Button
             startIcon={<Clear />}
@@ -349,6 +382,13 @@ export default function FilterBar({
               onDelete={() => onTagsChange(selectedTags.filter((x) => x !== t))}
             />
           ))}
+          {maxDueDate && (
+            <Chip
+              label={`Due before: ${maxDueDate}`}
+              size="small"
+              onDelete={() => onMaxDueDateChange(undefined)}
+            />
+          )}
         </Stack>
       )}
     </Box>

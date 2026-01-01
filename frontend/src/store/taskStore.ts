@@ -16,6 +16,7 @@ interface TaskFilters {
   projects: string[];
   tags: string[];
   search?: string;
+  maxDueDate?: string; // ISO date string - show tasks due on or before this date
 }
 
 export type SubtaskViewMode = 'hidden' | 'inline' | 'top-level';
@@ -346,6 +347,7 @@ export const useTaskStore = create<TaskState>()(
               projects: persisted.filters?.projects ?? defaultFilters.projects,
               tags: persisted.filters?.tags ?? defaultFilters.tags,
               search: persisted.filters?.search,
+              maxDueDate: persisted.filters?.maxDueDate,
             },
           };
         },
@@ -436,6 +438,14 @@ export const useFilteredTasks = (lastProcessedDate?: string) => {
       ) {
         return false;
       }
+    }
+
+    // Max due date filter - show tasks due on or before this date
+    if (filters.maxDueDate) {
+      if (!task.due_date) return false; // Tasks without due date are excluded
+      const taskDueDate = new Date(task.due_date.split('T')[0]);
+      const maxDate = new Date(filters.maxDueDate);
+      if (taskDueDate > maxDate) return false;
     }
 
     return true;
