@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '../../test/utils';
+import { render, screen, waitFor, fireEvent } from '../../test/utils';
 import { EditableCell } from './EditableCell';
 
 describe('EditableCell', () => {
@@ -220,6 +220,23 @@ describe('EditableCell', () => {
       // Re-enter edit mode to verify value was reverted
       await user.click(screen.getByTestId('editable-cell-display'));
       expect(screen.getByTestId('editor-input')).toHaveValue('original');
+    });
+
+    it('closes editor when Escape key is pressed on wrapper', async () => {
+      const { user } = render(<EditableCell {...defaultProps} />);
+
+      // Enter edit mode
+      await user.click(screen.getByTestId('editable-cell-display'));
+      expect(screen.getByTestId('editable-cell-editor')).toBeInTheDocument();
+
+      // Press Escape on the wrapper element
+      fireEvent.keyDown(screen.getByTestId('editable-cell-editor'), { key: 'Escape' });
+
+      // Verify edit mode closed
+      await waitFor(() => {
+        expect(screen.getByTestId('display')).toBeInTheDocument();
+      });
+      expect(mockOnSave).not.toHaveBeenCalled();
     });
   });
 

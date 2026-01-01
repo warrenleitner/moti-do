@@ -307,7 +307,8 @@ test.describe('Task CRUD Operations', () => {
       await expect(taskRow).toBeVisible();
 
       // Click on the priority chip (should show Medium by default)
-      const priorityCell = taskRow.locator('[data-testid="editable-cell-display"]').first();
+      // Note: nth(1) because nth(0) is now the title cell
+      const priorityCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(1);
       await priorityCell.click();
 
       // Select "High" from the dropdown
@@ -332,8 +333,8 @@ test.describe('Task CRUD Operations', () => {
       // Find the task row
       const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
 
-      // Click on the difficulty chip (second editable cell)
-      const difficultyCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(1);
+      // Click on the difficulty chip (third editable cell after title and priority)
+      const difficultyCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(2);
       await difficultyCell.click();
 
       // Select "Herculean" from the dropdown
@@ -358,8 +359,8 @@ test.describe('Task CRUD Operations', () => {
       // Find the task row
       const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
 
-      // Click on the duration chip (third editable cell)
-      const durationCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(2);
+      // Click on the duration chip (fourth editable cell after title, priority, difficulty)
+      const durationCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(3);
       await durationCell.click();
 
       // Select "Odysseyan" from the dropdown
@@ -381,9 +382,9 @@ test.describe('Task CRUD Operations', () => {
       await tasksPage.switchToTableView();
       await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
 
-      // Find the task row and edit priority
+      // Find the task row and edit priority (nth(1) because title is now nth(0))
       const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
-      const priorityCell = taskRow.locator('[data-testid="editable-cell-display"]').first();
+      const priorityCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(1);
       await priorityCell.click();
       await page.getByRole('option', { name: /Defcon One/i }).click();
 
@@ -416,9 +417,9 @@ test.describe('Task CRUD Operations', () => {
       await expect(taskRow).toBeVisible();
 
       // The due date cell is the one showing "-" in the Due Date column
-      // Find the editable cell in the due date column (after priority, difficulty, duration)
-      // Priority (1st), Difficulty (2nd), Duration (3rd), Due Date (4th editable cell)
-      const dueDateCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(3);
+      // Find the editable cell in the due date column (after title, priority, difficulty, duration)
+      // Title (0), Priority (1), Difficulty (2), Duration (3), Due Date (4)
+      const dueDateCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(4);
       await dueDateCell.click();
 
       // Wait for the date editor to appear within the row
@@ -457,8 +458,8 @@ test.describe('Task CRUD Operations', () => {
       const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
       await expect(taskRow).toBeVisible();
 
-      // Click on the due date cell (4th editable cell)
-      const dueDateCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(3);
+      // Click on the due date cell (5th editable cell: title=0, priority=1, difficulty=2, duration=3, due_date=4)
+      const dueDateCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(4);
       await dueDateCell.click();
 
       // Wait for the date editor to appear within the row
@@ -480,6 +481,90 @@ test.describe('Task CRUD Operations', () => {
       // Verify the due date is now empty (shows "-")
       // The cell should show "-" after clearing
       await expect(taskRow.locator('td').filter({ hasText: '-' })).toBeVisible({ timeout: 5000 });
+    });
+
+    test('should edit title inline in table view', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      // Create a task
+      const originalTitle = `Inline Edit Title ${Date.now()}`;
+      await tasksPage.createTask(originalTitle);
+
+      // Switch to table view
+      await tasksPage.switchToTableView();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+      // Find the task row
+      const taskRow = page.locator('table tbody tr').filter({ hasText: originalTitle });
+      await expect(taskRow).toBeVisible();
+
+      // Click on the title cell (first editable cell, nth(0))
+      const titleCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(0);
+      await titleCell.click();
+
+      // Wait for the text editor to appear
+      await expect(page.getByTestId('text-editor')).toBeVisible({ timeout: 5000 });
+
+      // Wait for auto-focus and select to complete
+      await page.waitForTimeout(150);
+
+      // Fill the new title (fill() clears existing text and types new value)
+      const newTitle = `Renamed Task ${Date.now()}`;
+      const input = page.getByTestId('text-editor').getByRole('textbox');
+      await input.fill(newTitle);
+
+      // Small wait to ensure React state is updated
+      await page.waitForTimeout(50);
+
+      // Click outside to blur and save (more reliable than Enter)
+      await page.locator('body').click({ position: { x: 0, y: 0 } });
+
+      // Wait for the save to complete and editor to close
+      await expect(page.getByTestId('text-editor')).not.toBeVisible({ timeout: 5000 });
+
+      // Verify the title has changed
+      await expect(page.locator('table tbody tr').filter({ hasText: newTitle })).toBeVisible({ timeout: 5000 });
+    });
+
+    test('should cancel title edit on Escape', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      // Create a task
+      const originalTitle = `Cancel Edit Test ${Date.now()}`;
+      await tasksPage.createTask(originalTitle);
+
+      // Switch to table view
+      await tasksPage.switchToTableView();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+      // Find the task row
+      const taskRow = page.locator('table tbody tr').filter({ hasText: originalTitle });
+      await expect(taskRow).toBeVisible();
+
+      // Click on the title cell (first editable cell, nth(0))
+      const titleCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(0);
+      await titleCell.click();
+
+      // Wait for the text editor to appear
+      await expect(page.getByTestId('text-editor')).toBeVisible({ timeout: 5000 });
+
+      // Wait for auto-focus and select to complete
+      await page.waitForTimeout(150);
+
+      // Fill a different title but don't save
+      const input = page.getByTestId('text-editor').getByRole('textbox');
+      await input.fill('This should not be saved');
+
+      // Press Escape to cancel
+      await input.press('Escape');
+
+      // Wait for editor to close
+      await expect(page.getByTestId('text-editor')).not.toBeVisible({ timeout: 5000 });
+
+      // Verify the original title is still there
+      await expect(page.locator('table tbody tr').filter({ hasText: originalTitle })).toBeVisible({ timeout: 5000 });
     });
   });
 });

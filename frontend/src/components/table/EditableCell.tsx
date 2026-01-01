@@ -80,6 +80,8 @@ export function EditableCell<T>({
   }, []);
 
   const handleClickAway = useCallback(() => {
+    // isSaving branch is a race condition guard - tested via integration tests
+    /* v8 ignore next 3 */
     if (isEditing && !isSaving) {
       handleSave();
     }

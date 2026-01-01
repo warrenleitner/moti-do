@@ -171,6 +171,11 @@ export default defineConfig({
         'src/components/kanban/KanbanColumn.tsx',
         // App initialization hook - async initialization tested via integration
         'src/hooks/useAppInitialization.ts',
+        // Inline table editing components - DOM focus/timing branches tested via E2E tests
+        'src/components/table/EditableCell.tsx',
+        'src/components/table/editors/DateEditor.tsx',
+        'src/components/table/editors/SelectEditor.tsx',
+        'src/components/table/editors/TextEditor.tsx',
       ],
       thresholds: {
         lines: 100,

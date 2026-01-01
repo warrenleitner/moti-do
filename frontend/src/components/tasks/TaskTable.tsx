@@ -41,7 +41,7 @@ import PriorityChip from '../common/PriorityChip';
 import DifficultyChip from '../common/DifficultyChip';
 import DurationChip from '../common/DurationChip';
 import ProjectChip from '../common/ProjectChip';
-import { EditableCell, SelectEditor, DateEditor } from '../table';
+import { EditableCell, SelectEditor, DateEditor, TextEditor } from '../table';
 import { format } from 'date-fns';
 import ColumnConfigDialog from './ColumnConfigDialog';
 
@@ -386,12 +386,36 @@ const TaskTable: React.FC<TaskTableProps> = ({
           </Box>
         );
 
-      case 'title':
-        return (
+      case 'title': {
+        const titleDisplay = (
           <span style={{ textDecoration: task.is_complete ? 'line-through' : 'none' }}>
             {task.title}
           </span>
         );
+
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.title}
+            taskId={task.id}
+            field="title"
+            displayComponent={titleDisplay}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <TextEditor
+                value={value}
+                placeholder="Task title"
+                required
+                minLength={1}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          titleDisplay
+        );
+      }
 
       case 'score':
         return (
