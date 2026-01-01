@@ -41,7 +41,7 @@ import PriorityChip from '../common/PriorityChip';
 import DifficultyChip from '../common/DifficultyChip';
 import DurationChip from '../common/DurationChip';
 import ProjectChip from '../common/ProjectChip';
-import { EditableCell, SelectEditor, DateEditor, TextEditor } from '../table';
+import { EditableCell, SelectEditor, DateEditor, TextEditor, ProjectEditor, TagsEditor } from '../table';
 import { format } from 'date-fns';
 import ColumnConfigDialog from './ColumnConfigDialog';
 
@@ -573,11 +573,32 @@ const TaskTable: React.FC<TaskTableProps> = ({
       case 'creation_date':
         return format(new Date(task.creation_date), 'MMM d, yyyy');
 
-      case 'project':
-        return task.project ? <ProjectChip project={task.project} /> : '-';
+      case 'project': {
+        const projectDisplay = task.project ? <ProjectChip project={task.project} /> : '-';
 
-      case 'tags':
-        return task.tags.length > 0 ? (
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.project}
+            taskId={task.id}
+            field="project"
+            displayComponent={projectDisplay}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <ProjectEditor
+                value={value}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          projectDisplay
+        );
+      }
+
+      case 'tags': {
+        const tagsDisplay = task.tags.length > 0 ? (
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
             {task.tags.slice(0, 2).map((tag) => (
               <Chip key={tag} label={tag} size="small" />
@@ -589,6 +610,27 @@ const TaskTable: React.FC<TaskTableProps> = ({
         ) : (
           '-'
         );
+
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.tags}
+            taskId={task.id}
+            field="tags"
+            displayComponent={tagsDisplay}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <TagsEditor
+                value={value}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          tagsDisplay
+        );
+      }
 
       case 'streak':
         return task.is_habit && task.streak_current > 0 ? (

@@ -391,13 +391,25 @@ test.describe('Task CRUD Operations', () => {
       // Wait for the change to be saved
       await expect(taskRow.getByText(/Defcon One/)).toBeVisible({ timeout: 5000 });
 
+      // Wait for the API call to complete (optimistic update shows immediately but save may still be in flight)
+      await page.waitForTimeout(1000);
+
       // Reload the page
       await page.reload();
+
+      // Wait for page to fully load
+      await page.waitForLoadState('networkidle');
+
+      // Switch back to table view after reload (view mode is stored in localStorage)
+      await tasksPage.switchToTableView();
       await expect(page.locator('table')).toBeVisible({ timeout: 10000 });
+
+      // Wait a moment for the table data to settle
+      await page.waitForTimeout(500);
 
       // Verify the change persisted
       const taskRowAfterReload = page.locator('table tbody tr').filter({ hasText: taskTitle });
-      await expect(taskRowAfterReload.getByText(/Defcon One/)).toBeVisible({ timeout: 5000 });
+      await expect(taskRowAfterReload.getByText(/Defcon One/)).toBeVisible({ timeout: 10000 });
     });
 
     test('should edit due date inline in table view', async ({ page }) => {
@@ -439,7 +451,7 @@ test.describe('Task CRUD Operations', () => {
       await page.waitForTimeout(500);
 
       // Verify the due date has changed - should now show a date with "15" in it
-      await expect(taskRow.getByText(/15/)).toBeVisible({ timeout: 5000 });
+      await expect(taskRow.getByText(/\b15,\s+/)).toBeVisible({ timeout: 5000 });
     });
 
     test('should clear due date using the clear button', async ({ page }) => {
@@ -565,6 +577,137 @@ test.describe('Task CRUD Operations', () => {
 
       // Verify the original title is still there
       await expect(page.locator('table tbody tr').filter({ hasText: originalTitle })).toBeVisible({ timeout: 5000 });
+    });
+
+    test('should edit project inline in table view', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      // Create a task without a project
+      const taskTitle = `Inline Edit Project ${Date.now()}`;
+      await tasksPage.createTask(taskTitle);
+
+      // Switch to table view
+      await tasksPage.switchToTableView();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+      // Find the task row
+      const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
+      await expect(taskRow).toBeVisible();
+
+      // Click on the project cell (6th editable cell: title=0, priority=1, difficulty=2, duration=3, due_date=4, project=5)
+      const projectCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(5);
+      await projectCell.click();
+
+      // Wait for the project editor to appear
+      await expect(page.getByTestId('project-editor')).toBeVisible({ timeout: 5000 });
+
+      // Type a new project name
+      const projectInput = page.getByTestId('project-editor').getByRole('combobox');
+      await projectInput.fill('New Project');
+
+      // Click outside to blur and save
+      await page.locator('body').click({ position: { x: 0, y: 0 } });
+
+      // Wait for the save to complete
+      await page.waitForTimeout(500);
+
+      // Verify the project has been set
+      await expect(taskRow.getByText('New Project')).toBeVisible({ timeout: 5000 });
+    });
+
+    test('should clear project inline in table view', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      // Create a task with a project using quick add
+      const taskTitle = `Clear Project Test ${Date.now()}`;
+      await tasksPage.quickAddTask(`${taskTitle} @work`);
+
+      // Switch to table view
+      await tasksPage.switchToTableView();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+      // Find the task row
+      const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
+      await expect(taskRow).toBeVisible();
+
+      // Click on the project cell
+      const projectCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(5);
+      await projectCell.click();
+
+      // Wait for the project editor to appear
+      await expect(page.getByTestId('project-editor')).toBeVisible({ timeout: 5000 });
+
+      // Clear the project name
+      const projectInput = page.getByTestId('project-editor').getByRole('combobox');
+      await projectInput.clear();
+
+      // Click outside to blur and save
+      await page.locator('body').click({ position: { x: 0, y: 0 } });
+
+      // Wait for the save to complete
+      await page.waitForTimeout(500);
+
+      // Verify the project is now empty (shows "-") - check the project cell specifically
+      // The project cell shows "-" via the editable cell display
+      const projectCellAfter = taskRow.locator('[data-testid="editable-cell-display"]').nth(5);
+      await expect(projectCellAfter.getByText('-')).toBeVisible({ timeout: 5000 });
+    });
+
+    test('should edit tags inline in table view', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      // Create a task
+      const taskTitle = `Inline Edit Tags ${Date.now()}`;
+      await tasksPage.createTask(taskTitle);
+
+      // Switch to table view
+      await tasksPage.switchToTableView();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+      // Enable the Tags column via column config
+      await page.getByRole('button', { name: /configure columns/i }).click();
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+
+      // Find the Tags row in the column list and click its checkbox
+      // The dialog shows columns as ListItems with the column label as primary text
+      const tagsListItem = page.getByRole('listitem').filter({ hasText: 'Tags' });
+      const tagsCheckbox = tagsListItem.getByRole('checkbox');
+      await tagsCheckbox.check();
+
+      // Save the column config
+      await page.getByRole('button', { name: /save changes/i }).click();
+      await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5000 });
+
+      // Wait for table to update
+      await page.waitForTimeout(300);
+
+      // Find the task row
+      const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
+      await expect(taskRow).toBeVisible();
+
+      // Click on the tags cell (7th editable cell: title=0, priority=1, difficulty=2, duration=3, due_date=4, project=5, tags=6)
+      const tagsCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(6);
+      await tagsCell.click();
+
+      // Wait for the tags editor to appear
+      await expect(page.getByTestId('tags-editor')).toBeVisible({ timeout: 5000 });
+
+      // Type a new tag and press Enter to add it
+      const tagsInput = page.getByTestId('tags-editor').getByRole('combobox');
+      await tagsInput.fill('urgent');
+      await tagsInput.press('Enter');
+
+      // Click outside to blur and save
+      await page.locator('body').click({ position: { x: 0, y: 0 } });
+
+      // Wait for the save to complete
+      await page.waitForTimeout(500);
+
+      // Verify the tag has been added
+      await expect(taskRow.getByText('urgent')).toBeVisible({ timeout: 5000 });
     });
   });
 });

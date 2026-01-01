@@ -4,3 +4,7 @@ export { DateEditor } from './DateEditor';
 export type { DateEditorProps } from './DateEditor';
 export { TextEditor } from './TextEditor';
 export type { TextEditorProps } from './TextEditor';
+export { ProjectEditor } from './ProjectEditor';
+export type { ProjectEditorProps } from './ProjectEditor';
+export { TagsEditor } from './TagsEditor';
+export type { TagsEditorProps } from './TagsEditor';

@@ -176,6 +176,8 @@ export default defineConfig({
         'src/components/table/editors/DateEditor.tsx',
         'src/components/table/editors/SelectEditor.tsx',
         'src/components/table/editors/TextEditor.tsx',
+        'src/components/table/editors/ProjectEditor.tsx',
+        'src/components/table/editors/TagsEditor.tsx',
       ],
       thresholds: {
         lines: 100,
