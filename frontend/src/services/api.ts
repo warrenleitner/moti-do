@@ -204,12 +204,12 @@ export const authApi = {
   // Login with username and password
   /* v8 ignore start - thin API wrapper, tested via integration tests */
   login: async (username: string, password: string): Promise<TokenResponse> => {
-    // Use FormData for OAuth2PasswordRequestForm
-    const formData = new FormData();
-    formData.append('username', username);
-    formData.append('password', password);
+    // Use URLSearchParams for OAuth2PasswordRequestForm (x-www-form-urlencoded)
+    const params = new URLSearchParams();
+    params.append('username', username);
+    params.append('password', password);
 
-    const response = await apiClient.post<TokenResponse>('/auth/login', formData, {
+    const response = await apiClient.post<TokenResponse>('/auth/login', params, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },

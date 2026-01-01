@@ -125,7 +125,7 @@ describe('API Tests', () => {
         expect(mockLocalStorage.setItem).toHaveBeenCalledWith('auth_token', 'test-token');
         expect(mockAxiosInstance.post).toHaveBeenCalledWith(
           '/auth/login',
-          expect.any(FormData),
+          expect.any(URLSearchParams),
           expect.objectContaining({
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
