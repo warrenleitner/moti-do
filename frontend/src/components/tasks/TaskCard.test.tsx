@@ -9,6 +9,17 @@ import TaskCard from './TaskCard';
 import type { Task } from '../../types';
 import { Priority, Difficulty, Duration } from '../../types';
 
+// Mock useMediaQuery to control mobile/desktop state
+// Using a ref object so the mock can be updated during tests
+const mockMediaQueryResult = { current: false };
+vi.mock('@mui/material', async () => {
+  const actual = await vi.importActual('@mui/material');
+  return {
+    ...actual,
+    useMediaQuery: () => mockMediaQueryResult.current,
+  };
+});
+
 const mockTask: Task = {
   id: 'test-task-1',
   title: 'Test Task',
@@ -56,6 +67,8 @@ describe('TaskCard', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default to desktop mode
+    mockMediaQueryResult.current = false;
   });
 
   it('renders task title', () => {
@@ -502,5 +515,106 @@ describe('TaskCard', () => {
 
     // Should not show undo icon since onUndo is not provided
     expect(screen.queryByTestId('UndoIcon')).not.toBeInTheDocument();
+  });
+
+  describe('mobile behavior', () => {
+    beforeEach(() => {
+      // Set mobile mode
+      mockMediaQueryResult.current = true;
+    });
+
+    it('shows only XP and due date on mobile when collapsed', () => {
+      const taskWithDueDate: Task = {
+        ...mockTask,
+        due_date: '2025-12-31',
+      };
+
+      render(
+        <TaskCard
+          task={taskWithDueDate}
+          onComplete={mockOnComplete}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // XP should be visible
+      expect(screen.getByText(/XP/)).toBeInTheDocument();
+      // Due date icon should be visible
+      expect(screen.getByTestId('CalendarTodayIcon')).toBeInTheDocument();
+      // Priority chip is in the DOM (inside Collapse) but NOT visible when collapsed
+      expect(screen.queryByText(/High/i)).not.toBeVisible();
+    });
+
+    it('shows expand button on mobile even with no description/tags', () => {
+      const simpleTask: Task = {
+        ...mockTask,
+        text_description: '',
+        tags: [],
+        subtasks: [],
+      };
+
+      render(
+        <TaskCard
+          task={simpleTask}
+          onComplete={mockOnComplete}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Should have expand button on mobile (to reveal hidden metadata)
+      expect(screen.getByTestId('ExpandMoreIcon')).toBeInTheDocument();
+    });
+
+    it('shows priority, difficulty, duration when expanded on mobile', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <TaskCard
+          task={mockTask}
+          onComplete={mockOnComplete}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Priority is in DOM (inside Collapse) but not visible initially on mobile
+      expect(screen.queryByText(/High/i)).not.toBeVisible();
+
+      // Click expand button
+      const expandButton = screen.getByTestId('ExpandMoreIcon').closest('button');
+      if (expandButton) {
+        await user.click(expandButton);
+      }
+
+      // Priority should now be visible after expanding
+      expect(screen.getByText(/High/i)).toBeVisible();
+    });
+
+    it('shows project badge when expanded on mobile', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <TaskCard
+          task={mockTask}
+          onComplete={mockOnComplete}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Project is in DOM (inside Collapse) but not visible initially on mobile
+      expect(screen.queryByText('Test Project')).not.toBeVisible();
+
+      // Click expand button
+      const expandButton = screen.getByTestId('ExpandMoreIcon').closest('button');
+      if (expandButton) {
+        await user.click(expandButton);
+      }
+
+      // Project should now be visible
+      expect(screen.getByText('Test Project')).toBeVisible();
+    });
   });
 });
