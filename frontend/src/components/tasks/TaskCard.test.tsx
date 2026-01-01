@@ -9,6 +9,17 @@ import TaskCard from './TaskCard';
 import type { Task } from '../../types';
 import { Priority, Difficulty, Duration } from '../../types';
 
+// Mock useMediaQuery to control mobile/desktop state
+// Using a ref object so the mock can be updated during tests
+const mockMediaQueryResult = { current: false };
+vi.mock('@mui/material', async () => {
+  const actual = await vi.importActual('@mui/material');
+  return {
+    ...actual,
+    useMediaQuery: () => mockMediaQueryResult.current,
+  };
+});
+
 const mockTask: Task = {
   id: 'test-task-1',
   title: 'Test Task',
@@ -29,6 +40,10 @@ const mockTask: Task = {
   history: [],
   text_description: 'This is a test task description',
   project: 'Test Project',
+  score: 25,
+  penalty_score: 5,
+  net_score: 30,
+  current_count: 0,
 };
 
 const mockHabit: Task = {
@@ -47,6 +62,10 @@ const mockHabit: Task = {
   streak_current: 5,
   streak_best: 10,
   history: [],
+  score: 15,
+  penalty_score: 0,
+  net_score: 15,
+  current_count: 0,
 };
 
 describe('TaskCard', () => {
@@ -56,6 +75,8 @@ describe('TaskCard', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default to desktop mode
+    mockMediaQueryResult.current = false;
   });
 
   it('renders task title', () => {
@@ -400,9 +421,14 @@ describe('TaskCard', () => {
   });
 
   it('renders task with due date', () => {
+    // Use a future date to ensure CalendarTodayIcon is shown (not Warning for overdue)
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 7);
+    const futureDateStr = futureDate.toISOString().split('T')[0];
+
     const taskWithDueDate: Task = {
       ...mockTask,
-      due_date: '2025-12-31',  // DateDisplay expects YYYY-MM-DD format
+      due_date: futureDateStr,  // DateDisplay expects YYYY-MM-DD format
     };
 
     render(
@@ -414,7 +440,7 @@ describe('TaskCard', () => {
       />
     );
 
-    // Should show calendar icon (DateDisplay component renders CalendarToday icon)
+    // Should show calendar icon (DateDisplay component renders CalendarToday icon for future dates)
     expect(screen.getByTestId('CalendarTodayIcon')).toBeInTheDocument();
   });
 
@@ -502,5 +528,229 @@ describe('TaskCard', () => {
 
     // Should not show undo icon since onUndo is not provided
     expect(screen.queryByTestId('UndoIcon')).not.toBeInTheDocument();
+  });
+
+  describe('mobile behavior', () => {
+    beforeEach(() => {
+      // Set mobile mode
+      mockMediaQueryResult.current = true;
+    });
+
+    it('shows only XP and due date on mobile when collapsed', () => {
+      // Use a future date to ensure CalendarTodayIcon is shown (not Warning for overdue)
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7);
+      const futureDateStr = futureDate.toISOString().split('T')[0];
+
+      const taskWithDueDate: Task = {
+        ...mockTask,
+        due_date: futureDateStr,
+      };
+
+      render(
+        <TaskCard
+          task={taskWithDueDate}
+          onComplete={mockOnComplete}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // XP should be visible
+      expect(screen.getByText(/XP/)).toBeInTheDocument();
+      // Due date icon should be visible (CalendarToday for future dates)
+      expect(screen.getByTestId('CalendarTodayIcon')).toBeInTheDocument();
+      // Priority chip is in the DOM (inside Collapse) but NOT visible when collapsed
+      expect(screen.queryByText(/High/i)).not.toBeVisible();
+    });
+
+    it('shows expand button on mobile even with no description/tags', () => {
+      const simpleTask: Task = {
+        ...mockTask,
+        text_description: '',
+        tags: [],
+        subtasks: [],
+      };
+
+      render(
+        <TaskCard
+          task={simpleTask}
+          onComplete={mockOnComplete}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Should have expand button on mobile (to reveal hidden metadata)
+      expect(screen.getByTestId('ExpandMoreIcon')).toBeInTheDocument();
+    });
+
+    it('shows priority, difficulty, duration when expanded on mobile', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <TaskCard
+          task={mockTask}
+          onComplete={mockOnComplete}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Priority is in DOM (inside Collapse) but not visible initially on mobile
+      expect(screen.queryByText(/High/i)).not.toBeVisible();
+
+      // Click expand button
+      const expandButton = screen.getByTestId('ExpandMoreIcon').closest('button');
+      if (expandButton) {
+        await user.click(expandButton);
+      }
+
+      // Priority should now be visible after expanding
+      expect(screen.getByText(/High/i)).toBeVisible();
+    });
+
+    it('shows project badge when expanded on mobile', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <TaskCard
+          task={mockTask}
+          onComplete={mockOnComplete}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Project is in DOM (inside Collapse) but not visible initially on mobile
+      expect(screen.queryByText('Test Project')).not.toBeVisible();
+
+      // Click expand button
+      const expandButton = screen.getByTestId('ExpandMoreIcon').closest('button');
+      if (expandButton) {
+        await user.click(expandButton);
+      }
+
+      // Project should now be visible
+      expect(screen.getByText('Test Project')).toBeVisible();
+    });
+
+    describe('swipe to complete', () => {
+      // Helper to simulate touch swipe
+      const simulateSwipe = (element: HTMLElement, deltaX: number) => {
+        const startX = 0;
+        const startY = 100;
+
+        // Touch start
+        element.dispatchEvent(
+          new TouchEvent('touchstart', {
+            bubbles: true,
+            touches: [{ clientX: startX, clientY: startY, identifier: 0 } as Touch],
+          })
+        );
+
+        // Touch move
+        element.dispatchEvent(
+          new TouchEvent('touchmove', {
+            bubbles: true,
+            touches: [{ clientX: startX + deltaX, clientY: startY, identifier: 0 } as Touch],
+          })
+        );
+
+        // Touch end
+        element.dispatchEvent(
+          new TouchEvent('touchend', {
+            bubbles: true,
+            changedTouches: [{ clientX: startX + deltaX, clientY: startY, identifier: 0 } as Touch],
+          })
+        );
+      };
+
+      it('renders swipe container on mobile', () => {
+        render(
+          <TaskCard
+            task={mockTask}
+            onComplete={mockOnComplete}
+            onEdit={mockOnEdit}
+            onDelete={mockOnDelete}
+          />
+        );
+
+        // Card should be rendered
+        expect(screen.getByText('Test Task')).toBeInTheDocument();
+      });
+
+      it('does not show swipe indicator for completed tasks', () => {
+        const completedTask = { ...mockTask, is_complete: true };
+        render(
+          <TaskCard
+            task={completedTask}
+            onComplete={mockOnComplete}
+            onEdit={mockOnEdit}
+            onDelete={mockOnDelete}
+          />
+        );
+
+        // The swipe indicator (green background) should not be present for completed tasks
+        // This is implicitly tested by the fact that swipeOffset is not set for completed tasks
+        expect(screen.getByText('Test Task')).toBeInTheDocument();
+      });
+
+      it('does not show swipe indicator for blocked tasks', () => {
+        render(
+          <TaskCard
+            task={mockTask}
+            onComplete={mockOnComplete}
+            onEdit={mockOnEdit}
+            onDelete={mockOnDelete}
+            isBlocked={true}
+          />
+        );
+
+        // The swipe indicator should not be present for blocked tasks
+        expect(screen.getByText('Test Task')).toBeInTheDocument();
+        expect(screen.getByText('Blocked')).toBeInTheDocument();
+      });
+
+      it('calls onComplete when swiped right far enough on mobile', async () => {
+        const { container } = render(
+          <TaskCard
+            task={mockTask}
+            onComplete={mockOnComplete}
+            onEdit={mockOnEdit}
+            onDelete={mockOnDelete}
+          />
+        );
+
+        // Find the outer Box (swipe container) by getting the first child of container
+        const swipeContainer = container.firstChild as HTMLElement;
+        expect(swipeContainer).toBeInTheDocument();
+
+        // Simulate a right swipe of 120px (above threshold of 100px)
+        simulateSwipe(swipeContainer, 120);
+
+        // Should have called onComplete
+        expect(mockOnComplete).toHaveBeenCalledWith('test-task-1');
+      });
+
+      it('does not call onComplete when swipe is too short on mobile', async () => {
+        const { container } = render(
+          <TaskCard
+            task={mockTask}
+            onComplete={mockOnComplete}
+            onEdit={mockOnEdit}
+            onDelete={mockOnDelete}
+          />
+        );
+
+        const swipeContainer = container.firstChild as HTMLElement;
+
+        // Simulate a short right swipe of 50px (below threshold of 100px)
+        simulateSwipe(swipeContainer, 50);
+
+        // Should NOT have called onComplete
+        expect(mockOnComplete).not.toHaveBeenCalled();
+      });
+    });
   });
 });

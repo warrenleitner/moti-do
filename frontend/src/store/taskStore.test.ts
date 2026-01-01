@@ -809,6 +809,104 @@ describe('useFilteredTasks', () => {
     const { result } = renderHook(() => useFilteredTasks(lastProcessedDate));
     expect(result.current.find((t) => t.id === 'task-future')).toBeUndefined();
   });
+
+  it('should filter by maxDueDate', () => {
+    const tasksWithDueDates = [
+      {
+        id: 'task-due-soon',
+        title: 'Due Soon',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        due_date: '2024-01-15',
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+      {
+        id: 'task-due-later',
+        title: 'Due Later',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        due_date: '2024-02-15',
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+      {
+        id: 'task-no-due',
+        title: 'No Due Date',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        due_date: undefined,
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithDueDates);
+    store.setFilters({ status: 'all', maxDueDate: '2024-01-31' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    // Should include task due on 2024-01-15, exclude task due 2024-02-15 and task with no due date
+    expect(result.current.length).toBe(1);
+    expect(result.current[0].id).toBe('task-due-soon');
+  });
+
+  it('should include tasks due on the maxDueDate', () => {
+    const tasksWithDueDates = [
+      {
+        id: 'task-due-on-max',
+        title: 'Due On Max',
+        priority: Priority.MEDIUM,
+        difficulty: Difficulty.MEDIUM,
+        duration: Duration.SHORT,
+        is_complete: false,
+        is_habit: false,
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        due_date: '2024-01-31',
+        creation_date: new Date().toISOString(),
+        streak_current: 0,
+        streak_best: 0,
+        history: [],
+        score: 50,
+      },
+    ];
+    const store = useTaskStore.getState();
+    store.setTasks(tasksWithDueDates);
+    store.setFilters({ status: 'all', maxDueDate: '2024-01-31' });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    // Should include task due exactly on maxDueDate
+    expect(result.current.length).toBe(1);
+    expect(result.current[0].id).toBe('task-due-on-max');
+  });
 });
 
 describe('useSelectedTask', () => {

@@ -9,6 +9,8 @@ import {
   Stack,
   Tooltip,
   Chip,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   ExpandMore,
@@ -21,8 +23,11 @@ import {
   Undo,
   CheckCircle,
   RadioButtonUnchecked,
+  Add,
+  Remove,
 } from '@mui/icons-material';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useSwipeable } from 'react-swipeable';
 import type { Task } from '../../types';
 import type { SubtaskViewMode } from '../../store/taskStore';
 import {
@@ -43,9 +48,14 @@ interface TaskCardProps {
   onDelete: (id: string) => void;
   onSubtaskToggle?: (taskId: string, subtaskIndex: number) => void;
   onUndo?: (id: string) => void;
+  onIncrement?: (id: string) => void;
+  onDecrement?: (id: string) => void;
   isBlocked?: boolean;
   subtaskViewMode?: SubtaskViewMode;
 }
+
+// Threshold for completing a swipe action (in pixels)
+const SWIPE_THRESHOLD = 100;
 
 export default function TaskCard({
   task,
@@ -54,34 +64,113 @@ export default function TaskCard({
   onDelete,
   onSubtaskToggle,
   onUndo,
+  onIncrement,
+  onDecrement,
   isBlocked = false,
   subtaskViewMode = 'inline',
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Handle swipe completion
+  const handleSwipeComplete = useCallback(() => {
+    if (!isBlocked && !task.is_complete) {
+      onComplete(task.id);
+    }
+    setSwipeOffset(0);
+  }, [isBlocked, task.is_complete, task.id, onComplete]);
+
+  // Swipe handlers for mobile
+  const swipeHandlers = useSwipeable({
+    onSwiping: (eventData) => {
+      // Only track right swipes on mobile
+      if (isMobile && eventData.dir === 'Right' && !isBlocked && !task.is_complete) {
+        setSwipeOffset(Math.min(eventData.deltaX, SWIPE_THRESHOLD * 1.5));
+      }
+    },
+    onSwipedRight: (eventData) => {
+      if (isMobile && eventData.deltaX >= SWIPE_THRESHOLD) {
+        handleSwipeComplete();
+      } else {
+        setSwipeOffset(0);
+      }
+    },
+    onTouchEndOrOnMouseUp: () => {
+      // Reset if swipe wasn't completed
+      if (swipeOffset < SWIPE_THRESHOLD) {
+        setSwipeOffset(0);
+      }
+    },
+    trackMouse: false,
+    trackTouch: true,
+    preventScrollOnSwipe: false,
+  });
+
+  // Calculate swipe progress (0 to 1)
+  const swipeProgress = Math.min(swipeOffset / SWIPE_THRESHOLD, 1);
 
   const completedSubtasks = task.subtasks.filter((s) => s.complete).length;
   const hasSubtasks = task.subtasks.length > 0;
   // In hidden and top-level modes, subtasks don't contribute to hasDetails
   const showSubtasksInline = subtaskViewMode === 'inline' && hasSubtasks;
-  const hasDetails = task.text_description || showSubtasksInline || task.tags.length > 0;
+  // On mobile, always show expand button since we hide some metadata when collapsed
+  const hasDetails = isMobile || task.text_description || showSubtasksInline || task.tags.length > 0;
 
   return (
-    <Card
+    <Box
+      {...swipeHandlers}
       sx={{
+        position: 'relative',
+        overflow: 'hidden',
         mb: 1,
-        opacity: task.is_complete ? 0.7 : isBlocked ? 0.6 : 1,
-        borderLeft: 4,
-        borderColor: task.is_complete
-          ? 'success.main'
-          : isBlocked
-          ? 'grey.400'
-          : 'primary.main',
-        transition: 'all 0.2s ease',
-        '&:hover': {
-          boxShadow: 3,
-        },
+        borderRadius: 1,
       }}
     >
+      {/* Swipe indicator background - only show on mobile when swiping incomplete tasks */}
+      {isMobile && !task.is_complete && !isBlocked && swipeOffset > 0 && (
+        <Box
+          sx={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: swipeOffset,
+            bgcolor: swipeProgress >= 1 ? 'success.main' : 'success.light',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            pl: 2,
+            transition: swipeProgress >= 1 ? 'background-color 0.2s' : 'none',
+          }}
+        >
+          <CheckCircle
+            sx={{
+              color: 'white',
+              opacity: swipeProgress,
+              transform: `scale(${0.5 + swipeProgress * 0.5})`,
+              transition: 'transform 0.1s',
+            }}
+          />
+        </Box>
+      )}
+      <Card
+        sx={{
+          opacity: task.is_complete ? 0.7 : isBlocked ? 0.6 : 1,
+          borderLeft: 4,
+          borderColor: task.is_complete
+            ? 'success.main'
+            : isBlocked
+            ? 'grey.400'
+            : 'primary.main',
+          transition: swipeOffset > 0 ? 'none' : 'all 0.2s ease',
+          transform: isMobile ? `translateX(${swipeOffset}px)` : 'none',
+          '&:hover': {
+            boxShadow: 3,
+          },
+        }}
+      >
       <CardContent sx={{ pb: 1 }}>
         {/* Main row */}
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -113,7 +202,7 @@ export default function TaskCard({
               )}
             </Box>
 
-            {/* Metadata row */}
+            {/* Metadata row - on mobile, show only XP and due date when collapsed */}
             <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
               <Tooltip title="XP reward for completing this task">
                 <Chip
@@ -125,19 +214,66 @@ export default function TaskCard({
                   sx={{ fontWeight: 600 }}
                 />
               </Tooltip>
-              <PriorityChip priority={task.priority} />
-              <DifficultyChip difficulty={task.difficulty} />
-              <DurationChip duration={task.duration} />
+              {/* Counter controls for counter tasks */}
+              {task.target_count !== undefined && task.target_count > 0 && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Tooltip title="Decrease count">
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDecrement?.(task.id);
+                        }}
+                        disabled={task.current_count <= 0 || task.is_complete}
+                        sx={{ p: 0.25 }}
+                      >
+                        <Remove fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Chip
+                    label={`${task.current_count}/${task.target_count}`}
+                    size="small"
+                    color={task.current_count >= task.target_count ? 'success' : 'default'}
+                    variant="outlined"
+                    sx={{ minWidth: 50, fontWeight: 600 }}
+                  />
+                  <Tooltip title="Increase count">
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onIncrement?.(task.id);
+                        }}
+                        disabled={task.is_complete}
+                        sx={{ p: 0.25 }}
+                      >
+                        <Add fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
+              )}
+              {/* Show full metadata on desktop, minimal on mobile */}
+              {!isMobile && (
+                <>
+                  <PriorityChip priority={task.priority} />
+                  <DifficultyChip difficulty={task.difficulty} />
+                  <DurationChip duration={task.duration} />
+                </>
+              )}
               {task.due_date && <DateDisplay date={task.due_date} label="Due" />}
-              {task.is_habit && (
+              {!isMobile && task.is_habit && (
                 <StreakBadge current={task.streak_current} best={task.streak_best} />
               )}
-              {/* Project badge - inline with other metadata */}
-              {task.project && <ProjectChip project={task.project} />}
+              {/* Project badge - inline with other metadata (desktop only) */}
+              {!isMobile && task.project && <ProjectChip project={task.project} />}
             </Stack>
 
-            {/* Subtask progress - show in inline and top-level modes */}
-            {hasSubtasks && subtaskViewMode !== 'hidden' && (
+            {/* Subtask progress - show in inline and top-level modes (desktop only when collapsed) */}
+            {!isMobile && hasSubtasks && subtaskViewMode !== 'hidden' && (
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
                 Subtasks: {completedSubtasks}/{task.subtasks.length}
               </Typography>
@@ -155,6 +291,26 @@ export default function TaskCard({
         {/* Expanded details */}
         <Collapse in={expanded}>
           <Box sx={{ mt: 2, pl: 4 }}>
+            {/* Mobile-only: show hidden metadata when expanded */}
+            {isMobile && (
+              <Stack direction="row" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
+                <PriorityChip priority={task.priority} />
+                <DifficultyChip difficulty={task.difficulty} />
+                <DurationChip duration={task.duration} />
+                {task.is_habit && (
+                  <StreakBadge current={task.streak_current} best={task.streak_best} />
+                )}
+                {task.project && <ProjectChip project={task.project} />}
+              </Stack>
+            )}
+
+            {/* Mobile: show subtask progress in expanded section */}
+            {isMobile && hasSubtasks && subtaskViewMode !== 'hidden' && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                Subtasks: {completedSubtasks}/{task.subtasks.length}
+              </Typography>
+            )}
+
             {task.text_description && (
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {task.text_description}
@@ -222,5 +378,6 @@ export default function TaskCard({
         </IconButton>
       </CardActions>
     </Card>
+    </Box>
   );
 }

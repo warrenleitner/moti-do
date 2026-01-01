@@ -57,6 +57,8 @@ class TaskBase(BaseModel):
     recurrence_type: str | None = None
     habit_start_delta: int | None = None
     subtask_recurrence_mode: str | None = None
+    # Counter task fields
+    target_count: int | None = None  # Target count to reach (None = not a counter task)
 
 
 class TaskCreate(TaskBase):
@@ -85,6 +87,9 @@ class TaskUpdate(BaseModel):
     habit_start_delta: int | None = None
     subtask_recurrence_mode: str | None = None
     is_complete: bool | None = None
+    # Counter task fields
+    target_count: int | None = None
+    current_count: int | None = None
 
 
 class TaskResponse(TaskBase):
@@ -100,7 +105,11 @@ class TaskResponse(TaskBase):
     streak_best: int = 0
     parent_habit_id: str | None = None
     subtask_recurrence_mode: str = "default"
-    score: int = 0  # Calculated XP value for this task
+    score: float = 0.0  # Calculated XP value for this task
+    penalty_score: float = 0.0  # Penalty if not completed today
+    net_score: float = 0.0  # XP + penalty avoided
+    # Counter task fields
+    current_count: int = 0  # Current progress toward target
 
     model_config = ConfigDict(from_attributes=True)
 

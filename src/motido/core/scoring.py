@@ -10,7 +10,7 @@ import os
 from datetime import date
 from typing import Any, Dict, Optional
 
-from motido.core.models import Task, User
+from motido.core.models import Difficulty, Duration, Task, User
 
 
 def get_scoring_config_path() -> str:
@@ -985,6 +985,115 @@ def withdraw_xp(user: Any, manager: Any, points: int) -> bool:
     return False
 
 
+def get_penalty_multiplier(
+    difficulty: Difficulty, duration: Duration, config: Dict[str, Any]
+) -> float:
+    """
+    Calculate penalty multiplier - INVERTED from XP multiplier.
+
+    Easy/short tasks get HIGHER penalties (no excuse for skipping).
+    Hard/long tasks get LOWER penalties (understandable to defer).
+
+    XP multipliers range from ~1.0 to ~5.0 where higher = harder/longer.
+    Invert using: penalty_mult = 6.0 - xp_mult
+    So trivial (1.1) becomes 4.9, herculean (5.0) becomes 1.0.
+
+    Args:
+        difficulty: The task's difficulty level
+        duration: The task's duration level
+        config: The scoring configuration containing multipliers
+
+    Returns:
+        Combined inverted penalty multiplier (difficulty_penalty * duration_penalty)
+    """
+    # Get XP multipliers from config (with explicit float conversion for type safety)
+    difficulty_xp: float = float(
+        config["difficulty_multiplier"].get(difficulty.name, 1.0)
+    )
+    duration_xp: float = float(config["duration_multiplier"].get(duration.name, 1.0))
+
+    # Invert: 6.0 - xp_mult
+    # TRIVIAL (1.1) -> 4.9 (high penalty)
+    # HERCULEAN (5.0) -> 1.0 (low penalty)
+    # MINUSCULE (1.05) -> 4.95 (high penalty)
+    # ODYSSEYAN (3.0) -> 3.0 (medium penalty)
+    difficulty_penalty: float = 6.0 - difficulty_xp
+    duration_penalty: float = 6.0 - duration_xp
+
+    return difficulty_penalty * duration_penalty
+
+
+def calculate_penalty_score(
+    task: Task, config: Dict[str, Any], effective_date: date
+) -> float:
+    """
+    Calculate the penalty score for a task (penalty if not completed today).
+
+    The penalty applies only for tasks that are due today or overdue.
+
+    Args:
+        task: The task to calculate penalty for
+        config: The scoring configuration
+        effective_date: The date to calculate penalty for
+
+    Returns:
+        The penalty score (positive value representing XP that would be lost)
+    """
+    # No penalty for completed tasks
+    if task.is_complete:
+        return 0.0
+
+    # No penalty for tasks not yet due
+    if not task.due_date:
+        return 0.0
+
+    task_due_date = (
+        task.due_date.date() if hasattr(task.due_date, "date") else task.due_date
+    )
+
+    if task_due_date > effective_date:
+        return 0.0
+
+    # Calculate penalty using inverted multipliers
+    penalty_multiplier = get_penalty_multiplier(task.difficulty, task.duration, config)
+    base_score: float = float(config.get("base_score", 10))
+    raw_penalty: float = base_score * penalty_multiplier
+
+    # Normalize (same as in apply_penalties)
+    normalizer: float = 25.0
+    return max(1.0, raw_penalty / normalizer)
+
+
+def calculate_task_scores(
+    task: Task,
+    all_tasks: Dict[str, Task],
+    config: Dict[str, Any],
+    effective_date: date,
+) -> tuple[float, float, float]:
+    """
+    Calculate all scoring values for a task.
+
+    Args:
+        task: The task to calculate scores for
+        all_tasks: Dict of all tasks for dependency resolution
+        config: The scoring configuration
+        effective_date: The date for score calculation
+
+    Returns:
+        Tuple of (xp_score, penalty_score, net_score)
+    """
+    # Calculate XP score
+    xp_score = calculate_score(task, all_tasks, config, effective_date)
+
+    # Calculate penalty score (only for due/overdue tasks)
+    penalty_score = calculate_penalty_score(task, config, effective_date)
+
+    # Net score = XP + penalty avoided
+    net_score = xp_score + penalty_score
+
+    return (xp_score, penalty_score, net_score)
+
+
 def apply_penalties(
     user: Any,
     manager: Any,
@@ -1021,19 +1130,29 @@ def apply_penalties(
     for task in all_tasks:
         # Only penalize tasks created before this date
         if not task.is_complete and task.creation_date.date() < effective_date:
-            # Calculate current score
+            # Calculate current score (used to check if task is worth penalizing)
             current_score = calculate_score(task, task_map, config, effective_date)
 
-            # Get multipliers to dampen the penalty
-            difficulty_key = task.difficulty.name
-            difficulty_mult = config["difficulty_multiplier"].get(difficulty_key, 1.0)
-
-            duration_key = task.duration.name
-            duration_mult = config["duration_multiplier"].get(duration_key, 1.0)
-
-            # Dampen penalty: penalty = score / (diff * dur)
             if current_score > 0:
-                penalty = int(current_score / (difficulty_mult * duration_mult))
+                # Get inverted penalty multiplier
+                # Easy/short tasks get higher penalties (no excuse for skipping)
+                # Hard/long tasks get lower penalties (understandable to defer)
+                penalty_multiplier = get_penalty_multiplier(
+                    task.difficulty, task.duration, config
+                )
+
+                # Calculate penalty using base score and inverted multiplier
+                # Normalize to keep penalties in a reasonable range
+                # Max multiplier is ~25 (NOT_SET: 5.0 * 5.0), min is ~3.0
+                base_score = config.get("base_score", 10)
+                raw_penalty = base_score * penalty_multiplier
+                # Normalize so average penalty is ~10 XP
+                # NOT_SET (25.0): 10 * 25 / 25 = 10 XP penalty
+                # TRIVIAL + MINUSCULE (24.3): 10 * 24.3 / 25 ≈ 10 XP
+                # HERCULEAN + ODYSSEYAN (3.0): 10 * 3.0 / 25 = 1 XP
+                # This gives ~10x ratio between easiest and hardest tasks
+                normalizer = 25.0
+                penalty = max(1, int(raw_penalty / normalizer))
                 if penalty > 0:
                     add_xp(
                         user,

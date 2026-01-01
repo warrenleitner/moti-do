@@ -387,6 +387,17 @@ export const taskApi = {
     const response = await apiClient.post<Task>(`/tasks/${id}/undo`);
     return response.data;
   },
+
+  // Counter task operations
+  incrementCounter: async (id: string): Promise<Task> => {
+    const response = await apiClient.post<Task>(`/tasks/${id}/counter/increment`);
+    return response.data;
+  },
+
+  decrementCounter: async (id: string): Promise<Task> => {
+    const response = await apiClient.post<Task>(`/tasks/${id}/counter/decrement`);
+    return response.data;
+  },
 };
 /* v8 ignore stop */
 

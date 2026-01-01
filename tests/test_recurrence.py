@@ -361,47 +361,46 @@ def test_create_next_habit_instance_empty_subtasks_all_modes() -> None:
 # --- Tests for minimum start date logic (FROM_DUE_DATE) ---
 
 
-def test_from_due_date_skips_past_start_date() -> None:
-    """Test FROM_DUE_DATE recurrence skips forward when start_date would be in past.
+def test_from_due_date_skips_when_completed_late() -> None:
+    """Test FROM_DUE_DATE recurrence skips forward when completed late.
 
-    Example: Task due Jan 14 with start Jan 1 (13-day delta), monthly recurrence.
-    If current date is Feb 2, next due Feb 14 would have start Feb 1 (in past).
-    Should skip to March (due March 14, start March 1).
+    Example: Task due Jan 14, daily recurrence.
+    If completed on Jan 16 (2 days late), next due Jan 15 is before completion.
+    Should skip to Jan 17 (first due date after completion).
     """
-    # Original task: due Jan 14, start Jan 1 (habit_start_delta = 13)
+    # Original task: due Jan 14, daily recurrence
     due_date = datetime(2024, 1, 14, 12, 0, 0)
     task = Task(
         id="parent-id",
-        title="Monthly Task",
+        title="Daily Task",
         creation_date=datetime(2024, 1, 1),
         due_date=due_date,
         is_habit=True,
-        recurrence_rule="monthly",
+        recurrence_rule="daily",
         recurrence_type=RecurrenceType.FROM_DUE_DATE,
-        habit_start_delta=13,  # Start 13 days before due = Jan 1
+        habit_start_delta=1,  # Start 1 day before due
     )
 
-    # Current real date is Feb 2
-    current_date = datetime(2024, 2, 2, 12, 0, 0)
+    # Completed 2 days late on Jan 16
+    completion_date = datetime(2024, 1, 16, 12, 0, 0)
 
-    new_instance = create_next_habit_instance(
-        task, completion_date=due_date, current_date=current_date
-    )
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
 
     assert new_instance is not None
-    # Should skip February (start Feb 1 < current Feb 2) and go to March
+    # Next due Jan 15 <= completion Jan 16, skip
+    # Next due Jan 16 <= completion Jan 16, skip
+    # Next due Jan 17 > completion Jan 16, use this
     assert new_instance.due_date is not None
-    assert new_instance.due_date.month == 3
-    assert new_instance.due_date.day == 14
+    assert new_instance.due_date.month == 1
+    assert new_instance.due_date.day == 17
     assert new_instance.start_date is not None
-    assert new_instance.start_date.month == 3
-    assert new_instance.start_date.day == 1
+    assert new_instance.start_date.day == 16
 
 
 def test_from_due_date_skips_multiple_periods() -> None:
     """Test that FROM_DUE_DATE skips multiple periods if needed.
 
-    If current date is far in the future, should skip multiple intervals.
+    If completed very late, should skip multiple intervals until due > completion.
     """
     # Task due Jan 14, monthly recurrence
     due_date = datetime(2024, 1, 14, 12, 0, 0)
@@ -416,27 +415,25 @@ def test_from_due_date_skips_multiple_periods() -> None:
         habit_start_delta=13,  # Start 13 days before due
     )
 
-    # Current date is May 10 - should skip Feb, Mar, Apr and land on May
-    current_date = datetime(2024, 5, 10, 12, 0, 0)
+    # Completed very late on May 10 - should skip Feb, Mar, Apr, May
+    completion_date = datetime(2024, 5, 10, 12, 0, 0)
 
-    new_instance = create_next_habit_instance(
-        task, completion_date=due_date, current_date=current_date
-    )
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
 
     assert new_instance is not None
-    # May 1 (start) >= May 10 (current)? No. So should go to June.
-    # June 1 (start) >= May 10 (current)? Yes.
+    # Feb 14 <= May 10, skip. Mar 14 <= May 10, skip. Apr 14 <= May 10, skip.
+    # May 14 > May 10, use this.
     assert new_instance.due_date is not None
-    assert new_instance.due_date.month == 6
+    assert new_instance.due_date.month == 5
     assert new_instance.due_date.day == 14
     assert new_instance.start_date is not None
-    assert new_instance.start_date.month == 6
+    assert new_instance.start_date.month == 5
     assert new_instance.start_date.day == 1
 
 
-def test_from_due_date_no_skip_when_future() -> None:
-    """Test FROM_DUE_DATE doesn't skip when start_date is already in future."""
-    # Task due Jan 14, start Jan 1
+def test_from_due_date_no_skip_when_completed_on_time() -> None:
+    """Test FROM_DUE_DATE doesn't skip when completed on or before due date."""
+    # Task due Jan 14, monthly recurrence
     due_date = datetime(2024, 1, 14, 12, 0, 0)
     task = Task(
         id="parent-id",
@@ -449,15 +446,13 @@ def test_from_due_date_no_skip_when_future() -> None:
         habit_start_delta=13,
     )
 
-    # Current date is Jan 15 - Feb 1 (start) is in future
-    current_date = datetime(2024, 1, 15, 12, 0, 0)
+    # Completed on time (same day as due date)
+    completion_date = datetime(2024, 1, 14, 12, 0, 0)
 
-    new_instance = create_next_habit_instance(
-        task, completion_date=due_date, current_date=current_date
-    )
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
 
     assert new_instance is not None
-    # Should be February as normal
+    # Next due Feb 14 > completion Jan 14, no skip needed
     assert new_instance.due_date is not None
     assert new_instance.due_date.month == 2
     assert new_instance.due_date.day == 14
@@ -466,8 +461,8 @@ def test_from_due_date_no_skip_when_future() -> None:
     assert new_instance.start_date.day == 1
 
 
-def test_from_due_date_no_start_delta_uses_due_date() -> None:
-    """Test FROM_DUE_DATE uses due_date for comparison when no habit_start_delta."""
+def test_from_due_date_no_start_delta_completed_late() -> None:
+    """Test FROM_DUE_DATE with late completion and no habit_start_delta."""
     # Task due Jan 14, no start_date (no delta)
     due_date = datetime(2024, 1, 14, 12, 0, 0)
     task = Task(
@@ -481,15 +476,13 @@ def test_from_due_date_no_start_delta_uses_due_date() -> None:
         habit_start_delta=None,  # No start_date
     )
 
-    # Current date is Feb 20 - Feb 14 (due) is in past
-    current_date = datetime(2024, 2, 20, 12, 0, 0)
+    # Completed late on Feb 20 - next due Feb 14 is before completion
+    completion_date = datetime(2024, 2, 20, 12, 0, 0)
 
-    new_instance = create_next_habit_instance(
-        task, completion_date=due_date, current_date=current_date
-    )
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
 
     assert new_instance is not None
-    # Feb 14 < Feb 20, so should skip to March 14
+    # Feb 14 <= Feb 20, skip to March 14 > Feb 20
     assert new_instance.due_date is not None
     assert new_instance.due_date.month == 3
     assert new_instance.due_date.day == 14
@@ -497,10 +490,10 @@ def test_from_due_date_no_start_delta_uses_due_date() -> None:
 
 
 def test_from_completion_does_not_skip() -> None:
-    """Test that FROM_COMPLETION recurrence does NOT skip past dates.
+    """Test that FROM_COMPLETION recurrence does NOT apply skip logic.
 
     FROM_COMPLETION calculates from completion date, so the result
-    should always be in the future relative to completion.
+    is always in the future relative to completion (by design).
     """
     due_date = datetime(2024, 1, 14, 12, 0, 0)
     completion_date = datetime(2024, 1, 14, 12, 0, 0)
@@ -515,13 +508,7 @@ def test_from_completion_does_not_skip() -> None:
         habit_start_delta=13,
     )
 
-    # Even if current_date is way in the future, FROM_COMPLETION
-    # should use completion_date as reference
-    current_date = datetime(2024, 5, 1, 12, 0, 0)
-
-    new_instance = create_next_habit_instance(
-        task, completion_date=completion_date, current_date=current_date
-    )
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
 
     assert new_instance is not None
     # FROM_COMPLETION: next due = completion + 1 month = Feb 14
@@ -532,7 +519,7 @@ def test_from_completion_does_not_skip() -> None:
 
 
 def test_strict_does_not_skip() -> None:
-    """Test that STRICT recurrence does NOT skip past dates."""
+    """Test that STRICT recurrence does NOT apply skip logic."""
     due_date = datetime(2024, 1, 14, 12, 0, 0)
     task = Task(
         id="parent-id",
@@ -545,12 +532,10 @@ def test_strict_does_not_skip() -> None:
         habit_start_delta=13,
     )
 
-    # Even if current_date is in the future, STRICT should not skip
-    current_date = datetime(2024, 5, 1, 12, 0, 0)
+    # Even if completed very late, STRICT should not skip
+    completion_date = datetime(2024, 5, 1, 12, 0, 0)
 
-    new_instance = create_next_habit_instance(
-        task, completion_date=due_date, current_date=current_date
-    )
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
 
     assert new_instance is not None
     # STRICT uses due_date as reference, next = Feb 14
@@ -575,23 +560,20 @@ def test_from_due_date_weekly_recurrence() -> None:
         habit_start_delta=3,  # Start 3 days before (Friday)
     )
 
-    # Current date is Jan 20 (Saturday)
-    # Next due would be Jan 15, start Jan 12 - both in past
-    # Should skip to Jan 22 (due), start Jan 19
-    current_date = datetime(2024, 1, 20, 12, 0, 0)
+    # Completed late on Jan 20 (Saturday)
+    # Next due would be Jan 15 <= Jan 20, skip
+    # Jan 22 > Jan 20, use this
+    completion_date = datetime(2024, 1, 20, 12, 0, 0)
 
-    new_instance = create_next_habit_instance(
-        task, completion_date=due_date, current_date=current_date
-    )
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
 
     assert new_instance is not None
     assert new_instance.due_date is not None
-    # Jan 15 start=Jan 12 < Jan 20, skip
-    # Jan 22 start=Jan 19 < Jan 20, skip
-    # Jan 29 start=Jan 26 >= Jan 20, use this
-    assert new_instance.due_date.day == 29
+    # Jan 15 <= Jan 20, skip
+    # Jan 22 > Jan 20, use this
+    assert new_instance.due_date.day == 22
     assert new_instance.start_date is not None
-    assert new_instance.start_date.day == 26
+    assert new_instance.start_date.day == 19
 
 
 # --- Tests for helper functions ---
@@ -630,11 +612,11 @@ def test_advance_to_future_start_invalid_rule() -> None:
     )
     next_due = datetime(2024, 1, 15, 12, 0, 0)
     start_date = datetime(2024, 1, 10, 12, 0, 0)
-    current_date = datetime(2024, 2, 1, 12, 0, 0)
+    completion_date = datetime(2024, 2, 1, 12, 0, 0)
 
     # Should return original values when rule is invalid
     result_due, result_start = _advance_to_future_start(
-        task, next_due, start_date, current_date
+        task, next_due, start_date, completion_date
     )
 
     # Original values returned when parsing fails
@@ -656,11 +638,11 @@ def test_advance_to_future_start_finite_rule_exhausted() -> None:
     # Initial due date is Jan 15, start date is Jan 10
     next_due = datetime(2024, 1, 15, 12, 0, 0)
     start_date = datetime(2024, 1, 10, 12, 0, 0)
-    # Current date is way in the future - rule will exhaust before we reach it
-    current_date = datetime(2024, 12, 1, 12, 0, 0)
+    # Completed way in the future - rule will exhaust before we find valid due date
+    completion_date = datetime(2024, 12, 1, 12, 0, 0)
 
     result_due, result_start = _advance_to_future_start(
-        task, next_due, start_date, current_date
+        task, next_due, start_date, completion_date
     )
 
     # When rule exhausts, we get the last computed values
@@ -668,3 +650,53 @@ def test_advance_to_future_start_finite_rule_exhausted() -> None:
     # The function should break out of loop and return last computed values
     assert result_due is not None
     assert result_start is not None
+
+
+def test_from_due_date_completed_before_due() -> None:
+    """Test FROM_DUE_DATE when completed before the due date (early completion)."""
+    # Task due Jan 14, daily recurrence
+    due_date = datetime(2024, 1, 14, 12, 0, 0)
+    task = Task(
+        id="parent-id",
+        title="Daily Task",
+        creation_date=datetime(2024, 1, 1),
+        due_date=due_date,
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.FROM_DUE_DATE,
+    )
+
+    # Completed early on Jan 12
+    completion_date = datetime(2024, 1, 12, 12, 0, 0)
+
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
+
+    assert new_instance is not None
+    # Next due Jan 15 > completion Jan 12, no skip needed
+    assert new_instance.due_date is not None
+    assert new_instance.due_date.day == 15
+
+
+def test_from_due_date_completed_same_day() -> None:
+    """Test FROM_DUE_DATE when completed exactly on due date same time."""
+    # Task due Jan 14 at noon, daily recurrence
+    due_date = datetime(2024, 1, 14, 12, 0, 0)
+    task = Task(
+        id="parent-id",
+        title="Daily Task",
+        creation_date=datetime(2024, 1, 1),
+        due_date=due_date,
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.FROM_DUE_DATE,
+    )
+
+    # Completed exactly at due date time
+    completion_date = datetime(2024, 1, 14, 12, 0, 0)
+
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
+
+    assert new_instance is not None
+    # Next due Jan 15 > completion Jan 14, no skip needed
+    assert new_instance.due_date is not None
+    assert new_instance.due_date.day == 15

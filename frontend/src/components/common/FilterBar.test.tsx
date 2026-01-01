@@ -21,6 +21,8 @@ describe('FilterBar', () => {
     onTagsChange: vi.fn(),
     projects: [],
     tags: [],
+    maxDueDate: undefined as string | undefined,
+    onMaxDueDateChange: vi.fn(),
     onReset: vi.fn(),
   };
 

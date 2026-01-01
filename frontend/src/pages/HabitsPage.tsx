@@ -57,6 +57,9 @@ export default function HabitsPage() {
         streak_best: 0,
         history: [],
         score: 0,
+        penalty_score: 0,
+        net_score: 0,
+        current_count: 0,
         ...taskData,
       };
       addTask(newHabit);

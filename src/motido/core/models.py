@@ -269,6 +269,15 @@ class Task:  # pylint: disable=too-many-instance-attributes
         default=SubtaskRecurrenceMode.DEFAULT
     )
 
+    # Counter task fields (for tracking repeated actions like "drink 8 glasses of water")
+    target_count: int | None = None  # Target count to reach (None = not a counter task)
+    current_count: int = 0  # Current progress toward target
+
+    # Computed scoring fields (not persisted, calculated at runtime)
+    score: float = field(default=0.0)
+    penalty_score: float = field(default=0.0)  # Penalty if not completed today
+    net_score: float = field(default=0.0)  # XP + penalty avoided
+
     def __str__(self) -> str:
         """String representation for simple display."""
         # Format creation_date as YYYY-MM-DD HH:MM:SS

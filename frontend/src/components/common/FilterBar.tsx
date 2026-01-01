@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { SelectChangeEvent } from '@mui/material';
 import {
   Box,
@@ -11,8 +12,19 @@ import {
   Checkbox,
   ListItemText,
   OutlinedInput,
+  Drawer,
+  Badge,
+  Typography,
+  IconButton,
+  Divider,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
-import { FilterList, Clear } from '@mui/icons-material';
+import { FilterList, Clear, Close } from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { format } from 'date-fns';
 import {
   Priority,
   PriorityEmoji,
@@ -42,6 +54,8 @@ interface FilterBarProps {
   onTagsChange: (tags: string[]) => void;
   projects: string[];
   tags: string[];
+  maxDueDate?: string;
+  onMaxDueDateChange: (date: string | undefined) => void;
   onReset: () => void;
 }
 
@@ -91,8 +105,14 @@ export default function FilterBar({
   onTagsChange,
   projects,
   tags,
+  maxDueDate,
+  onMaxDueDateChange,
   onReset,
 }: FilterBarProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const hasActiveFilters =
     search ||
     status !== 'active' ||
@@ -100,7 +120,18 @@ export default function FilterBar({
     difficulties.length > 0 ||
     durations.length > 0 ||
     selectedProjects.length > 0 ||
-    selectedTags.length > 0;
+    selectedTags.length > 0 ||
+    maxDueDate;
+
+  // Count active filters for badge (excluding search and status=active)
+  const activeFilterCount =
+    (status !== 'active' ? 1 : 0) +
+    priorities.length +
+    difficulties.length +
+    durations.length +
+    selectedProjects.length +
+    selectedTags.length +
+    (maxDueDate ? 1 : 0);
 
   const handlePriorityChange = (event: SelectChangeEvent<Priority[]>) => {
     const value = event.target.value;
@@ -160,197 +191,309 @@ export default function FilterBar({
     return `${selected.length} selected`;
   };
 
+  // Shared filter controls - used in both mobile drawer and desktop inline view
+  const filterControls = (
+    <>
+      <FormControl size="small" sx={{ minWidth: 120, width: isMobile ? '100%' : 'auto' }}>
+        <InputLabel>Status</InputLabel>
+        <Select
+          value={status}
+          label="Status"
+          onChange={(e) => onStatusChange(e.target.value as StatusFilter)}
+        >
+          <MenuItem value="active">Active</MenuItem>
+          <MenuItem value="blocked">Blocked</MenuItem>
+          <MenuItem value="future">Future</MenuItem>
+          <MenuItem value="completed">Completed</MenuItem>
+          <MenuItem value="all">All</MenuItem>
+        </Select>
+      </FormControl>
+
+      <FormControl size="small" sx={{ minWidth: 140, width: isMobile ? '100%' : 'auto' }}>
+        <InputLabel>Priority</InputLabel>
+        <Select
+          multiple
+          value={priorities}
+          onChange={handlePriorityChange}
+          input={<OutlinedInput label="Priority" />}
+          renderValue={renderPriorityValue}
+        >
+          {priorityOptions.map((option) => (
+            <MenuItem key={option.value} value={option.value}>
+              <Checkbox checked={priorities.includes(option.value)} size="small" />
+              <ListItemText primary={option.label} />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <FormControl size="small" sx={{ minWidth: 140, width: isMobile ? '100%' : 'auto' }}>
+        <InputLabel>Difficulty</InputLabel>
+        <Select
+          multiple
+          value={difficulties}
+          onChange={handleDifficultyChange}
+          input={<OutlinedInput label="Difficulty" />}
+          renderValue={renderDifficultyValue}
+        >
+          {difficultyOptions.map((option) => (
+            <MenuItem key={option.value} value={option.value}>
+              <Checkbox checked={difficulties.includes(option.value)} size="small" />
+              <ListItemText primary={option.label} />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <FormControl size="small" sx={{ minWidth: 140, width: isMobile ? '100%' : 'auto' }}>
+        <InputLabel>Duration</InputLabel>
+        <Select
+          multiple
+          value={durations}
+          onChange={handleDurationChange}
+          input={<OutlinedInput label="Duration" />}
+          renderValue={renderDurationValue}
+        >
+          {durationOptions.map((option) => (
+            <MenuItem key={option.value} value={option.value}>
+              <Checkbox checked={durations.includes(option.value)} size="small" />
+              <ListItemText primary={option.label} />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      {projects.length > 0 && (
+        <FormControl size="small" sx={{ minWidth: 140, width: isMobile ? '100%' : 'auto' }}>
+          <InputLabel>Project</InputLabel>
+          <Select
+            multiple
+            value={selectedProjects}
+            onChange={handleProjectChange}
+            input={<OutlinedInput label="Project" />}
+            renderValue={renderMultiValue}
+          >
+            {projects.map((p) => (
+              <MenuItem key={p} value={p}>
+                <Checkbox checked={selectedProjects.includes(p)} size="small" />
+                <ListItemText primary={p} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      )}
+
+      {tags.length > 0 && (
+        <FormControl size="small" sx={{ minWidth: 140, width: isMobile ? '100%' : 'auto' }}>
+          <InputLabel>Tag</InputLabel>
+          <Select
+            multiple
+            value={selectedTags}
+            onChange={handleTagChange}
+            input={<OutlinedInput label="Tag" />}
+            renderValue={renderMultiValue}
+          >
+            {tags.map((t) => (
+              <MenuItem key={t} value={t}>
+                <Checkbox checked={selectedTags.includes(t)} size="small" />
+                <ListItemText primary={t} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      )}
+
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <DatePicker
+          label="Due before"
+          value={maxDueDate ? new Date(maxDueDate + 'T00:00:00') : null}
+          onChange={(date) => {
+            if (date && !isNaN(date.getTime())) {
+              onMaxDueDateChange(format(date, 'yyyy-MM-dd'));
+            } else {
+              onMaxDueDateChange(undefined);
+            }
+          }}
+          slotProps={{
+            textField: {
+              size: 'small',
+              sx: { minWidth: 150, width: isMobile ? '100%' : 'auto' },
+            },
+            field: {
+              clearable: true,
+              onClear: () => onMaxDueDateChange(undefined),
+            },
+          }}
+        />
+      </LocalizationProvider>
+
+      {hasActiveFilters && (
+        <Button
+          startIcon={<Clear />}
+          onClick={onReset}
+          size="small"
+          sx={{ whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto' }}
+        >
+          Clear filters
+        </Button>
+      )}
+    </>
+  );
+
+  // Active filter chips - shown in both mobile and desktop
+  const activeFilterChips = hasActiveFilters && (
+    <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap" useFlexGap>
+      <FilterList color="action" sx={{ mr: 1 }} />
+      {search && (
+        <Chip
+          label={`Search: "${search}"`}
+          size="small"
+          onDelete={() => onSearchChange('')}
+        />
+      )}
+      {status !== 'active' && (
+        <Chip
+          label={`Status: ${status}`}
+          size="small"
+          onDelete={() => onStatusChange('active')}
+        />
+      )}
+      {priorities.map((p) => (
+        <Chip
+          key={p}
+          label={`Priority: ${p}`}
+          size="small"
+          onDelete={() => onPrioritiesChange(priorities.filter((x) => x !== p))}
+        />
+      ))}
+      {difficulties.map((d) => (
+        <Chip
+          key={d}
+          label={`Difficulty: ${d}`}
+          size="small"
+          onDelete={() => onDifficultiesChange(difficulties.filter((x) => x !== d))}
+        />
+      ))}
+      {durations.map((d) => (
+        <Chip
+          key={d}
+          label={`Duration: ${d}`}
+          size="small"
+          onDelete={() => onDurationsChange(durations.filter((x) => x !== d))}
+        />
+      ))}
+      {selectedProjects.map((p) => (
+        <Chip
+          key={p}
+          label={`Project: ${p}`}
+          size="small"
+          onDelete={() => onProjectsChange(selectedProjects.filter((x) => x !== p))}
+        />
+      ))}
+      {selectedTags.map((t) => (
+        <Chip
+          key={t}
+          label={`Tag: ${t}`}
+          size="small"
+          onDelete={() => onTagsChange(selectedTags.filter((x) => x !== t))}
+        />
+      ))}
+      {maxDueDate && (
+        <Chip
+          label={`Due before: ${maxDueDate}`}
+          size="small"
+          onDelete={() => onMaxDueDateChange(undefined)}
+        />
+      )}
+    </Stack>
+  );
+
+  // Mobile view: compact bar + drawer
+  if (isMobile) {
+    return (
+      <Box sx={{ mb: 3 }}>
+        {/* Compact mobile filter bar */}
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Box sx={{ flex: 1 }}>
+            <SearchInput
+              value={search}
+              onChange={onSearchChange}
+              placeholder="Search tasks..."
+            />
+          </Box>
+          <Badge badgeContent={activeFilterCount} color="primary">
+            <Button
+              variant="outlined"
+              startIcon={<FilterList />}
+              onClick={() => setDrawerOpen(true)}
+              size="small"
+            >
+              Filters
+            </Button>
+          </Badge>
+        </Stack>
+
+        {/* Active filter chips below search bar */}
+        {activeFilterChips}
+
+        {/* Filter drawer */}
+        <Drawer
+          anchor="bottom"
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          PaperProps={{
+            sx: {
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              maxHeight: '80vh',
+            },
+          }}
+        >
+          <Box sx={{ p: 2 }}>
+            {/* Drawer header */}
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+              <Typography variant="h6">Filter Tasks</Typography>
+              <IconButton onClick={() => setDrawerOpen(false)} size="small">
+                <Close />
+              </IconButton>
+            </Stack>
+            <Divider sx={{ mb: 2 }} />
+
+            {/* Filter controls in vertical stack */}
+            <Stack spacing={2}>
+              {filterControls}
+            </Stack>
+
+            {/* Apply button */}
+            <Button
+              variant="contained"
+              fullWidth
+              sx={{ mt: 3 }}
+              onClick={() => setDrawerOpen(false)}
+            >
+              Apply Filters
+            </Button>
+          </Box>
+        </Drawer>
+      </Box>
+    );
+  }
+
+  // Desktop view: inline filters
   return (
     <Box sx={{ mb: 3 }}>
       {/* Main filter row */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-start" flexWrap="wrap" useFlexGap>
+      <Stack direction="row" spacing={2} alignItems="flex-start" flexWrap="wrap" useFlexGap>
         <SearchInput
           value={search}
           onChange={onSearchChange}
           placeholder="Search tasks..."
         />
-
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Status</InputLabel>
-          <Select
-            value={status}
-            label="Status"
-            onChange={(e) => onStatusChange(e.target.value as StatusFilter)}
-          >
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="blocked">Blocked</MenuItem>
-            <MenuItem value="future">Future</MenuItem>
-            <MenuItem value="completed">Completed</MenuItem>
-            <MenuItem value="all">All</MenuItem>
-          </Select>
-        </FormControl>
-
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Priority</InputLabel>
-          <Select
-            multiple
-            value={priorities}
-            onChange={handlePriorityChange}
-            input={<OutlinedInput label="Priority" />}
-            renderValue={renderPriorityValue}
-          >
-            {priorityOptions.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                <Checkbox checked={priorities.includes(option.value)} size="small" />
-                <ListItemText primary={option.label} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Difficulty</InputLabel>
-          <Select
-            multiple
-            value={difficulties}
-            onChange={handleDifficultyChange}
-            input={<OutlinedInput label="Difficulty" />}
-            renderValue={renderDifficultyValue}
-          >
-            {difficultyOptions.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                <Checkbox checked={difficulties.includes(option.value)} size="small" />
-                <ListItemText primary={option.label} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Duration</InputLabel>
-          <Select
-            multiple
-            value={durations}
-            onChange={handleDurationChange}
-            input={<OutlinedInput label="Duration" />}
-            renderValue={renderDurationValue}
-          >
-            {durationOptions.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                <Checkbox checked={durations.includes(option.value)} size="small" />
-                <ListItemText primary={option.label} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {projects.length > 0 && (
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>Project</InputLabel>
-            <Select
-              multiple
-              value={selectedProjects}
-              onChange={handleProjectChange}
-              input={<OutlinedInput label="Project" />}
-              renderValue={renderMultiValue}
-            >
-              {projects.map((p) => (
-                <MenuItem key={p} value={p}>
-                  <Checkbox checked={selectedProjects.includes(p)} size="small" />
-                  <ListItemText primary={p} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
-
-        {tags.length > 0 && (
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>Tag</InputLabel>
-            <Select
-              multiple
-              value={selectedTags}
-              onChange={handleTagChange}
-              input={<OutlinedInput label="Tag" />}
-              renderValue={renderMultiValue}
-            >
-              {tags.map((t) => (
-                <MenuItem key={t} value={t}>
-                  <Checkbox checked={selectedTags.includes(t)} size="small" />
-                  <ListItemText primary={t} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
-
-        {hasActiveFilters && (
-          <Button
-            startIcon={<Clear />}
-            onClick={onReset}
-            size="small"
-            sx={{ whiteSpace: 'nowrap' }}
-          >
-            Clear filters
-          </Button>
-        )}
+        {filterControls}
       </Stack>
 
       {/* Active filter chips */}
-      {hasActiveFilters && (
-        <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap" useFlexGap>
-          <FilterList color="action" sx={{ mr: 1 }} />
-          {search && (
-            <Chip
-              label={`Search: "${search}"`}
-              size="small"
-              onDelete={() => onSearchChange('')}
-            />
-          )}
-          {status !== 'active' && (
-            <Chip
-              label={`Status: ${status}`}
-              size="small"
-              onDelete={() => onStatusChange('active')}
-            />
-          )}
-          {priorities.map((p) => (
-            <Chip
-              key={p}
-              label={`Priority: ${p}`}
-              size="small"
-              onDelete={() => onPrioritiesChange(priorities.filter((x) => x !== p))}
-            />
-          ))}
-          {difficulties.map((d) => (
-            <Chip
-              key={d}
-              label={`Difficulty: ${d}`}
-              size="small"
-              onDelete={() => onDifficultiesChange(difficulties.filter((x) => x !== d))}
-            />
-          ))}
-          {durations.map((d) => (
-            <Chip
-              key={d}
-              label={`Duration: ${d}`}
-              size="small"
-              onDelete={() => onDurationsChange(durations.filter((x) => x !== d))}
-            />
-          ))}
-          {selectedProjects.map((p) => (
-            <Chip
-              key={p}
-              label={`Project: ${p}`}
-              size="small"
-              onDelete={() => onProjectsChange(selectedProjects.filter((x) => x !== p))}
-            />
-          ))}
-          {selectedTags.map((t) => (
-            <Chip
-              key={t}
-              label={`Tag: ${t}`}
-              size="small"
-              onDelete={() => onTagsChange(selectedTags.filter((x) => x !== t))}
-            />
-          ))}
-        </Stack>
-      )}
+      {activeFilterChips}
     </Box>
   );
 }

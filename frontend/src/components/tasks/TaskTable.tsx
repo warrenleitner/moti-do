@@ -29,10 +29,19 @@ import {
   Download as DownloadIcon,
 } from '@mui/icons-material';
 import type { Task } from '../../types/models';
+import {
+  Priority,
+  Difficulty,
+  Duration,
+  PriorityEmoji,
+  DifficultyEmoji,
+  DurationEmoji,
+} from '../../types/models';
 import PriorityChip from '../common/PriorityChip';
 import DifficultyChip from '../common/DifficultyChip';
 import DurationChip from '../common/DurationChip';
 import ProjectChip from '../common/ProjectChip';
+import { EditableCell, SelectEditor, DateEditor, TextEditor, ProjectEditor, TagsEditor } from '../table';
 import { format } from 'date-fns';
 import ColumnConfigDialog from './ColumnConfigDialog';
 
@@ -73,6 +82,7 @@ interface TaskTableProps {
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   onComplete: (taskId: string) => void;
+  onInlineEdit?: (taskId: string, updates: Partial<Task>) => Promise<void>;
   selectedTasks?: string[];
   onSelectTask?: (taskId: string) => void;
   onSelectAll?: (selected: boolean) => void;
@@ -106,6 +116,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
   onEdit,
   onDelete,
   onComplete,
+  onInlineEdit,
   selectedTasks = [],
   onSelectTask,
   onSelectAll,
@@ -375,12 +386,36 @@ const TaskTable: React.FC<TaskTableProps> = ({
           </Box>
         );
 
-      case 'title':
-        return (
+      case 'title': {
+        const titleDisplay = (
           <span style={{ textDecoration: task.is_complete ? 'line-through' : 'none' }}>
             {task.title}
           </span>
         );
+
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.title}
+            taskId={task.id}
+            field="title"
+            displayComponent={titleDisplay}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <TextEditor
+                value={value}
+                placeholder="Task title"
+                required
+                minLength={1}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          titleDisplay
+        );
+      }
 
       case 'score':
         return (
@@ -393,52 +428,177 @@ const TaskTable: React.FC<TaskTableProps> = ({
         );
 
       case 'priority':
-        return <PriorityChip priority={task.priority} />;
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.priority}
+            taskId={task.id}
+            field="priority"
+            displayComponent={<PriorityChip priority={task.priority} />}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <SelectEditor
+                value={value}
+                options={Object.values(Priority)}
+                emojis={PriorityEmoji}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          <PriorityChip priority={task.priority} />
+        );
 
       case 'difficulty':
-        return <DifficultyChip difficulty={task.difficulty} />;
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.difficulty}
+            taskId={task.id}
+            field="difficulty"
+            displayComponent={<DifficultyChip difficulty={task.difficulty} />}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <SelectEditor
+                value={value}
+                options={Object.values(Difficulty)}
+                emojis={DifficultyEmoji}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          <DifficultyChip difficulty={task.difficulty} />
+        );
 
       case 'duration':
-        return <DurationChip duration={task.duration} />;
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.duration}
+            taskId={task.id}
+            field="duration"
+            displayComponent={<DurationChip duration={task.duration} />}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <SelectEditor
+                value={value}
+                options={Object.values(Duration)}
+                emojis={DurationEmoji}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          <DurationChip duration={task.duration} />
+        );
 
       case 'start_date': {
-        if (!task.start_date) return '-';
-        // Handle both date-only (YYYY-MM-DD) and datetime formats
-        const startDateStr = task.start_date.includes('T')
-          ? task.start_date
-          : task.start_date + 'T00:00:00';
-        const startDate = new Date(startDateStr);
-        const isFuture = startDate > new Date();
-        return (
-          <span style={{ color: isFuture ? '#9e9e9e' : 'inherit' }}>
-            {format(startDate, 'MMM d, yyyy')}
-          </span>
+        const startDateDisplay = (() => {
+          if (!task.start_date) return '-';
+          const startDateStr = task.start_date.includes('T')
+            ? task.start_date
+            : task.start_date + 'T00:00:00';
+          const startDate = new Date(startDateStr);
+          const isFuture = startDate > new Date();
+          return (
+            <span style={{ color: isFuture ? '#9e9e9e' : 'inherit' }}>
+              {format(startDate, 'MMM d, yyyy')}
+            </span>
+          );
+        })();
+
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.start_date}
+            taskId={task.id}
+            field="start_date"
+            displayComponent={startDateDisplay}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <DateEditor
+                value={value}
+                label="Start Date"
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          startDateDisplay
         );
       }
 
       case 'due_date': {
-        if (!task.due_date) return '-';
-        // Handle both date-only (YYYY-MM-DD) and datetime formats
-        const dueDateStr = task.due_date.includes('T')
-          ? task.due_date
-          : task.due_date + 'T23:59:59';
-        const dueDate = new Date(dueDateStr);
-        const isOverdue = dueDate < new Date();
-        return (
-          <span style={{ color: isOverdue ? '#f44336' : 'inherit' }}>
-            {format(dueDate, 'MMM d, yyyy')}
-          </span>
+        const dueDateDisplay = (() => {
+          if (!task.due_date) return '-';
+          const dueDateStr = task.due_date.includes('T')
+            ? task.due_date
+            : task.due_date + 'T23:59:59';
+          const dueDate = new Date(dueDateStr);
+          const isOverdue = dueDate < new Date();
+          return (
+            <span style={{ color: isOverdue ? '#f44336' : 'inherit' }}>
+              {format(dueDate, 'MMM d, yyyy')}
+            </span>
+          );
+        })();
+
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.due_date}
+            taskId={task.id}
+            field="due_date"
+            displayComponent={dueDateDisplay}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <DateEditor
+                value={value}
+                label="Due Date"
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          dueDateDisplay
         );
       }
 
       case 'creation_date':
         return format(new Date(task.creation_date), 'MMM d, yyyy');
 
-      case 'project':
-        return task.project ? <ProjectChip project={task.project} /> : '-';
+      case 'project': {
+        const projectDisplay = task.project ? <ProjectChip project={task.project} /> : '-';
 
-      case 'tags':
-        return task.tags.length > 0 ? (
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.project}
+            taskId={task.id}
+            field="project"
+            displayComponent={projectDisplay}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <ProjectEditor
+                value={value}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          projectDisplay
+        );
+      }
+
+      case 'tags': {
+        const tagsDisplay = task.tags.length > 0 ? (
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
             {task.tags.slice(0, 2).map((tag) => (
               <Chip key={tag} label={tag} size="small" />
@@ -450,6 +610,27 @@ const TaskTable: React.FC<TaskTableProps> = ({
         ) : (
           '-'
         );
+
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.tags}
+            taskId={task.id}
+            field="tags"
+            displayComponent={tagsDisplay}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <TagsEditor
+                value={value}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          tagsDisplay
+        );
+      }
 
       case 'streak':
         return task.is_habit && task.streak_current > 0 ? (
