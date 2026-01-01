@@ -116,6 +116,15 @@ export default function TasksPage() {
     }
   };
 
+  const handleInlineEdit = async (taskId: string, updates: Partial<Task>) => {
+    try {
+      await saveTask(taskId, updates);
+    } catch (error) {
+      setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to update task'), severity: 'error' });
+      throw error; // Re-throw to let EditableCell handle rollback
+    }
+  };
+
   const handleComplete = async (taskId: string) => {
     const { tasks } = useTaskStore.getState();
     const task = tasks.find((t) => t.id === taskId);
@@ -339,6 +348,7 @@ export default function TasksPage() {
             onEdit={handleEdit}
             onDelete={handleDeleteClick}
             onComplete={handleComplete}
+            onInlineEdit={handleInlineEdit}
             selectedTasks={selectedTasks}
             onSelectTask={handleSelectTask}
             onSelectAll={handleSelectAll}

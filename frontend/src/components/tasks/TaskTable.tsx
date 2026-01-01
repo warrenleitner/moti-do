@@ -29,10 +29,19 @@ import {
   Download as DownloadIcon,
 } from '@mui/icons-material';
 import type { Task } from '../../types/models';
+import {
+  Priority,
+  Difficulty,
+  Duration,
+  PriorityEmoji,
+  DifficultyEmoji,
+  DurationEmoji,
+} from '../../types/models';
 import PriorityChip from '../common/PriorityChip';
 import DifficultyChip from '../common/DifficultyChip';
 import DurationChip from '../common/DurationChip';
 import ProjectChip from '../common/ProjectChip';
+import { EditableCell, SelectEditor } from '../table';
 import { format } from 'date-fns';
 import ColumnConfigDialog from './ColumnConfigDialog';
 
@@ -73,6 +82,7 @@ interface TaskTableProps {
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   onComplete: (taskId: string) => void;
+  onInlineEdit?: (taskId: string, updates: Partial<Task>) => Promise<void>;
   selectedTasks?: string[];
   onSelectTask?: (taskId: string) => void;
   onSelectAll?: (selected: boolean) => void;
@@ -106,6 +116,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
   onEdit,
   onDelete,
   onComplete,
+  onInlineEdit,
   selectedTasks = [],
   onSelectTask,
   onSelectAll,
@@ -393,13 +404,73 @@ const TaskTable: React.FC<TaskTableProps> = ({
         );
 
       case 'priority':
-        return <PriorityChip priority={task.priority} />;
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.priority}
+            taskId={task.id}
+            field="priority"
+            displayComponent={<PriorityChip priority={task.priority} />}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <SelectEditor
+                value={value}
+                options={Object.values(Priority)}
+                emojis={PriorityEmoji}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          <PriorityChip priority={task.priority} />
+        );
 
       case 'difficulty':
-        return <DifficultyChip difficulty={task.difficulty} />;
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.difficulty}
+            taskId={task.id}
+            field="difficulty"
+            displayComponent={<DifficultyChip difficulty={task.difficulty} />}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <SelectEditor
+                value={value}
+                options={Object.values(Difficulty)}
+                emojis={DifficultyEmoji}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          <DifficultyChip difficulty={task.difficulty} />
+        );
 
       case 'duration':
-        return <DurationChip duration={task.duration} />;
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.duration}
+            taskId={task.id}
+            field="duration"
+            displayComponent={<DurationChip duration={task.duration} />}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <SelectEditor
+                value={value}
+                options={Object.values(Duration)}
+                emojis={DurationEmoji}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          <DurationChip duration={task.duration} />
+        );
 
       case 'start_date': {
         if (!task.start_date) return '-';

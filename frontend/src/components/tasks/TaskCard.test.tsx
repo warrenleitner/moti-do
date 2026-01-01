@@ -421,9 +421,14 @@ describe('TaskCard', () => {
   });
 
   it('renders task with due date', () => {
+    // Use a future date to ensure CalendarTodayIcon is shown (not Warning for overdue)
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 7);
+    const futureDateStr = futureDate.toISOString().split('T')[0];
+
     const taskWithDueDate: Task = {
       ...mockTask,
-      due_date: '2025-12-31',  // DateDisplay expects YYYY-MM-DD format
+      due_date: futureDateStr,  // DateDisplay expects YYYY-MM-DD format
     };
 
     render(
@@ -435,7 +440,7 @@ describe('TaskCard', () => {
       />
     );
 
-    // Should show calendar icon (DateDisplay component renders CalendarToday icon)
+    // Should show calendar icon (DateDisplay component renders CalendarToday icon for future dates)
     expect(screen.getByTestId('CalendarTodayIcon')).toBeInTheDocument();
   });
 
@@ -532,9 +537,14 @@ describe('TaskCard', () => {
     });
 
     it('shows only XP and due date on mobile when collapsed', () => {
+      // Use a future date to ensure CalendarTodayIcon is shown (not Warning for overdue)
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7);
+      const futureDateStr = futureDate.toISOString().split('T')[0];
+
       const taskWithDueDate: Task = {
         ...mockTask,
-        due_date: '2025-12-31',
+        due_date: futureDateStr,
       };
 
       render(
@@ -548,7 +558,7 @@ describe('TaskCard', () => {
 
       // XP should be visible
       expect(screen.getByText(/XP/)).toBeInTheDocument();
-      // Due date icon should be visible
+      // Due date icon should be visible (CalendarToday for future dates)
       expect(screen.getByTestId('CalendarTodayIcon')).toBeInTheDocument();
       // Priority chip is in the DOM (inside Collapse) but NOT visible when collapsed
       expect(screen.queryByText(/High/i)).not.toBeVisible();

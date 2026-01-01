@@ -288,4 +288,115 @@ test.describe('Task CRUD Operations', () => {
       await expect(tasksPage.subtaskTopLevelButton).toHaveAttribute('aria-pressed', 'true');
     });
   });
+
+  test.describe('Inline Table Editing', () => {
+    test('should edit priority inline in table view', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      // Create a task with Medium priority (default)
+      const taskTitle = `Inline Edit Priority ${Date.now()}`;
+      await tasksPage.createTask(taskTitle);
+
+      // Switch to table view
+      await tasksPage.switchToTableView();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+      // Find the priority cell for our task - look for the row containing our task title
+      const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
+      await expect(taskRow).toBeVisible();
+
+      // Click on the priority chip (should show Medium by default)
+      const priorityCell = taskRow.locator('[data-testid="editable-cell-display"]').first();
+      await priorityCell.click();
+
+      // Select "High" from the dropdown
+      await page.getByRole('option', { name: /High/i }).click();
+
+      // Verify the priority has changed - should now show High
+      await expect(taskRow.getByText(/High/)).toBeVisible({ timeout: 5000 });
+    });
+
+    test('should edit difficulty inline in table view', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      // Create a task
+      const taskTitle = `Inline Edit Difficulty ${Date.now()}`;
+      await tasksPage.createTask(taskTitle);
+
+      // Switch to table view
+      await tasksPage.switchToTableView();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+      // Find the task row
+      const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
+
+      // Click on the difficulty chip (second editable cell)
+      const difficultyCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(1);
+      await difficultyCell.click();
+
+      // Select "Herculean" from the dropdown
+      await page.getByRole('option', { name: /Herculean/i }).click();
+
+      // Verify the difficulty has changed
+      await expect(taskRow.getByText(/Herculean/)).toBeVisible({ timeout: 5000 });
+    });
+
+    test('should edit duration inline in table view', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      // Create a task
+      const taskTitle = `Inline Edit Duration ${Date.now()}`;
+      await tasksPage.createTask(taskTitle);
+
+      // Switch to table view
+      await tasksPage.switchToTableView();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+      // Find the task row
+      const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
+
+      // Click on the duration chip (third editable cell)
+      const durationCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(2);
+      await durationCell.click();
+
+      // Select "Odysseyan" from the dropdown
+      await page.getByRole('option', { name: /Odysseyan/i }).click();
+
+      // Verify the duration has changed
+      await expect(taskRow.getByText(/Odysseyan/)).toBeVisible({ timeout: 5000 });
+    });
+
+    test('should persist inline edit after page reload', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      // Create a task
+      const taskTitle = `Persist Inline Edit ${Date.now()}`;
+      await tasksPage.createTask(taskTitle);
+
+      // Switch to table view
+      await tasksPage.switchToTableView();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+      // Find the task row and edit priority
+      const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
+      const priorityCell = taskRow.locator('[data-testid="editable-cell-display"]').first();
+      await priorityCell.click();
+      await page.getByRole('option', { name: /Defcon One/i }).click();
+
+      // Wait for the change to be saved
+      await expect(taskRow.getByText(/Defcon One/)).toBeVisible({ timeout: 5000 });
+
+      // Reload the page
+      await page.reload();
+      await expect(page.locator('table')).toBeVisible({ timeout: 10000 });
+
+      // Verify the change persisted
+      const taskRowAfterReload = page.locator('table tbody tr').filter({ hasText: taskTitle });
+      await expect(taskRowAfterReload.getByText(/Defcon One/)).toBeVisible({ timeout: 5000 });
+    });
+  });
 });
