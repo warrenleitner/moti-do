@@ -23,6 +23,7 @@ from motido.core.scoring import (
     calculate_score,
     calculate_start_date_bonus,
     get_last_penalty_check_date,
+    get_penalty_multiplier,
     load_scoring_config,
     save_scoring_config,
     withdraw_xp,
@@ -706,10 +707,11 @@ def test_apply_penalties_basic(
     apply_penalties(mock_user, mock_manager, today, sample_config, [task1, task2])
 
     # Verify add_xp was called once for the incomplete task created yesterday
-    # Penalty should be score (20) / (1.0 * 1.0) = 20
+    # With inverted multipliers: NOT_SET (1.0) -> penalty_mult = 5.0 * 5.0 = 25
+    # penalty = max(1, int(10 * 25 / 25)) = 10
     mock_add_xp.assert_called_once()
     call_args = mock_add_xp.call_args
-    assert call_args[0] == (mock_user, mock_manager, -20)
+    assert call_args[0] == (mock_user, mock_manager, -10)
     assert call_args[1]["source"] == "penalty"
     assert call_args[1]["task_id"] == task1.id
     assert "Penalty for incomplete" in call_args[1]["description"]
@@ -758,12 +760,13 @@ def test_apply_penalties_multiple_days(
         penalty_date = today - timedelta(days=days_back)
         apply_penalties(mock_user, mock_manager, penalty_date, sample_config, [task])
 
-    # Verify add_xp was called 3 times (-15 points each day for 3 days)
+    # Verify add_xp was called 3 times (10 XP each day with inverted multipliers)
+    # NOT_SET (1.0): penalty_mult = 5.0 * 5.0 = 25, penalty = 10 * 25 / 25 = 10
     assert mock_add_xp.call_count == 3
 
     # Check the last call has the expected args for today's date
     call_args = mock_add_xp.call_args
-    assert call_args[0] == (mock_user, mock_manager, -15)
+    assert call_args[0] == (mock_user, mock_manager, -10)
     assert call_args[1]["source"] == "penalty"
     assert call_args[1]["task_id"] == task.id
     assert call_args[1]["game_date"] == today
@@ -830,6 +833,160 @@ def test_apply_penalties_disabled(
 
     # Verify add_xp was not called (penalties disabled)
     mock_add_xp.assert_not_called()
+
+
+# --- Inverted Penalty Multiplier Tests ---
+
+
+def test_get_penalty_multiplier_trivial_has_highest() -> None:
+    """Test that trivial/minuscule tasks have the highest penalty multiplier."""
+    config: Dict[str, Any] = {
+        "difficulty_multiplier": {
+            "TRIVIAL": 1.1,
+            "HERCULEAN": 5.0,
+        },
+        "duration_multiplier": {
+            "MINUSCULE": 1.05,
+            "ODYSSEYAN": 3.0,
+        },
+    }
+
+    # Easiest task: TRIVIAL + MINUSCULE
+    trivial_mult = get_penalty_multiplier(
+        Difficulty.TRIVIAL, Duration.MINUSCULE, config
+    )
+    # Hardest task: HERCULEAN + ODYSSEYAN
+    herculean_mult = get_penalty_multiplier(
+        Difficulty.HERCULEAN, Duration.ODYSSEYAN, config
+    )
+
+    # Trivial should have MUCH higher penalty multiplier
+    assert trivial_mult > herculean_mult
+    # Expected: trivial = (6-1.1)*(6-1.05) = 4.9 * 4.95 ≈ 24.3
+    # Expected: herculean = (6-5.0)*(6-3.0) = 1.0 * 3.0 = 3.0
+    assert trivial_mult > 20  # Should be ~24.3
+    assert herculean_mult < 5  # Should be ~3.0
+
+
+def test_get_penalty_multiplier_ratio() -> None:
+    """Test that penalty multiplier ratio between easiest and hardest is ~8x."""
+    config: Dict[str, Any] = {
+        "difficulty_multiplier": {
+            "TRIVIAL": 1.1,
+            "HERCULEAN": 5.0,
+        },
+        "duration_multiplier": {
+            "MINUSCULE": 1.05,
+            "ODYSSEYAN": 3.0,
+        },
+    }
+
+    trivial_mult = get_penalty_multiplier(
+        Difficulty.TRIVIAL, Duration.MINUSCULE, config
+    )
+    herculean_mult = get_penalty_multiplier(
+        Difficulty.HERCULEAN, Duration.ODYSSEYAN, config
+    )
+
+    ratio = trivial_mult / herculean_mult
+    # Expected ratio: 24.3 / 3.0 ≈ 8.1
+    assert 7 < ratio < 10, f"Expected ratio ~8x, got {ratio}"
+
+
+def test_get_penalty_multiplier_medium_in_between() -> None:
+    """Test that medium difficulty/duration has middle penalty value."""
+    config: Dict[str, Any] = {
+        "difficulty_multiplier": {
+            "TRIVIAL": 1.1,
+            "MEDIUM": 2.0,
+            "HERCULEAN": 5.0,
+        },
+        "duration_multiplier": {
+            "MINUSCULE": 1.05,
+            "MEDIUM": 1.5,
+            "ODYSSEYAN": 3.0,
+        },
+    }
+
+    trivial_mult = get_penalty_multiplier(
+        Difficulty.TRIVIAL, Duration.MINUSCULE, config
+    )
+    medium_mult = get_penalty_multiplier(Difficulty.MEDIUM, Duration.MEDIUM, config)
+    herculean_mult = get_penalty_multiplier(
+        Difficulty.HERCULEAN, Duration.ODYSSEYAN, config
+    )
+
+    # Medium should be between trivial (highest) and herculean (lowest)
+    assert trivial_mult > medium_mult > herculean_mult
+    # Expected medium: (6-2.0)*(6-1.5) = 4.0 * 4.5 = 18.0
+    assert 15 < medium_mult < 20
+
+
+@patch("motido.core.scoring.calculate_score")
+@patch("motido.core.scoring.add_xp")
+def test_apply_penalties_inverted_trivial_vs_herculean(
+    mock_add_xp: MagicMock,
+    mock_calculate_score: MagicMock,
+) -> None:
+    """Test that trivial tasks get higher penalties than herculean tasks."""
+    config: Dict[str, Any] = {
+        "base_score": 10,
+        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "difficulty_multiplier": {
+            "TRIVIAL": 1.1,
+            "HERCULEAN": 5.0,
+        },
+        "duration_multiplier": {
+            "MINUSCULE": 1.05,
+            "ODYSSEYAN": 3.0,
+        },
+    }
+
+    mock_calculate_score.return_value = 20
+    mock_user = MagicMock()
+    mock_user.vacation_mode = False
+    mock_manager = MagicMock()
+
+    yesterday = date.today() - timedelta(days=1)
+    today = date.today()
+
+    # Create trivial task
+    trivial_task = Task(
+        title="Easy Task",
+        difficulty=Difficulty.TRIVIAL,
+        duration=Duration.MINUSCULE,
+        creation_date=datetime.combine(yesterday, datetime.min.time()),
+        is_complete=False,
+    )
+
+    # Create herculean task
+    herculean_task = Task(
+        title="Hard Task",
+        difficulty=Difficulty.HERCULEAN,
+        duration=Duration.ODYSSEYAN,
+        creation_date=datetime.combine(yesterday, datetime.min.time()),
+        is_complete=False,
+    )
+
+    # Apply penalty to trivial task
+    apply_penalties(mock_user, mock_manager, today, config, [trivial_task])
+    trivial_penalty_call = mock_add_xp.call_args
+    trivial_penalty = abs(trivial_penalty_call[0][2])
+
+    mock_add_xp.reset_mock()
+
+    # Apply penalty to herculean task
+    apply_penalties(mock_user, mock_manager, today, config, [herculean_task])
+    herculean_penalty_call = mock_add_xp.call_args
+    herculean_penalty = abs(herculean_penalty_call[0][2])
+
+    # Trivial task should have HIGHER penalty than herculean
+    assert trivial_penalty > herculean_penalty
+    # Expected: trivial ≈ 10 XP, herculean ≈ 1 XP
+    assert trivial_penalty >= 5, f"Expected trivial penalty >= 5, got {trivial_penalty}"
+    assert (
+        herculean_penalty <= 3
+    ), f"Expected herculean penalty <= 3, got {herculean_penalty}"
 
 
 # --- XP Persistence Tests ---
