@@ -60,6 +60,8 @@ export default function CalendarPage() {
         history: [],
         due_date: newTaskDate?.toISOString(),
         score: 0,
+        penalty_score: 0,
+        net_score: 0,
         ...taskData,
       };
       addTask(newTask);
@@ -97,6 +99,8 @@ export default function CalendarPage() {
     history: [],
     due_date: newTaskDate.toISOString(),
     score: 0,
+    penalty_score: 0,
+    net_score: 0,
   } : null);
 
   return (

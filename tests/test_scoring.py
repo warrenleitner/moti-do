@@ -20,8 +20,10 @@ from motido.core.scoring import (
     apply_penalties,
     build_scoring_config_with_user_multipliers,
     calculate_due_date_multiplier,
+    calculate_penalty_score,
     calculate_score,
     calculate_start_date_bonus,
+    calculate_task_scores,
     get_last_penalty_check_date,
     get_penalty_multiplier,
     load_scoring_config,
@@ -987,6 +989,115 @@ def test_apply_penalties_inverted_trivial_vs_herculean(
     assert (
         herculean_penalty <= 3
     ), f"Expected herculean penalty <= 3, got {herculean_penalty}"
+
+
+# --- Penalty Score and Net Score Tests ---
+
+
+def test_calculate_penalty_score_no_penalty_for_future_task() -> None:
+    """Test that tasks not yet due have 0 penalty score."""
+    config: Dict[str, Any] = {
+        "base_score": 10,
+        "difficulty_multiplier": {"TRIVIAL": 1.1},
+        "duration_multiplier": {"MINUSCULE": 1.05},
+    }
+
+    tomorrow = date.today() + timedelta(days=1)
+    task = Task(
+        title="Future Task",
+        difficulty=Difficulty.TRIVIAL,
+        duration=Duration.MINUSCULE,
+        due_date=datetime.combine(tomorrow, datetime.min.time()),
+        creation_date=datetime.now(),
+        is_complete=False,
+    )
+
+    penalty = calculate_penalty_score(task, config, date.today())
+    assert penalty == 0.0
+
+
+def test_calculate_penalty_score_no_penalty_for_completed_task() -> None:
+    """Test that completed tasks have 0 penalty score."""
+    config: Dict[str, Any] = {
+        "base_score": 10,
+        "difficulty_multiplier": {"TRIVIAL": 1.1},
+        "duration_multiplier": {"MINUSCULE": 1.05},
+    }
+
+    yesterday = date.today() - timedelta(days=1)
+    task = Task(
+        title="Completed Task",
+        difficulty=Difficulty.TRIVIAL,
+        duration=Duration.MINUSCULE,
+        due_date=datetime.combine(yesterday, datetime.min.time()),
+        creation_date=datetime.combine(
+            yesterday - timedelta(days=1), datetime.min.time()
+        ),
+        is_complete=True,
+    )
+
+    penalty = calculate_penalty_score(task, config, date.today())
+    assert penalty == 0.0
+
+
+def test_calculate_penalty_score_for_overdue_task() -> None:
+    """Test that overdue tasks have positive penalty score."""
+    config: Dict[str, Any] = {
+        "base_score": 10,
+        "difficulty_multiplier": {"TRIVIAL": 1.1},
+        "duration_multiplier": {"MINUSCULE": 1.05},
+    }
+
+    yesterday = date.today() - timedelta(days=1)
+    task = Task(
+        title="Overdue Task",
+        difficulty=Difficulty.TRIVIAL,
+        duration=Duration.MINUSCULE,
+        due_date=datetime.combine(yesterday, datetime.min.time()),
+        creation_date=datetime.combine(
+            yesterday - timedelta(days=1), datetime.min.time()
+        ),
+        is_complete=False,
+    )
+
+    penalty = calculate_penalty_score(task, config, date.today())
+    assert penalty > 0
+    # Expected: (6-1.1)*(6-1.05) = 4.9 * 4.95 ≈ 24.3 -> 10 * 24.3 / 25 ≈ 9.7
+    assert penalty >= 5
+
+
+@patch("motido.core.scoring.calculate_score")
+def test_calculate_task_scores_net_score_equals_xp_plus_penalty(
+    mock_calculate_score: MagicMock,
+) -> None:
+    """Test that net_score = xp_score + penalty_score."""
+    config: Dict[str, Any] = {
+        "base_score": 10,
+        "difficulty_multiplier": {"TRIVIAL": 1.1},
+        "duration_multiplier": {"MINUSCULE": 1.05},
+    }
+
+    mock_calculate_score.return_value = 50.0  # Mock XP score
+
+    yesterday = date.today() - timedelta(days=1)
+    task = Task(
+        title="Due Task",
+        difficulty=Difficulty.TRIVIAL,
+        duration=Duration.MINUSCULE,
+        due_date=datetime.combine(yesterday, datetime.min.time()),
+        creation_date=datetime.combine(
+            yesterday - timedelta(days=1), datetime.min.time()
+        ),
+        is_complete=False,
+    )
+
+    xp_score, penalty_score, net_score = calculate_task_scores(
+        task, {task.id: task}, config, date.today()
+    )
+
+    assert xp_score == 50.0
+    assert penalty_score > 0
+    assert net_score == xp_score + penalty_score
 
 
 # --- XP Persistence Tests ---

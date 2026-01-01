@@ -94,6 +94,8 @@ export interface Task {
   history: HistoryEntry[];
   status?: TaskStatus; // For Kanban board
   score: number; // Calculated XP value for this task
+  penalty_score: number; // Penalty if not completed today
+  net_score: number; // XP + penalty avoided
   subtask_recurrence_mode?: SubtaskRecurrenceMode;
 }
 

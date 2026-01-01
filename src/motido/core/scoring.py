@@ -1023,6 +1023,77 @@ def get_penalty_multiplier(
     return difficulty_penalty * duration_penalty
 
 
+def calculate_penalty_score(
+    task: Task, config: Dict[str, Any], effective_date: date
+) -> float:
+    """
+    Calculate the penalty score for a task (penalty if not completed today).
+
+    The penalty applies only for tasks that are due today or overdue.
+
+    Args:
+        task: The task to calculate penalty for
+        config: The scoring configuration
+        effective_date: The date to calculate penalty for
+
+    Returns:
+        The penalty score (positive value representing XP that would be lost)
+    """
+    # No penalty for completed tasks
+    if task.is_complete:
+        return 0.0
+
+    # No penalty for tasks not yet due
+    if not task.due_date:
+        return 0.0
+
+    task_due_date = (
+        task.due_date.date() if hasattr(task.due_date, "date") else task.due_date
+    )
+
+    if task_due_date > effective_date:
+        return 0.0
+
+    # Calculate penalty using inverted multipliers
+    penalty_multiplier = get_penalty_multiplier(task.difficulty, task.duration, config)
+    base_score: float = float(config.get("base_score", 10))
+    raw_penalty: float = base_score * penalty_multiplier
+
+    # Normalize (same as in apply_penalties)
+    normalizer: float = 25.0
+    return max(1.0, raw_penalty / normalizer)
+
+
+def calculate_task_scores(
+    task: Task,
+    all_tasks: Dict[str, Task],
+    config: Dict[str, Any],
+    effective_date: date,
+) -> tuple[float, float, float]:
+    """
+    Calculate all scoring values for a task.
+
+    Args:
+        task: The task to calculate scores for
+        all_tasks: Dict of all tasks for dependency resolution
+        config: The scoring configuration
+        effective_date: The date for score calculation
+
+    Returns:
+        Tuple of (xp_score, penalty_score, net_score)
+    """
+    # Calculate XP score
+    xp_score = calculate_score(task, all_tasks, config, effective_date)
+
+    # Calculate penalty score (only for due/overdue tasks)
+    penalty_score = calculate_penalty_score(task, config, effective_date)
+
+    # Net score = XP + penalty avoided
+    net_score = xp_score + penalty_score
+
+    return (xp_score, penalty_score, net_score)
+
+
 def apply_penalties(
     user: Any,
     manager: Any,

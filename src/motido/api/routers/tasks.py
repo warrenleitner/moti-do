@@ -32,6 +32,7 @@ from motido.core.models import (
 from motido.core.scoring import (
     build_scoring_config_with_user_multipliers,
     calculate_score,
+    calculate_task_scores,
     load_scoring_config,
 )
 
@@ -44,11 +45,15 @@ def task_to_response(
     config: dict[str, Any] | None = None,
     effective_date: date_type | None = None,
 ) -> TaskResponse:
-    """Convert a Task model to a TaskResponse schema with calculated score."""
-    # Calculate score if we have the necessary context
-    score = 0
+    """Convert a Task model to a TaskResponse schema with calculated scores."""
+    # Calculate scores if we have the necessary context
+    score: float = 0.0
+    penalty_score: float = 0.0
+    net_score: float = 0.0
     if all_tasks is not None and config is not None and effective_date is not None:
-        score = calculate_score(task, all_tasks, config, effective_date)
+        score, penalty_score, net_score = calculate_task_scores(
+            task, all_tasks, config, effective_date
+        )
 
     return TaskResponse(
         id=task.id,
@@ -76,6 +81,8 @@ def task_to_response(
         streak_best=task.streak_best,
         parent_habit_id=task.parent_habit_id,
         score=score,
+        penalty_score=penalty_score,
+        net_score=net_score,
     )
 
 

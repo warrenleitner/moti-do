@@ -269,6 +269,11 @@ class Task:  # pylint: disable=too-many-instance-attributes
         default=SubtaskRecurrenceMode.DEFAULT
     )
 
+    # Computed scoring fields (not persisted, calculated at runtime)
+    score: float = field(default=0.0)
+    penalty_score: float = field(default=0.0)  # Penalty if not completed today
+    net_score: float = field(default=0.0)  # XP + penalty avoided
+
     def __str__(self) -> str:
         """String representation for simple display."""
         # Format creation_date as YYYY-MM-DD HH:MM:SS

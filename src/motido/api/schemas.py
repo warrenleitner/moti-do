@@ -100,7 +100,9 @@ class TaskResponse(TaskBase):
     streak_best: int = 0
     parent_habit_id: str | None = None
     subtask_recurrence_mode: str = "default"
-    score: int = 0  # Calculated XP value for this task
+    score: float = 0.0  # Calculated XP value for this task
+    penalty_score: float = 0.0  # Penalty if not completed today
+    net_score: float = 0.0  # XP + penalty avoided
 
     model_config = ConfigDict(from_attributes=True)
 
