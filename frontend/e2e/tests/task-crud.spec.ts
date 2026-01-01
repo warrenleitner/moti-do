@@ -398,5 +398,88 @@ test.describe('Task CRUD Operations', () => {
       const taskRowAfterReload = page.locator('table tbody tr').filter({ hasText: taskTitle });
       await expect(taskRowAfterReload.getByText(/Defcon One/)).toBeVisible({ timeout: 5000 });
     });
+
+    test('should edit due date inline in table view', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      // Create a task without a due date
+      const taskTitle = `Inline Edit Due Date ${Date.now()}`;
+      await tasksPage.createTask(taskTitle);
+
+      // Switch to table view
+      await tasksPage.switchToTableView();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+      // Find the task row - due date column shows "-" for tasks without a due date
+      const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
+      await expect(taskRow).toBeVisible();
+
+      // The due date cell is the one showing "-" in the Due Date column
+      // Find the editable cell in the due date column (after priority, difficulty, duration)
+      // Priority (1st), Difficulty (2nd), Duration (3rd), Due Date (4th editable cell)
+      const dueDateCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(3);
+      await dueDateCell.click();
+
+      // Wait for the date editor to appear within the row
+      const dateEditor = taskRow.getByTestId('date-editor');
+      await expect(dateEditor).toBeVisible({ timeout: 5000 });
+
+      // Click the calendar button within the row to open the date picker dialog
+      await taskRow.getByRole('button', { name: /choose date/i }).click();
+
+      // Wait for the date picker dialog to open
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+
+      // Click on day 15 of the current month
+      await page.getByRole('gridcell', { name: '15' }).click();
+
+      // Wait for the dialog to close and the date to be saved
+      await page.waitForTimeout(500);
+
+      // Verify the due date has changed - should now show a date with "15" in it
+      await expect(taskRow.getByText(/15/)).toBeVisible({ timeout: 5000 });
+    });
+
+    test('should clear due date using the clear button', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      // Create a task with a due date by using quick add with @tomorrow
+      const taskTitle = `Clear Due Date Test ${Date.now()}`;
+      await tasksPage.quickAddTask(`${taskTitle} @tomorrow`);
+
+      // Switch to table view
+      await tasksPage.switchToTableView();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+      // Find the task row - it should have a due date
+      const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
+      await expect(taskRow).toBeVisible();
+
+      // Click on the due date cell (4th editable cell)
+      const dueDateCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(3);
+      await dueDateCell.click();
+
+      // Wait for the date editor to appear within the row
+      const dateEditor = taskRow.getByTestId('date-editor');
+      await expect(dateEditor).toBeVisible({ timeout: 5000 });
+
+      // Click the calendar button within the row to open the date picker dialog
+      await taskRow.getByRole('button', { name: /choose date/i }).click();
+
+      // Wait for the date picker dialog to open
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+
+      // Click the clear button
+      await page.getByRole('button', { name: /clear/i }).click();
+
+      // Wait for the dialog to close
+      await page.waitForTimeout(500);
+
+      // Verify the due date is now empty (shows "-")
+      // The cell should show "-" after clearing
+      await expect(taskRow.locator('td').filter({ hasText: '-' })).toBeVisible({ timeout: 5000 });
+    });
   });
 });

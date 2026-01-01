@@ -41,7 +41,7 @@ import PriorityChip from '../common/PriorityChip';
 import DifficultyChip from '../common/DifficultyChip';
 import DurationChip from '../common/DurationChip';
 import ProjectChip from '../common/ProjectChip';
-import { EditableCell, SelectEditor } from '../table';
+import { EditableCell, SelectEditor, DateEditor } from '../table';
 import { format } from 'date-fns';
 import ColumnConfigDialog from './ColumnConfigDialog';
 
@@ -473,32 +473,76 @@ const TaskTable: React.FC<TaskTableProps> = ({
         );
 
       case 'start_date': {
-        if (!task.start_date) return '-';
-        // Handle both date-only (YYYY-MM-DD) and datetime formats
-        const startDateStr = task.start_date.includes('T')
-          ? task.start_date
-          : task.start_date + 'T00:00:00';
-        const startDate = new Date(startDateStr);
-        const isFuture = startDate > new Date();
-        return (
-          <span style={{ color: isFuture ? '#9e9e9e' : 'inherit' }}>
-            {format(startDate, 'MMM d, yyyy')}
-          </span>
+        const startDateDisplay = (() => {
+          if (!task.start_date) return '-';
+          const startDateStr = task.start_date.includes('T')
+            ? task.start_date
+            : task.start_date + 'T00:00:00';
+          const startDate = new Date(startDateStr);
+          const isFuture = startDate > new Date();
+          return (
+            <span style={{ color: isFuture ? '#9e9e9e' : 'inherit' }}>
+              {format(startDate, 'MMM d, yyyy')}
+            </span>
+          );
+        })();
+
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.start_date}
+            taskId={task.id}
+            field="start_date"
+            displayComponent={startDateDisplay}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <DateEditor
+                value={value}
+                label="Start Date"
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          startDateDisplay
         );
       }
 
       case 'due_date': {
-        if (!task.due_date) return '-';
-        // Handle both date-only (YYYY-MM-DD) and datetime formats
-        const dueDateStr = task.due_date.includes('T')
-          ? task.due_date
-          : task.due_date + 'T23:59:59';
-        const dueDate = new Date(dueDateStr);
-        const isOverdue = dueDate < new Date();
-        return (
-          <span style={{ color: isOverdue ? '#f44336' : 'inherit' }}>
-            {format(dueDate, 'MMM d, yyyy')}
-          </span>
+        const dueDateDisplay = (() => {
+          if (!task.due_date) return '-';
+          const dueDateStr = task.due_date.includes('T')
+            ? task.due_date
+            : task.due_date + 'T23:59:59';
+          const dueDate = new Date(dueDateStr);
+          const isOverdue = dueDate < new Date();
+          return (
+            <span style={{ color: isOverdue ? '#f44336' : 'inherit' }}>
+              {format(dueDate, 'MMM d, yyyy')}
+            </span>
+          );
+        })();
+
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.due_date}
+            taskId={task.id}
+            field="due_date"
+            displayComponent={dueDateDisplay}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <DateEditor
+                value={value}
+                label="Due Date"
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          dueDateDisplay
         );
       }
 
