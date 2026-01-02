@@ -78,8 +78,17 @@ def create_next_habit_instance(
     if not next_due:
         return None
 
-    # Calculate start_date based on habit_start_delta if set
-    start_date = _calculate_start_date(next_due, task.habit_start_delta)
+    # Determine effective habit_start_delta:
+    # Use explicit value if set, otherwise infer from original start_date/due_date
+    effective_delta = task.habit_start_delta
+    if effective_delta is None and task.start_date and task.due_date:
+        # Infer delta from the original task's dates
+        inferred_delta = (task.due_date - task.start_date).days
+        if inferred_delta > 0:
+            effective_delta = inferred_delta
+
+    # Calculate start_date based on effective delta
+    start_date = _calculate_start_date(next_due, effective_delta)
 
     # For FROM_DUE_DATE recurrence, ensure due_date is after completion_date
     if task.recurrence_type == RecurrenceType.FROM_DUE_DATE:

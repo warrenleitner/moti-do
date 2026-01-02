@@ -114,6 +114,16 @@ class TaskResponse(TaskBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TaskCompletionRequest(BaseModel):
+    """Schema for task completion request with optional completion date.
+
+    The completion_date allows the client to send its local date/time,
+    ensuring recurrence calculations work correctly regardless of server timezone.
+    """
+
+    completion_date: datetime | None = None
+
+
 class TaskCompletionResponse(BaseModel):
     """Schema for task completion response with next instance info."""
 

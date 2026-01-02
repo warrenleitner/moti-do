@@ -123,9 +123,10 @@ cleanup() {
     # Stop Docker if we started it and --keep wasn't specified
     if [ "$DOCKER_STARTED" = true ] && [ "$KEEP_DB" = false ]; then
         echo "Stopping Docker PostgreSQL container..."
-        docker compose -f docker-compose.test.yml down -v 2>/dev/null || true
+        # Use detected docker-compose command, or fallback to docker-compose
+        ${DOCKER_COMPOSE:-docker-compose} -f docker-compose.test.yml down -v 2>/dev/null || true
     elif [ "$DOCKER_STARTED" = true ] && [ "$KEEP_DB" = true ]; then
-        echo -e "${BLUE}Keeping Docker PostgreSQL running (use 'docker compose -f docker-compose.test.yml down -v' to stop)${NC}"
+        echo -e "${BLUE}Keeping Docker PostgreSQL running (use 'docker-compose -f docker-compose.test.yml down -v' to stop)${NC}"
     fi
 
     echo -e "${GREEN}Goodbye!${NC}"
@@ -172,12 +173,25 @@ if [ "$MODE" = "local" ]; then
         fi
     fi
 
+    # Detect docker compose command (V2 plugin vs standalone)
+    if docker compose version &> /dev/null; then
+        DOCKER_COMPOSE="docker compose"
+    elif docker-compose version &> /dev/null; then
+        DOCKER_COMPOSE="docker-compose"
+    elif /opt/homebrew/bin/docker-compose version &> /dev/null; then
+        # Homebrew install on macOS (may not be in PATH)
+        DOCKER_COMPOSE="/opt/homebrew/bin/docker-compose"
+    else
+        echo -e "${RED}Docker Compose is not installed. Install docker-compose or use --supabase mode.${NC}"
+        exit 1
+    fi
+
     # Check if test database container is already running
     if docker ps --format '{{.Names}}' | grep -q '^motido-test-db$'; then
         echo -e "${YELLOW}Docker PostgreSQL already running on port ${TEST_DB_PORT}${NC}"
     else
         echo -e "${GREEN}Starting Docker PostgreSQL container...${NC}"
-        docker compose -f docker-compose.test.yml up -d
+        $DOCKER_COMPOSE -f docker-compose.test.yml up -d
         DOCKER_STARTED=true
 
         # Wait for PostgreSQL to be ready
