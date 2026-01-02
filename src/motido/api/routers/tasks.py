@@ -522,6 +522,7 @@ async def complete_task(
     Mark a task as complete and award XP.
 
     For recurring habit tasks, also creates the next instance and returns it.
+    Recurrence is calculated based on the user's processing date (game day).
     """
     task = user.find_task_by_id(task_id)
     if not task:  # pragma: no cover
@@ -535,6 +536,11 @@ async def complete_task(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Task is already complete",
         )
+
+    # For recurrence calculations, use the user's processing date (game day)
+    # This ensures consistent behavior regardless of actual wall-clock time
+    # Convert last_processed_date to datetime at noon for recurrence calculation
+    completion_date = datetime.combine(user.last_processed_date, datetime.min.time())
 
     # Mark as complete
     task.is_complete = True
@@ -554,7 +560,7 @@ async def complete_task(
     xp_earned = int(calculate_score(task, all_tasks, config, effective_date))
     user.total_xp += xp_earned
 
-    # Log XP transaction
+    # Log XP transaction (use actual time for audit trail)
     from motido.core.models import XPTransaction
 
     transaction = XPTransaction(
@@ -563,6 +569,7 @@ async def complete_task(
         timestamp=datetime.now(),
         task_id=task.id,
         description=f"Completed: {task.title}",
+        game_date=user.last_processed_date,
     )
     user.xp_transactions.append(transaction)
 
@@ -575,7 +582,7 @@ async def complete_task(
     if task.is_habit and task.recurrence_rule:
         from motido.core.recurrence import create_next_habit_instance
 
-        next_instance = create_next_habit_instance(task, datetime.now())
+        next_instance = create_next_habit_instance(task, completion_date)
         if next_instance:
             user.add_task(next_instance)
             # Update all_tasks to include the new instance for scoring

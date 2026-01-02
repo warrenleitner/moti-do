@@ -700,3 +700,82 @@ def test_from_due_date_completed_same_day() -> None:
     # Next due Jan 15 > completion Jan 14, no skip needed
     assert new_instance.due_date is not None
     assert new_instance.due_date.day == 15
+
+
+# --- Tests for start_date inference ---
+
+
+def test_start_date_inferred_from_original_dates() -> None:
+    """Test that start_date is inferred from original task's dates if no delta set."""
+    # Task with start_date but no habit_start_delta
+    task = Task(
+        id="parent-id",
+        title="Daily Task",
+        creation_date=datetime(2024, 1, 1),
+        due_date=datetime(2024, 1, 10, 12, 0, 0),
+        start_date=datetime(2024, 1, 7, 12, 0, 0),  # 3 days before due
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+        habit_start_delta=None,  # Not explicitly set
+    )
+
+    completion_date = datetime(2024, 1, 10, 12, 0, 0)
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
+
+    assert new_instance is not None
+    assert new_instance.due_date is not None
+    assert new_instance.due_date.day == 11
+    # start_date should be inferred: 3 days before due date
+    assert new_instance.start_date is not None
+    assert new_instance.start_date.day == 8  # Jan 11 - 3 days = Jan 8
+
+
+def test_start_date_uses_explicit_delta_over_inference() -> None:
+    """Test that explicit habit_start_delta takes precedence over inference."""
+    # Task with both start_date and habit_start_delta (delta should win)
+    task = Task(
+        id="parent-id",
+        title="Daily Task",
+        creation_date=datetime(2024, 1, 1),
+        due_date=datetime(2024, 1, 10, 12, 0, 0),
+        start_date=datetime(2024, 1, 7, 12, 0, 0),  # 3 days before due
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+        habit_start_delta=5,  # Explicit: 5 days before due
+    )
+
+    completion_date = datetime(2024, 1, 10, 12, 0, 0)
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
+
+    assert new_instance is not None
+    assert new_instance.due_date is not None
+    assert new_instance.due_date.day == 11
+    # start_date should use explicit delta: 5 days before due date
+    assert new_instance.start_date is not None
+    assert new_instance.start_date.day == 6  # Jan 11 - 5 days = Jan 6
+
+
+def test_start_date_not_inferred_when_start_after_due() -> None:
+    """Test that start_date is not inferred when start_date >= due_date."""
+    # Edge case: start_date same as due_date (would result in 0 delta)
+    task = Task(
+        id="parent-id",
+        title="Daily Task",
+        creation_date=datetime(2024, 1, 1),
+        due_date=datetime(2024, 1, 10, 12, 0, 0),
+        start_date=datetime(2024, 1, 10, 12, 0, 0),  # Same as due date
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+        habit_start_delta=None,
+    )
+
+    completion_date = datetime(2024, 1, 10, 12, 0, 0)
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
+
+    assert new_instance is not None
+    assert new_instance.due_date is not None
+    # start_date should be None since inferred delta would be 0
+    assert new_instance.start_date is None
