@@ -148,6 +148,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         position="fixed"
         sx={{
           display: { xs: 'block', md: 'none' },
+          backgroundColor: '#334155', // Slate - contrasts with logo gradient
         }}
       >
         <Toolbar>
