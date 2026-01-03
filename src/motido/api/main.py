@@ -92,7 +92,9 @@ async def db_health_check(manager: ManagerDep) -> dict:
 async def get_system_status(user: CurrentUser) -> SystemStatus:
     """Get system status including date processing state."""
     current = date.today()
-    pending_days = (current - user.last_processed_date).days
+    # pending_days = 0 means "up to date" (last_processed_date is yesterday or today)
+    # You can't process today until it's over, so yesterday is the max processable date
+    pending_days = max(0, (current - user.last_processed_date).days - 1)
 
     return SystemStatus(
         last_processed_date=user.last_processed_date,
@@ -140,7 +142,8 @@ async def advance_date(
 
     manager.save_user(user)
 
-    pending_days = (current - user.last_processed_date).days
+    # pending_days = 0 means "up to date" (last_processed_date is yesterday or today)
+    pending_days = max(0, (current - user.last_processed_date).days - 1)
     return SystemStatus(
         last_processed_date=user.last_processed_date,
         current_date=current,
