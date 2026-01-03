@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "motido"
 version = "0.1.0"
-description = "A simple command-line task management application."
-authors = ["Your Name <you@example.com>"] # TODO: Update author details
+description = "A gamified task and habit tracker with XP, streaks, and badges."
+authors = ["Warren Leitner <warrenleitner@gmail.com>"]
 readme = "README.md"
-license = "MIT" # TODO: Choose appropriate license or confirm MIT
-homepage = "https://github.com/yourusername/moti-do" # TODO: Update URL
-repository = "https://github.com/yourusername/moti-do" # TODO: Update URL
+license = "MIT"
+homepage = "https://github.com/warrenleitner/moti-do"
+repository = "https://github.com/warrenleitner/moti-do"
 packages = [{include = "motido", from = "src"}]
 classifiers = [
     "Programming Language :: Python :: 3",

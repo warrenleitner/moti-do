@@ -594,10 +594,11 @@ def test_calculate_start_date_no_delta() -> None:
 
 
 def test_calculate_start_date_zero_delta() -> None:
-    """Test _calculate_start_date with zero delta."""
+    """Test _calculate_start_date with zero delta returns same date as due_date."""
     due_date = datetime(2024, 1, 15, 12, 0, 0)
     result = _calculate_start_date(due_date, 0)
-    assert result is None
+    # Zero delta means start_date equals due_date
+    assert result == due_date
 
 
 def test_advance_to_future_start_invalid_rule() -> None:
@@ -613,10 +614,11 @@ def test_advance_to_future_start_invalid_rule() -> None:
     next_due = datetime(2024, 1, 15, 12, 0, 0)
     start_date = datetime(2024, 1, 10, 12, 0, 0)
     completion_date = datetime(2024, 2, 1, 12, 0, 0)
+    effective_delta = 5  # 5 days before due
 
     # Should return original values when rule is invalid
     result_due, result_start = _advance_to_future_start(
-        task, next_due, start_date, completion_date
+        task, next_due, start_date, completion_date, effective_delta
     )
 
     # Original values returned when parsing fails
@@ -640,9 +642,10 @@ def test_advance_to_future_start_finite_rule_exhausted() -> None:
     start_date = datetime(2024, 1, 10, 12, 0, 0)
     # Completed way in the future - rule will exhaust before we find valid due date
     completion_date = datetime(2024, 12, 1, 12, 0, 0)
+    effective_delta = 5  # 5 days before due
 
     result_due, result_start = _advance_to_future_start(
-        task, next_due, start_date, completion_date
+        task, next_due, start_date, completion_date, effective_delta
     )
 
     # When rule exhausts, we get the last computed values
@@ -757,9 +760,13 @@ def test_start_date_uses_explicit_delta_over_inference() -> None:
     assert new_instance.start_date.day == 6  # Jan 11 - 5 days = Jan 6
 
 
-def test_start_date_not_inferred_when_start_after_due() -> None:
-    """Test that start_date is not inferred when start_date >= due_date."""
-    # Edge case: start_date same as due_date (would result in 0 delta)
+def test_start_date_inferred_when_same_as_due_date() -> None:
+    """Test that start_date equals due_date when original task has same start/due date.
+
+    This is the fix for the bug where recurring tasks with start_date == due_date
+    would have their start_date set to None on new instances.
+    """
+    # Edge case: start_date same as due_date (0 delta should be preserved)
     task = Task(
         id="parent-id",
         title="Daily Task",
@@ -777,5 +784,42 @@ def test_start_date_not_inferred_when_start_after_due() -> None:
 
     assert new_instance is not None
     assert new_instance.due_date is not None
-    # start_date should be None since inferred delta would be 0
-    assert new_instance.start_date is None
+    assert new_instance.due_date.day == 11
+    # start_date should equal due_date (0 delta)
+    assert new_instance.start_date is not None
+    assert new_instance.start_date == new_instance.due_date
+
+
+def test_start_date_same_as_due_date_with_late_completion() -> None:
+    """Test FROM_DUE_DATE with same-day start/due and late completion.
+
+    When a task with start_date == due_date is completed late, the new instance
+    should still have start_date == due_date after advancing to a future date.
+    """
+    # Task due Jan 10 with start_date also Jan 10 (0 delta)
+    task = Task(
+        id="parent-id",
+        title="Daily Task",
+        creation_date=datetime(2024, 1, 1),
+        due_date=datetime(2024, 1, 10, 12, 0, 0),
+        start_date=datetime(2024, 1, 10, 12, 0, 0),  # Same as due date
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.FROM_DUE_DATE,
+        habit_start_delta=None,
+    )
+
+    # Completed 3 days late on Jan 13
+    completion_date = datetime(2024, 1, 13, 12, 0, 0)
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
+
+    assert new_instance is not None
+    # Next due Jan 11 <= Jan 13, skip
+    # Next due Jan 12 <= Jan 13, skip
+    # Next due Jan 13 <= Jan 13, skip
+    # Next due Jan 14 > Jan 13, use this
+    assert new_instance.due_date is not None
+    assert new_instance.due_date.day == 14
+    # start_date should still equal due_date (0 delta preserved)
+    assert new_instance.start_date is not None
+    assert new_instance.start_date == new_instance.due_date

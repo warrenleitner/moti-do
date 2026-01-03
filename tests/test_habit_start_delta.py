@@ -211,8 +211,8 @@ class TestRecurrenceWithStartDelta:
         assert next_instance.habit_start_delta is None
         assert next_instance.start_date is None
 
-    def test_next_instance_zero_delta_no_start_date(self) -> None:
-        """Test that delta=0 doesn't calculate start_date."""
+    def test_next_instance_zero_delta_start_date_equals_due_date(self) -> None:
+        """Test that delta=0 means start_date equals due_date."""
         habit = Task(
             title="Exercise",
             creation_date=datetime.now(),
@@ -225,5 +225,6 @@ class TestRecurrenceWithStartDelta:
         next_instance = create_next_habit_instance(habit)
 
         assert next_instance is not None
-        # delta=0 means no advance notice needed
-        assert next_instance.start_date is None
+        # delta=0 means start_date == due_date (same day start)
+        assert next_instance.start_date is not None
+        assert next_instance.start_date == next_instance.due_date

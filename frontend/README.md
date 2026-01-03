@@ -1,73 +1,173 @@
-# React + TypeScript + Vite
+# Moti-Do Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 frontend for Moti-Do - a gamified task and habit tracker.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 19** with TypeScript
+- **Vite** for fast builds and HMR
+- **Material-UI (MUI)** for components
+- **Zustand** for state management
+- **Axios** for API requests
+- **React Router** for navigation
 
-## React Compiler
+### Specialized Libraries
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **FullCalendar** - Calendar view integration
+- **@xyflow/react** - Dependency graph visualization
+- **@hello-pangea/dnd** - Drag and drop (Kanban)
+- **RRule** - Recurrence rule parsing
 
-## Expanding the ESLint configuration
+## Development
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js 18+
+- npm
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Setup
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Install dependencies
+npm install
+
+# Install Playwright browsers (for E2E tests)
+npx playwright install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Commands
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Development server (port 5173)
+npm run dev
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Type checking
+npx tsc --noEmit
+
+# Linting
+npm run lint
+
+# Unit tests
+npm run test           # Run once
+npm run test:watch     # Watch mode
+npm run test:coverage  # With coverage
+
+# Build
+npm run build          # Production build
+npm run preview        # Preview build
+
+# E2E tests
+npm run test:e2e       # Run all
+npm run test:e2e:ui    # Playwright UI
+npm run test:e2e:headed # Headed browser
 ```
+
+### Recommended: Use Project Scripts
+
+From the project root, use the unified development scripts:
+
+```bash
+# Start frontend + backend together
+./scripts/dev.sh
+
+# Run all checks (lint, typecheck, test, build)
+poetry run poe frontend-check
+```
+
+## Project Structure
+
+```
+src/
+├── pages/          # Top-level page components
+│   ├── Dashboard.tsx
+│   ├── TasksPage.tsx
+│   ├── CalendarPage.tsx
+│   ├── KanbanPage.tsx
+│   ├── HabitsPage.tsx
+│   ├── GraphPage.tsx
+│   └── SettingsPage.tsx
+├── components/     # Reusable components
+│   ├── common/     # Shared utilities
+│   ├── tasks/      # Task-related components
+│   ├── calendar/   # Calendar integration
+│   ├── kanban/     # Kanban board
+│   ├── habits/     # Habit tracking
+│   └── graph/      # Dependency graph
+├── store/          # Zustand state stores
+│   ├── taskStore.ts
+│   └── userStore.ts
+├── services/       # API client
+│   └── api.ts
+├── types/          # TypeScript definitions
+├── utils/          # Helper functions
+├── hooks/          # Custom React hooks
+└── main.tsx        # Entry point
+```
+
+## Testing
+
+### Unit Tests (Vitest)
+
+```bash
+npm run test
+```
+
+Tests are co-located with components (`.test.tsx` files).
+
+### E2E Tests (Playwright)
+
+```bash
+# From project root (recommended)
+bash scripts/run-e2e.sh
+
+# Or from frontend directory
+npm run test:e2e
+```
+
+E2E tests are in `e2e/` directory and test full user workflows.
+
+### Coverage Requirements
+
+- **100% coverage required** - enforced in CI
+- Use `/* v8 ignore */` only when code truly cannot be tested
+- Document reason for any coverage exclusions
+
+## Quality Standards
+
+All checks must pass before PR:
+
+```bash
+# Run all frontend checks
+npm run lint && npx tsc --noEmit && npm run test && npm run build
+```
+
+Or from project root:
+
+```bash
+poetry run poe frontend-check
+```
+
+## Environment Variables
+
+Create `.env.local` for local overrides:
+
+```bash
+# Custom API URL (default: auto-detected)
+VITE_API_URL=http://localhost:8000/api
+```
+
+## Build Output
+
+Production build output goes to `dist/`. This is served by Vercel in production.
+
+Build includes:
+- Code splitting for optimal loading
+- Vendor chunk separation (React, MUI, etc.)
+- PWA service worker
+
+## Key Features
+
+- **PWA Support**: Offline capability via service worker
+- **Responsive Design**: Mobile-first with MUI breakpoints
+- **Dark/Light Mode**: Follows system preference
+- **Optimistic Updates**: Fast UI with background sync

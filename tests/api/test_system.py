@@ -67,13 +67,44 @@ class TestSystemStatusEndpoint:
     def test_system_status_pending_days_calculation(
         self, client: TestClient, test_user: User
     ) -> None:
-        """Test that pending days is calculated correctly."""
+        """Test that pending days is calculated correctly.
+
+        pending_days = 0 means "up to date" (last_processed = yesterday or today)
+        pending_days = N means N days behind (need to process N days to catch up)
+        """
         # Set last processed to 3 days ago
+        # If today is Jan 4 and last_processed is Jan 1:
+        #   - Jan 2 needs processing (1 day behind)
+        #   - Jan 3 needs processing (2 days behind)
+        #   - Jan 4 is today (can't process yet)
+        # So pending_days = 2, not 3
         test_user.last_processed_date = date.today() - timedelta(days=3)
 
         response = client.get("/api/system/status")
         data = response.json()
-        assert data["pending_days"] == 3
+        assert data["pending_days"] == 2
+
+    def test_system_status_up_to_date_when_processed_yesterday(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Test that pending_days is 0 when last_processed is yesterday."""
+        # Yesterday is the most recent day that can be processed
+        test_user.last_processed_date = date.today() - timedelta(days=1)
+
+        response = client.get("/api/system/status")
+        data = response.json()
+        assert data["pending_days"] == 0
+
+    def test_system_status_up_to_date_when_processed_today(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Test that pending_days is 0 when last_processed is today."""
+        # Edge case: processed today (shouldn't normally happen, but handle gracefully)
+        test_user.last_processed_date = date.today()
+
+        response = client.get("/api/system/status")
+        data = response.json()
+        assert data["pending_days"] == 0
 
 
 class TestAdvanceDateEndpoint:

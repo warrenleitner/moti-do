@@ -83,8 +83,9 @@ def create_next_habit_instance(
     effective_delta = task.habit_start_delta
     if effective_delta is None and task.start_date and task.due_date:
         # Infer delta from the original task's dates
+        # Include 0 to handle same-day start/due dates
         inferred_delta = (task.due_date - task.start_date).days
-        if inferred_delta > 0:
+        if inferred_delta >= 0:
             effective_delta = inferred_delta
 
     # Calculate start_date based on effective delta
@@ -93,7 +94,7 @@ def create_next_habit_instance(
     # For FROM_DUE_DATE recurrence, ensure due_date is after completion_date
     if task.recurrence_type == RecurrenceType.FROM_DUE_DATE:
         next_due, start_date = _advance_to_future_start(
-            task, next_due, start_date, completion_date
+            task, next_due, start_date, completion_date, effective_delta
         )
 
     # Calculate subtasks based on subtask_recurrence_mode
@@ -139,11 +140,12 @@ def _calculate_start_date(
     Args:
         due_date: The due date for the task.
         habit_start_delta: Days before due date when task should start.
+            A delta of 0 means start_date equals due_date.
 
     Returns:
         The calculated start_date, or None if no delta is set.
     """
-    if habit_start_delta is not None and habit_start_delta > 0:
+    if habit_start_delta is not None and habit_start_delta >= 0:
         return due_date - timedelta(days=habit_start_delta)
     return None
 
@@ -153,6 +155,7 @@ def _advance_to_future_start(
     next_due: datetime,
     start_date: Optional[datetime],
     completion_date: datetime,
+    effective_delta: Optional[int],
 ) -> tuple[datetime, Optional[datetime]]:
     """
     Advance due_date/start_date forward until due_date is after completion_date.
@@ -169,6 +172,7 @@ def _advance_to_future_start(
         next_due: The initially calculated next due date.
         start_date: The initially calculated start date (may be None).
         completion_date: When the previous instance was completed.
+        effective_delta: The effective habit_start_delta (explicit or inferred).
 
     Returns:
         Tuple of (adjusted_due_date, adjusted_start_date).
@@ -189,7 +193,7 @@ def _advance_to_future_start(
                 # No more occurrences - return what we have
                 break
             next_due = next_occurrence
-            start_date = _calculate_start_date(next_due, task.habit_start_delta)
+            start_date = _calculate_start_date(next_due, effective_delta)
 
     except (ValueError, TypeError):
         # If rule parsing fails, return original values
