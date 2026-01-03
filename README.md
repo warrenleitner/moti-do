@@ -40,7 +40,7 @@ colima start
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/yourusername/moti-do # TODO: Update URL
+    git clone https://github.com/warrenleitner/moti-do
     cd moti-do
     ```
 
@@ -484,7 +484,6 @@ Requirements:
 **Frontend:**
 - React 19 with TypeScript
 - Material-UI (MUI) components
-- TanStack Query (data fetching)
 - Zustand (state management)
 - React Router (routing)
 - Vite (build tool)
@@ -493,20 +492,30 @@ Requirements:
 **Features:**
 - XP system with difficulty-based scoring
 - Task management with priority, difficulty, duration
+- Habit tracking with streaks and heatmaps
+- Multiple views: List, Calendar, Kanban, Dependency Graph
 - PWA support (offline capable)
 - Responsive design
-- Emoji support for tasks
+
+## Documentation
+
+Detailed documentation is available in the `docs/` directory:
+
+- **[Architecture](docs/ARCHITECTURE.md)** - Tech stack, system design, and code structure
+- **[Scoring Algorithm](docs/SCORING.md)** - How XP, penalties, and badges work
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Local development and production deployment
+- **[Feature Plan](docs/FEATURE_IMPLEMENTATION_PLAN.md)** - Planned features and roadmap
 
 ## Contributing
 
 See [CLAUDE.md](CLAUDE.md) for development guidelines and quality standards.
 
 Key requirements:
-- 100% test coverage for Python code
+- 100% test coverage for Python and frontend code
 - Pylint score 10.0/10.0
 - Zero TypeScript/ESLint errors
-- All CI checks must pass
+- All CI checks must pass (run `bash scripts/check-all.sh`)
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details. (TODO: Add LICENSE file or confirm MIT in pyproject.toml) 
+This project is licensed under the MIT License. See `pyproject.toml` for license details.
