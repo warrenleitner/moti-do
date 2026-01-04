@@ -44,6 +44,7 @@ import ProjectChip from '../common/ProjectChip';
 import { EditableCell, SelectEditor, DateEditor, TextEditor, ProjectEditor, TagsEditor } from '../table';
 import { format } from 'date-fns';
 import ColumnConfigDialog from './ColumnConfigDialog';
+import { useSystemStatus } from '../../store/userStore';
 
 export type ColumnId =
   | 'select'
@@ -165,6 +166,15 @@ const TaskTable: React.FC<TaskTableProps> = ({
   });
 
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
+
+  const systemStatus = useSystemStatus();
+
+  // Calculate current processing date (last_processed_date + 1 day) for date comparisons
+  const currentProcessingDate = (() => {
+    if (!systemStatus?.last_processed_date) return new Date();
+    const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
+    return new Date(year, month - 1, day + 1);
+  })();
 
   // Save column config to localStorage when it changes
   const updateColumns = (newColumns: ColumnConfig[]) => {
@@ -499,11 +509,11 @@ const TaskTable: React.FC<TaskTableProps> = ({
       case 'start_date': {
         const startDateDisplay = (() => {
           if (!task.start_date) return '-';
-          const startDateStr = task.start_date.includes('T')
-            ? task.start_date
-            : task.start_date + 'T00:00:00';
-          const startDate = new Date(startDateStr);
-          const isFuture = startDate > new Date();
+          // Parse date as local to avoid timezone issues
+          const startDateStr = task.start_date.includes('T') ? task.start_date.split('T')[0] : task.start_date;
+          const [year, month, day] = startDateStr.split('-').map(Number);
+          const startDate = new Date(year, month - 1, day);
+          const isFuture = startDate > currentProcessingDate;
           return (
             <span style={{ color: isFuture ? '#9e9e9e' : 'inherit' }}>
               {format(startDate, 'MMM d, yyyy')}
@@ -536,11 +546,11 @@ const TaskTable: React.FC<TaskTableProps> = ({
       case 'due_date': {
         const dueDateDisplay = (() => {
           if (!task.due_date) return '-';
-          const dueDateStr = task.due_date.includes('T')
-            ? task.due_date
-            : task.due_date + 'T23:59:59';
-          const dueDate = new Date(dueDateStr);
-          const isOverdue = dueDate < new Date();
+          // Parse date as local to avoid timezone issues
+          const dueDateStr = task.due_date.includes('T') ? task.due_date.split('T')[0] : task.due_date;
+          const [year, month, day] = dueDateStr.split('-').map(Number);
+          const dueDate = new Date(year, month - 1, day);
+          const isOverdue = dueDate < currentProcessingDate;
           return (
             <span style={{ color: isOverdue ? '#f44336' : 'inherit' }}>
               {format(dueDate, 'MMM d, yyyy')}

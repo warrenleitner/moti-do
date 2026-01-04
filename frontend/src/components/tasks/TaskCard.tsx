@@ -30,6 +30,7 @@ import { useState, useCallback } from 'react';
 import { useSwipeable } from 'react-swipeable';
 import type { Task } from '../../types';
 import type { SubtaskViewMode } from '../../store/taskStore';
+import { useSystemStatus } from '../../store/userStore';
 import {
   PriorityChip,
   DifficultyChip,
@@ -73,6 +74,16 @@ export default function TaskCard({
   const [swipeOffset, setSwipeOffset] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const systemStatus = useSystemStatus();
+
+  // Calculate current processing date (last_processed_date + 1 day) for relative date display
+  const currentProcessingDate = systemStatus?.last_processed_date
+    ? (() => {
+        const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
+        const nextDay = new Date(year, month - 1, day + 1);
+        return nextDay.toISOString().split('T')[0]; // Return as YYYY-MM-DD
+      })()
+    : undefined;
 
   // Handle swipe completion
   const handleSwipeComplete = useCallback(() => {
@@ -264,7 +275,7 @@ export default function TaskCard({
                   <DurationChip duration={task.duration} />
                 </>
               )}
-              {task.due_date && <DateDisplay date={task.due_date} label="Due" />}
+              {task.due_date && <DateDisplay date={task.due_date} label="Due" referenceDate={currentProcessingDate} />}
               {!isMobile && task.is_habit && (
                 <StreakBadge current={task.streak_current} best={task.streak_best} />
               )}

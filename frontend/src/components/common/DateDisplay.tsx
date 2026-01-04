@@ -7,6 +7,8 @@ interface DateDisplayProps {
   label?: string;
   showIcon?: boolean;
   showRelative?: boolean;
+  /** Reference date for relative calculations (e.g., current processing date). Defaults to today. */
+  referenceDate?: string;
 }
 
 /**
@@ -20,12 +22,22 @@ function extractDateParts(dateStr: string): [number, number, number] {
   return [year, month, day];
 }
 
-function formatRelativeDate(dateStr: string): { text: string; color: string; isOverdue: boolean } {
+function formatRelativeDate(
+  dateStr: string,
+  referenceDate?: string
+): { text: string; color: string; isOverdue: boolean } {
   // Parse date as local time to avoid timezone issues
   const [year, month, day] = extractDateParts(dateStr);
   const date = new Date(year, month - 1, day);
 
-  const today = new Date();
+  // Use reference date (e.g., current processing date) if provided, otherwise use real today
+  let today: Date;
+  if (referenceDate) {
+    const [refYear, refMonth, refDay] = extractDateParts(referenceDate);
+    today = new Date(refYear, refMonth - 1, refDay);
+  } else {
+    today = new Date();
+  }
   today.setHours(0, 0, 0, 0);
 
   const targetDate = new Date(date);
@@ -64,6 +76,7 @@ export default function DateDisplay({
   label,
   showIcon = true,
   showRelative = true,
+  referenceDate,
 }: DateDisplayProps) {
   if (!date) {
     return null;
@@ -81,7 +94,7 @@ export default function DateDisplay({
   });
 
   const { text, color, isOverdue } = showRelative
-    ? formatRelativeDate(date)
+    ? formatRelativeDate(date, referenceDate)
     : { text: dateObj.toLocaleDateString(), color: 'text.secondary', isOverdue: false };
 
   const Icon = isOverdue ? Warning : CalendarToday;
