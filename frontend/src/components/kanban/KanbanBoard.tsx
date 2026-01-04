@@ -1,7 +1,16 @@
 import { useMemo } from 'react';
-import { Box, Typography } from '@mui/material';
+import {
+  Box,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
+} from '@mui/material';
+import { Sort } from '@mui/icons-material';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
-import type { Task } from '../../types';
+import type { Task, TaskStatus } from '../../types';
 import { Priority } from '../../types';
 import KanbanColumn, { type KanbanStatus } from './KanbanColumn';
 import { useTaskStore } from '../../store';
@@ -12,6 +21,8 @@ interface KanbanBoardProps {
   tasks: Task[];
   onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
   onEditTask?: (task: Task) => void;
+  onCompleteTask?: (taskId: string) => void;
+  onUncompleteTask?: (taskId: string) => void;
 }
 
 interface Column {
@@ -40,8 +51,14 @@ function getTaskStatus(task: Task): KanbanStatus {
 
 // UI component - tested via integration tests
 /* v8 ignore start */
-export default function KanbanBoard({ tasks, onUpdateTask, onEditTask }: KanbanBoardProps) {
-  const { filters, setFilters, resetFilters } = useTaskStore();
+export default function KanbanBoard({
+  tasks,
+  onUpdateTask,
+  onEditTask,
+  onCompleteTask,
+  onUncompleteTask,
+}: KanbanBoardProps) {
+  const { filters, setFilters, resetFilters, sort, setSort } = useTaskStore();
   const definedProjects = useDefinedProjects();
 
   // Get projects from defined projects, and tags from tasks
@@ -56,9 +73,6 @@ export default function KanbanBoard({ tasks, onUpdateTask, onEditTask }: KanbanB
   // Filter tasks using global store filters
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
-      // Exclude habits (they have their own view)
-      if (task.is_habit) return false;
-
       // Search filter
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
@@ -117,48 +131,99 @@ export default function KanbanBoard({ tasks, onUpdateTask, onEditTask }: KanbanB
       grouped[status].push(task);
     });
 
-    // Sort by priority within each column
+    // Sort within each column using global sort settings
     const priorityOrder: Record<Priority, number> = {
-      [Priority.DEFCON_ONE]: 0,
-      [Priority.HIGH]: 1,
+      [Priority.TRIVIAL]: 0,
+      [Priority.LOW]: 1,
       [Priority.MEDIUM]: 2,
-      [Priority.LOW]: 3,
-      [Priority.TRIVIAL]: 4,
+      [Priority.HIGH]: 3,
+      [Priority.DEFCON_ONE]: 4,
     };
+
     Object.keys(grouped).forEach((status) => {
-      grouped[status as KanbanStatus].sort(
-        (a, b) => (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2)
-      );
+      grouped[status as KanbanStatus].sort((a, b) => {
+        let comparison = 0;
+
+        switch (sort.field) {
+          case 'priority':
+            comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+            break;
+          case 'due_date':
+            if (!a.due_date && !b.due_date) comparison = 0;
+            else if (!a.due_date) comparison = 1;
+            else if (!b.due_date) comparison = -1;
+            else comparison = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+            break;
+          case 'creation_date':
+            comparison = new Date(a.creation_date).getTime() - new Date(b.creation_date).getTime();
+            break;
+          case 'title':
+            comparison = a.title.localeCompare(b.title);
+            break;
+          case 'score':
+            comparison = a.score - b.score;
+            break;
+          default:
+            comparison = 0;
+        }
+
+        return sort.order === 'asc' ? comparison : -comparison;
+      });
     });
 
     return grouped;
-  }, [filteredTasks]);
+  }, [filteredTasks, sort]);
 
   // Handle drag end
   const handleDragEnd = (result: DropResult) => {
-    const { destination, draggableId } = result;
+    const { destination, source, draggableId } = result;
 
     if (!destination) return;
 
     const newStatus = destination.droppableId as KanbanStatus;
+    const oldStatus = source.droppableId as KanbanStatus;
     const task = tasks.find((t) => t.id === draggableId);
 
     if (!task) return;
 
-    // Map kanban status back to task properties
-    const updates: Partial<Task> = {};
-
-    if (newStatus === 'done') {
-      updates.is_complete = true;
-      updates.completion_date = new Date().toISOString();
-      updates.status = undefined;
-    } else {
-      updates.is_complete = false;
-      updates.completion_date = undefined;
-      updates.status = newStatus === 'backlog' ? undefined : newStatus;
+    // Case 1: Dragging TO done column - trigger full completion
+    if (newStatus === 'done' && oldStatus !== 'done') {
+      if (onCompleteTask) {
+        onCompleteTask(draggableId);
+        return;
+      }
+      // Fallback if no handler provided
+      onUpdateTask(draggableId, {
+        is_complete: true,
+        completion_date: new Date().toISOString(),
+        status: undefined,
+      });
+      return;
     }
 
-    onUpdateTask(draggableId, updates);
+    // Case 2: Dragging FROM done column - uncomplete and update status
+    if (oldStatus === 'done' && newStatus !== 'done') {
+      if (onUncompleteTask) {
+        onUncompleteTask(draggableId);
+      }
+      // newStatus is 'backlog' | 'todo' | 'in_progress' | 'blocked' (not 'done')
+      const taskStatus = newStatus === 'backlog' ? undefined : (newStatus as TaskStatus);
+      onUpdateTask(draggableId, {
+        is_complete: false,
+        completion_date: undefined,
+        status: taskStatus,
+      });
+      return;
+    }
+
+    // Case 3: Moving between non-done columns
+    // newStatus is 'backlog' | 'todo' | 'in_progress' | 'blocked' (not 'done')
+    const taskStatus = newStatus === 'backlog' ? undefined : (newStatus as TaskStatus);
+    onUpdateTask(draggableId, {
+      is_complete: false,
+      completion_date: undefined,
+      status: taskStatus,
+    });
   };
 
   return (
@@ -186,10 +251,43 @@ export default function KanbanBoard({ tasks, onUpdateTask, onEditTask }: KanbanB
         onReset={resetFilters}
       />
 
-      {/* Task count */}
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Showing {filteredTasks.length} tasks
-      </Typography>
+      {/* Sort controls */}
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+        <Sort color="action" />
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Sort by</InputLabel>
+          <Select
+            value={sort.field}
+            label="Sort by"
+            onChange={(e) =>
+              setSort({ ...sort, field: e.target.value as typeof sort.field })
+            }
+          >
+            <MenuItem value="score">Score (XP)</MenuItem>
+            <MenuItem value="priority">Priority</MenuItem>
+            <MenuItem value="due_date">Due Date</MenuItem>
+            <MenuItem value="creation_date">Created</MenuItem>
+            <MenuItem value="title">Title</MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Order</InputLabel>
+          <Select
+            value={sort.order}
+            label="Order"
+            onChange={(e) =>
+              setSort({ ...sort, order: e.target.value as 'asc' | 'desc' })
+            }
+          >
+            <MenuItem value="desc">Descending</MenuItem>
+            <MenuItem value="asc">Ascending</MenuItem>
+          </Select>
+        </FormControl>
+        <Box sx={{ flex: 1 }} />
+        <Typography variant="body2" color="text.secondary">
+          {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
+        </Typography>
+      </Stack>
 
       {/* Kanban columns */}
       <DragDropContext onDragEnd={handleDragEnd}>

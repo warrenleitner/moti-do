@@ -168,7 +168,33 @@ describe('KanbanBoard', () => {
     expect(screen.getAllByText('Project').length).toBeGreaterThan(0);
   });
 
-  it('handles drag end to move task to done', () => {
+  it('handles drag end to move task to done - calls onCompleteTask when provided', () => {
+    const onUpdateTask = vi.fn();
+    const onCompleteTask = vi.fn();
+    render(
+      <KanbanBoard
+        tasks={mockTasks}
+        onUpdateTask={onUpdateTask}
+        onCompleteTask={onCompleteTask}
+      />
+    );
+
+    // Simulate drag end
+    const mockDragEnd = (window as typeof window & { mockDragEnd?: (result: unknown) => void }).mockDragEnd;
+    if (mockDragEnd) {
+      mockDragEnd({
+        draggableId: '1',
+        destination: { droppableId: 'done', index: 0 },
+        source: { droppableId: 'backlog', index: 0 },
+      });
+
+      // Should call onCompleteTask, NOT onUpdateTask
+      expect(onCompleteTask).toHaveBeenCalledWith('1');
+      expect(onUpdateTask).not.toHaveBeenCalled();
+    }
+  });
+
+  it('handles drag end to move task to done - fallback without onCompleteTask', () => {
     const onUpdateTask = vi.fn();
     render(<KanbanBoard tasks={mockTasks} onUpdateTask={onUpdateTask} />);
 
@@ -181,6 +207,7 @@ describe('KanbanBoard', () => {
         source: { droppableId: 'backlog', index: 0 },
       });
 
+      // Should fallback to onUpdateTask when onCompleteTask not provided
       expect(onUpdateTask).toHaveBeenCalledWith('1', {
         is_complete: true,
         completion_date: expect.any(String),
@@ -245,7 +272,7 @@ describe('KanbanBoard', () => {
     }
   });
 
-  it('filters out habits', () => {
+  it('shows habits on the board', () => {
     const tasksWithHabit: Task[] = [
       ...mockTasks,
       {
@@ -267,14 +294,52 @@ describe('KanbanBoard', () => {
 
     render(<KanbanBoard tasks={tasksWithHabit} onUpdateTask={vi.fn()} />);
 
-    // Habit should not be shown
-    expect(screen.queryByText('Habit Task')).not.toBeInTheDocument();
+    // Habit SHOULD be shown now
+    expect(screen.getByText('Habit Task')).toBeInTheDocument();
   });
 
   it('shows task count', () => {
     render(<KanbanBoard tasks={mockTasks} onUpdateTask={vi.fn()} />);
 
-    // Should show filtered task count (excluding habits)
-    expect(screen.getByText(/Showing \d+ tasks/)).toBeInTheDocument();
+    // Should show filtered task count
+    expect(screen.getByText(/\d+ tasks?/)).toBeInTheDocument();
+  });
+
+  it('calls onUncompleteTask when dragging from done column', () => {
+    const onUpdateTask = vi.fn();
+    const onUncompleteTask = vi.fn();
+    render(
+      <KanbanBoard
+        tasks={mockTasks}
+        onUpdateTask={onUpdateTask}
+        onUncompleteTask={onUncompleteTask}
+      />
+    );
+
+    // Simulate drag from done to backlog
+    const mockDragEnd = (window as typeof window & { mockDragEnd?: (result: unknown) => void }).mockDragEnd;
+    if (mockDragEnd) {
+      mockDragEnd({
+        draggableId: '3', // Done Task
+        destination: { droppableId: 'backlog', index: 0 },
+        source: { droppableId: 'done', index: 0 },
+      });
+
+      // Should call onUncompleteTask and onUpdateTask
+      expect(onUncompleteTask).toHaveBeenCalledWith('3');
+      expect(onUpdateTask).toHaveBeenCalledWith('3', {
+        is_complete: false,
+        completion_date: undefined,
+        status: undefined,
+      });
+    }
+  });
+
+  it('renders sort controls', () => {
+    render(<KanbanBoard tasks={mockTasks} onUpdateTask={vi.fn()} />);
+
+    // Should have sort dropdowns - there may be multiple, so use getAllByText
+    expect(screen.getAllByText('Sort by').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Order').length).toBeGreaterThan(0);
   });
 });
