@@ -1321,11 +1321,22 @@ export default function SettingsPage() {
           </Typography>
 
           <Box sx={{ mb: 2 }}>
-            <Typography variant="body2">
-              <strong>Today:</strong> {new Date().toLocaleDateString()}
+            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+              <strong>Current Processing Date:</strong>{' '}
+              {systemStatus?.last_processed_date
+                ? (() => {
+                    // Parse as local date to avoid timezone issues
+                    const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
+                    const nextDay = new Date(year, month - 1, day + 1);
+                    return nextDay.toLocaleDateString();
+                  })()
+                : 'Not started'}
             </Typography>
-            <Typography variant="body2">
-              <strong>Last Processed:</strong> {systemStatus?.last_processed_date || 'Never'}
+            <Typography variant="body2" color="text.secondary">
+              <strong>Real Date:</strong> {new Date().toLocaleDateString()}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              <strong>Last Completed:</strong> {systemStatus?.last_processed_date || 'Never'}
             </Typography>
             <Typography variant="body2" color={systemStatus?.pending_days && systemStatus.pending_days > 0 ? 'error.main' : 'text.secondary'}>
               <strong>Days Behind:</strong> {systemStatus?.pending_days ?? 0} day{(systemStatus?.pending_days ?? 0) !== 1 ? 's' : ''}
@@ -1341,7 +1352,13 @@ export default function SettingsPage() {
                 disabled={advancingDate || loading}
                 startIcon={advancingDate ? <CircularProgress size={20} color="inherit" /> : <CalendarIcon />}
               >
-                Process Next Day
+                Process {systemStatus?.last_processed_date
+                  ? (() => {
+                      const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
+                      const nextDay = new Date(year, month - 1, day + 1);
+                      return nextDay.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                    })()
+                  : 'Next Day'}
               </Button>
               {systemStatus.pending_days > 1 && (
                 <Button

@@ -67,12 +67,22 @@ export default function Dashboard() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <CalendarIcon fontSize="small" color="primary" />
               <Typography variant="body2" color="text.secondary">
-                Today: <strong>{new Date().toLocaleDateString()}</strong>
+                Processing:{' '}
+                <strong>
+                  {systemStatus?.last_processed_date
+                    ? (() => {
+                        // Parse as local date to avoid timezone issues
+                        const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
+                        const nextDay = new Date(year, month - 1, day + 1);
+                        return nextDay.toLocaleDateString();
+                      })()
+                    : 'Not started'}
+                </strong>
               </Typography>
             </Box>
             <Divider orientation="vertical" flexItem />
             <Typography variant="body2" color="text.secondary">
-              Last Processed: <strong>{systemStatus?.last_processed_date || 'Never'}</strong>
+              Real Date: <strong>{new Date().toLocaleDateString()}</strong>
             </Typography>
             {systemStatus && systemStatus.pending_days > 0 && (
               <>

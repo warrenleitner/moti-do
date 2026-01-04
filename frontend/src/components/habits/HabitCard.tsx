@@ -12,6 +12,7 @@ import {
 import { Edit, Loop, Delete } from '@mui/icons-material';
 import type { Task } from '../../types';
 import { PriorityChip, DateDisplay, StreakBadge } from '../common';
+import { useSystemStatus } from '../../store/userStore';
 
 interface HabitCardProps {
   habit: Task;
@@ -23,6 +24,17 @@ interface HabitCardProps {
 // UI component - tested via integration tests
 /* v8 ignore start */
 export default function HabitCard({ habit, onComplete, onEdit, onDelete }: HabitCardProps) {
+  const systemStatus = useSystemStatus();
+
+  // Calculate current processing date (last_processed_date + 1 day) for relative date display
+  const currentProcessingDate = systemStatus?.last_processed_date
+    ? (() => {
+        const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
+        const nextDay = new Date(year, month - 1, day + 1);
+        return nextDay.toISOString().split('T')[0]; // Return as YYYY-MM-DD
+      })()
+    : undefined;
+
   // Calculate streak progress (visual indicator, max at 30 days)
   const streakProgress = Math.min((habit.streak_current / 30) * 100, 100);
 
@@ -73,7 +85,7 @@ export default function HabitCard({ habit, onComplete, onEdit, onDelete }: Habit
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
               <StreakBadge current={habit.streak_current} best={habit.streak_best} />
               <PriorityChip priority={habit.priority} />
-              {habit.due_date && <DateDisplay date={habit.due_date} label="Due" />}
+              {habit.due_date && <DateDisplay date={habit.due_date} label="Due" referenceDate={currentProcessingDate} />}
             </Box>
 
             {/* Streak progress bar */}

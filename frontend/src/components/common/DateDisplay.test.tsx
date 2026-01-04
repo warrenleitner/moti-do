@@ -107,4 +107,70 @@ describe('DateDisplay', () => {
     const { container } = render(<DateDisplay date={isoDate} />);
     expect(container.textContent).toContain('Yesterday');
   });
+
+  describe('referenceDate prop', () => {
+    it('uses referenceDate instead of real today for "Today" calculation', () => {
+      // If referenceDate is 2025-06-15 and date is 2025-06-15, should show "Today"
+      const { container } = render(
+        <DateDisplay date="2025-06-15" referenceDate="2025-06-15" />
+      );
+      expect(container.textContent).toContain('Today');
+    });
+
+    it('uses referenceDate for "Tomorrow" calculation', () => {
+      // If referenceDate is 2025-06-15 and date is 2025-06-16, should show "Tomorrow"
+      const { container } = render(
+        <DateDisplay date="2025-06-16" referenceDate="2025-06-15" />
+      );
+      expect(container.textContent).toContain('Tomorrow');
+    });
+
+    it('uses referenceDate for "Yesterday" calculation', () => {
+      // If referenceDate is 2025-06-15 and date is 2025-06-14, should show "Yesterday"
+      const { container } = render(
+        <DateDisplay date="2025-06-14" referenceDate="2025-06-15" />
+      );
+      expect(container.textContent).toContain('Yesterday');
+    });
+
+    it('uses referenceDate for overdue calculation', () => {
+      // If referenceDate is 2025-06-15 and date is 2025-06-12, should show "3 days overdue"
+      const { container } = render(
+        <DateDisplay date="2025-06-12" referenceDate="2025-06-15" />
+      );
+      expect(container.textContent).toContain('3 days overdue');
+    });
+
+    it('uses referenceDate for "In X days" calculation', () => {
+      // If referenceDate is 2025-06-15 and date is 2025-06-18, should show "In 3 days"
+      const { container } = render(
+        <DateDisplay date="2025-06-18" referenceDate="2025-06-15" />
+      );
+      expect(container.textContent).toContain('In 3 days');
+    });
+
+    it('handles ISO datetime format in referenceDate', () => {
+      // Reference date with time component should still work
+      const { container } = render(
+        <DateDisplay date="2025-06-15" referenceDate="2025-06-15T10:30:00.000Z" />
+      );
+      expect(container.textContent).toContain('Today');
+    });
+
+    it('handles ISO datetime format in both date and referenceDate', () => {
+      const { container } = render(
+        <DateDisplay date="2025-06-16T23:59:59.999Z" referenceDate="2025-06-15T00:00:00.000Z" />
+      );
+      expect(container.textContent).toContain('Tomorrow');
+    });
+
+    it('shows absolute date when more than 7 days from referenceDate', () => {
+      // If referenceDate is 2025-06-15 and date is 2025-06-30, should show absolute date
+      const { container } = render(
+        <DateDisplay date="2025-06-30" referenceDate="2025-06-15" />
+      );
+      expect(container.textContent).not.toContain('In');
+      expect(container.textContent).toMatch(/\d+\/\d+\/\d+/);
+    });
+  });
 });
