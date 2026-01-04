@@ -1324,9 +1324,12 @@ export default function SettingsPage() {
             <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               <strong>Current Processing Date:</strong>{' '}
               {systemStatus?.last_processed_date
-                ? new Date(
-                    new Date(systemStatus.last_processed_date).getTime() + 86400000
-                  ).toLocaleDateString()
+                ? (() => {
+                    // Parse as local date to avoid timezone issues
+                    const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
+                    const nextDay = new Date(year, month - 1, day + 1);
+                    return nextDay.toLocaleDateString();
+                  })()
                 : 'Not started'}
             </Typography>
             <Typography variant="body2" color="text.secondary">

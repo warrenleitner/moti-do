@@ -284,7 +284,12 @@ export default function TasksPage() {
 
   // Calculate current processing date (last_processed_date + 1 day)
   const currentProcessingDate = systemStatus?.last_processed_date
-    ? new Date(new Date(systemStatus.last_processed_date).getTime() + 86400000).toLocaleDateString()
+    ? (() => {
+        // Parse as local date to avoid timezone issues
+        const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
+        const nextDay = new Date(year, month - 1, day + 1);
+        return nextDay.toLocaleDateString();
+      })()
     : null;
 
   return (

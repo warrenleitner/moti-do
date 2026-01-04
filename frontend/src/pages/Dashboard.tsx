@@ -70,9 +70,12 @@ export default function Dashboard() {
                 Processing:{' '}
                 <strong>
                   {systemStatus?.last_processed_date
-                    ? new Date(
-                        new Date(systemStatus.last_processed_date).getTime() + 86400000
-                      ).toLocaleDateString()
+                    ? (() => {
+                        // Parse as local date to avoid timezone issues
+                        const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
+                        const nextDay = new Date(year, month - 1, day + 1);
+                        return nextDay.toLocaleDateString();
+                      })()
                     : 'Not started'}
                 </strong>
               </Typography>
