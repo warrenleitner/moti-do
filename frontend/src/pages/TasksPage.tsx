@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Box, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton, Link as MuiLink } from '@mui/material';
-import { Add, ViewList, TableChart } from '@mui/icons-material';
+import { Box, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton, Link as MuiLink, Typography, Chip } from '@mui/material';
+import { Add, ViewList, TableChart, CalendarMonth as CalendarIcon } from '@mui/icons-material';
 import { AxiosError } from 'axios';
 import { TaskList, TaskForm } from '../components/tasks';
 import TaskTable from '../components/tasks/TaskTable';
@@ -282,8 +282,35 @@ export default function TasksPage() {
     setTasksToDelete([]);
   };
 
+  // Calculate current processing date (last_processed_date + 1 day)
+  const currentProcessingDate = systemStatus?.last_processed_date
+    ? new Date(new Date(systemStatus.last_processed_date).getTime() + 86400000).toLocaleDateString()
+    : null;
+
   return (
     <Box>
+      {/* Processing date indicator */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+        <CalendarIcon fontSize="small" color="primary" />
+        <Typography variant="body2" color="text.secondary">
+          Processing:
+        </Typography>
+        <Chip
+          label={currentProcessingDate || 'Not started'}
+          size="small"
+          color="primary"
+          variant="outlined"
+        />
+        {systemStatus && systemStatus.pending_days > 0 && (
+          <Chip
+            label={`${systemStatus.pending_days} day${systemStatus.pending_days > 1 ? 's' : ''} behind`}
+            size="small"
+            color="error"
+            variant="filled"
+          />
+        )}
+      </Box>
+
       {/* Header actions with quick-add on the same line */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
         {/* Quick-add box takes available space */}

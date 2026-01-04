@@ -1321,11 +1321,19 @@ export default function SettingsPage() {
           </Typography>
 
           <Box sx={{ mb: 2 }}>
-            <Typography variant="body2">
-              <strong>Today:</strong> {new Date().toLocaleDateString()}
+            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+              <strong>Current Processing Date:</strong>{' '}
+              {systemStatus?.last_processed_date
+                ? new Date(
+                    new Date(systemStatus.last_processed_date).getTime() + 86400000
+                  ).toLocaleDateString()
+                : 'Not started'}
             </Typography>
-            <Typography variant="body2">
-              <strong>Last Processed:</strong> {systemStatus?.last_processed_date || 'Never'}
+            <Typography variant="body2" color="text.secondary">
+              <strong>Real Date:</strong> {new Date().toLocaleDateString()}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              <strong>Last Completed:</strong> {systemStatus?.last_processed_date || 'Never'}
             </Typography>
             <Typography variant="body2" color={systemStatus?.pending_days && systemStatus.pending_days > 0 ? 'error.main' : 'text.secondary'}>
               <strong>Days Behind:</strong> {systemStatus?.pending_days ?? 0} day{(systemStatus?.pending_days ?? 0) !== 1 ? 's' : ''}
