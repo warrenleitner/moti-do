@@ -370,14 +370,19 @@ export const useFilteredTasks = (lastProcessedDate?: string) => {
     });
   };
 
-  // Helper: check if a task is in the future (start_date > last_processed_date)
+  // Helper: check if a task is in the future (start_date > current_processing_date)
+  // Current processing date = last_processed_date + 1 day
   const isFuture = (task: Task): boolean => {
     if (!lastProcessedDate || !task.start_date) return false;
-    const processedDate = new Date(lastProcessedDate + 'T23:59:59');
-    const taskStartDate = new Date(
-      task.start_date.includes('T') ? task.start_date : task.start_date + 'T00:00:00'
-    );
-    return taskStartDate > processedDate;
+    // Parse last_processed_date and add 1 day to get current processing date
+    const [year, month, day] = lastProcessedDate.split('-').map(Number);
+    const currentProcessingDate = new Date(year, month - 1, day + 1);
+    // Parse task start_date
+    const startDateStr = task.start_date.includes('T') ? task.start_date.split('T')[0] : task.start_date;
+    const [sYear, sMonth, sDay] = startDateStr.split('-').map(Number);
+    const taskStartDate = new Date(sYear, sMonth - 1, sDay);
+    // Task is future if start_date is AFTER current processing date
+    return taskStartDate > currentProcessingDate;
   };
 
   // Apply filters
