@@ -12,6 +12,7 @@ vi.mock('../store', () => ({
 
 vi.mock('../store/userStore', () => ({
   useUserStore: vi.fn(),
+  useSystemStatus: vi.fn(),
   useDefinedProjects: vi.fn(() => []),
   useDefinedTags: vi.fn(() => []),
 }));
@@ -77,6 +78,10 @@ describe('KanbanPage', () => {
     vi.mocked(userStore.useUserStore).mockReturnValue({
       fetchStats: mockFetchStats,
     } as unknown as ReturnType<typeof userStore.useUserStore>);
+    vi.mocked(userStore.useSystemStatus).mockReturnValue({
+      last_processed_date: '2024-01-15',
+      pending_days: 0,
+    });
   });
 
   // Since KanbanPage is wrapped in /* v8 ignore start/stop */,

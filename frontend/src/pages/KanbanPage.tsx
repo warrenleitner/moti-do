@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Box, Snackbar, Alert } from '@mui/material';
 import { KanbanBoard } from '../components/kanban';
 import { TaskForm } from '../components/tasks';
 import { useTaskStore } from '../store';
-import { useUserStore } from '../store/userStore';
+import { useUserStore, useSystemStatus } from '../store/userStore';
 import type { Task } from '../types';
 import { Priority, Difficulty, Duration } from '../types';
 
@@ -12,6 +12,29 @@ import { Priority, Difficulty, Duration } from '../types';
 export default function KanbanPage() {
   const { tasks, updateTask, addTask, completeTask, uncompleteTask } = useTaskStore();
   const { fetchStats } = useUserStore();
+  const systemStatus = useSystemStatus();
+
+  // Filter out future tasks (start_date > current_processing_date)
+  // Kanban shows all statuses (active/completed) in columns, so we don't use useFilteredTasks
+  const lastProcessedDate = systemStatus?.last_processed_date;
+  const kanbanTasks = useMemo(() => {
+    if (!lastProcessedDate) return tasks;
+
+    // Parse last_processed_date and add 1 day to get current processing date
+    const [year, month, day] = lastProcessedDate.split('-').map(Number);
+    const currentProcessingDate = new Date(year, month - 1, day + 1);
+
+    return tasks.filter((task) => {
+      // Skip future tasks
+      if (task.start_date) {
+        const startDateStr = task.start_date.includes('T') ? task.start_date.split('T')[0] : task.start_date;
+        const [sYear, sMonth, sDay] = startDateStr.split('-').map(Number);
+        const taskStartDate = new Date(sYear, sMonth - 1, sDay);
+        if (taskStartDate > currentProcessingDate) return false;
+      }
+      return true;
+    });
+  }, [tasks, lastProcessedDate]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -114,7 +137,7 @@ export default function KanbanPage() {
   return (
     <Box>
       <KanbanBoard
-        tasks={tasks}
+        tasks={kanbanTasks}
         onUpdateTask={handleUpdateTask}
         onEditTask={handleEditTask}
         onCompleteTask={handleCompleteTask}
@@ -123,8 +146,9 @@ export default function KanbanPage() {
 
       {/* Task form dialog */}
       <TaskForm
+        key={editingTask?.id ?? 'new'}
         open={formOpen}
-        task={editingTask || ({} as Task)}
+        task={editingTask}
         onSave={handleSave}
         onClose={() => {
           setFormOpen(false);
