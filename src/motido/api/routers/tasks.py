@@ -5,7 +5,7 @@ Task management API endpoints.
 """
 
 from datetime import date as date_type
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
@@ -537,10 +537,12 @@ async def complete_task(
             detail="Task is already complete",
         )
 
-    # For recurrence calculations, use the user's processing date (game day)
+    # For recurrence calculations, use the current processing date (game day)
+    # This is the day AFTER last_processed_date (the day being worked on now)
     # This ensures consistent behavior regardless of actual wall-clock time
-    # Convert last_processed_date to datetime at noon for recurrence calculation
-    completion_date = datetime.combine(user.last_processed_date, datetime.min.time())
+    completion_date = datetime.combine(
+        user.last_processed_date + timedelta(days=1), datetime.min.time()
+    )
 
     # Mark as complete
     task.is_complete = True
