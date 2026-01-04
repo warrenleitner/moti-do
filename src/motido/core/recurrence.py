@@ -91,8 +91,14 @@ def create_next_habit_instance(
     # Calculate start_date based on effective delta
     start_date = _calculate_start_date(next_due, effective_delta)
 
-    # For FROM_DUE_DATE recurrence, ensure due_date is after completion_date
-    if task.recurrence_type == RecurrenceType.FROM_DUE_DATE:
+    # For FROM_DUE_DATE and FROM_COMPLETION recurrence, ensure due_date is after
+    # completion_date. This handles:
+    # - FROM_DUE_DATE: completing late means next_due might be before completion
+    # - FROM_COMPLETION: edge cases where rrule.after() returns same date
+    if task.recurrence_type in (
+        RecurrenceType.FROM_DUE_DATE,
+        RecurrenceType.FROM_COMPLETION,
+    ):
         next_due, start_date = _advance_to_future_start(
             task, next_due, start_date, completion_date, effective_delta
         )

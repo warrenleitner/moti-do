@@ -489,11 +489,11 @@ def test_from_due_date_no_start_delta_completed_late() -> None:
     assert new_instance.start_date is None
 
 
-def test_from_completion_does_not_skip() -> None:
-    """Test that FROM_COMPLETION recurrence does NOT apply skip logic.
+def test_from_completion_normal_case() -> None:
+    """Test FROM_COMPLETION recurrence in the normal case.
 
-    FROM_COMPLETION calculates from completion date, so the result
-    is always in the future relative to completion (by design).
+    When completed on the due date, the next occurrence is calculated
+    from the completion date and should be in the future.
     """
     due_date = datetime(2024, 1, 14, 12, 0, 0)
     completion_date = datetime(2024, 1, 14, 12, 0, 0)
@@ -512,10 +512,42 @@ def test_from_completion_does_not_skip() -> None:
 
     assert new_instance is not None
     # FROM_COMPLETION: next due = completion + 1 month = Feb 14
-    # This is NOT adjusted because we only adjust FROM_DUE_DATE
+    # Already after completion_date, no adjustment needed
     assert new_instance.due_date is not None
     assert new_instance.due_date.month == 2
     assert new_instance.due_date.day == 14
+
+
+def test_from_completion_ensures_next_due_after_completion() -> None:
+    """Test FROM_COMPLETION ensures next_due is always after completion_date.
+
+    This handles edge cases where rrule.after() might return a date that's
+    not strictly after the completion_date (e.g., same timestamp due to
+    time precision issues).
+    """
+    # Create a daily task
+    due_date = datetime(2024, 1, 3, 12, 0, 0)
+    # Complete on the same day - rrule might return Jan 4 at 12:00
+    # but if there's a time component issue, it could return Jan 3
+    completion_date = datetime(2024, 1, 3, 12, 0, 0)
+    task = Task(
+        id="parent-id",
+        title="Daily Task",
+        creation_date=datetime(2024, 1, 1),
+        due_date=due_date,
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
+
+    assert new_instance is not None
+    assert new_instance.due_date is not None
+    # Must be strictly after completion_date (Jan 3)
+    assert new_instance.due_date > completion_date
+    # For daily recurrence from Jan 3, should be Jan 4
+    assert new_instance.due_date.day == 4
 
 
 def test_strict_does_not_skip() -> None:
