@@ -1352,7 +1352,13 @@ export default function SettingsPage() {
                 disabled={advancingDate || loading}
                 startIcon={advancingDate ? <CircularProgress size={20} color="inherit" /> : <CalendarIcon />}
               >
-                Process Next Day
+                Process {systemStatus?.last_processed_date
+                  ? (() => {
+                      const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
+                      const nextDay = new Date(year, month - 1, day + 1);
+                      return nextDay.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                    })()
+                  : 'Next Day'}
               </Button>
               {systemStatus.pending_days > 1 && (
                 <Button
