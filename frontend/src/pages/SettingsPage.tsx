@@ -48,8 +48,9 @@ import {
   CardGiftcard as RewardIcon,
   RestartAlt as ResetIcon,
 } from '@mui/icons-material';
-import { dataApi, authApi, userApi, type XPTransaction, type TagDefinition, type ProjectDefinition, type ScoringConfig } from '../services/api';
+import { dataApi, authApi, userApi, systemApi, type XPTransaction, type TagDefinition, type ProjectDefinition, type ScoringConfig } from '../services/api';
 import { useUserStore, useSystemStatus, useUserStats } from '../store/userStore';
+import InfoIcon from '@mui/icons-material/Info';
 
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
@@ -97,6 +98,9 @@ export default function SettingsPage() {
   const [savingScoringConfig, setSavingScoringConfig] = useState(false);
   const [resettingScoringConfig, setResettingScoringConfig] = useState(false);
   const [scoringConfigExpanded, setScoringConfigExpanded] = useState(false);
+
+  // Backend version state
+  const [backendVersion, setBackendVersion] = useState<string | null>(null);
 
   // Fetch XP history, tags, and projects on mount
   useEffect(() => {
@@ -148,10 +152,20 @@ export default function SettingsPage() {
       }
     };
 
+    const fetchBackendVersion = async () => {
+      try {
+        const health = await systemApi.healthCheck();
+        setBackendVersion(health.version);
+      } catch (error) {
+        console.error('Failed to fetch backend version:', error);
+      }
+    };
+
     fetchXPHistory();
     fetchTags();
     fetchProjects();
     fetchScoringConfig();
+    fetchBackendVersion();
   }, []);
 
   const handleExport = async () => {
@@ -1506,7 +1520,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Security */}
-      <Card>
+      <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
             Security
@@ -1522,6 +1536,64 @@ export default function SettingsPage() {
           >
             Change Password
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* About */}
+      <Card>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <InfoIcon color="primary" />
+            <Typography variant="h6">About</Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Application version and build information.
+          </Typography>
+
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small">
+              <TableBody>
+                <TableRow>
+                  <TableCell component="th" sx={{ fontWeight: 'bold', width: 180 }}>
+                    Frontend Version
+                  </TableCell>
+                  <TableCell>{__APP_VERSION__}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell component="th" sx={{ fontWeight: 'bold' }}>
+                    Backend Version
+                  </TableCell>
+                  <TableCell>{backendVersion ?? 'Loading...'}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell component="th" sx={{ fontWeight: 'bold' }}>
+                    Build Date
+                  </TableCell>
+                  <TableCell>{new Date(__BUILD_TIMESTAMP__).toLocaleString()}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell component="th" sx={{ fontWeight: 'bold' }}>
+                    Environment
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={import.meta.env.MODE}
+                      size="small"
+                      color={import.meta.env.MODE === 'production' ? 'success' : 'warning'}
+                    />
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell component="th" sx={{ fontWeight: 'bold' }}>
+                    API URL
+                  </TableCell>
+                  <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                    {import.meta.env.VITE_API_URL || window.location.origin}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
         </CardContent>
       </Card>
 

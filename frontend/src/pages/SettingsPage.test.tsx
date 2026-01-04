@@ -39,6 +39,9 @@ vi.mock('../services/api', () => ({
     updateScoringConfig: vi.fn(),
     resetScoringConfig: vi.fn(),
   },
+  systemApi: {
+    healthCheck: vi.fn().mockResolvedValue({ status: 'healthy', version: '0.1.0' }),
+  },
 }));
 
 // Mock window.location.reload
