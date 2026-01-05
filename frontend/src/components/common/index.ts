@@ -13,4 +13,5 @@ export { default as FilterBar } from './FilterBar';
 export { default as XPDisplay } from './XPDisplay';
 export { default as StreakBadge } from './StreakBadge';
 export { default as DateDisplay } from './DateDisplay';
+export { default as PullToRefreshWrapper } from './PullToRefreshWrapper';
 /* v8 ignore stop */

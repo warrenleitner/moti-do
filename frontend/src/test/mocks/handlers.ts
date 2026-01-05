@@ -89,7 +89,7 @@ const API_BASE = 'http://localhost:8000/api';
 export const handlers = [
   // Health check
   http.get(`${API_BASE}/health`, () => {
-    return HttpResponse.json({ status: 'healthy', version: '0.1.0' });
+    return HttpResponse.json({ status: 'healthy', version: '0.2.0' });
   }),
 
   // Task endpoints
