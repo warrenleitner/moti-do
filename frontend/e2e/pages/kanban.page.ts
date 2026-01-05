@@ -10,13 +10,18 @@ export class KanbanPage {
   readonly tagFilter: Locator;
   readonly taskCountText: Locator;
   readonly snackbar: Locator;
+  readonly sortBySelect: Locator;
+  readonly sortOrderSelect: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.projectFilter = page.getByLabel('Project');
     this.tagFilter = page.getByLabel('Tag');
-    this.taskCountText = page.getByText(/Showing \d+ tasks/);
+    this.taskCountText = page.getByText(/\d+ tasks?/);
     this.snackbar = page.getByRole('alert');
+    // MUI Select components - use the label text within FormControl
+    this.sortBySelect = page.getByRole('combobox', { name: /sort by/i });
+    this.sortOrderSelect = page.getByRole('combobox', { name: /order/i });
   }
 
   /**
@@ -175,7 +180,7 @@ export class KanbanPage {
    */
   async getDisplayedTaskCount(): Promise<number> {
     const text = await this.taskCountText.textContent();
-    const match = text?.match(/Showing (\d+) tasks/);
+    const match = text?.match(/(\d+) tasks?/);
     return match ? parseInt(match[1], 10) : 0;
   }
 
@@ -184,5 +189,19 @@ export class KanbanPage {
    */
   async waitForSnackbar(message: string): Promise<void> {
     await expect(this.page.getByText(message)).toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Sort tasks by field.
+   */
+  async sortBy(
+    field: 'Score (XP)' | 'Priority' | 'Due Date' | 'Created' | 'Title',
+    order: 'Ascending' | 'Descending' = 'Descending'
+  ): Promise<void> {
+    await this.sortBySelect.click();
+    await this.page.getByRole('option', { name: field }).click();
+
+    await this.sortOrderSelect.click();
+    await this.page.getByRole('option', { name: order }).click();
   }
 }

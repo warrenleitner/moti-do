@@ -200,6 +200,41 @@ E2E tests (Playwright) run automatically in CI after unit tests pass:
 - Always run the full check suite before considering work complete
 - This "almost ridiculous" quality standard applies at all times and all phases
 
+## Version Management
+
+### Version Number Locations
+The app version is defined in multiple places that must stay in sync:
+1. **Frontend**: `frontend/package.json` - `"version": "x.y.z"`
+2. **Backend**: `pyproject.toml` - `version = "x.y.z"`
+3. **Backend API**: `src/motido/api/main.py` - FastAPI `version="x.y.z"` and health endpoint
+4. **Test Mocks**: `frontend/src/test/mocks/handlers.ts` - health endpoint mock
+5. **Test Setup**: `frontend/src/test/setup.ts` - `__APP_VERSION__` constant
+
+### When to Increment Version
+**MANDATORY**: When making any commit, you MUST increment the version number using semantic versioning:
+- **PATCH (x.y.Z)**: Bug fixes, small improvements, documentation changes
+- **MINOR (x.Y.0)**: New features, non-breaking changes
+- **MAJOR (X.0.0)**: Breaking changes, major rewrites
+
+### How to Increment Version
+When committing changes, update the version in ALL locations listed above:
+1. Increment the version number according to the change type
+2. Update `frontend/package.json`
+3. Update `pyproject.toml`
+4. Update `src/motido/api/main.py` (both FastAPI app and health endpoint)
+5. Update `frontend/src/test/mocks/handlers.ts`
+6. Update `frontend/src/test/setup.ts`
+
+Example for a patch increment from 0.1.0 to 0.1.1:
+```bash
+# All these files need the version updated
+frontend/package.json: "version": "0.1.1"
+pyproject.toml: version = "0.1.1"
+src/motido/api/main.py: version="0.1.1" (2 places)
+frontend/src/test/mocks/handlers.ts: version: '0.1.1'
+frontend/src/test/setup.ts: __APP_VERSION__ = '0.1.1'
+```
+
 ## Testing Philosophy
 
 ### Saving Test Output for Analysis

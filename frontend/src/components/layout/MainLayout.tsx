@@ -136,6 +136,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
             color="primary"
             variant="outlined"
           />
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block', mt: 1, textAlign: 'center' }}
+          >
+            v{__APP_VERSION__}
+          </Typography>
         </Box>
       )}
     </Box>

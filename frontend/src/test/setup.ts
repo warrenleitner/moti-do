@@ -6,6 +6,11 @@ import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeAll, afterAll, vi } from 'vitest';
 
+// Define global constants that Vite injects at build time
+// These are used for version display in the UI
+(globalThis as Record<string, unknown>).__APP_VERSION__ = '0.1.0';
+(globalThis as Record<string, unknown>).__BUILD_TIMESTAMP__ = new Date().toISOString();
+
 // Mock localStorage for Zustand persist middleware
 const localStorageMock = {
   getItem: vi.fn(() => null),
