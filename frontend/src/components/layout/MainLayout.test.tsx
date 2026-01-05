@@ -1,10 +1,24 @@
 import { render, screen } from '../../test/utils';
 import { vi } from 'vitest';
+import type { ReactNode } from 'react';
 import MainLayout from './MainLayout';
 import * as stores from '../../store';
+import * as hooks from '../../hooks';
 
 vi.mock('../../store', () => ({
   useUserStore: vi.fn(),
+}));
+
+vi.mock('../../hooks', () => ({
+  useRefresh: vi.fn(() => ({
+    refresh: vi.fn(),
+    isRefreshing: false,
+  })),
+}));
+
+// Mock PullToRefreshWrapper to avoid complex gesture testing in unit tests
+vi.mock('../common/PullToRefreshWrapper', () => ({
+  default: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 describe('MainLayout', () => {
@@ -126,5 +140,39 @@ describe('MainLayout', () => {
     // Dashboard should be highlighted (current route is '/')
     const dashboardItems = screen.getAllByText(/Dashboard/i);
     expect(dashboardItems.length).toBeGreaterThan(0);
+  });
+
+  it('displays refresh button', () => {
+    render(<MainLayout><div>Content</div></MainLayout>);
+
+    const refreshButton = screen.getByRole('button', { name: /refresh data/i });
+    expect(refreshButton).toBeInTheDocument();
+  });
+
+  it('calls refresh when refresh button clicked', async () => {
+    const mockRefresh = vi.fn();
+    vi.mocked(hooks.useRefresh).mockReturnValue({
+      refresh: mockRefresh,
+      isRefreshing: false,
+    });
+
+    const { user } = render(<MainLayout><div>Content</div></MainLayout>);
+
+    const refreshButton = screen.getByRole('button', { name: /refresh data/i });
+    await user.click(refreshButton);
+
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables refresh button while refreshing', () => {
+    vi.mocked(hooks.useRefresh).mockReturnValue({
+      refresh: vi.fn(),
+      isRefreshing: true,
+    });
+
+    render(<MainLayout><div>Content</div></MainLayout>);
+
+    const refreshButton = screen.getByRole('button', { name: /refresh data/i });
+    expect(refreshButton).toBeDisabled();
   });
 });

@@ -24,7 +24,7 @@ from motido.api.schemas import AdvanceRequest, SystemStatus
 app = FastAPI(
     title="Moti-Do API",
     description="Backend API for the Moti-Do task and habit tracker",
-    version="0.1.0",
+    version="0.2.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
@@ -73,7 +73,7 @@ app.include_router(views.router, prefix="/api")
 @app.get("/api/health")
 async def health_check() -> dict:
     """Health check endpoint."""
-    return {"status": "healthy", "version": "0.1.0"}
+    return {"status": "healthy", "version": "0.2.0"}
 
 
 @app.get("/api/health/db")
