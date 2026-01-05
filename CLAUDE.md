@@ -237,40 +237,47 @@ frontend/src/test/setup.ts: __APP_VERSION__ = '0.1.1'
 
 ## Testing Philosophy
 
-### Saving Test Output for Analysis
-When running tests (individual or full suites), **always save output to a file** for efficient analysis:
+### Token-Efficient Test Running (CRITICAL FOR CLAUDE)
+
+**ALWAYS use the test wrapper script instead of running tests directly:**
 
 ```bash
-# Save output for later analysis (recommended)
-bash scripts/check-all.sh 2>&1 | tee /tmp/test-output.txt
-
-# Run E2E tests with saved output
-bash scripts/run-e2e.sh --no-docker 2>&1 | tee /tmp/e2e-output.txt
-
-# Run specific Python test with output
-poetry run pytest tests/test_file.py -v 2>&1 | tee /tmp/pytest-output.txt
-
-# Run frontend tests with output
-cd frontend && npm run test 2>&1 | tee /tmp/vitest-output.txt
+./scripts/run-tests.sh              # All tests (python + frontend + e2e)
+./scripts/run-tests.sh python       # Python tests only
+./scripts/run-tests.sh frontend     # Frontend (Vitest) tests only
+./scripts/run-tests.sh e2e          # E2E (Playwright) tests only
+./scripts/run-tests.sh unit         # Python + Frontend (no E2E, faster)
+./scripts/run-tests.sh check        # Full check-all.sh (format, lint, typecheck, tests)
 ```
 
-**Benefits:**
-- Quickly grep for specific errors without re-running tests
-- Compare output between runs
-- Share output for debugging
-- Analyze different aspects without waiting for slow re-runs
+**Why this matters:**
+- Verbose test output is captured to `test-logs/` directory
+- Only a minimal summary is printed to stdout (pass/fail, counts, failure names)
+- Saves ~90% of tokens compared to raw test output
+- Prevents re-running tests just to see what failed
 
-**Quick analysis commands:**
+**CLAUDE WORKFLOW - READ LOGS, DON'T RE-RUN:**
+1. Run the script once with appropriate test type
+2. The printed summary shows pass/fail, counts, and failing test names
+3. If failures exist, search the log file for details:
+   ```bash
+   grep -B5 -A20 'FAILED\|AssertionError' test-logs/latest_python.log
+   grep -B5 -A20 'FAIL\|Error' test-logs/latest_frontend.log
+   grep -B5 -A30 '✘\|FAILED' test-logs/latest_e2e.log
+   ```
+4. **DO NOT re-run the entire test suite just to see what failed - read the log!**
+5. Only run individual tests when debugging specific failures
+
+**Log file locations:**
+- `test-logs/latest_python.log` - Most recent Python test output
+- `test-logs/latest_frontend.log` - Most recent Frontend test output
+- `test-logs/latest_e2e.log` - Most recent E2E test output
+- `test-logs/latest_check.log` - Most recent full check-all output
+- Timestamped logs are preserved for history: `test-logs/python_20250104_123456.log`
+
+**User can follow test progress live:**
 ```bash
-# Find all failures
-grep -E "FAIL|Error|✘" /tmp/test-output.txt
-
-# Count passing/failing tests
-grep -c "✓\|passed" /tmp/test-output.txt
-grep -c "✘\|failed" /tmp/test-output.txt
-
-# Find specific error messages
-grep -A5 "AssertionError" /tmp/test-output.txt
+tail -f test-logs/latest_python.log
 ```
 
 ### Three Layers of Testing
