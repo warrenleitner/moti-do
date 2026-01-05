@@ -29,6 +29,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Build: `npm run build`
 - All frontend checks: `poetry run poe frontend-check` (from project root)
 
+### Running Locally
+- **Standard (Supabase)**: `./scripts/dev.sh` (uses `.env` DATABASE_URL)
+- **Local Docker**: `./scripts/dev.sh --local` (uses Docker PostgreSQL)
+- **Offline (SQLite/JSON)**: `./scripts/dev.sh --offline` (no Docker, local files)
+- **Sandbox (Isolated)**: `./scripts/dev.sh --sandbox` (requires `socat`, Linux only)
+
 ### E2E Tests (Playwright)
 - Run all E2E tests: `bash scripts/run-e2e.sh` (from project root)
 - Run E2E with Playwright UI: `bash scripts/run-e2e.sh --ui`
