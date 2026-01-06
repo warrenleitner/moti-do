@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dev-dist
 *.local
 
 # Frontend coverage reports
@@ -33,9 +34,13 @@ __pycache__
 *.pyd
 *.pyw
 *.pyz
+*.egg
 *.egg-info
 .coverage
 *.py,cover
+htmlcov/
+.pytest_cache/
+.mypy_cache/
 venv/
 .venv/
 
@@ -45,6 +50,7 @@ venv/
 .env.*.local
 
 # User data (should not be committed)
+comments.txt
 src/motido/data/motido_data/users.json
 src/motido/data/motido_data/last_penalty_check.txt
 *.db
