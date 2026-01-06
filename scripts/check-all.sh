@@ -9,6 +9,10 @@
 
 set -e  # Exit on first error
 
+# Store the project root
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$PROJECT_ROOT"
+
 # Parse arguments - E2E is ON by default
 RUN_E2E=true
 for arg in "$@"; do
@@ -24,22 +28,34 @@ echo "===================================="
 echo "Running Python Backend Checks"
 echo "===================================="
 
+# Determine how to run python/poetry
+if command -v poetry &> /dev/null; then
+    PYTHON_RUN="poetry run"
+elif [ -f "$PROJECT_ROOT/.venv/bin/python" ]; then
+    PYTHON_RUN="$PROJECT_ROOT/.venv/bin/python -m"
+else
+    PYTHON_RUN="python3 -m"
+fi
+
+# Ensure src is in PYTHONPATH so motido module can be found
+export PYTHONPATH="$PROJECT_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
+
 echo ""
 echo "→ Formatting code with isort and black..."
-poetry run isort .
-poetry run black .
+$PYTHON_RUN isort .
+$PYTHON_RUN black .
 
 echo ""
 echo "→ Type checking with mypy..."
-poetry run mypy src tests
+$PYTHON_RUN mypy src tests
 
 echo ""
 echo "→ Linting with pylint..."
-poetry run pylint src tests --fail-under=10
+$PYTHON_RUN pylint src tests --fail-under=10
 
 echo ""
 echo "→ Running tests with coverage..."
-poetry run pytest --cov=motido --cov-report=term-missing --cov-fail-under=100
+$PYTHON_RUN pytest --cov=motido --cov-report=term-missing --cov-fail-under=100
 
 echo ""
 echo "===================================="

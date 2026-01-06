@@ -164,14 +164,21 @@ def _advance_to_future_start(
     effective_delta: Optional[int],
 ) -> tuple[datetime, Optional[datetime]]:
     """
-    Advance due_date/start_date forward until due_date is after completion_date.
+    Advance due_date/start_date forward until due_date is after both
+    completion_date and the original due_date.
 
     For FROM_DUE_DATE recurrence, if the calculated due_date is not after
     the completion_date, keep advancing by the recurrence interval until
     the due date is in the future relative to when the task was completed.
 
-    This ensures that completing a task late still results in a new instance
-    with a due date that makes sense (after the completion, not before).
+    For FROM_COMPLETION recurrence with BYDAY rules, completing early could
+    result in next_due being the same as the original due_date (e.g., task
+    due Wednesday, completed Monday, next occurrence is Wednesday). This
+    ensures the new due_date is strictly after the original.
+
+    Date comparisons use date-only (ignoring time) to avoid timezone and
+    time-of-day issues. Since we don't support anything shorter than daily
+    recurrence, this is the correct granularity.
 
     Args:
         task: The task with recurrence rule.
@@ -183,8 +190,16 @@ def _advance_to_future_start(
     Returns:
         Tuple of (adjusted_due_date, adjusted_start_date).
     """
-    # If due date is already after completion date, no adjustment needed
-    if next_due > completion_date:
+    # Use date-only comparison to avoid time-of-day issues
+    next_due_date = next_due.date()
+    completion_date_only = completion_date.date()
+    original_due_date = task.due_date.date() if task.due_date else None
+
+    # Check if due date is already after both completion date AND original due date
+    # next_due must be strictly after both (using > not >=)
+    if next_due_date > completion_date_only and (
+        original_due_date is None or next_due_date > original_due_date
+    ):
         return next_due, start_date
 
     # Need to advance - parse the recurrence rule
@@ -192,13 +207,16 @@ def _advance_to_future_start(
         rule_str = _normalize_rule(task.recurrence_rule or "")
         rule = rrulestr(rule_str, dtstart=next_due)
 
-        # Keep advancing until due_date is after completion_date
-        while next_due <= completion_date:
+        # Keep advancing until due_date is after both completion_date and original
+        while next_due_date <= completion_date_only or (
+            original_due_date is not None and next_due_date <= original_due_date
+        ):
             next_occurrence = rule.after(next_due)
             if next_occurrence is None:
                 # No more occurrences - return what we have
                 break
             next_due = next_occurrence
+            next_due_date = next_due.date()
             start_date = _calculate_start_date(next_due, effective_delta)
 
     except (ValueError, TypeError):

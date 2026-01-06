@@ -58,3 +58,6 @@ frontend/playwright/.auth/user.json
 
 # Script lock files (prevent dev/e2e conflicts)
 .run/
+
+# Test logs (token-efficient test output)
+test-logs/

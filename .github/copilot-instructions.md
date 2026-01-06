@@ -1,195 +1,38 @@
 # GitHub Copilot Instructions for MotiDo
 
-MotiDo is a gamified task and habit tracker with XP, streaks, and badges. Built with FastAPI (Python) backend and React (TypeScript) frontend.
+## Core architecture pointers
+- Backend logic lives under `src/motido/` (see `docs/ARCHITECTURE.md` for the full diagram); FastAPI routers in `api/` wire to the core/domain code in `core/` and the storage abstractions in `data/`.
+- All persistence calls go through `motido.data.abstraction.DataManager`; `backend_factory.py` chooses PostgreSQL when `DATABASE_URL` is set, otherwise falls back to JSON or SQLite—limit changes to the interface (`abstraction.py`) or a specific manager (`postgres_manager.py`, `json_manager.py`).
+- Scoring, XP tracking, and recurrence rules live in `core/scoring.py` and `core/recurrence.py`; avoid duplicating formulas and consult `docs/SCORING.md` for the weight/multiplier definitions.
+- API schemas/DTOs (`api/schemas.py`) mirror the core dataclasses in `core/models.py`, so add new fields in both places and keep Pydantic validation in sync with the CLI helpers in `cli/main.py`.
 
-## Project Overview
+## Developer workflows that matter
+- **Local dev servers**: `scripts/dev.sh` orchestrates backend (`uvicorn motido.api.main:app`) plus Vite frontend, manages Docker PostgreSQL when passed `--local`, and exposes `--keep` to keep the DB alive for debugging—inspect it before adjusting startup behavior.
+- **Sign-off workflow**: `bash scripts/check-all.sh` (optional `--skip-e2e`) mirrors CI—runs `poetry run poe check` (Python + frontend) and Playwright E2E with Docker. Run it before declaring changes merge-ready.
+- **Python helpers**: Always use `poetry run poe <task>` (format, lint, typecheck, coverage, check-python); no backend change should skip `poe check` due to the 100% coverage and Pylint 10.0 standards.
+- **Frontend commands**: Within `frontend/`, rely on `npm run lint`, `npx tsc --noEmit`, `npm run test`/`test:watch`, `npm run build`, and the Playwright targets described under `frontend/README.md`/`scripts/run-e2e.sh` when touching UI or tests.
 
-### Tech Stack
-- **Backend**: Python 3.9+ with FastAPI, PostgreSQL, Pydantic validation, JWT authentication
-- **Frontend**: React 19 with TypeScript, Material-UI, TanStack Query, Zustand, Vite
-- **Development**: Poetry for Python dependencies, npm for frontend, Vitest for frontend testing, pytest for backend
-- **Quality**: 100% test coverage required, Pylint 10.0/10.0, strict TypeScript, zero linting errors
+## Backend-specific patterns
+- Authentication, CORS, and middleware live in `api/main.py` (with JWT lifetimes and allowed origins). Follow the dependency injection style in `api/deps.py` for shared DB/session resources.
+- Database configuration is centralized in `data/config.py`; mutate `Config` only through helper functions so `.env` overrides stay consistent across `scripts/dev.sh`, `scripts/run-e2e.sh`, and CI.
+- CLI commands (`src/motido/cli/main.py`) reuse the same storage factory/score engine as the HTTP API—if you add new CLI flags, ensure they integrate with `backend_factory.create_data_manager` and `core/scoring.py` so scoring stays deterministic.
 
-### Architecture
-- Monorepo structure with `/src/motido/` (Python backend) and `/frontend/` (React app)
-- RESTful API with `/api` prefix
-- Component-based frontend with hooks and functional components
-- PostgreSQL database with in-memory fallback for development
+## Frontend conventions
+- State is held in Zustand stores (`frontend/src/store`), especially `taskStore.ts` for task filtering, sorting, and CRUD; reuse the existing `persist`+`devtools` wrappers so storage keys remain stable.
+- API traffic goes through the Axios client in `frontend/src/services/api.ts`; add endpoints there and expose them via hooks in `frontend/src/hooks` or `pages/*` to keep UI components declarative.
+- Layout/UI follows Material-UI + TanStack Query patterns—check `frontend/src/components/layout` and `frontend/src/pages` for example prop composition, and mirror the hook usage from `frontend/src/hooks/useTasks.ts` to avoid manual state handling.
+- Date handling relies on `date-fns` and `rrule`; reuse helper utilities under `frontend/src/utils` when normalizing UTC/local times for calendar, habit, and recurrence views.
 
-## Build and Test Commands
+## Testing & quality guardrails
+- Backend pytest suites live under `tests/` (e.g., `test_scoring.py`, `test_recurrence.py`, CLI regression tests). Targeted tests are required for any logic change, as the pipeline enforces 100% coverage—follow the fixture patterns in `tests/conftest.py` to reuse the factory-backed storage.
+- Frontend Vitest suites live under `frontend/tests/`, and Playwright E2E scripts live in `frontend/e2e/`; use `scripts/run-e2e.sh` to run the browser tests against Docker Postgres exactly as CI does.
+- Use `scripts/check-all.sh` as the canonical gatekeeper; document exceptions (e.g., `--skip-e2e`) when Docker can't start so reviewers understand the gap.
 
-### Quick Check (All)
-```bash
-poetry run poe check  # Runs ALL Python + Frontend checks
-```
+## Repository hygiene & cross-cutting notes
+- Always consult `.github/instructions/*.md` (Python, React/TypeScript, Node & Vitest, Angular) before editing files matching those patterns—these contain strict lint/type-check expectations beyond what the code shows.
+- Refer back to `CLAUDE.md` for project-wide mandates (100% coverage, linting perfection, testing expectations) before claiming work is complete.
+- When adding new configuration, update `.env.example` and verify `scripts/dev.sh`, `scripts/run-e2e.sh`, and `scripts/check-all.sh` honor the new defaults so local dev and CI stay in sync.
 
-### Python Backend
-```bash
-poetry run poe format      # Black + isort
-poetry run poe lint        # Pylint (must score 10.0/10.0)
-poetry run poe typecheck   # Mypy strict mode
-poetry run poe test        # pytest
-poetry run poe coverage    # pytest with 100% coverage
-poetry run poe check-python  # All Python checks
-```
-
-### Frontend (from frontend/ directory)
-```bash
-npm run lint          # ESLint
-npx tsc --noEmit      # TypeScript type checking
-npm run test          # Vitest
-npm run build         # Production build
-```
-
-From project root:
-```bash
-poetry run poe frontend-check  # All frontend checks
-```
-
-## Code Style Guidelines
-
-### Python
-- Python 3.9+ with type hints (checked by mypy strict mode)
-- Line length: 88 characters (Black default)
-- Imports: isort with Black profile
-- Naming: snake_case for variables/functions, PascalCase for classes, UPPER_CASE for constants
-- Docstrings: Follow PEP 257 for all modules, classes, and functions
-- Use Enum classes for constants with limited values (Priority, Difficulty, Duration)
-- Specific exceptions with descriptive error messages
-
-### TypeScript/React
-- Functional components with hooks (React 19+)
-- TypeScript strict mode enabled
-- Material-UI components for consistent styling
-- Component composition over inheritance
-- Custom hooks for reusable logic
-- Proper prop types and interfaces
-
-### Testing
-- **Python**: pytest with 100% coverage required, test all new functionality
-- **Frontend**: Vitest for unit/integration tests, React Testing Library patterns
-- Test edge cases and error conditions
-- Mock external dependencies appropriately
-
-## CI/CD Requirements (MANDATORY)
-
-**Before completing ANY feature or fix:**
-```bash
-poetry run poe check  # Must pass ALL checks
-```
-
-This enforces:
-- Python: format, lint (10.0/10.0), typecheck (0 errors), coverage (100%)
-- Frontend: lint (ESLint), typecheck (TypeScript), test (Vitest), build
-
-**These checks are enforced by GitHub Actions CI on every PR. Do NOT submit code that fails these checks.**
-
-## Development Workflow
-
-1. **Analyze Impact**: Consider changes across motido.core, motido.data, motido.cli, motido.api
-2. **Write Code**: Clear, readable, efficient code with appropriate type hints
-3. **Format**: Run `poetry run poe format` for Python
-4. **Test**: Write comprehensive tests for ALL new/modified functionality
-5. **Verify**: Run `poetry run poe check` before submitting
-6. **Document**: Update docstrings and README if needed
-
-## Security Best Practices
-
-- Sanitize user inputs to prevent XSS and SQL injection
-- Validate all data with Pydantic models
-- Use JWT for authentication with secure secret keys
-- Never store sensitive data in localStorage or commit secrets
-- Use environment variables for configuration (see .env.example)
-- Follow OWASP guidelines for web application security
-
-## Project Structure
-
-```
-moti-do/
-├── src/motido/           # Python backend
-│   ├── api/              # FastAPI endpoints
-│   ├── cli/              # CLI interface
-│   ├── core/             # Core business logic
-│   └── data/             # Data models and persistence
-├── frontend/             # React frontend
-│   ├── src/
-│   │   ├── components/   # React components
-│   │   ├── hooks/        # Custom hooks
-│   │   ├── services/     # API client
-│   │   └── stores/       # Zustand state
-│   └── tests/            # Frontend tests
-├── tests/                # Backend tests
-└── .github/
-    ├── instructions/     # File-type specific instructions
-    └── workflows/        # CI/CD workflows
-```
-
-## Additional Guidelines
-
-- **Dependencies**: Use Poetry for Python (pyproject.toml), npm for frontend
-- **Environment**: Use .env for configuration (copy from .env.example)
-- **Documentation**: See CLAUDE.md for detailed development requirements
-- **File-Specific**: Check .github/instructions/ for language-specific guidelines
-- **Commits**: Write clear, descriptive commit messages
-- **Quality**: Maintain "almost ridiculous" quality standards at all times
-
-## Common Patterns
-
-### Python
-- Use FastAPI dependencies for request handling
-- Pydantic models for validation
-- Async/await for I/O operations
-- Type hints everywhere
-
-### React
-- Functional components with hooks
-- TanStack Query for server state
-- Zustand for client state
-- Custom hooks for reusable logic
-- Material-UI for consistent UI
-
-## File-Type Specific Instructions
-
-This repository has detailed instructions for specific file types in `.github/instructions/`:
-- Python: `.github/instructions/python.instructions.md`
-- React/TypeScript: `.github/instructions/reactjs.instructions.md`
-- Node.js/JavaScript: `.github/instructions/nodejs-javascript-vitest.instructions.md`
-- Angular: `.github/instructions/angular.instructions.md` (reference)
-
-These instructions apply automatically to matching file patterns and provide detailed coding standards.
-
-## Running the Application
-
-### Development Mode (No Database)
-```bash
-# Backend (port 8000)
-poetry run uvicorn motido.api.main:app --reload
-
-# Frontend (port 5173)
-cd frontend && npm run dev
-```
-
-### With PostgreSQL or Supabase
-Set `DATABASE_URL` in `.env`, then run same commands above.
-
-### Development Mode Authentication
-Set `MOTIDO_DEV_MODE=true` in `.env` to bypass authentication during development.
-
-## Key Features to Understand
-
-- **XP System**: Tasks earn XP based on difficulty (EASY=10, MEDIUM=20, HARD=30, EXTREME=50)
-- **Streaks**: Daily completion tracking
-- **Badges**: Achievement system based on milestones
-- **Priority**: Tasks have priority levels (LOW, MEDIUM, HIGH, CRITICAL)
-- **Duration**: Estimated time (QUICK, SHORT, MEDIUM, LONG, EXTENDED)
-- **PWA**: Progressive Web App with offline support
-
-## Quality Standards Summary
-
-This project maintains exceptionally high quality standards:
-- **Python**: 100% test coverage, Pylint 10.0/10.0, zero Mypy errors
-- **Frontend**: Zero ESLint errors, zero TypeScript errors, all tests pass
-- **Always** run full check suite before considering work complete
-- **Never** submit code that fails CI checks
-
-When in doubt, check CLAUDE.md for comprehensive development requirements.
+## Feedback loop
+- After editing instructions or architecture-critical code, ask reviewers if any guidance is missing—point to the README, `docs/ARCHITECTURE.md`, or specific routers/stores you needed to understand.
+- If something still feels underspecified, request direct feedback on which files/topics need expanded documentation before the next iteration.

@@ -27,10 +27,13 @@ import {
   Settings as SettingsIcon,
   EmojiEvents as XPIcon,
   Logout as LogoutIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '../../store';
 import { authApi } from '../../services/api';
+import { useRefresh } from '../../hooks';
+import PullToRefreshWrapper from '../common/PullToRefreshWrapper';
 
 const DRAWER_WIDTH = 240;
 
@@ -63,6 +66,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useUserStore();
+  const { refresh, isRefreshing } = useRefresh();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -170,6 +174,22 @@ export default function MainLayout({ children }: MainLayoutProps) {
           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
             <img src="/logo-wordmark.png" alt="Motodo" style={{ height: 64, objectFit: 'contain' }} />
           </Box>
+          <IconButton
+            color="inherit"
+            onClick={refresh}
+            disabled={isRefreshing}
+            aria-label="Refresh data"
+          >
+            <RefreshIcon
+              sx={{
+                animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
+                '@keyframes spin': {
+                  '0%': { transform: 'rotate(0deg)' },
+                  '100%': { transform: 'rotate(360deg)' },
+                },
+              }}
+            />
+          </IconButton>
         </Toolbar>
       </AppBar>
 
@@ -223,7 +243,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           minHeight: '100vh',
         }}
       >
-        {children}
+        <PullToRefreshWrapper>{children}</PullToRefreshWrapper>
       </Box>
     </>
   );

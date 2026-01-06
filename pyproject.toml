@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "motido"
-version = "0.1.0"
+version = "0.2.1"
 description = "A gamified task and habit tracker with XP, streaks, and badges."
 authors = ["Warren Leitner <warrenleitner@gmail.com>"]
 readme = "README.md"
