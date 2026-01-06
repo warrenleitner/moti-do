@@ -1,0 +1,19 @@
+# Future Motodo Enhancements
+
+1. Make all fields accessible when quick adding tasks
+2. Finish the dependency template implementation thing for recurring tasks from our existing implementation plan.
+3. Compare against original plan again.
+4. See what's going on in that "some more advanced features thing:
+        Some more advanced features to work on. Create a detailed implementation plan for these features and write to to a file. Order things from easiest to most complex. At each phase we need to emphasize test coverage, and a clean pass of ALL tests, including end to end.
+        1. For penalties, we should invert some of the score multipliers. Eg, a harder/longer task is more valuable as an XP REWARD, but less harmful as a penalty. So we penalize more for skipping easy things. 
+        2. #1 means that we now have a "penalty score" in addition to the normal "xp". Which should be another field that can be displayed in the table view. I want another field (which should also be a sortable field for cards) which is the "net score". So for tasks that would CAUSE a penalty if not completed that day, the XP they provide PLUS the penalty that they avoid.
+        3. We need a special task type. A counter type. Wherein you have to complete it X times by the due date. Completing it should increment a 1 / X counter, and grant you 0.5 * 1 / X XP. Completing the task completely should grant the remaining 0.5 * X XP.
+        4. I would really like to be able to edit fields in the table view. Eg: When you click on the difficulty cell for a specific task, it opens a dropdown as if you were in the edit view, and you can change it right there. And apply that across all fields, including text/date. I know that is a major effort, so it can be implemented as a separate features if necessary.
+        5. We need to be sure that we're handling dependencies on recurring tasks correctly. This one is also a bit complicated. If a recurring task is dependent upon a recurring task, we want the new instance of the latter one in the chain to be dependent on the new instance of the earlier one in the chain. This is complicated, since teh new instances of both tasks won't be created at the same time. So somehow, the original instance of the latter task needs to "remember" the ID of hte new instance of the earlier task so that when a new instance of this latter task is created, the dependency can be created properly.
+        6. For the "from due date" recurrence correction, when we're offsetting the next instance because the task was completed late, I think I previously said make sure that the START date was in the future, but that doesn't make sense. Just make sure that the DUE date for the new instance is after the COMPLETION date for the previous instance.
+        7. We should have another filter for the task/table view which is max due date (eg, show me tasks with a due date before (or equal to) x date)
+        8. On mobile, the task cards look really busy. It would be nice if the only thing we see before expanding is the task name and maybe XP and due date. And then you need to expand it to see priority and other stuff.
+        9. Also on mobile, the filter menu is very busy, especially since all the filters stack vertically. Put some thought into that. Maybe it's as simple as hiding them behind an expand button but maybe there's something more elegant.
+        10. In the task card view, it would be nice to be able to swipe to mark a task as complete like you can in most email apps.
+5. Fix mobile viewport being too large by default
+6. Somehow force update the pwa???
