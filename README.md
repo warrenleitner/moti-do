@@ -99,9 +99,41 @@ The easiest way to run Moti-Do is with the `dev.sh` script, which starts both fr
 # Run with local Docker PostgreSQL (no cloud resources needed)
 ./scripts/dev.sh --local
 
-# Keep Docker DB running after stopping (for data persistence)
-./scripts/dev.sh --local --keep
+# Run completely offline (uses local SQLite or JSON, no Docker needed)
+./scripts/dev.sh --offline
+
+# Run in a network-isolated sandbox (Linux only, no internet access)
+./scripts/dev.sh --sandbox
 ```
+
+### Offline Mode & Local Storage
+
+Moti-Do supports running completely offline without any external dependencies or Docker.
+
+1.  **Switch to SQLite (Recommended for offline):**
+    ```bash
+    ./scripts/dev.sh --init db
+    ```
+    This creates a local `motido.db` file in `src/motido/data/`.
+
+2.  **Run in offline mode:**
+    ```bash
+    ./scripts/dev.sh --offline
+    ```
+    This unsets `DATABASE_URL` for the session and skips all Docker checks, using your configured local backend (SQLite or JSON).
+
+3.  **Run in Sandbox mode (Linux only):**
+    ```bash
+    ./scripts/dev.sh --sandbox
+    ```
+    This uses Linux network namespaces (`unshare`) to completely disable internet access for the application. The servers will only be able to communicate with each other via `127.0.0.1`. 
+
+    **Requirements for Sandbox:**
+    - Linux (WSL2 works)
+    - `socat` installed (`sudo apt install socat`)
+    - `unshare` and `nsenter` (usually pre-installed on Linux)
+
+    The script automatically bridges the sandbox ports to your host so you can still visit `http://localhost:5173` from Windows Edge while the app remains airgapped.
 
 The script:
 - Starts both backend (port 8000) and frontend (port 5173)

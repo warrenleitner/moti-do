@@ -10,6 +10,8 @@
 #   ./scripts/dev.sh                  # Default: Supabase mode (uses .env)
 #   ./scripts/dev.sh --supabase       # Explicit Supabase mode
 #   ./scripts/dev.sh --local          # Local Docker PostgreSQL mode
+#   ./scripts/dev.sh --offline        # Offline mode (SQLite/JSON, no Docker)
+#   ./scripts/dev.sh --sandbox        # Offline mode + Network Sandboxing (Linux only)
 #   ./scripts/dev.sh --local --keep   # Keep Docker DB when stopping
 #
 # Press Ctrl+C to stop all servers.
@@ -27,6 +29,8 @@ NC='\033[0m' # No Color
 # Default configuration
 MODE="supabase"
 KEEP_DB=false
+INIT_BACKEND=""
+SANDBOX=false
 
 # Parse arguments
 for arg in "$@"; do
@@ -36,6 +40,23 @@ for arg in "$@"; do
             ;;
         --local)
             MODE="local"
+            ;;
+        --offline)
+            MODE="offline"
+            ;;
+        --sandbox)
+            MODE="offline"
+            SANDBOX=true
+            ;;
+        --init)
+            # Check if next arg exists and is not another flag
+            if [[ -n "$2" && "$2" != --* ]]; then
+                INIT_BACKEND="$2"
+                shift
+            else
+                echo -e "${RED}Error: --init requires a backend type (db or json)${NC}"
+                exit 1
+            fi
             ;;
         --keep)
             KEEP_DB=true
@@ -48,12 +69,18 @@ for arg in "$@"; do
             echo "Options:"
             echo "  --supabase    Use Supabase database from .env (default)"
             echo "  --local       Use local Docker PostgreSQL database"
+            echo "  --offline     Use local file storage (SQLite/JSON) - no Docker needed"
+            echo "  --sandbox     Offline mode + Network Sandboxing (Linux only)"
+            echo "  --init TYPE   Initialize backend (db or json) and exit"
             echo "  --keep        Keep Docker DB running after stopping (only with --local)"
             echo "  -h, --help    Show this help message"
             echo ""
             echo "Examples:"
             echo "  $0                    # Start with Supabase (from .env)"
             echo "  $0 --local            # Start with local Docker PostgreSQL"
+            echo "  $0 --offline          # Start in offline mode (no Docker)"
+            echo "  $0 --sandbox          # Start in isolated sandbox (no internet)"
+            echo "  $0 --init db          # Initialize SQLite backend"
             echo "  $0 --local --keep     # Local mode, keep DB on exit"
             exit 0
             ;;
@@ -77,6 +104,81 @@ E2E_LOCK="$LOCK_DIR/e2e.lock"
 # Create lock directory if needed
 mkdir -p "$LOCK_DIR"
 
+# Handle Sandboxing (Linux only)
+if [ "$SANDBOX" = true ] && [ "$IN_SANDBOX" != "true" ]; then
+    if ! command -v unshare &> /dev/null; then
+        echo -e "${RED}Error: 'unshare' command not found. Sandboxing requires Linux namespaces.${NC}"
+        exit 1
+    fi
+    
+    if ! command -v socat &> /dev/null; then
+        echo -e "${RED}Error: 'socat' command not found. Sandboxing requires socat for the WSL bridge.${NC}"
+        echo -e "${YELLOW}Install it with: sudo apt install socat${NC}"
+        exit 1
+    fi
+    
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}  Initializing Network Sandbox${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${YELLOW}Internet access will be DISABLED.${NC}"
+    echo -e "${YELLOW}Only local communication (127.0.0.1) is allowed.${NC}"
+    echo ""
+    
+    # Trigger sudo early to cache credentials for the bridge
+    echo -e "${YELLOW}Sudo access is required for the network bridge...${NC}"
+    sudo -v
+    
+    # Re-run this script inside a new network namespace
+    # -n: new network namespace
+    # -r: map current user to root (to allow 'ip link set lo up')
+    export IN_SANDBOX=true
+    
+    # Disable common telemetry/update checks
+    export DO_NOT_TRACK=1
+    export VITE_TELEMETRY_DISABLED=1
+    export CHECKPOINT_DISABLE=1
+    export PIP_DISABLE_PIP_VERSION_CHECK=1
+    
+    # Start the sandbox in the background
+    # Use bash -c with -- so "$0" and "$@" are passed as separate args
+    # This avoids nested-quote parsing issues when re-invoking the script
+    unshare -n -r -- bash -c 'ip link set lo up; exec "$@"' -- "$0" "$@" &
+    SANDBOX_PID=$!
+    
+    echo -e "${GREEN}Sandbox started with PID: $SANDBOX_PID${NC}"
+    echo -e "${YELLOW}Waiting for servers to initialize...${NC}"
+    sleep 5
+    
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}  WSL Bridge: Connecting Windows to Sandbox${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "To access the app from Windows Edge, keep this terminal open."
+    echo ""
+    
+    # Use socat to bridge the ports from host to sandbox
+    # This allows Windows to see the ports while the app remains airgapped
+    # Note: sudo is required for nsenter to join the network namespace
+    # We escape colons (\:) in the inner address because socat uses : as a separator
+    echo -e "[*] Bridge active: http://localhost:5173 -> Sandbox:5173"
+    socat TCP-LISTEN:5173,fork,reuseaddr "SYSTEM:sudo nsenter -t $SANDBOX_PID -n socat - TCP\:127.0.0.1\:5173" &
+    BRIDGE_PID1=$!
+    
+    echo -e "[*] Bridge active: http://localhost:8000 -> Sandbox:8000"
+    socat TCP-LISTEN:8000,fork,reuseaddr "SYSTEM:sudo nsenter -t $SANDBOX_PID -n socat - TCP\:127.0.0.1\:8000" &
+    BRIDGE_PID2=$!
+
+    echo ""
+    echo -e "${YELLOW}[!] Press Ctrl+C to stop the bridge and sandbox${NC}"
+    echo ""
+
+    # Wait for user to stop
+    trap "kill $BRIDGE_PID1 $BRIDGE_PID2 $SANDBOX_PID 2>/dev/null; exit 0" INT TERM
+    wait $SANDBOX_PID
+    
+    kill $BRIDGE_PID1 $BRIDGE_PID2 2>/dev/null || true
+    exit 0
+fi
+
 # Check for conflicting E2E tests
 if [ -f "$E2E_LOCK" ]; then
     E2E_PID=$(cat "$E2E_LOCK" 2>/dev/null)
@@ -93,6 +195,26 @@ fi
 
 # Create our lock file
 echo $$ > "$DEV_LOCK"
+
+# Determine how to run python/poetry
+if command -v poetry &> /dev/null; then
+    PYTHON_RUN="poetry run"
+elif [ -f "$PROJECT_ROOT/.venv/bin/python" ]; then
+    PYTHON_RUN="$PROJECT_ROOT/.venv/bin/python -m"
+else
+    PYTHON_RUN="python3 -m"
+fi
+
+# Ensure src is in PYTHONPATH so motido module can be found
+export PYTHONPATH="$PROJECT_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
+
+# Handle initialization if requested
+if [ -n "$INIT_BACKEND" ]; then
+    echo -e "${GREEN}Initializing backend: $INIT_BACKEND${NC}"
+    $PYTHON_RUN motido init --backend "$INIT_BACKEND"
+    rm -f "$DEV_LOCK"
+    exit 0
+fi
 
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  Moti-Do Development Server${NC}"
@@ -133,13 +255,23 @@ cleanup() {
 }
 
 # Set up cleanup trap
-trap cleanup EXIT INT TERM
+trap cleanup INT TERM
 
 # Track if we started Docker
 DOCKER_STARTED=false
 
 # Configure database based on mode
-if [ "$MODE" = "local" ]; then
+if [ "$MODE" = "offline" ]; then
+    echo -e "${BLUE}Mode: Offline (Local SQLite/JSON)${NC}"
+    echo ""
+    
+    # Unset DATABASE_URL to force local storage
+    unset DATABASE_URL
+    
+    echo -e "${YELLOW}Using local file storage. No Docker required.${NC}"
+    echo -e "${YELLOW}To switch between SQLite and JSON, use: ./scripts/dev.sh --init [db|json]${NC}"
+
+elif [ "$MODE" = "local" ]; then
     echo -e "${BLUE}Mode: Local Docker PostgreSQL${NC}"
     echo ""
 
@@ -239,7 +371,7 @@ echo ""
 
 # Start backend
 echo -e "${GREEN}Starting backend server on http://localhost:8000...${NC}"
-poetry run uvicorn motido.api.main:app --host 0.0.0.0 --port 8000 --reload &
+$PYTHON_RUN uvicorn motido.api.main:app --host 0.0.0.0 --port 8000 --reload &
 BACKEND_PID=$!
 
 # Wait for backend to be ready
@@ -255,6 +387,23 @@ done
 if ! curl -s http://localhost:8000/api/health > /dev/null 2>&1; then
     echo -e "${RED}Backend failed to start!${NC}"
     exit 1
+fi
+
+# Check if npm is installed
+if ! command -v npm &> /dev/null; then
+    echo -e "${RED}Error: npm is not installed. Please install Node.js and npm.${NC}"
+    exit 1
+fi
+
+# Check frontend dependencies
+if [ ! -d "frontend/node_modules" ]; then
+    echo -e "${YELLOW}Frontend dependencies missing. Running npm install...${NC}"
+    cd frontend
+    if ! npm install; then
+        echo -e "${RED}Failed to install frontend dependencies!${NC}"
+        exit 1
+    fi
+    cd ..
 fi
 
 # Start frontend
@@ -285,11 +434,18 @@ echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  All servers running!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
+if [ "$SANDBOX" = true ]; then
+    echo -e "${YELLOW}SANDBOX ACTIVE: Network is isolated.${NC}"
+    echo -e "The WSL Bridge is active. You can access the app directly from Windows."
+    echo ""
+fi
 echo -e "  Frontend: ${BLUE}http://localhost:5173${NC}"
 echo -e "  Backend:  ${BLUE}http://localhost:8000${NC}"
 echo -e "  API Docs: ${BLUE}http://localhost:8000/docs${NC}"
 if [ "$MODE" = "local" ]; then
     echo -e "  Database: ${BLUE}Docker PostgreSQL (port 5433)${NC}"
+elif [ "$MODE" = "offline" ]; then
+    echo -e "  Database: ${BLUE}Local file storage (SQLite/JSON)${NC}"
 else
     if [ -n "$DATABASE_URL" ]; then
         echo -e "  Database: ${BLUE}Supabase${NC}"

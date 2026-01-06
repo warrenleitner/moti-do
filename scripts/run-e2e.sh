@@ -211,10 +211,22 @@ if curl -s http://localhost:5173 > /dev/null 2>&1; then
     FRONTEND_RUNNING=true
 fi
 
+# Determine how to run python/poetry
+if command -v poetry &> /dev/null; then
+    PYTHON_RUN="poetry run"
+elif [ -f "$PROJECT_ROOT/.venv/bin/python" ]; then
+    PYTHON_RUN="$PROJECT_ROOT/.venv/bin/python -m"
+else
+    PYTHON_RUN="python3 -m"
+fi
+
+# Ensure src is in PYTHONPATH so motido module can be found
+export PYTHONPATH="$PROJECT_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
+
 # Start backend if not running
 if [ "$BACKEND_RUNNING" = false ]; then
     echo -e "${GREEN}Starting backend server...${NC}"
-    poetry run uvicorn motido.api.main:app --host 0.0.0.0 --port 8000 &
+    $PYTHON_RUN uvicorn motido.api.main:app --host 0.0.0.0 --port 8000 &
     BACKEND_PID=$!
 
     # Wait for backend to be ready

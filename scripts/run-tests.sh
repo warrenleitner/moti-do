@@ -155,6 +155,19 @@ run_python_tests() {
     local log_file="$LOG_DIR/python_${TIMESTAMP}.log"
     local latest_link="$LOG_DIR/latest_python.log"
 
+    # Determine how to run python/poetry
+    local python_run
+    if command -v poetry &> /dev/null; then
+        python_run="poetry run"
+    elif [ -f "$PROJECT_ROOT/.venv/bin/python" ]; then
+        python_run="$PROJECT_ROOT/.venv/bin/python -m"
+    else
+        python_run="python3 -m"
+    fi
+
+    # Ensure src is in PYTHONPATH so motido module can be found
+    export PYTHONPATH="$PROJECT_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
+
     print_header "Python Tests"
     echo "Log: $log_file"
     echo "Follow: tail -f $log_file"
@@ -162,7 +175,7 @@ run_python_tests() {
     local start_time=$(date +%s)
 
     # Run pytest with coverage
-    poetry run pytest --cov=motido --cov-report=term-missing --cov-fail-under=100 > "$log_file" 2>&1
+    $python_run pytest --cov=motido --cov-report=term-missing --cov-fail-under=100 > "$log_file" 2>&1
     local exit_code=$?
 
     local duration=$(($(date +%s) - start_time))
