@@ -142,3 +142,18 @@ export const PERFORMANCE_BUDGETS = {
   dialogOpen: 2000,      // 2s max for dialog/modal open
   totalTestTime: 120000, // 2min max for any single test
 };
+
+/**
+ * Per-page load budgets for pages with heavy rendering requirements.
+ * Use getPageLoadBudget() to get the appropriate budget for a route.
+ */
+export const PAGE_LOAD_BUDGETS: Record<string, number> = {
+  '/graph': 10000,  // 10s - @xyflow/react has heavy initial render
+};
+
+/**
+ * Get the appropriate page load budget for a route.
+ */
+export function getPageLoadBudget(route: string): number {
+  return PAGE_LOAD_BUDGETS[route] ?? PERFORMANCE_BUDGETS.pageLoad;
+}
