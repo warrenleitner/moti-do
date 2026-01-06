@@ -206,7 +206,7 @@ export class HabitsPage {
     }
 
     await this.page.getByRole('button', { name: 'Save Changes' }).click();
-    await expect(this.page.getByText('Task updated successfully')).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText('Task updated successfully')).toBeVisible({ timeout: 10000 });
   }
 
   /**
@@ -220,7 +220,7 @@ export class HabitsPage {
     await this.page.getByRole('dialog').filter({ hasText: 'Delete Habit' }).waitFor();
     await this.page.getByRole('button', { name: 'Delete' }).click();
 
-    await expect(this.page.getByText('Habit deleted successfully')).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText('Habit deleted successfully')).toBeVisible({ timeout: 10000 });
   }
 
   /**

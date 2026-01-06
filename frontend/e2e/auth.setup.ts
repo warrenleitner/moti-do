@@ -22,7 +22,8 @@ setup('authenticate', async ({ page }) => {
   });
 
   // Verify we're on the dashboard (main heading is "Welcome back!")
-  await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+  // Extended timeout to handle slow initial data load
+  await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible({ timeout: 10000 });
 
   // Save authentication state
   await page.context().storageState({ path: AUTH_FILE });

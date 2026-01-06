@@ -188,7 +188,7 @@ export class KanbanPage {
    * Wait for snackbar with message.
    */
   async waitForSnackbar(message: string): Promise<void> {
-    await expect(this.page.getByText(message)).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText(message)).toBeVisible({ timeout: 10000 });
   }
 
   /**

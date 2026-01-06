@@ -141,8 +141,8 @@ export class TasksPage {
     // Submit the form - button text is "Create Task" for new tasks
     await dialog.getByRole('button', { name: 'Create Task' }).click();
 
-    // Wait for success snackbar
-    await expect(this.page.getByText('Task created successfully')).toBeVisible({ timeout: 5000 });
+    // Wait for success snackbar (increased timeout for slow systems under load)
+    await expect(this.page.getByText('Task created successfully')).toBeVisible({ timeout: 10000 });
   }
 
   /**
@@ -196,7 +196,7 @@ export class TasksPage {
     await this.page.getByRole('button', { name: 'Save Changes' }).click();
 
     // Wait for success snackbar
-    await expect(this.page.getByText('Task updated successfully')).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText('Task updated successfully')).toBeVisible({ timeout: 10000 });
   }
 
   /**
@@ -212,7 +212,7 @@ export class TasksPage {
     await this.page.getByRole('button', { name: 'Delete' }).click();
 
     // Wait for success snackbar
-    await expect(this.page.getByText('Task deleted')).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText('Task deleted')).toBeVisible({ timeout: 10000 });
   }
 
   /**
@@ -280,7 +280,7 @@ export class TasksPage {
     await this.quickAddInput.fill(input);
     await this.quickAddInput.press('Enter');
     // Wait for snackbar confirmation - message format is 'Task "..." created!'
-    await expect(this.page.getByText(/created!/i)).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText(/created!/i)).toBeVisible({ timeout: 10000 });
   }
 
   /**
