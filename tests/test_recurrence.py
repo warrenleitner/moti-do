@@ -1,5 +1,7 @@
 """Tests for recurrence logic."""
 
+# pylint: disable=too-many-lines
+
 from datetime import datetime, timedelta
 
 from motido.core.models import Priority, RecurrenceType, SubtaskRecurrenceMode, Task
@@ -855,3 +857,151 @@ def test_start_date_same_as_due_date_with_late_completion() -> None:
     # start_date should still equal due_date (0 delta preserved)
     assert new_instance.start_date is not None
     assert new_instance.start_date == new_instance.due_date
+
+
+# --- Tests for BYDAY rules with early completion ---
+
+
+def test_from_completion_byday_early_completion_not_same_due_date() -> None:
+    """Test FROM_COMPLETION with BYDAY rule doesn't return same due_date on early completion.
+
+    Bug scenario: Task due Wednesday with BYDAY=MO,WE,FR recurrence.
+    If completed early on Monday, rrule.after(Monday) returns Wednesday
+    (same as original due_date). This test ensures the fix advances to
+    the next occurrence (Friday) instead.
+
+    2024 Calendar Reference:
+    - Jan 1 = Monday (weekday 0)
+    - Jan 3 = Wednesday (weekday 2)
+    - Jan 5 = Friday (weekday 4)
+    """
+    # Task due Wednesday Jan 3 at noon
+    # BYDAY=MO,WE,FR means Monday/Wednesday/Friday each week
+    due_date = datetime(2024, 1, 3, 12, 0, 0)  # Wednesday (weekday 2)
+    assert due_date.weekday() == 2  # Verify it's Wednesday
+
+    task = Task(
+        id="parent-id",
+        title="MWF Task",
+        creation_date=datetime(2024, 1, 1),
+        due_date=due_date,
+        is_habit=True,
+        recurrence_rule="FREQ=WEEKLY;BYDAY=MO,WE,FR",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+
+    # Completed early on Monday Jan 1
+    completion_date = datetime(2024, 1, 1, 10, 0, 0)  # Monday
+    assert completion_date.weekday() == 0  # Verify it's Monday
+
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
+
+    assert new_instance is not None
+    assert new_instance.due_date is not None
+    # Without fix: rrule.after(Monday Jan 1) = Wednesday Jan 3 = same as original due_date
+    # With fix: Must be strictly after original due_date (Wednesday Jan 3)
+    # Next occurrence after Wednesday Jan 3 is Friday Jan 5
+    assert new_instance.due_date > due_date  # Must be after original due_date
+    assert new_instance.due_date.day == 5  # Friday Jan 5
+    assert new_instance.due_date.weekday() == 4  # Friday
+
+
+def test_from_completion_byday_same_day_completion() -> None:
+    """Test FROM_COMPLETION with BYDAY rule when completed on the due date.
+
+    Completing on the due date should result in the next valid BYDAY occurrence.
+
+    2024 Calendar: Jan 3 = Wednesday, Jan 5 = Friday
+    """
+    # Task due Wednesday Jan 3
+    due_date = datetime(2024, 1, 3, 12, 0, 0)  # Wednesday
+    assert due_date.weekday() == 2
+
+    task = Task(
+        id="parent-id",
+        title="MWF Task",
+        creation_date=datetime(2024, 1, 1),
+        due_date=due_date,
+        is_habit=True,
+        recurrence_rule="FREQ=WEEKLY;BYDAY=MO,WE,FR",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+
+    # Completed on time on Wednesday Jan 3
+    completion_date = datetime(2024, 1, 3, 12, 0, 0)
+
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
+
+    assert new_instance is not None
+    assert new_instance.due_date is not None
+    # Next after Wednesday Jan 3 is Friday Jan 5
+    assert new_instance.due_date.day == 5  # Friday
+    assert new_instance.due_date > due_date
+
+
+def test_from_due_date_byday_early_completion() -> None:
+    """Test FROM_DUE_DATE with BYDAY rule when completed early.
+
+    FROM_DUE_DATE uses the original due date as reference, so next_due
+    is calculated from due_date, not completion_date. The new due_date
+    should still be after both the original due_date and completion_date.
+
+    2024 Calendar: Jan 1 = Monday, Jan 3 = Wednesday, Jan 5 = Friday
+    """
+    # Task due Wednesday Jan 3
+    due_date = datetime(2024, 1, 3, 12, 0, 0)  # Wednesday
+    assert due_date.weekday() == 2
+
+    task = Task(
+        id="parent-id",
+        title="MWF Task",
+        creation_date=datetime(2024, 1, 1),
+        due_date=due_date,
+        is_habit=True,
+        recurrence_rule="FREQ=WEEKLY;BYDAY=MO,WE,FR",
+        recurrence_type=RecurrenceType.FROM_DUE_DATE,
+    )
+
+    # Completed early on Monday Jan 1
+    completion_date = datetime(2024, 1, 1, 10, 0, 0)
+    assert completion_date.weekday() == 0
+
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
+
+    assert new_instance is not None
+    assert new_instance.due_date is not None
+    # FROM_DUE_DATE: rrule.after(Wednesday Jan 3) = Friday Jan 5
+    # Already after both completion (Monday Jan 1) and due_date (Wednesday Jan 3)
+    assert new_instance.due_date.day == 5  # Friday
+    assert new_instance.due_date > due_date
+    assert new_instance.due_date > completion_date
+
+
+def test_date_only_comparison_ignores_time_of_day() -> None:
+    """Test that date comparison ignores time-of-day differences.
+
+    Completing at 11:59pm should not be treated differently than
+    completing at 12:01am the next day for recurrence purposes.
+    """
+    # Task due Jan 8 at noon
+    due_date = datetime(2024, 1, 8, 12, 0, 0)
+    task = Task(
+        id="parent-id",
+        title="Daily Task",
+        creation_date=datetime(2024, 1, 1),
+        due_date=due_date,
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+
+    # Completed at 11:59pm on Jan 8 (same day as due)
+    completion_date = datetime(2024, 1, 8, 23, 59, 0)
+
+    new_instance = create_next_habit_instance(task, completion_date=completion_date)
+
+    assert new_instance is not None
+    assert new_instance.due_date is not None
+    # Must be strictly after Jan 8 (date-only), so Jan 9
+    assert new_instance.due_date.date() > due_date.date()
+    assert new_instance.due_date.day == 9
