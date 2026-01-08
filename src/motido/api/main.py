@@ -133,12 +133,12 @@ async def advance_date(
 
     while processing_date < target_date:
         processing_date += timedelta(days=1)
+        # Update date BEFORE penalties so all saves during apply_penalties have correct date
+        user.last_processed_date = processing_date
 
         if not user.vacation_mode:
             # Apply penalties for overdue tasks
             apply_penalties(user, manager, processing_date, config, user.tasks)
-
-        user.last_processed_date = processing_date
 
     manager.save_user(user)
 
