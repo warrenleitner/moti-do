@@ -484,7 +484,7 @@ services:
 Before any PR:
 
 ```bash
-bash scripts/check-all.sh
+python3 scripts/verify.py
 ```
 
 This runs ALL checks matching CI/CD exactly.
@@ -516,15 +516,14 @@ moti-do/
 │   └── FEATURE_IMPLEMENTATION_PLAN.md
 ├── scripts/                 # Utility scripts
 │   ├── dev.sh               # Development server
-│   ├── run-e2e.sh           # E2E test runner
-│   └── check-all.sh         # Sign-off workflow
+│   └── verify.py            # Sign-off workflow (checks + optional E2E)
 ├── .github/                 # GitHub configuration
 │   └── workflows/           # CI/CD pipelines
 ├── pyproject.toml           # Python config (Poetry)
 ├── vercel.json              # Vercel deployment
 ├── docker-compose.test.yml  # Test database
 ├── README.md                # Project overview
-└── CLAUDE.md                # AI development guidelines
+└── AGENTS.md                # Agent development guidelines
 ```
 
 ### Key Configuration Files

@@ -2,7 +2,7 @@
 
 This document outlines the implementation plan for 10 advanced features, ordered from easiest to most complex. Each phase includes detailed technical specifications, testing requirements, and acceptance criteria.
 
-**Critical Requirement:** Each phase MUST pass the full test suite (`bash scripts/check-all.sh`) including E2E tests before proceeding to the next phase.
+**Critical Requirement:** Each phase MUST pass the full test suite (`python3 scripts/verify.py`) including E2E tests before proceeding to the next phase.
 
 ---
 
@@ -75,7 +75,7 @@ def _advance_to_future_start(
 ### Acceptance Criteria
 - [ ] New due date is always > completion date for FROM_DUE_DATE recurrence
 - [ ] All existing recurrence tests pass
-- [ ] `bash scripts/check-all.sh` passes
+- [ ] `python3 scripts/verify.py` passes
 
 ---
 
@@ -145,7 +145,7 @@ if (filters.maxDueDate) {
 - [ ] Setting a date filters tasks correctly
 - [ ] Active filter chip shows selected date
 - [ ] Clear button removes the filter
-- [ ] `bash scripts/check-all.sh` passes
+- [ ] `python3 scripts/verify.py` passes
 
 ---
 
@@ -216,7 +216,7 @@ const hasDetails = isMobile || !!task.text_description || !!task.tags?.length ||
 - [ ] Expanding card reveals all metadata
 - [ ] Desktop cards unchanged (show all metadata)
 - [ ] Expand button always visible on mobile
-- [ ] `bash scripts/check-all.sh` passes
+- [ ] `python3 scripts/verify.py` passes
 
 ---
 
@@ -295,7 +295,7 @@ const isMobile = useMediaQuery('(max-width: 768px)');
 - [ ] Filter button shows count of active filters
 - [ ] Drawer contains all filter options
 - [ ] Desktop FilterBar unchanged
-- [ ] `bash scripts/check-all.sh` passes
+- [ ] `python3 scripts/verify.py` passes
 
 ---
 
@@ -378,7 +378,7 @@ penalty_inversion_enabled: bool = True  # Allow toggling behavior
 - [ ] Trivial tasks penalized ~25x more than Herculean tasks
 - [ ] Penalty formula documented in code comments
 - [ ] All existing scoring tests updated/passing
-- [ ] `bash scripts/check-all.sh` passes
+- [ ] `python3 scripts/verify.py` passes
 
 ---
 
@@ -492,7 +492,7 @@ interface Task {
 - [ ] net_score = XP + penalty for due/overdue tasks
 - [ ] Table columns sortable by new fields
 - [ ] TaskCard shows net score when penalty applies
-- [ ] `bash scripts/check-all.sh` passes
+- [ ] `python3 scripts/verify.py` passes
 
 ---
 
@@ -603,7 +603,7 @@ export function SwipeableTaskCard({ task, onComplete, children }: SwipeableTaskC
 - [ ] Visual feedback during swipe (green background)
 - [ ] Blocked tasks cannot be swiped
 - [ ] Desktop behavior unchanged (click-based)
-- [ ] `bash scripts/check-all.sh` passes
+- [ ] `python3 scripts/verify.py` passes
 
 ---
 
@@ -736,7 +736,7 @@ interface Task {
 - [ ] XP awarded proportionally per increment
 - [ ] Final completion awards remaining XP
 - [ ] Progress displayed in card and table
-- [ ] `bash scripts/check-all.sh` passes
+- [ ] `python3 scripts/verify.py` passes
 
 ---
 
@@ -857,7 +857,7 @@ async def add_dependency_template(task_id: str, parent_habit_id: str):
 - [ ] New instances resolve to correct dependency instances
 - [ ] Blocked status calculated correctly
 - [ ] Dependency graph shows template relationships
-- [ ] `bash scripts/check-all.sh` passes
+- [ ] `python3 scripts/verify.py` passes
 
 ---
 
@@ -1038,7 +1038,7 @@ const FIELD_VALIDATORS: Record<string, (value: any) => string | null> = {
 - [ ] Escape cancels without saving
 - [ ] Validation errors shown inline
 - [ ] Optimistic updates with rollback
-- [ ] `bash scripts/check-all.sh` passes
+- [ ] `python3 scripts/verify.py` passes
 
 ---
 
@@ -1068,7 +1068,7 @@ Before each phase is considered complete:
 1. [ ] All new code has unit test coverage
 2. [ ] All existing tests still pass
 3. [ ] E2E tests cover new user workflows
-4. [ ] `bash scripts/check-all.sh` passes completely
+4. [ ] `python3 scripts/verify.py` passes completely
 5. [ ] Code reviewed for security vulnerabilities
 6. [ ] No TypeScript errors
 7. [ ] No ESLint warnings
