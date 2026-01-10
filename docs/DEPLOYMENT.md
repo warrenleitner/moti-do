@@ -406,10 +406,10 @@ The CI pipeline (`.github/workflows/ci.yml`) runs on every PR and push to main:
 
 ```bash
 # Run all checks (recommended before PR)
-bash scripts/check-all.sh
+python3 scripts/verify.py
 
 # Skip E2E tests (faster, less thorough)
-bash scripts/check-all.sh --skip-e2e
+python3 scripts/verify.py --skip-e2e
 ```
 
 ## Monitoring and Maintenance
@@ -490,11 +490,11 @@ poetry run pytest
 # Kill any process on ports 5173, 8000, 5433
 
 # Run E2E tests with fresh state
-bash scripts/run-e2e.sh
+python3 scripts/verify.py
 ```
 
 **Problem:** Docker not available
 ```bash
 # Use JSON storage instead
-bash scripts/run-e2e.sh --no-docker
+python3 scripts/verify.py --no-docker
 ```

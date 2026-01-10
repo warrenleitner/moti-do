@@ -118,7 +118,7 @@ Tests are co-located with components (`.test.tsx` files).
 
 ```bash
 # From project root (recommended)
-bash scripts/run-e2e.sh
+python3 scripts/verify.py
 
 # Or from frontend directory
 npm run test:e2e

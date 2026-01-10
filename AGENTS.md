@@ -6,12 +6,15 @@ This repo uses automated agents (Copilot, Claude, etc.). This file is the single
 
 Run from project root:
 
-- Full suite (Python + Frontend + E2E): `bash scripts/verify.sh`
+- Full suite (Python + Frontend + E2E): `python3 scripts/verify.py`
 
 Notes:
-- `scripts/verify.sh` is intentionally **quiet**: it prints only a one-line status per step, and prints detailed logs only when a step fails.
+- `scripts/verify.py` is intentionally **quiet**: it prints only a one-line status per step, and prints detailed logs only when a step fails.
+- `scripts/verify.py` supports checkpointed resume: if a step fails, the next run resumes from that step and then loops back to complete the full suite.
+- Use `python3 scripts/verify.py --clear-checkpoint` to discard the saved failure checkpoint and start from the beginning.
+- If a checkpoint exists and you change flags (e.g., `--skip-e2e`, `--no-docker`, Playwright args), `scripts/verify.py` will refuse to resume; clear the checkpoint or re-run with matching flags.
 - E2E uses a local Docker PostgreSQL by default (port 5433). Use `--no-docker` to force JSON storage.
-- Playwright args pass through: `bash scripts/verify.sh --ui`, `bash scripts/verify.sh auth`, etc.
+- Playwright args pass through: `python3 scripts/verify.py --ui`, `python3 scripts/verify.py auth`, etc.
 
 ## Local development
 

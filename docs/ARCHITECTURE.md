@@ -484,7 +484,7 @@ services:
 Before any PR:
 
 ```bash
-bash scripts/check-all.sh
+python3 scripts/verify.py
 ```
 
 This runs ALL checks matching CI/CD exactly.
@@ -516,7 +516,7 @@ moti-do/
 │   └── FEATURE_IMPLEMENTATION_PLAN.md
 ├── scripts/                 # Utility scripts
 │   ├── dev.sh               # Development server
-│   └── verify.sh            # Sign-off workflow (checks + optional E2E)
+│   └── verify.py            # Sign-off workflow (checks + optional E2E)
 ├── .github/                 # GitHub configuration
 │   └── workflows/           # CI/CD pipelines
 ├── pyproject.toml           # Python config (Poetry)

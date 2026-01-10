@@ -260,7 +260,7 @@ This project uses [Poe the Poet](https://github.com/nat-n/poethepoet) for task r
 **Scripts (in `scripts/` directory):**
 *   **`./scripts/dev.sh`** ⭐ **Start development servers** (frontend + backend)
 *   **`./scripts/dev.sh --local`** - Use local Docker PostgreSQL instead of Supabase
-*   **`./scripts/verify.sh`** ⭐ **Sign-off workflow** - Run all checks before committing
+*   **`python3 scripts/verify.py`** ⭐ **Sign-off workflow** - Run all checks before committing
 
 **Poe tasks** (run with `poetry run poe <task_name>`):
 
@@ -309,19 +309,23 @@ E2E tests use Playwright to test full user workflows through the browser with a 
 
 ```bash
 # Run from project root (starts Docker PostgreSQL + servers automatically)
-bash scripts/verify.sh
+python3 scripts/verify.py
 
 # Run with Playwright UI for debugging
-bash scripts/verify.sh --ui
+python3 scripts/verify.py --ui
 
 # Keep Docker database running after tests (for inspection)
-bash scripts/verify.sh --keep-db
+python3 scripts/verify.py --keep-db
 
 # Use JSON storage instead of Docker (faster, less realistic)
-bash scripts/verify.sh --no-docker
+python3 scripts/verify.py --no-docker
 
 # Run unit checks only (skip E2E)
-bash scripts/verify.sh --skip-e2e
+python3 scripts/verify.py --skip-e2e
+
+# If a previous run failed, verify.py resumes from the failed step by default.
+# To start from the beginning, clear the checkpoint:
+python3 scripts/verify.py --clear-checkpoint
 ```
 
 **Prerequisites for E2E tests:**
@@ -340,7 +344,7 @@ Before submitting code, ensure all checks pass:
 
 **Sign-Off Workflow (Required):**
 ```bash
-bash scripts/verify.sh      # Official sign-off - run before committing
+python3 scripts/verify.py      # Official sign-off - run before committing
 ```
 
 This is the **official sign-off workflow** that matches our CI/CD pipeline exactly.
@@ -350,7 +354,7 @@ This single command verifies:
 - Frontend: lint (ESLint), typecheck (TypeScript), test (Vitest), build
 - E2E: Playwright tests against Docker PostgreSQL
 
-**Skip E2E tests:** `bash scripts/verify.sh --skip-e2e` (use sparingly)
+**Skip E2E tests:** `python3 scripts/verify.py --skip-e2e` (use sparingly)
 
 **Alternative:** `poetry run poe check` (unit tests only, no E2E)
 
@@ -542,7 +546,7 @@ Key requirements:
 - 100% test coverage for Python and frontend code
 - Pylint score 10.0/10.0
 - Zero TypeScript/ESLint errors
-- All CI checks must pass (run `bash scripts/verify.sh`)
+- All CI checks must pass (run `python3 scripts/verify.py`)
 
 ## License
 
