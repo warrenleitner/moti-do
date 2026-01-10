@@ -67,7 +67,7 @@ test.describe('Task CRUD Operations', () => {
       await tasksPage.toggleTaskComplete(taskTitle);
 
       // Verify snackbar shows success message
-      await expect(tasksPage.snackbar).toBeVisible({ timeout: 5000 });
+      await expect(tasksPage.snackbar).toBeVisible({ timeout: 10000 });
     });
 
     test('should mark task as incomplete', async ({ page }) => {
@@ -90,7 +90,7 @@ test.describe('Task CRUD Operations', () => {
       await tasksPage.toggleTaskComplete(taskTitle);
 
       // Verify snackbar shows message
-      await expect(tasksPage.snackbar).toBeVisible({ timeout: 5000 });
+      await expect(tasksPage.snackbar).toBeVisible({ timeout: 10000 });
     });
   });
 

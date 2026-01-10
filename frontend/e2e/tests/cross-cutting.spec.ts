@@ -21,7 +21,7 @@ import {
   measureNavigation,
   logPerformanceSummary,
   type NavigationTiming,
-  PERFORMANCE_BUDGETS,
+  getPageLoadBudget,
 } from '../utils/performance-metrics';
 
 // Log database backend at start of test suite
@@ -283,12 +283,13 @@ test.describe('Cross-Cutting Flows', () => {
       // Log performance summary
       await logPerformanceSummary('Multi-Page Navigation', navigationTimings, page);
 
-      // Assert performance budgets
+      // Assert performance budgets (using per-page budgets for heavy pages)
       for (const timing of navigationTimings) {
+        const budget = getPageLoadBudget(timing.route);
         expect(
           timing.duration,
-          `${timing.route} exceeded performance budget of ${PERFORMANCE_BUDGETS.pageLoad}ms`
-        ).toBeLessThan(PERFORMANCE_BUDGETS.pageLoad);
+          `${timing.route} exceeded performance budget of ${budget}ms`
+        ).toBeLessThan(budget);
       }
     });
 

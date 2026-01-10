@@ -90,3 +90,16 @@ body {
 .animate-slide-in {
   animation: slideIn 0.2s ease-out;
 }
+
+/* Prevent iOS Safari auto-zoom on form inputs */
+/* iOS zooms in on inputs with font-size < 16px, which causes the "need to zoom out" issue */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Also apply to MUI TextField inputs which may be nested */
+  .MuiInputBase-input {
+    font-size: 16px !important;
+  }
+}

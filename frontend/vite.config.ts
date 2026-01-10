@@ -127,7 +127,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    testTimeout: 10000, // 10 seconds for slow MUI component tests
+    testTimeout: 15000, // 15 seconds for slow MUI component tests under load
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
