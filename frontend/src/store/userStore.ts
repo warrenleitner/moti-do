@@ -284,11 +284,36 @@ export const useUserStore = create<UserState>()(
         advanceDate: async (params) => {
           set({ isLoading: true, error: null });
           try {
-            const status = await systemApi.advanceDate({
-              days: params?.days,
+            const initialPendingDays = get().systemStatus?.pending_days ?? 0;
+            const requestedDays = params?.days;
+
+            const shouldLoopUntilCaughtUp =
+              !params?.toDate &&
+              (requestedDays === undefined ||
+                (initialPendingDays > 0 && requestedDays === initialPendingDays));
+
+            const maxIterations = 50;
+            let iterations = 0;
+
+            let status = await systemApi.advanceDate({
+              days: requestedDays,
               to_date: params?.toDate,
             });
-            set({ systemStatus: status, isLoading: false });
+            set({ systemStatus: status });
+
+            while (shouldLoopUntilCaughtUp && status.pending_days > 0) {
+              iterations += 1;
+              if (iterations >= maxIterations) {
+                break;
+              }
+
+              status = await systemApi.advanceDate({
+                days: status.pending_days,
+              });
+              set({ systemStatus: status });
+            }
+
+            set({ isLoading: false });
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to advance date';
             set({ error: message, isLoading: false });

@@ -765,6 +765,51 @@ describe('userStore', () => {
       expect(state.error).toBeNull();
     });
 
+    it('should loop until caught up when processing all pending days', async () => {
+      act(() => {
+        useUserStore.setState({
+          systemStatus: {
+            last_processed_date: '2024-01-01',
+            current_date: '2024-01-03',
+            vacation_mode: false,
+            pending_days: 2,
+          },
+        });
+      });
+
+      vi.mocked(systemApi.advanceDate)
+        .mockResolvedValueOnce({
+          last_processed_date: '2024-01-02',
+          current_date: '2024-01-03',
+          vacation_mode: false,
+          pending_days: 1,
+        })
+        .mockResolvedValueOnce({
+          last_processed_date: '2024-01-03',
+          current_date: '2024-01-03',
+          vacation_mode: false,
+          pending_days: 0,
+        });
+
+      await act(async () => {
+        await useUserStore.getState().advanceDate({ days: 2 });
+      });
+
+      expect(systemApi.advanceDate).toHaveBeenCalledTimes(2);
+      expect(systemApi.advanceDate).toHaveBeenNthCalledWith(1, {
+        days: 2,
+        to_date: undefined,
+      });
+      expect(systemApi.advanceDate).toHaveBeenNthCalledWith(2, {
+        days: 1,
+      });
+
+      const state = useUserStore.getState();
+      expect(state.systemStatus?.pending_days).toBe(0);
+      expect(state.isLoading).toBe(false);
+      expect(state.error).toBeNull();
+    });
+
     it('should handle advance date error', async () => {
       vi.mocked(systemApi.advanceDate).mockRejectedValue(new Error('Advance error'));
 

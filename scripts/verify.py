@@ -423,6 +423,12 @@ def e2e_setup_db(config: VerifyConfig, state: RuntimeState) -> None:
         timeout_seconds=30,
     )
 
+    # Point the backend (and Playwright global-setup) at the ephemeral test DB.
+    # This intentionally overrides any developer-provided DATABASE_URL.
+    os.environ["DATABASE_URL"] = (
+        "postgresql://motido_test:motido_test_password@localhost:5433/motido_test"
+    )
+
 
 def ensure_docker_running() -> None:
     """Ensure docker daemon is available; try colima if present."""
@@ -503,10 +509,16 @@ def e2e_ensure_backend(config: VerifyConfig, state: RuntimeState) -> None:
         "8000",
     ]
 
+    env = os.environ.copy()
+    # Ensure we run against the workspace source tree (src/) rather than an
+    # installed package, so E2E reset logic can reliably delete users.json.
+    env["PYTHONPATH"] = str(PROJECT_ROOT / "src")
+
     with BACKEND_LOG.open("wb") as out:
         state.backend_proc = subprocess.Popen(
             cmd,
             cwd=str(PROJECT_ROOT),
+            env=env,
             stdout=out,
             stderr=subprocess.STDOUT,
         )

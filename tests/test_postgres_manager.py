@@ -8,6 +8,7 @@ Tests use mocks to avoid requiring an actual database connection.
 # pylint: disable=import-outside-toplevel,protected-access,unused-argument
 
 from datetime import date, datetime
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -21,6 +22,7 @@ from motido.core.models import (
     RecurrenceType,
     SubtaskRecurrenceMode,
     Tag,
+    Task,
     User,
     XPTransaction,
 )
@@ -351,6 +353,145 @@ def test_load_user_error(mock_print: Any, mock_psycopg2: Any) -> None:
 
 @patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
 @patch("motido.data.postgres_manager.psycopg2")
+def test_load_user_reraises_non_psycopg2_error(mock_psycopg2: Any) -> None:
+    """Test that load_user re-raises exceptions that are not psycopg2.Error."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    # Create a mock error class for psycopg2.Error
+    mock_error = type("Error", (Exception,), {})
+    mock_psycopg2.Error = mock_error
+
+    mock_psycopg2.connect.side_effect = ValueError("Unexpected")
+
+    manager = PostgresDataManager("postgresql://test")
+
+    with pytest.raises(ValueError):
+        manager.load_user("testuser")
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+@patch("motido.data.postgres_manager.psycopg2")
+def test_can_use_execute_values_detects_real_cursor_encoding(
+    mock_psycopg2: Any,
+) -> None:
+    """Test _can_use_execute_values with non-mock cursor stubs."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    # Create a mock error class for psycopg2.Error to satisfy constructor.
+    mock_error = type("Error", (Exception,), {})
+    mock_psycopg2.Error = mock_error
+
+    manager = PostgresDataManager("postgresql://test")
+
+    cursor_no_encoding = SimpleNamespace(connection=SimpleNamespace(encoding=None))
+    cursor_utf8 = SimpleNamespace(connection=SimpleNamespace(encoding="UTF8"))
+
+    assert manager._can_use_execute_values(cursor_no_encoding) is False
+    assert manager._can_use_execute_values(cursor_utf8) is True
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+@patch("motido.data.postgres_manager.execute_values")
+@patch("motido.data.postgres_manager.psycopg2")
+def test_bulk_upsert_uses_execute_values_when_possible(
+    mock_psycopg2: Any, mock_execute_values: Any
+) -> None:
+    """Test that _bulk_upsert uses execute_values when cursor supports it."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    mock_error = type("Error", (Exception,), {})
+    mock_psycopg2.Error = mock_error
+
+    manager = PostgresDataManager("postgresql://test")
+
+    cursor = SimpleNamespace(
+        connection=SimpleNamespace(encoding="UTF8"),
+        execute=MagicMock(),
+    )
+
+    manager._bulk_upsert(cursor, "VALUES %s", "VALUES (%s)", [("x",)])
+    mock_execute_values.assert_called_once()
+    cursor.execute.assert_not_called()
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+@patch("motido.data.postgres_manager.psycopg2")
+def test_save_user_deletes_xp_when_no_transactions(mock_psycopg2: Any) -> None:
+    """Test xp delete branch when user has no xp_transactions."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_psycopg2.connect.return_value.__enter__.return_value = mock_conn
+
+    user = User(username="testuser", total_xp=0, tasks=[], xp_transactions=[])
+
+    manager = PostgresDataManager("postgresql://test")
+    manager.save_user(user)
+
+    assert any(
+        "DELETE FROM xp_transactions WHERE user_username" in str(call)
+        for call in mock_cursor.execute.call_args_list
+    )
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+@patch("motido.data.postgres_manager.psycopg2")
+@patch("motido.data.postgres_manager.print")
+def test_save_user_progress_error(mock_print: Any, mock_psycopg2: Any) -> None:
+    """Test save_user_progress error handling."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_psycopg2.connect.return_value.__enter__.return_value = mock_conn
+
+    mock_cursor.execute.side_effect = RuntimeError("Save progress failed")
+
+    manager = PostgresDataManager("postgresql://test")
+    user = User(username="testuser")
+
+    with pytest.raises(RuntimeError):
+        manager.save_user_progress(user)
+
+    assert any(
+        "Error saving user progress" in str(call) for call in mock_print.call_args_list
+    )
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+@patch("motido.data.postgres_manager.psycopg2")
+def test_save_user_progress_success(mock_psycopg2: Any) -> None:
+    """Test save_user_progress success path persists user fields + XP only."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_psycopg2.connect.return_value.__enter__.return_value = mock_conn
+
+    xp_trans = XPTransaction(
+        id="trans1",
+        amount=50,
+        source="daily_earned",
+        timestamp=datetime.now(),
+        description="Earned 50 XP",
+        game_date=date(2025, 1, 1),
+    )
+    user = User(username="testuser", total_xp=100, xp_transactions=[xp_trans])
+    setattr(user, "_dirty_xp_transaction_ids", {"trans1"})
+
+    manager = PostgresDataManager("postgresql://test")
+    manager.save_user_progress(user)
+
+    mock_conn.commit.assert_called_once()
+    assert getattr(user, "_dirty_xp_transaction_ids") == set()
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+@patch("motido.data.postgres_manager.psycopg2")
 @patch("motido.data.postgres_manager.print")
 def test_save_user_success(mock_print: Any, mock_psycopg2: Any) -> None:
     """Test successful user saving."""
@@ -385,6 +526,76 @@ def test_save_user_success(mock_print: Any, mock_psycopg2: Any) -> None:
     # Verify user insert, task delete, xp delete, and xp insert
     assert mock_cursor.execute.call_count >= 4
     mock_conn.commit.assert_called_once()
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+@patch("motido.data.postgres_manager.psycopg2")
+@patch("motido.data.postgres_manager.print")
+def test_save_user_with_tasks_uses_row_fallback_for_bulk_upsert(
+    mock_print: Any, mock_psycopg2: Any
+) -> None:
+    """Test save_user with tasks triggers row-by-row fallback under mocked cursor."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_psycopg2.connect.return_value.__enter__.return_value = mock_conn
+
+    task = Task(
+        title="Test Task",
+        creation_date=datetime.now(),
+        priority=Priority.HIGH,
+        difficulty=Difficulty.MEDIUM,
+        duration=Duration.SHORT,
+    )
+
+    xp_trans = XPTransaction(
+        id="trans1",
+        amount=50,
+        source="daily_earned",
+        timestamp=datetime.now(),
+        description="Earned 50 XP",
+        game_date=date(2025, 1, 1),
+    )
+
+    user = User(
+        username="testuser",
+        total_xp=100,
+        tasks=[task],
+        defined_tags=[Tag(id="1", name="work", color="#ff0000")],
+        defined_projects=[Project(id="1", name="Project1", color="#00ff00")],
+        xp_transactions=[xp_trans],
+    )
+
+    # Simulate dirty tracking so only one transaction is upserted.
+    setattr(user, "_dirty_xp_transaction_ids", {"trans1"})
+
+    manager = PostgresDataManager("postgresql://test")
+    manager.save_user(user)
+
+    # Under MagicMock cursor, bulk upsert falls back to per-row execute calls.
+    assert mock_cursor.execute.call_count >= 4
+    mock_conn.commit.assert_called_once()
+
+
+@patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)
+@patch("motido.data.postgres_manager.psycopg2")
+def test_bulk_upsert_empty_rows_is_noop(mock_psycopg2: Any) -> None:
+    """Test that _bulk_upsert is a no-op when rows are empty."""
+    from motido.data.postgres_manager import PostgresDataManager
+
+    manager = PostgresDataManager("postgresql://test")
+    mock_cursor = MagicMock()
+
+    manager._bulk_upsert(
+        mock_cursor,
+        "INSERT INTO x VALUES %s",
+        "INSERT INTO x VALUES (%s)",
+        [],
+    )
+
+    mock_cursor.execute.assert_not_called()
 
 
 @patch("motido.data.postgres_manager.POSTGRES_AVAILABLE", True)

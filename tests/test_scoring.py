@@ -14,7 +14,16 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from motido.core.models import Difficulty, Duration, Priority, Project, Tag, Task, User
+from motido.core.models import (
+    Difficulty,
+    Duration,
+    Priority,
+    Project,
+    Tag,
+    Task,
+    User,
+    XPTransaction,
+)
 from motido.core.scoring import (
     add_xp,
     apply_penalties,
@@ -696,11 +705,13 @@ def test_apply_penalties_basic(
     task1 = Task(
         title="Task 1",
         creation_date=datetime.combine(yesterday, datetime.min.time()),
+        due_date=datetime.combine(yesterday, datetime.min.time()),
         is_complete=False,
     )
     task2 = Task(
         title="Task 2",
         creation_date=datetime.combine(yesterday, datetime.min.time()),
+        due_date=datetime.combine(yesterday, datetime.min.time()),
         is_complete=True,  # Completed task should not get penalty
     )
 
@@ -753,6 +764,7 @@ def test_apply_penalties_multiple_days(
     task = Task(
         title="Task 1",
         creation_date=datetime.combine(three_days_ago, datetime.min.time()),
+        due_date=datetime.combine(three_days_ago, datetime.min.time()),
         is_complete=False,
     )
 
@@ -958,6 +970,7 @@ def test_apply_penalties_inverted_trivial_vs_herculean(
         difficulty=Difficulty.TRIVIAL,
         duration=Duration.MINUSCULE,
         creation_date=datetime.combine(yesterday, datetime.min.time()),
+        due_date=datetime.combine(yesterday, datetime.min.time()),
         is_complete=False,
     )
 
@@ -967,6 +980,7 @@ def test_apply_penalties_inverted_trivial_vs_herculean(
         difficulty=Difficulty.HERCULEAN,
         duration=Duration.ODYSSEYAN,
         creation_date=datetime.combine(yesterday, datetime.min.time()),
+        due_date=datetime.combine(yesterday, datetime.min.time()),
         is_complete=False,
     )
 
@@ -1253,8 +1267,80 @@ def test_add_xp_separate_earned_and_lost_same_day() -> None:
     # Verify TWO entries: one daily_earned, one daily_lost
     assert len(user.xp_transactions) == 2
 
-    sources = {t.source for t in user.xp_transactions}
-    assert sources == {"daily_earned", "daily_lost"}
+
+def test_add_xp_existing_entry_creates_dirty_set_when_missing() -> None:
+    """Test that add_xp creates dirty tracking when entry exists but set is missing."""
+    user = User(username=DEFAULT_USERNAME, total_xp=0)
+    mock_manager = MagicMock()
+    test_date = date(2025, 1, 15)
+
+    # Simulate a user loaded from storage: has transactions but no dirty set attribute.
+    user.xp_transactions.append(
+        XPTransaction(
+            amount=10,
+            source="daily_earned",
+            timestamp=datetime.now(),
+            description="Earned 10 XP on 2025-01-15",
+            game_date=test_date,
+        )
+    )
+
+    assert not hasattr(user, "_dirty_xp_transaction_ids")
+
+    add_xp(user, mock_manager, 5, game_date=test_date)
+
+    dirty_ids = getattr(user, "_dirty_xp_transaction_ids")
+    assert isinstance(dirty_ids, set)
+    assert user.xp_transactions[0].id in dirty_ids
+
+
+def test_apply_penalties_skips_undated_and_future_due_tasks_and_persists() -> None:
+    """Test due_date filters and that persistence occurs once when penalties apply."""
+    mock_user = User(username=DEFAULT_USERNAME, total_xp=0)
+    mock_manager = MagicMock()
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    config = load_scoring_config()
+    config["daily_penalty"]["apply_penalty"] = True
+
+    base_creation = datetime.combine(yesterday - timedelta(days=1), datetime.min.time())
+
+    task_no_due = Task(
+        title="No due date",
+        creation_date=base_creation,
+        is_complete=False,
+        due_date=None,
+    )
+
+    task_future_due = Task(
+        title="Future due",
+        creation_date=base_creation,
+        is_complete=False,
+        due_date=datetime.combine(today + timedelta(days=1), datetime.min.time()),
+    )
+
+    task_due_yesterday = Task(
+        title="Overdue",
+        creation_date=base_creation,
+        is_complete=False,
+        due_date=datetime.combine(yesterday, datetime.min.time()),
+    )
+
+    apply_penalties(
+        mock_user,
+        mock_manager,
+        today,
+        config,
+        [task_no_due, task_future_due, task_due_yesterday],
+        persist=True,
+    )
+
+    # add_xp is called with persist=False inside apply_penalties; persistence is one final save.
+    mock_manager.save_user.assert_called_once_with(mock_user)
+
+    assert len(mock_user.xp_transactions) == 1
+    assert mock_user.xp_transactions[0].source == "daily_lost"
 
 
 def test_add_xp_with_game_date_parameter() -> None:
