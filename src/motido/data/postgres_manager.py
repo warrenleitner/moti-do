@@ -33,7 +33,7 @@ from .abstraction import DEFAULT_USERNAME, DataManager
 # Try to import psycopg2, but allow graceful fallback
 try:
     import psycopg2  # pragma: no cover
-    from psycopg2.extras import RealDictCursor  # pragma: no cover
+    from psycopg2.extras import RealDictCursor, execute_values  # pragma: no cover
 
     POSTGRES_AVAILABLE = True  # pragma: no cover
 except ImportError:  # pragma: no cover
@@ -73,8 +73,11 @@ class PostgresDataManager(DataManager):
         try:
             conn = psycopg2.connect(self._database_url, cursor_factory=RealDictCursor)
             return conn
-        except psycopg2.Error as e:
-            print(f"Error connecting to PostgreSQL database: {e}")
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            error_type = getattr(psycopg2, "Error", None)
+            if isinstance(error_type, type) and issubclass(error_type, BaseException):
+                if isinstance(e, error_type):
+                    print(f"Error connecting to PostgreSQL database: {e}")
             raise
 
     def _create_tables(self, conn: "psycopg2.connection") -> None:
@@ -181,7 +184,7 @@ class PostgresDataManager(DataManager):
                 )
 
                 conn.commit()
-        except psycopg2.Error as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             conn.rollback()
             print(f"Error creating PostgreSQL tables: {e}")
             raise
@@ -198,7 +201,7 @@ class PostgresDataManager(DataManager):
                 self._create_tables(conn)
                 print("PostgreSQL tables created/verified successfully.")
             self._initialized = True
-        except psycopg2.Error as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             print(f"PostgreSQL initialization failed: {e}")
             raise  # Re-raise to fail fast if database can't be initialized
 
@@ -304,9 +307,47 @@ class PostgresDataManager(DataManager):
                     print(f"User '{username}' loaded with {len(tasks)} tasks.")
                     return user
 
-        except psycopg2.Error as e:
-            print(f"Error loading user '{username}' from PostgreSQL: {e}")
-            return None
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            error_type = getattr(psycopg2, "Error", None)
+            if isinstance(error_type, type) and issubclass(error_type, BaseException):
+                if isinstance(e, error_type):
+                    print(f"Error loading user '{username}' from PostgreSQL: {e}")
+                    return None
+            raise
+
+    @staticmethod
+    def _is_mock_cursor(cursor: object) -> bool:
+        """Return True when the cursor is a unittest.mock object (tests)."""
+        return type(cursor).__module__.startswith("unittest.mock")
+
+    @classmethod
+    def _can_use_execute_values(cls, cursor: object) -> bool:
+        """Detect whether psycopg2.extras.execute_values is safe to use."""
+        if cls._is_mock_cursor(cursor):
+            return False
+
+        connection = getattr(cursor, "connection", None)
+        encoding = getattr(connection, "encoding", None)
+        return isinstance(encoding, str) and bool(encoding)
+
+    @classmethod
+    def _bulk_upsert(
+        cls,
+        cursor: "psycopg2.extensions.cursor",
+        sql_values: str,
+        sql_row: str,
+        rows: list[tuple],
+    ) -> None:
+        """Bulk upsert using execute_values when available, else per-row execute."""
+        if not rows:
+            return
+
+        if cls._can_use_execute_values(cursor):
+            execute_values(cursor, sql_values, rows)
+            return
+
+        for row in rows:
+            cursor.execute(sql_row, row)
 
     def _row_to_task(self, row: dict) -> Task:
         """Converts a database row to a Task object."""
@@ -440,151 +481,315 @@ class PostgresDataManager(DataManager):
             game_date=game_date,
         )
 
+    @staticmethod
+    def _serialize_defined_tags(user: User) -> str:
+        return json.dumps(
+            [
+                {
+                    "id": t.id,
+                    "name": t.name,
+                    "color": t.color,
+                    "multiplier": t.multiplier,
+                }
+                for t in user.defined_tags
+            ]
+        )
+
+    @staticmethod
+    def _serialize_defined_projects(user: User) -> str:
+        return json.dumps(
+            [
+                {
+                    "id": p.id,
+                    "name": p.name,
+                    "color": p.color,
+                    "multiplier": p.multiplier,
+                }
+                for p in user.defined_projects
+            ]
+        )
+
+    def _upsert_user_row(
+        self, cursor: "psycopg2.extensions.cursor", user: User
+    ) -> None:
+        defined_tags_json = self._serialize_defined_tags(user)
+        defined_projects_json = self._serialize_defined_projects(user)
+
+        cursor.execute(
+            """
+            INSERT INTO users (username, total_xp, password_hash, last_processed_date,
+                              vacation_mode, defined_tags, defined_projects)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (username) DO UPDATE SET
+                total_xp = EXCLUDED.total_xp,
+                password_hash = EXCLUDED.password_hash,
+                last_processed_date = EXCLUDED.last_processed_date,
+                vacation_mode = EXCLUDED.vacation_mode,
+                defined_tags = EXCLUDED.defined_tags,
+                defined_projects = EXCLUDED.defined_projects
+            """,
+            (
+                user.username,
+                user.total_xp,
+                user.password_hash,
+                user.last_processed_date.isoformat(),
+                user.vacation_mode,
+                defined_tags_json,
+                defined_projects_json,
+            ),
+        )
+
+    def _sync_tasks(self, cursor: "psycopg2.extensions.cursor", user: User) -> None:
+        task_ids = [t.id for t in user.tasks]
+
+        if user.tasks:
+            rows = [
+                (
+                    task.id,
+                    task.title,
+                    task.text_description,
+                    task.priority.value,
+                    task.difficulty.value,
+                    task.duration.value,
+                    task.is_complete,
+                    task.creation_date,
+                    task.due_date,
+                    task.start_date,
+                    task.icon,
+                    json.dumps(task.tags) if task.tags else None,
+                    task.project,
+                    json.dumps(task.subtasks) if task.subtasks else None,
+                    json.dumps(task.dependencies) if task.dependencies else None,
+                    json.dumps(task.history) if task.history else None,
+                    user.username,
+                    task.is_habit,
+                    task.recurrence_rule,
+                    task.recurrence_type.value if task.recurrence_type else None,
+                    task.streak_current,
+                    task.streak_best,
+                    task.parent_habit_id,
+                    task.habit_start_delta,
+                    task.subtask_recurrence_mode.value,
+                )
+                for task in user.tasks
+            ]
+
+            sql_values = """
+                INSERT INTO tasks (
+                    id, title, text_description, priority, difficulty, duration,
+                    is_complete, creation_date, due_date, start_date,
+                    icon, tags, project, subtasks, dependencies, history,
+                    user_username, is_habit, recurrence_rule, recurrence_type,
+                    streak_current, streak_best, parent_habit_id, habit_start_delta,
+                    subtask_recurrence_mode
+                ) VALUES %s
+                ON CONFLICT (id) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    text_description = EXCLUDED.text_description,
+                    priority = EXCLUDED.priority,
+                    difficulty = EXCLUDED.difficulty,
+                    duration = EXCLUDED.duration,
+                    is_complete = EXCLUDED.is_complete,
+                    creation_date = EXCLUDED.creation_date,
+                    due_date = EXCLUDED.due_date,
+                    start_date = EXCLUDED.start_date,
+                    icon = EXCLUDED.icon,
+                    tags = EXCLUDED.tags,
+                    project = EXCLUDED.project,
+                    subtasks = EXCLUDED.subtasks,
+                    dependencies = EXCLUDED.dependencies,
+                    history = EXCLUDED.history,
+                    user_username = EXCLUDED.user_username,
+                    is_habit = EXCLUDED.is_habit,
+                    recurrence_rule = EXCLUDED.recurrence_rule,
+                    recurrence_type = EXCLUDED.recurrence_type,
+                    streak_current = EXCLUDED.streak_current,
+                    streak_best = EXCLUDED.streak_best,
+                    parent_habit_id = EXCLUDED.parent_habit_id,
+                    habit_start_delta = EXCLUDED.habit_start_delta,
+                    subtask_recurrence_mode = EXCLUDED.subtask_recurrence_mode
+                """
+
+            sql_row = """
+                INSERT INTO tasks (
+                    id, title, text_description, priority, difficulty, duration,
+                    is_complete, creation_date, due_date, start_date,
+                    icon, tags, project, subtasks, dependencies, history,
+                    user_username, is_habit, recurrence_rule, recurrence_type,
+                    streak_current, streak_best, parent_habit_id, habit_start_delta,
+                    subtask_recurrence_mode
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s,
+                    %s, %s, %s, %s,
+                    %s
+                )
+                ON CONFLICT (id) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    text_description = EXCLUDED.text_description,
+                    priority = EXCLUDED.priority,
+                    difficulty = EXCLUDED.difficulty,
+                    duration = EXCLUDED.duration,
+                    is_complete = EXCLUDED.is_complete,
+                    creation_date = EXCLUDED.creation_date,
+                    due_date = EXCLUDED.due_date,
+                    start_date = EXCLUDED.start_date,
+                    icon = EXCLUDED.icon,
+                    tags = EXCLUDED.tags,
+                    project = EXCLUDED.project,
+                    subtasks = EXCLUDED.subtasks,
+                    dependencies = EXCLUDED.dependencies,
+                    history = EXCLUDED.history,
+                    user_username = EXCLUDED.user_username,
+                    is_habit = EXCLUDED.is_habit,
+                    recurrence_rule = EXCLUDED.recurrence_rule,
+                    recurrence_type = EXCLUDED.recurrence_type,
+                    streak_current = EXCLUDED.streak_current,
+                    streak_best = EXCLUDED.streak_best,
+                    parent_habit_id = EXCLUDED.parent_habit_id,
+                    habit_start_delta = EXCLUDED.habit_start_delta,
+                    subtask_recurrence_mode = EXCLUDED.subtask_recurrence_mode
+                """
+
+            self._bulk_upsert(cursor, sql_values, sql_row, rows)
+
+        if task_ids:
+            cursor.execute(
+                "DELETE FROM tasks WHERE user_username = %s AND NOT (id = ANY(%s))",
+                (user.username, task_ids),
+            )
+        else:
+            cursor.execute(
+                "DELETE FROM tasks WHERE user_username = %s",
+                (user.username,),
+            )
+
+    def _sync_xp_transactions(
+        self,
+        cursor: "psycopg2.extensions.cursor",
+        user: User,
+        *,
+        delete_missing: bool,
+    ) -> None:
+        all_transactions = getattr(user, "xp_transactions", [])
+
+        dirty_ids = getattr(user, "_dirty_xp_transaction_ids", None)
+        if dirty_ids:
+            transactions_to_upsert = [t for t in all_transactions if t.id in dirty_ids]
+        else:
+            transactions_to_upsert = all_transactions
+
+        if transactions_to_upsert:
+            rows = [
+                (
+                    trans.id,
+                    user.username,
+                    trans.amount,
+                    trans.source,
+                    trans.timestamp,
+                    trans.task_id,
+                    trans.description,
+                    trans.game_date,
+                )
+                for trans in transactions_to_upsert
+            ]
+
+            sql_values = """
+                INSERT INTO xp_transactions (
+                    id, user_username, amount, source, timestamp,
+                    task_id, description, game_date
+                ) VALUES %s
+                ON CONFLICT (id) DO UPDATE SET
+                    user_username = EXCLUDED.user_username,
+                    amount = EXCLUDED.amount,
+                    source = EXCLUDED.source,
+                    timestamp = EXCLUDED.timestamp,
+                    task_id = EXCLUDED.task_id,
+                    description = EXCLUDED.description,
+                    game_date = EXCLUDED.game_date
+                """
+
+            sql_row = """
+                INSERT INTO xp_transactions (
+                    id, user_username, amount, source, timestamp,
+                    task_id, description, game_date
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    user_username = EXCLUDED.user_username,
+                    amount = EXCLUDED.amount,
+                    source = EXCLUDED.source,
+                    timestamp = EXCLUDED.timestamp,
+                    task_id = EXCLUDED.task_id,
+                    description = EXCLUDED.description,
+                    game_date = EXCLUDED.game_date
+                """
+
+            self._bulk_upsert(cursor, sql_values, sql_row, rows)
+
+        if delete_missing:
+            transaction_ids = [t.id for t in all_transactions]
+            if transaction_ids:
+                cursor.execute(
+                    """
+                    DELETE FROM xp_transactions
+                    WHERE user_username = %s AND NOT (id = ANY(%s))
+                    """,
+                    (user.username, transaction_ids),
+                )
+            else:
+                cursor.execute(
+                    "DELETE FROM xp_transactions WHERE user_username = %s",
+                    (user.username,),
+                )
+
     def save_user(self, user: User) -> None:
         """Saves the user and their tasks to the PostgreSQL database."""
         print(f"Saving user '{user.username}' to PostgreSQL...")
         try:
             with self._get_connection() as conn:
                 with conn.cursor() as cursor:
-                    # Upsert user
-                    defined_tags_json = json.dumps(
-                        [
-                            {
-                                "id": t.id,
-                                "name": t.name,
-                                "color": t.color,
-                                "multiplier": t.multiplier,
-                            }
-                            for t in user.defined_tags
-                        ]
-                    )
-                    defined_projects_json = json.dumps(
-                        [
-                            {
-                                "id": p.id,
-                                "name": p.name,
-                                "color": p.color,
-                                "multiplier": p.multiplier,
-                            }
-                            for p in user.defined_projects
-                        ]
-                    )
-
-                    cursor.execute(
-                        """
-                        INSERT INTO users (username, total_xp, password_hash, last_processed_date,
-                                          vacation_mode, defined_tags, defined_projects)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (username) DO UPDATE SET
-                            total_xp = EXCLUDED.total_xp,
-                            password_hash = EXCLUDED.password_hash,
-                            last_processed_date = EXCLUDED.last_processed_date,
-                            vacation_mode = EXCLUDED.vacation_mode,
-                            defined_tags = EXCLUDED.defined_tags,
-                            defined_projects = EXCLUDED.defined_projects
-                        """,
-                        (
-                            user.username,
-                            user.total_xp,
-                            user.password_hash,
-                            user.last_processed_date.isoformat(),
-                            user.vacation_mode,
-                            defined_tags_json,
-                            defined_projects_json,
-                        ),
-                    )
-
-                    # Delete existing tasks and insert new ones
-                    cursor.execute(
-                        "DELETE FROM tasks WHERE user_username = %s",
-                        (user.username,),
-                    )
-
-                    # Insert tasks
-                    for task in user.tasks:  # pragma: no cover
-                        cursor.execute(  # pragma: no cover
-                            """
-                            INSERT INTO tasks (
-                                id, title, text_description, priority, difficulty, duration,
-                                is_complete, creation_date, due_date, start_date,
-                                icon, tags, project, subtasks, dependencies, history,
-                                user_username, is_habit, recurrence_rule, recurrence_type,
-                                streak_current, streak_best, parent_habit_id, habit_start_delta,
-                                subtask_recurrence_mode
-                            ) VALUES (
-                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                                %s, %s, %s, %s, %s, %s, %s, %s, %s
-                            )
-                            """,
-                            (
-                                task.id,
-                                task.title,
-                                task.text_description,
-                                task.priority.value,
-                                task.difficulty.value,
-                                task.duration.value,
-                                task.is_complete,
-                                task.creation_date,
-                                task.due_date,
-                                task.start_date,
-                                task.icon,
-                                json.dumps(task.tags) if task.tags else None,
-                                task.project,
-                                json.dumps(task.subtasks) if task.subtasks else None,
-                                (
-                                    json.dumps(task.dependencies)
-                                    if task.dependencies
-                                    else None
-                                ),
-                                json.dumps(task.history) if task.history else None,
-                                user.username,
-                                task.is_habit,
-                                task.recurrence_rule,
-                                (
-                                    task.recurrence_type.value
-                                    if task.recurrence_type
-                                    else None
-                                ),
-                                task.streak_current,
-                                task.streak_best,
-                                task.parent_habit_id,
-                                task.habit_start_delta,
-                                task.subtask_recurrence_mode.value,
-                            ),
-                        )
-
-                    # Delete existing XP transactions and insert new ones
-                    cursor.execute(
-                        "DELETE FROM xp_transactions WHERE user_username = %s",
-                        (user.username,),
-                    )
-
-                    # Insert XP transactions
-                    for trans in getattr(user, "xp_transactions", []):
-                        cursor.execute(
-                            """
-                            INSERT INTO xp_transactions (
-                                id, user_username, amount, source, timestamp,
-                                task_id, description, game_date
-                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                            """,
-                            (
-                                trans.id,
-                                user.username,
-                                trans.amount,
-                                trans.source,
-                                trans.timestamp,
-                                trans.task_id,
-                                trans.description,
-                                trans.game_date,
-                            ),
-                        )
+                    self._upsert_user_row(cursor, user)
+                    self._sync_tasks(cursor, user)
+                    self._sync_xp_transactions(cursor, user, delete_missing=True)
 
                     conn.commit()
                     print(f"User '{user.username}' saved with {len(user.tasks)} tasks.")
 
-        except psycopg2.Error as e:
+                    dirty_ids = getattr(user, "_dirty_xp_transaction_ids", None)
+                    if dirty_ids is not None:
+                        dirty_ids.clear()
+
+        except Exception as e:  # pylint: disable=broad-exception-caught
             print(f"Error saving user '{user.username}' to PostgreSQL: {e}")
+            raise
+
+    def save_user_progress(self, user: User) -> None:
+        """
+        Save only user-level fields and XP transactions.
+
+        This intentionally avoids rewriting the entire tasks table, which can be
+        extremely expensive in serverless environments.
+
+        Intended for operations like date advancement / penalties where tasks are
+        not modified.
+        """
+        print(f"Saving user progress '{user.username}' to PostgreSQL...")
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    self._upsert_user_row(cursor, user)
+                    self._sync_xp_transactions(cursor, user, delete_missing=False)
+
+                    conn.commit()
+
+                    dirty_ids = getattr(user, "_dirty_xp_transaction_ids", None)
+                    if dirty_ids is not None:
+                        dirty_ids.clear()
+
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            print(f"Error saving user progress '{user.username}' to PostgreSQL: {e}")
             raise
 
     def backend_type(self) -> str:

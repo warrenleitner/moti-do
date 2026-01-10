@@ -846,6 +846,8 @@ def add_xp(
     task_id: str | None = None,
     description: str = "",
     game_date: Optional[date] = None,
+    persist: bool = True,
+    print_confirmation: bool = True,
 ) -> None:
     """
     Add XP points to the user's total, aggregating into daily entries.
@@ -909,6 +911,12 @@ def add_xp(
                 f"Lost {abs(existing_entry.amount)} XP on "
                 f"{effective_game_date.strftime('%Y-%m-%d')}"
             )
+
+        dirty_ids = getattr(user, "_dirty_xp_transaction_ids", None)
+        if dirty_ids is None:
+            dirty_ids = set()
+            setattr(user, "_dirty_xp_transaction_ids", dirty_ids)
+        dirty_ids.add(existing_entry.id)
     else:
         # Create new daily aggregate entry
         if points > 0:
@@ -930,14 +938,22 @@ def add_xp(
         )
         user.xp_transactions.append(transaction)
 
-    # Persist the change to backend
-    manager.save_user(user)
+        dirty_ids = getattr(user, "_dirty_xp_transaction_ids", None)
+        if dirty_ids is None:
+            dirty_ids = set()
+            setattr(user, "_dirty_xp_transaction_ids", dirty_ids)
+        dirty_ids.add(transaction.id)
 
-    # Print confirmation message
-    if points > 0:
-        print(f"Added {points} XP points! Total XP: {user.total_xp}")
-    else:
-        print(f"Deducted {abs(points)} XP points as penalty. Total XP: {user.total_xp}")
+    if persist:
+        manager.save_user(user)
+
+    if print_confirmation:
+        if points > 0:
+            print(f"Added {points} XP points! Total XP: {user.total_xp}")
+        else:
+            print(
+                f"Deducted {abs(points)} XP points as penalty. Total XP: {user.total_xp}"
+            )
 
 
 def withdraw_xp(user: Any, manager: Any, points: int) -> bool:
@@ -1100,6 +1116,7 @@ def apply_penalties(
     effective_date: date,
     config: Dict[str, Any],
     all_tasks: list[Task],
+    persist: bool = True,
 ) -> None:
     """
     Apply daily penalties for incomplete tasks for a single day.
@@ -1123,46 +1140,46 @@ def apply_penalties(
         print("Vacation mode enabled. Skipping penalties.")
         return
 
-    # Create a dict of tasks for dependency resolution in calculate_score
-    task_map = {t.id: t for t in all_tasks}
-
+    penalties_applied = 0
     # Apply penalties for each incomplete task on this specific date
     for task in all_tasks:
         # Only penalize tasks created before this date
         if not task.is_complete and task.creation_date.date() < effective_date:
-            # Calculate current score (used to check if task is worth penalizing)
-            current_score = calculate_score(task, task_map, config, effective_date)
+            # Penalties only apply to tasks that are due today or overdue.
+            if not task.due_date:
+                continue
+            if task.due_date.date() > effective_date:
+                continue
 
-            if current_score > 0:
-                # Get inverted penalty multiplier
-                # Easy/short tasks get higher penalties (no excuse for skipping)
-                # Hard/long tasks get lower penalties (understandable to defer)
-                penalty_multiplier = get_penalty_multiplier(
-                    task.difficulty, task.duration, config
-                )
+            # Get inverted penalty multiplier
+            # Easy/short tasks get higher penalties (no excuse for skipping)
+            # Hard/long tasks get lower penalties (understandable to defer)
+            penalty_multiplier = get_penalty_multiplier(
+                task.difficulty, task.duration, config
+            )
 
-                # Calculate penalty using base score and inverted multiplier
-                # Normalize to keep penalties in a reasonable range
-                # Max multiplier is ~25 (NOT_SET: 5.0 * 5.0), min is ~3.0
-                base_score = config.get("base_score", 10)
-                raw_penalty = base_score * penalty_multiplier
-                # Normalize so average penalty is ~10 XP
-                # NOT_SET (25.0): 10 * 25 / 25 = 10 XP penalty
-                # TRIVIAL + MINUSCULE (24.3): 10 * 24.3 / 25 ≈ 10 XP
-                # HERCULEAN + ODYSSEYAN (3.0): 10 * 3.0 / 25 = 1 XP
-                # This gives ~10x ratio between easiest and hardest tasks
-                normalizer = 25.0
-                penalty = max(1, int(raw_penalty / normalizer))
-                if penalty > 0:
-                    add_xp(
-                        user,
-                        manager,
-                        -penalty,
-                        source="penalty",
-                        task_id=task.id,
-                        description=f"Penalty for incomplete: {task.title}",
-                        game_date=effective_date,
-                    )
+            # Calculate penalty using base score and inverted multiplier
+            # Normalize to keep penalties in a reasonable range
+            base_score = config.get("base_score", 10)
+            raw_penalty = base_score * penalty_multiplier
+            normalizer = 25.0
+            penalty = max(1, int(raw_penalty / normalizer))
+
+            penalties_applied += 1
+            add_xp(
+                user,
+                manager,
+                -penalty,
+                source="penalty",
+                task_id=task.id,
+                description=f"Penalty for incomplete: {task.title}",
+                game_date=effective_date,
+                persist=False,
+                print_confirmation=False,
+            )
+
+    if persist and penalties_applied > 0:
+        manager.save_user(user)
 
 
 def check_badges(user: Any, manager: Any, config: Dict[str, Any]) -> list[Any]:

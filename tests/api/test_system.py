@@ -4,6 +4,8 @@ Tests for the system API endpoints (health, status, advance, vacation).
 """
 
 from datetime import date, timedelta
+from typing import Any
+from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
@@ -167,6 +169,18 @@ class TestAdvanceDateEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["vacation_mode"] is True
+
+    def test_advance_uses_save_user_progress_when_available(
+        self, client: TestClient, test_user: User, mock_manager: Any
+    ) -> None:
+        """Test that advance uses save_user_progress() when the manager provides it."""
+        test_user.last_processed_date = date.today() - timedelta(days=2)
+
+        mock_manager.save_user_progress = MagicMock(side_effect=mock_manager.save_user)
+
+        response = client.post("/api/system/advance", json={})
+        assert response.status_code == 200
+        mock_manager.save_user_progress.assert_called_once()
 
 
 class TestVacationModeEndpoint:

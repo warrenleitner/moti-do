@@ -6,6 +6,7 @@ Main FastAPI application for Moti-Do.
 
 import os
 from datetime import date, timedelta
+from time import perf_counter
 
 from dotenv import load_dotenv
 
@@ -19,6 +20,7 @@ from motido.api.deps import CurrentUser, ManagerDep
 from motido.api.middleware.rate_limit import RateLimitMiddleware
 from motido.api.routers import auth, tasks, user, views
 from motido.api.schemas import AdvanceRequest, SystemStatus
+from motido.core import scoring
 
 # Create FastAPI app
 app = FastAPI(
@@ -125,22 +127,48 @@ async def advance_date(
     # Don't advance past today
     target_date = min(target_date, current)
 
-    # Process each day
-    from motido.core.scoring import apply_penalties, load_scoring_config
+    # Serverless safety: cap work per request to reduce timeout risk.
+    # Client can call repeatedly until pending_days == 0.
+    max_days = int(os.getenv("ADVANCE_DATE_MAX_DAYS", "31"))
+    if max_days > 0:
+        max_target_date = user.last_processed_date + timedelta(days=max_days)
+        target_date = min(target_date, max_target_date)
 
-    config = load_scoring_config()
+    start_time = perf_counter()
+
+    # Process each day
+    config = scoring.load_scoring_config()
     processing_date = user.last_processed_date
+    days_processed = 0
 
     while processing_date < target_date:
         processing_date += timedelta(days=1)
+        # Update date BEFORE penalties so all saves during apply_penalties have correct date
+        user.last_processed_date = processing_date
+        days_processed += 1
 
         if not user.vacation_mode:
             # Apply penalties for overdue tasks
-            apply_penalties(user, manager, processing_date, config, user.tasks)
+            scoring.apply_penalties(
+                user,
+                manager,
+                processing_date,
+                config,
+                user.tasks,
+                persist=False,
+            )
 
-        user.last_processed_date = processing_date
+    save_progress = getattr(manager, "save_user_progress", None)
+    if callable(save_progress):
+        save_progress(user)
+    else:
+        manager.save_user(user)
 
-    manager.save_user(user)
+    elapsed_ms = int((perf_counter() - start_time) * 1000)
+    print(
+        f"advance_date: processed={days_processed} days, "
+        f"target={target_date.isoformat()}, elapsed_ms={elapsed_ms}"
+    )
 
     # pending_days = 0 means "up to date" (last_processed_date is yesterday or today)
     pending_days = max(0, (current - user.last_processed_date).days - 1)
