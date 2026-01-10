@@ -67,3 +67,7 @@ frontend/playwright/.auth/user.json
 
 # Test logs (token-efficient test output)
 test-logs/
+.backlog/
+tasks_categorized.csv
+tasks_updated.csv
+tasks_import.json
