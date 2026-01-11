@@ -60,6 +60,7 @@ scripts/convert_clickup_to_motido.py
 .venv
 *.bak
 frontend/playwright/.auth/user.json
+.copilot_tracking/
 # Note: frontend/e2e/snapshots/ is NOT ignored - visual regression baselines must be committed
 
 # Script lock files (prevent dev/e2e conflicts)
@@ -68,6 +69,9 @@ frontend/playwright/.auth/user.json
 # Test logs (token-efficient test output)
 test-logs/
 .backlog/
+
+
+
 tasks_categorized.csv
 tasks_updated.csv
 tasks_import.json
