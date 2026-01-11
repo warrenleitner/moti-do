@@ -63,6 +63,7 @@ interface TaskState {
   completeTask: (id: string) => Promise<TaskCompletionResponse>;
   uncompleteTask: (id: string) => Promise<Task>;
   undoTask: (id: string) => Promise<Task>;
+  duplicateTask: (id: string) => Promise<Task>;
 }
 
 const defaultFilters: TaskFilters = {
@@ -306,6 +307,42 @@ export const useTaskStore = create<TaskState>()(
             set({ error: message });
             throw error;
           }
+        },
+
+        duplicateTask: async (id) => {
+          const { tasks, createTask } = get();
+          const taskToDuplicate = tasks.find((t) => t.id === id);
+
+          if (!taskToDuplicate) {
+            throw new Error(`Task with id ${id} not found`);
+          }
+
+          // Create a copy of the task data, excluding system-managed fields
+          // and resetting status fields
+          /* eslint-disable @typescript-eslint/no-unused-vars */
+          const {
+            id: _id,
+            creation_date: _created,
+            completion_date: _completed,
+            history: _history,
+            is_complete: _isComplete,
+            score: _score,
+            penalty_score: _penalty,
+            net_score: _net,
+            streak_current: _streakCur,
+            streak_best: _streakBest,
+            ...taskData
+          } = taskToDuplicate;
+          /* eslint-enable @typescript-eslint/no-unused-vars */
+
+          const newTaskData: Partial<Task> = {
+            ...taskData,
+            is_complete: false,
+            // Reset subtasks completion status
+            subtasks: taskData.subtasks?.map(st => ({ ...st, complete: false })) || [],
+          };
+
+          return createTask(newTaskData);
         },
       }),
       {

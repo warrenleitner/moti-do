@@ -27,6 +27,7 @@ import {
   Block as BlockIcon,
   Repeat as RepeatIcon,
   Download as DownloadIcon,
+  ContentCopy as ContentCopyIcon,
 } from '@mui/icons-material';
 import type { Task } from '../../types/models';
 import {
@@ -89,6 +90,8 @@ interface TaskTableProps {
   onSelectAll?: (selected: boolean) => void;
   onBulkComplete?: (taskIds: string[]) => void;
   onBulkDelete?: (taskIds: string[]) => void;
+  onDuplicate?: (taskId: string) => void;
+  onBulkDuplicate?: (taskIds: string[]) => void;
 }
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
@@ -123,6 +126,8 @@ const TaskTable: React.FC<TaskTableProps> = ({
   onSelectAll,
   onBulkComplete,
   onBulkDelete,
+  onDuplicate,
+  onBulkDuplicate,
 }) => {
   // Load saved column config from localStorage, merging in any new columns
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
@@ -725,6 +730,13 @@ const TaskTable: React.FC<TaskTableProps> = ({
                 <EditIcon fontSize="small" />
               </IconButton>
             </Tooltip>
+            {onDuplicate && (
+              <Tooltip title="Duplicate">
+                <IconButton size="small" onClick={() => onDuplicate(task.id)}>
+                  <ContentCopyIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title="Delete">
               <IconButton size="small" onClick={() => onDelete(task.id)} color="error">
                 <DeleteIcon fontSize="small" />
@@ -777,6 +789,17 @@ const TaskTable: React.FC<TaskTableProps> = ({
               sx={{ mr: 1 }}
             >
               Complete Selected
+            </Button>
+          )}
+          {onBulkDuplicate && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<ContentCopyIcon />}
+              onClick={() => onBulkDuplicate(selectedTasks)}
+              sx={{ mr: 1 }}
+            >
+              Duplicate Selected
             </Button>
           )}
           {onBulkDelete && (
