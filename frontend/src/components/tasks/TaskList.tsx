@@ -27,6 +27,7 @@ import type { SubtaskViewMode } from '../../store/taskStore';
 interface TaskListProps {
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  onDuplicate?: (id: string) => void;
   onComplete: (id: string) => void;
   onSubtaskToggle?: (taskId: string, subtaskIndex: number) => void;
   onUndo?: (id: string) => void;
@@ -38,6 +39,7 @@ interface TaskListProps {
 export default function TaskList({
   onEdit,
   onDelete,
+  onDuplicate,
   onComplete,
   onSubtaskToggle,
   onUndo,
@@ -184,6 +186,7 @@ export default function TaskList({
                 onComplete={onComplete}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onDuplicate={onDuplicate}
                 onSubtaskToggle={onSubtaskToggle}
                 onUndo={onUndo}
                 isBlocked={isTaskBlocked(task)}

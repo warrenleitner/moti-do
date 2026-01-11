@@ -18,6 +18,7 @@ import {
   Edit,
   Delete,
   Loop,
+  ContentCopy,
   Link as LinkIcon,
   Star,
   Undo,
@@ -47,6 +48,7 @@ interface TaskCardProps {
   onComplete: (id: string) => void;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  onDuplicate?: (id: string) => void;
   onSubtaskToggle?: (taskId: string, subtaskIndex: number) => void;
   onUndo?: (id: string) => void;
   onIncrement?: (id: string) => void;
@@ -63,6 +65,7 @@ export default function TaskCard({
   onComplete,
   onEdit,
   onDelete,
+  onDuplicate,
   onSubtaskToggle,
   onUndo,
   onIncrement,
@@ -379,6 +382,15 @@ export default function TaskCard({
         <IconButton size="small" onClick={() => onEdit(task)} title="Edit task">
           <Edit fontSize="small" />
         </IconButton>
+        {onDuplicate && (
+          <IconButton
+            size="small"
+            onClick={() => onDuplicate(task.id)}
+            title="Duplicate task"
+          >
+            <ContentCopy fontSize="small" />
+          </IconButton>
+        )}
         <IconButton
           size="small"
           onClick={() => onDelete(task.id)}

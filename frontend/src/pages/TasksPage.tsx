@@ -43,6 +43,7 @@ export default function TasksPage() {
     completeTask,
     uncompleteTask,
     undoTask,
+    duplicateTask,
     isLoading,
     tasks: allTasks,
     filters,
@@ -80,6 +81,10 @@ export default function TasksPage() {
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [tasksToDelete, setTasksToDelete] = useState<string[]>([]);
+  const [bulkCompleteDialogOpen, setBulkCompleteDialogOpen] = useState(false);
+  const [tasksToComplete, setTasksToComplete] = useState<string[]>([]);
+  const [bulkDuplicateDialogOpen, setBulkDuplicateDialogOpen] = useState(false);
+  const [tasksToDuplicate, setTasksToDuplicate] = useState<string[]>([]);
 
   const handleViewModeChange = (_: React.MouseEvent<HTMLElement>, newMode: 'list' | 'table' | null) => {
     if (newMode !== null) {
@@ -202,6 +207,15 @@ export default function TasksPage() {
     }
   };
 
+  const handleDuplicate = async (taskId: string) => {
+    try {
+      await duplicateTask(taskId);
+      setSnackbar({ open: true, message: 'Task duplicated successfully', severity: 'success' });
+    } catch (error) {
+      setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to duplicate task'), severity: 'error' });
+    }
+  };
+
   const handleOpenNextInstance = () => {
     if (snackbar.nextInstanceId) {
       const { tasks } = useTaskStore.getState();
@@ -231,9 +245,14 @@ export default function TasksPage() {
   };
 
   // Bulk action handlers
-  const handleBulkComplete = async (taskIds: string[]) => {
+  const handleBulkComplete = (taskIds: string[]) => {
+    setTasksToComplete(taskIds);
+    setBulkCompleteDialogOpen(true);
+  };
+
+  const handleBulkCompleteConfirm = async () => {
     let successCount = 0;
-    for (const taskId of taskIds) {
+    for (const taskId of tasksToComplete) {
       const task = filteredTasks.find((t) => t.id === taskId);
       if (task && !task.is_complete) {
         try {
@@ -253,6 +272,8 @@ export default function TasksPage() {
       });
     }
     setSelectedTasks([]);
+    setBulkCompleteDialogOpen(false);
+    setTasksToComplete([]);
   };
 
   const handleBulkDeleteClick = (taskIds: string[]) => {
@@ -280,6 +301,33 @@ export default function TasksPage() {
     setSelectedTasks([]);
     setBulkDeleteDialogOpen(false);
     setTasksToDelete([]);
+  };
+
+  const handleBulkDuplicateClick = (taskIds: string[]) => {
+    setTasksToDuplicate(taskIds);
+    setBulkDuplicateDialogOpen(true);
+  };
+
+  const handleBulkDuplicateConfirm = async () => {
+    let successCount = 0;
+    for (const taskId of tasksToDuplicate) {
+      try {
+        await duplicateTask(taskId);
+        successCount++;
+      } catch {
+        // Continue with other tasks even if one fails
+      }
+    }
+    if (successCount > 0) {
+      setSnackbar({
+        open: true,
+        message: `Duplicated ${successCount} task${successCount > 1 ? 's' : ''}`,
+        severity: 'success',
+      });
+    }
+    setSelectedTasks([]);
+    setBulkDuplicateDialogOpen(false);
+    setTasksToDuplicate([]);
   };
 
   // Calculate current processing date (last_processed_date + 1 day)
@@ -352,6 +400,7 @@ export default function TasksPage() {
         <TaskList
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
+          onDuplicate={handleDuplicate}
           onComplete={handleComplete}
           onSubtaskToggle={handleSubtaskToggle}
           onUndo={handleUndo}
@@ -392,6 +441,8 @@ export default function TasksPage() {
             onSelectAll={handleSelectAll}
             onBulkComplete={handleBulkComplete}
             onBulkDelete={handleBulkDeleteClick}
+            onDuplicate={handleDuplicate}
+            onBulkDuplicate={handleBulkDuplicateClick}
           />
         </>
       )}
@@ -434,6 +485,34 @@ export default function TasksPage() {
         onCancel={() => {
           setBulkDeleteDialogOpen(false);
           setTasksToDelete([]);
+        }}
+      />
+
+      {/* Bulk complete confirmation dialog */}
+      <ConfirmDialog
+        open={bulkCompleteDialogOpen}
+        title="Complete Selected Tasks"
+        message={`Are you sure you want to complete ${tasksToComplete.length} task${tasksToComplete.length > 1 ? 's' : ''}?`}
+        confirmLabel="Complete All"
+        confirmColor="primary"
+        onConfirm={handleBulkCompleteConfirm}
+        onCancel={() => {
+          setBulkCompleteDialogOpen(false);
+          setTasksToComplete([]);
+        }}
+      />
+
+      {/* Bulk duplicate confirmation dialog */}
+      <ConfirmDialog
+        open={bulkDuplicateDialogOpen}
+        title="Duplicate Selected Tasks"
+        message={`Are you sure you want to duplicate ${tasksToDuplicate.length} task${tasksToDuplicate.length > 1 ? 's' : ''}?`}
+        confirmLabel="Duplicate All"
+        confirmColor="primary"
+        onConfirm={handleBulkDuplicateConfirm}
+        onCancel={() => {
+          setBulkDuplicateDialogOpen(false);
+          setTasksToDuplicate([]);
         }}
       />
 
