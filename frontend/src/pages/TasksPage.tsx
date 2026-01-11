@@ -1,6 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Box, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton, Link as MuiLink, Typography, Chip } from '@mui/material';
-import { Add, ViewList, TableChart, CalendarMonth as CalendarIcon } from '@mui/icons-material';
+import {
+  Add,
+  ViewList,
+  TableChart,
+  CalendarMonth as CalendarIcon,
+  FilterList,
+  FilterListOff,
+} from '@mui/icons-material';
 import { AxiosError } from 'axios';
 import { TaskList, TaskForm } from '../components/tasks';
 import TaskTable from '../components/tasks/TaskTable';
@@ -10,6 +17,7 @@ import { useTaskStore } from '../store';
 import { useFilteredTasks } from '../store/taskStore';
 import { useUserStore, useSystemStatus, useDefinedProjects } from '../store/userStore';
 import type { Task } from '../types';
+import { getCombinedTags } from '../utils/tags';
 
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
@@ -34,6 +42,9 @@ function getErrorMessage(error: unknown, fallback: string): string {
   }
   return fallback;
 }
+
+const DEFAULT_VISIBLE_COUNT = 50;
+const LOAD_MORE_STEP = 50;
 export default function TasksPage() {
   // Use API actions from the store
   const {
@@ -57,11 +68,16 @@ export default function TasksPage() {
 
   // Get projects from defined projects, and tags from tasks
   const projects = definedProjects.map((p) => p.name);
-  const tags = [...new Set(allTasks.flatMap((t) => t.tags))];
+  const tags = [...new Set(allTasks.flatMap((t) => getCombinedTags(t).map((tag) => tag.toLowerCase())))];
 
   const [viewMode, setViewMode] = useState<'list' | 'table'>(() => {
     const saved = localStorage.getItem('taskViewMode');
     return (saved as 'list' | 'table') || 'list';
+  });
+  const [visibleRowCount, setVisibleRowCount] = useState(DEFAULT_VISIBLE_COUNT);
+  const [filtersVisible, setFiltersVisible] = useState(() => {
+    const saved = localStorage.getItem('taskFiltersVisible');
+    return saved === null ? true : saved === 'true';
   });
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -85,12 +101,35 @@ export default function TasksPage() {
   const [tasksToComplete, setTasksToComplete] = useState<string[]>([]);
   const [bulkDuplicateDialogOpen, setBulkDuplicateDialogOpen] = useState(false);
   const [tasksToDuplicate, setTasksToDuplicate] = useState<string[]>([]);
+  const visibleTasks = useMemo(
+    () => filteredTasks.slice(0, Math.min(filteredTasks.length, visibleRowCount)),
+    [filteredTasks, visibleRowCount]
+  );
+  const hasMoreTasks = visibleTasks.length < filteredTasks.length;
+  const visibleTaskIds = useMemo(() => visibleTasks.map((task) => task.id), [visibleTasks]);
+  const visibleTaskIdSet = useMemo(() => new Set(visibleTaskIds), [visibleTaskIds]);
+  const visibleSelectedTasks = useMemo(
+    () => selectedTasks.filter((id) => visibleTaskIdSet.has(id)),
+    [selectedTasks, visibleTaskIdSet]
+  );
 
   const handleViewModeChange = (_: React.MouseEvent<HTMLElement>, newMode: 'list' | 'table' | null) => {
     if (newMode !== null) {
       setViewMode(newMode);
       localStorage.setItem('taskViewMode', newMode);
     }
+  };
+
+  const handleToggleFilters = () => {
+    setFiltersVisible((prev) => {
+      const next = !prev;
+      localStorage.setItem('taskFiltersVisible', String(next));
+      return next;
+    });
+  };
+
+  const handleLoadMore = () => {
+    setVisibleRowCount((prev) => Math.min(prev + LOAD_MORE_STEP, filteredTasks.length));
   };
 
   const handleCreateNew = () => {
@@ -235,13 +274,16 @@ export default function TasksPage() {
 
   // Selection handlers for bulk actions
   const handleSelectTask = (taskId: string) => {
-    setSelectedTasks((prev) =>
-      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
-    );
+    setSelectedTasks((prev) => {
+      const visibleSelection = prev.filter((id) => visibleTaskIdSet.has(id));
+      return visibleSelection.includes(taskId)
+        ? visibleSelection.filter((id) => id !== taskId)
+        : [...visibleSelection, taskId];
+    });
   };
 
   const handleSelectAll = (selected: boolean) => {
-    setSelectedTasks(selected ? filteredTasks.map((t) => t.id) : []);
+    setSelectedTasks(selected ? visibleTaskIds : []);
   };
 
   // Bulk action handlers
@@ -408,35 +450,46 @@ export default function TasksPage() {
         />
       ) : (
         <>
-          {/* Filter bar for table view */}
-          <FilterBar
-            search={filters.search || ''}
-            onSearchChange={(search) => setFilters({ search: search || undefined })}
-            status={filters.status}
-            onStatusChange={(status) => setFilters({ status })}
-            priorities={filters.priorities}
-            onPrioritiesChange={(priorities) => setFilters({ priorities })}
-            difficulties={filters.difficulties}
-            onDifficultiesChange={(difficulties) => setFilters({ difficulties })}
-            durations={filters.durations}
-            onDurationsChange={(durations) => setFilters({ durations })}
-            selectedProjects={filters.projects}
-            onProjectsChange={(projects) => setFilters({ projects })}
-            selectedTags={filters.tags}
-            onTagsChange={(tags) => setFilters({ tags })}
-            projects={projects}
-            tags={tags}
-            maxDueDate={filters.maxDueDate}
-            onMaxDueDateChange={(maxDueDate) => setFilters({ maxDueDate })}
-            onReset={resetFilters}
-          />
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: filtersVisible ? 0 : 2 }}>
+            <Button
+              variant="text"
+              size="small"
+              startIcon={filtersVisible ? <FilterListOff /> : <FilterList />}
+              onClick={handleToggleFilters}
+            >
+              {filtersVisible ? 'Hide Filters' : 'Show Filters'}
+            </Button>
+          </Box>
+          {filtersVisible && (
+            <FilterBar
+              search={filters.search || ''}
+              onSearchChange={(search) => setFilters({ search: search || undefined })}
+              status={filters.status}
+              onStatusChange={(status) => setFilters({ status })}
+              priorities={filters.priorities}
+              onPrioritiesChange={(priorities) => setFilters({ priorities })}
+              difficulties={filters.difficulties}
+              onDifficultiesChange={(difficulties) => setFilters({ difficulties })}
+              durations={filters.durations}
+              onDurationsChange={(durations) => setFilters({ durations })}
+              selectedProjects={filters.projects}
+              onProjectsChange={(projects) => setFilters({ projects })}
+              selectedTags={filters.tags}
+              onTagsChange={(tags) => setFilters({ tags })}
+              projects={projects}
+              tags={tags}
+              maxDueDate={filters.maxDueDate}
+              onMaxDueDateChange={(maxDueDate) => setFilters({ maxDueDate })}
+              onReset={resetFilters}
+            />
+          )}
           <TaskTable
-            tasks={filteredTasks}
+            tasks={visibleTasks}
             onEdit={handleEdit}
             onDelete={handleDeleteClick}
             onComplete={handleComplete}
             onInlineEdit={handleInlineEdit}
-            selectedTasks={selectedTasks}
+            selectedTasks={visibleSelectedTasks}
             onSelectTask={handleSelectTask}
             onSelectAll={handleSelectAll}
             onBulkComplete={handleBulkComplete}
@@ -444,6 +497,14 @@ export default function TasksPage() {
             onDuplicate={handleDuplicate}
             onBulkDuplicate={handleBulkDuplicateClick}
           />
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              Showing {visibleTasks.length} of {filteredTasks.length} tasks
+            </Typography>
+            <Button variant="outlined" size="small" onClick={handleLoadMore} disabled={!hasMoreTasks}>
+              Load more
+            </Button>
+          </Box>
         </>
       )}
 

@@ -2,6 +2,7 @@ import { render, screen } from '../test/utils';
 import { vi } from 'vitest';
 import TasksPage from './TasksPage';
 import * as stores from '../store';
+import * as taskStore from '../store/taskStore';
 import { Priority, Difficulty, Duration } from '../types';
 import type { Task } from '../types';
 
@@ -9,6 +10,9 @@ vi.mock('../store', () => ({
   useTaskStore: vi.fn(),
   useFilteredTasks: vi.fn(),
   useUserStore: vi.fn(),
+}));
+vi.mock('../store/taskStore', () => ({
+  useFilteredTasks: vi.fn(),
 }));
 
 // Mock localStorage
@@ -88,6 +92,8 @@ describe('TasksPage', () => {
       deleteTask: mockDeleteTask,
       completeTask: mockCompleteTask,
       uncompleteTask: mockUncompleteTask,
+      undoTask: vi.fn(),
+      duplicateTask: vi.fn(),
       isLoading: false,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
 
@@ -97,6 +103,7 @@ describe('TasksPage', () => {
     }));
 
     vi.mocked(stores.useFilteredTasks).mockReturnValue([mockTask]);
+    vi.mocked(taskStore.useFilteredTasks).mockReturnValue([mockTask]);
     vi.mocked(stores.useUserStore).mockReturnValue({
       fetchStats: mockFetchStats,
     } as unknown as ReturnType<typeof stores.useUserStore>);
@@ -151,5 +158,72 @@ describe('TasksPage', () => {
     // Table view button should be selected
     const tableViewButton = screen.getByRole('button', { name: /table view/i });
     expect(tableViewButton).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('toggles filter visibility with persistence', async () => {
+    localStorage.setItem('taskViewMode', 'table');
+    const { user } = render(<TasksPage />);
+
+    expect(screen.getByText(/hide filters/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search tasks...')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /hide filters/i }));
+    expect(localStorage.getItem('taskFiltersVisible')).toBe('false');
+    expect(screen.queryByPlaceholderText('Search tasks...')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /show filters/i }));
+    expect(localStorage.getItem('taskFiltersVisible')).toBe('true');
+    expect(screen.getByPlaceholderText('Search tasks...')).toBeInTheDocument();
+  });
+
+  it('loads additional tasks with load more control', async () => {
+    localStorage.setItem('taskViewMode', 'table');
+    const manyTasks: Task[] = Array.from({ length: 60 }).map((_, index) => ({
+      id: `task-${index}`,
+      title: `Task ${index}`,
+      creation_date: new Date().toISOString(),
+      priority: Priority.MEDIUM,
+      difficulty: Difficulty.MEDIUM,
+      duration: Duration.SHORT,
+      is_complete: false,
+      is_habit: false,
+      tags: [],
+      subtasks: [],
+      dependencies: [],
+      streak_current: 0,
+      streak_best: 0,
+      history: [],
+      score: 100,
+    }));
+
+    vi.mocked(stores.useTaskStore).mockReturnValue({
+      tasks: manyTasks,
+      filters: { ...defaultFilters },
+      sort: { field: 'score' as const, order: 'desc' as const },
+      setFilters: vi.fn(),
+      resetFilters: vi.fn(),
+      setSort: vi.fn(),
+      fetchTasks: vi.fn(),
+      createTask: mockCreateTask,
+      saveTask: mockSaveTask,
+      deleteTask: mockDeleteTask,
+      completeTask: mockCompleteTask,
+      uncompleteTask: mockUncompleteTask,
+      isLoading: false,
+    } as unknown as ReturnType<typeof stores.useTaskStore>);
+    (stores.useTaskStore as unknown as { getState: () => { tasks: Task[] } }).getState = vi.fn(() => ({
+      tasks: manyTasks,
+    }));
+    vi.mocked(stores.useFilteredTasks).mockReturnValue(manyTasks);
+    vi.mocked(taskStore.useFilteredTasks).mockReturnValue(manyTasks);
+
+    const { user } = render(<TasksPage />);
+
+    const initialRows = screen.getAllByRole('row').length;
+    expect(screen.getByText(/load more/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /load more/i }));
+    const expandedRows = screen.getAllByRole('row').length;
+    expect(expandedRows).toBeGreaterThan(initialRows);
   });
 });

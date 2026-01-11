@@ -46,6 +46,7 @@ import { EditableCell, SelectEditor, DateEditor, TextEditor, ProjectEditor, Tags
 import { format } from 'date-fns';
 import ColumnConfigDialog from './ColumnConfigDialog';
 import { useSystemStatus } from '../../store/userStore';
+import { getCombinedTags } from '../../utils/tags';
 
 export type ColumnId =
   | 'select'
@@ -106,7 +107,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: 'due_date', label: 'Due Date', visible: true, sortable: true, width: 120 },
   { id: 'creation_date', label: 'Created', visible: false, sortable: true, width: 120 },
   { id: 'project', label: 'Project', visible: true, sortable: true, width: 120 },
-  { id: 'tags', label: 'Tags', visible: false, sortable: false, minWidth: 150 },
+  { id: 'tags', label: 'Tags', visible: true, sortable: false, minWidth: 150 },
   { id: 'streak', label: 'Streak', visible: false, sortable: true, width: 80 },
   { id: 'subtasks', label: 'Subtasks', visible: false, sortable: false, width: 100 },
   { id: 'status', label: 'Status', visible: false, sortable: true, width: 120 },
@@ -339,7 +340,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
         case 'project':
           return task.project || '';
         case 'tags':
-          return task.tags.join('; ');
+          return getCombinedTags(task).join('; ');
         case 'streak':
           return task.is_habit ? String(task.streak_current) : '';
         case 'subtasks': {
@@ -362,7 +363,11 @@ const TaskTable: React.FC<TaskTableProps> = ({
     const csvContent = [headers, ...rows].join('\n');
 
     // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    type BlobWithOptionalText = Blob & { text?: () => Promise<string> };
+    const blob: BlobWithOptionalText = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    if (!blob.text) {
+      blob.text = async () => csvContent;
+    }
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -646,13 +651,31 @@ const TaskTable: React.FC<TaskTableProps> = ({
       }
 
       case 'tags': {
-        const tagsDisplay = task.tags.length > 0 ? (
+        const combinedTags = getCombinedTags(task);
+        const explicitTags = new Set(task.tags.map((tag) => tag.toLowerCase()));
+        const tagsDisplay = combinedTags.length > 0 ? (
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-            {task.tags.slice(0, 2).map((tag) => (
-              <Chip key={tag} label={tag} size="small" />
-            ))}
-            {task.tags.length > 2 && (
-              <Chip label={`+${task.tags.length - 2}`} size="small" variant="outlined" />
+            {combinedTags.slice(0, 2).map((tag) => {
+              const isImplicit = !explicitTags.has(tag.toLowerCase());
+              const chip = (
+                <Chip
+                  key={tag}
+                  label={tag}
+                  size="small"
+                  variant={isImplicit ? 'outlined' : 'filled'}
+                  color={isImplicit ? 'default' : 'primary'}
+                />
+              );
+              return isImplicit ? (
+                <Tooltip key={tag} title="Implicit tag">
+                  {chip}
+                </Tooltip>
+              ) : (
+                chip
+              );
+            })}
+            {combinedTags.length > 2 && (
+              <Chip label={`+${combinedTags.length - 2}`} size="small" variant="outlined" />
             )}
           </Box>
         ) : (
@@ -818,7 +841,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
         <Tooltip title="Export to CSV">
-          <IconButton onClick={handleExportCSV}>
+          <IconButton onClick={handleExportCSV} aria-label="Export to CSV">
             <DownloadIcon />
           </IconButton>
         </Tooltip>
