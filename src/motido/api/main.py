@@ -26,7 +26,7 @@ from motido.core import scoring
 app = FastAPI(
     title="Moti-Do API",
     description="Backend API for the Moti-Do task and habit tracker",
-    version="0.2.1",
+    version="0.3.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
@@ -75,7 +75,7 @@ app.include_router(views.router, prefix="/api")
 @app.get("/api/health")
 async def health_check() -> dict:
     """Health check endpoint."""
-    return {"status": "healthy", "version": "0.2.1"}
+    return {"status": "healthy", "version": "0.3.0"}
 
 
 @app.get("/api/health/db")

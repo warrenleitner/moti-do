@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { TextField } from '@mui/material';
+import type { SxProps, Theme } from '@mui/material';
 
 export interface TextEditorProps {
   value: string;
@@ -9,6 +10,8 @@ export interface TextEditorProps {
   placeholder?: string;
   required?: boolean;
   minLength?: number;
+  maxLength?: number;
+  sx?: SxProps<Theme>;
 }
 
 /**
@@ -24,8 +27,11 @@ export function TextEditor({
   placeholder = '',
   required = false,
   minLength = 0,
+  maxLength,
+  sx,
 }: TextEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const initialValue = useRef(value);
   const [error, setError] = useState<string | null>(null);
   const [localValue, setLocalValue] = useState(value);
 
@@ -79,12 +85,12 @@ export function TextEditor({
     }
 
     // Only save if value changed
-    if (trimmedValue !== value.trim()) {
+    if (trimmedValue !== initialValue.current.trim()) {
       onSave(trimmedValue);
     } else {
       onClose();
     }
-  }, [localValue, value, validate, onSave, onClose]);
+  }, [localValue, validate, onSave, onClose]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -120,6 +126,8 @@ export function TextEditor({
       fullWidth
       autoComplete="off"
       data-testid="text-editor"
+      inputProps={{ maxLength }}
+      sx={sx}
     />
   );
 }

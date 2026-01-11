@@ -41,14 +41,14 @@ async function waitForUrl(url: string, timeout: number = 60000): Promise<void> {
  * Reset user data by deleting the users.json file (for JSON backend only).
  * This ensures tests start with a clean slate when using JSON storage.
  *
- * Note: PostgreSQL reset is handled by run-e2e.sh which always starts
+ * Note: PostgreSQL reset is handled by scripts/verify.py which always starts
  * a fresh Docker container with an empty database.
  */
 function resetUserData(): void {
   // Skip reset if using PostgreSQL (DATABASE_URL is set)
-  // PostgreSQL is reset by run-e2e.sh before this script runs
+  // PostgreSQL is reset by scripts/verify.py before this script runs
   if (process.env.DATABASE_URL) {
-    console.log('Using PostgreSQL backend - database reset handled by run-e2e.sh');
+    console.log('Using PostgreSQL backend - database reset handled by scripts/verify.py');
     return;
   }
 

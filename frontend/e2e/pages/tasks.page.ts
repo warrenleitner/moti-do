@@ -76,6 +76,7 @@ export class TasksPage {
     title: string,
     options?: {
       description?: string;
+      icon?: string;
       priority?: string;
       difficulty?: string;
       duration?: string;
@@ -91,6 +92,11 @@ export class TasksPage {
 
     // Fill in the title (required)
     await dialog.getByLabel('Title').fill(title);
+
+    // Set icon if specified
+    if (options?.icon) {
+      await dialog.getByLabel('Icon').fill(options.icon);
+    }
 
     // Set description if specified
     if (options?.description) {
@@ -184,9 +190,12 @@ export class TasksPage {
   /**
    * Update a task in the edit dialog.
    */
-  async updateTask(updates: { title?: string; description?: string }): Promise<void> {
+  async updateTask(updates: { title?: string; icon?: string; description?: string }): Promise<void> {
     if (updates.title) {
       await this.page.getByLabel('Title').fill(updates.title);
+    }
+    if (updates.icon) {
+      await this.page.getByLabel('Icon').fill(updates.icon);
     }
     if (updates.description) {
       await this.page.getByLabel('Description').fill(updates.description);

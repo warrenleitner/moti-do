@@ -379,10 +379,19 @@ const TaskTable: React.FC<TaskTableProps> = ({
           />
         );
 
-      case 'icon':
-        return (
+      case 'icon': {
+        // Icon column with inline editing
+        const iconDisplay = (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {task.icon && <span style={{ fontSize: '1.5rem' }}>{task.icon}</span>}
+            {task.icon ? (
+              <Tooltip title="Task Icon">
+                <span style={{ fontSize: '1.5rem', cursor: 'pointer' }}>{task.icon}</span>
+              </Tooltip>
+            ) : (
+              <Tooltip title="Add Icon">
+                <span style={{ fontSize: '1.5rem', opacity: 0.3, cursor: 'pointer' }}>+</span>
+              </Tooltip>
+            )}
             {task.status === 'blocked' && (
               <Tooltip title="Blocked">
                 <BlockIcon fontSize="small" color="error" />
@@ -395,6 +404,30 @@ const TaskTable: React.FC<TaskTableProps> = ({
             )}
           </Box>
         );
+
+        return onInlineEdit ? (
+          <EditableCell
+            value={task.icon || ''}
+            taskId={task.id}
+            field="icon"
+            displayComponent={iconDisplay}
+            renderEditor={({ value, onChange, onClose, onSave }) => (
+              <TextEditor
+                value={value}
+                placeholder="Emoji"
+                maxLength={5}
+                sx={{ width: 80 }}
+                onChange={onChange}
+                onClose={onClose}
+                onSave={onSave}
+              />
+            )}
+            onSave={onInlineEdit}
+          />
+        ) : (
+          iconDisplay
+        );
+      }
 
       case 'title': {
         const titleDisplay = (

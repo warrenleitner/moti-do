@@ -37,6 +37,22 @@ test.describe('Task CRUD Operations', () => {
       await expect(task).toBeVisible();
     });
 
+    test('should create a task with an icon', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      const taskTitle = `Icon Task ${Date.now()}`;
+      const taskIcon = '🚀';
+      await tasksPage.createTask(taskTitle, {
+        icon: taskIcon,
+      });
+
+      // Verify task appears with icon
+      const task = tasksPage.getTaskByTitle(taskTitle);
+      await expect(task).toBeVisible();
+      await expect(task.getByText(taskIcon)).toBeVisible();
+    });
+
     test('should create a task with all fields', async ({ page }) => {
       const tasksPage = new TasksPage(page);
       await tasksPage.goto();
@@ -307,8 +323,8 @@ test.describe('Task CRUD Operations', () => {
       await expect(taskRow).toBeVisible();
 
       // Click on the priority chip (should show Medium by default)
-      // Note: nth(1) because nth(0) is now the title cell
-      const priorityCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(1);
+      // Note: nth(2) because nth(0) is icon and nth(1) is title
+      const priorityCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(2);
       await priorityCell.click();
 
       // Select "High" from the dropdown
@@ -333,8 +349,8 @@ test.describe('Task CRUD Operations', () => {
       // Find the task row
       const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
 
-      // Click on the difficulty chip (third editable cell after title and priority)
-      const difficultyCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(2);
+      // Click on the difficulty chip (fourth editable cell after icon, title, and priority)
+      const difficultyCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(3);
       await difficultyCell.click();
 
       // Select "Herculean" from the dropdown
@@ -359,8 +375,8 @@ test.describe('Task CRUD Operations', () => {
       // Find the task row
       const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
 
-      // Click on the duration chip (fourth editable cell after title, priority, difficulty)
-      const durationCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(3);
+      // Click on the duration chip (fifth editable cell after icon, title, priority, difficulty)
+      const durationCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(4);
       await durationCell.click();
 
       // Select "Odysseyan" from the dropdown
@@ -382,9 +398,9 @@ test.describe('Task CRUD Operations', () => {
       await tasksPage.switchToTableView();
       await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
 
-      // Find the task row and edit priority (nth(1) because title is now nth(0))
+      // Find the task row and edit priority (nth(2) because icon is 0 and title is 1)
       const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
-      const priorityCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(1);
+      const priorityCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(2);
       await priorityCell.click();
       await page.getByRole('option', { name: /Defcon One/i }).click();
 
@@ -428,10 +444,8 @@ test.describe('Task CRUD Operations', () => {
       const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
       await expect(taskRow).toBeVisible();
 
-      // The due date cell is the one showing "-" in the Due Date column
-      // Find the editable cell in the due date column (after title, priority, difficulty, duration)
-      // Title (0), Priority (1), Difficulty (2), Duration (3), Due Date (4)
-      const dueDateCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(4);
+      // Click on the due date cell (sixth editable cell after icon, title, priority, difficulty, duration)
+      const dueDateCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(5);
       await dueDateCell.click();
 
       // Wait for the date editor to appear within the row
@@ -470,8 +484,8 @@ test.describe('Task CRUD Operations', () => {
       const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
       await expect(taskRow).toBeVisible();
 
-      // Click on the due date cell (5th editable cell: title=0, priority=1, difficulty=2, duration=3, due_date=4)
-      const dueDateCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(4);
+      // Click on the due date cell
+      const dueDateCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(5);
       await dueDateCell.click();
 
       // Wait for the date editor to appear within the row
@@ -511,8 +525,9 @@ test.describe('Task CRUD Operations', () => {
       const taskRow = page.locator('table tbody tr').filter({ hasText: originalTitle });
       await expect(taskRow).toBeVisible();
 
-      // Click on the title cell (first editable cell, nth(0))
-      const titleCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(0);
+      // Click on the title cell (nth(1) among cells with data-testid="editable-cell-display")
+      // Icon is nth(0), Title is nth(1)
+      const titleCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(1);
       await titleCell.click();
 
       // Wait for the text editor to appear
@@ -539,6 +554,49 @@ test.describe('Task CRUD Operations', () => {
       await expect(page.locator('table tbody tr').filter({ hasText: newTitle })).toBeVisible({ timeout: 5000 });
     });
 
+    test('should edit icon inline in table view', async ({ page }) => {
+      const tasksPage = new TasksPage(page);
+      await tasksPage.goto();
+
+      // Create a task without an icon
+      const taskTitle = `Inline Edit Icon ${Date.now()}`;
+      await tasksPage.createTask(taskTitle);
+
+      // Switch to table view
+      await tasksPage.switchToTableView();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+      // Find the task row
+      const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
+      await expect(taskRow).toBeVisible();
+
+      // Find the icon cell (should show "+" for no icon)
+      // Icon is the second column (nth(1) among cells with data-testid="editable-cell-display")
+      // Wait, let's check the order in TaskTable.tsx: select, icon, title, score, priority, difficulty, duration...
+      // Editable cells are: icon, title, priority, difficulty, duration, start_date, due_date, project, tags
+      // So Icon is index 0 among editable cells.
+      const iconCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(0);
+      await expect(iconCell.getByText('+')).toBeVisible();
+      await iconCell.click();
+
+      // Wait for the text editor to appear
+      await expect(page.getByTestId('text-editor')).toBeVisible({ timeout: 5000 });
+
+      // Fill a new icon
+      const taskIcon = '🍕';
+      const input = page.getByTestId('text-editor').getByRole('textbox');
+      await input.fill(taskIcon);
+
+      // Click outside to blur and save
+      await page.locator('body').click({ position: { x: 0, y: 0 } });
+
+      // Wait for the save to complete
+      await expect(page.getByTestId('text-editor')).not.toBeVisible({ timeout: 5000 });
+
+      // Verify the icon has changed
+      await expect(taskRow.getByText(taskIcon)).toBeVisible({ timeout: 5000 });
+    });
+
     test('should cancel title edit on Escape', async ({ page }) => {
       const tasksPage = new TasksPage(page);
       await tasksPage.goto();
@@ -555,8 +613,8 @@ test.describe('Task CRUD Operations', () => {
       const taskRow = page.locator('table tbody tr').filter({ hasText: originalTitle });
       await expect(taskRow).toBeVisible();
 
-      // Click on the title cell (first editable cell, nth(0))
-      const titleCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(0);
+      // Click on the title cell (nth(1) among cells with data-testid="editable-cell-display")
+      const titleCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(1);
       await titleCell.click();
 
       // Wait for the text editor to appear
@@ -595,8 +653,8 @@ test.describe('Task CRUD Operations', () => {
       const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
       await expect(taskRow).toBeVisible();
 
-      // Click on the project cell (6th editable cell: title=0, priority=1, difficulty=2, duration=3, due_date=4, project=5)
-      const projectCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(5);
+      // Click on the project cell (7th editable cell: icon=0, title=1, priority=2, difficulty=3, duration=4, due_date=5, project=6)
+      const projectCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(6);
       await projectCell.click();
 
       // Wait for the project editor to appear
@@ -633,7 +691,7 @@ test.describe('Task CRUD Operations', () => {
       await expect(taskRow).toBeVisible();
 
       // Click on the project cell
-      const projectCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(5);
+      const projectCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(6);
       await projectCell.click();
 
       // Wait for the project editor to appear
@@ -651,7 +709,7 @@ test.describe('Task CRUD Operations', () => {
 
       // Verify the project is now empty (shows "-") - check the project cell specifically
       // The project cell shows "-" via the editable cell display
-      const projectCellAfter = taskRow.locator('[data-testid="editable-cell-display"]').nth(5);
+      const projectCellAfter = taskRow.locator('[data-testid="editable-cell-display"]').nth(6);
       await expect(projectCellAfter.getByText('-')).toBeVisible({ timeout: 5000 });
     });
 
@@ -688,8 +746,8 @@ test.describe('Task CRUD Operations', () => {
       const taskRow = page.locator('table tbody tr').filter({ hasText: taskTitle });
       await expect(taskRow).toBeVisible();
 
-      // Click on the tags cell (7th editable cell: title=0, priority=1, difficulty=2, duration=3, due_date=4, project=5, tags=6)
-      const tagsCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(6);
+      // Click on the tags cell (8th editable cell)
+      const tagsCell = taskRow.locator('[data-testid="editable-cell-display"]').nth(7);
       await tagsCell.click();
 
       // Wait for the tags editor to appear

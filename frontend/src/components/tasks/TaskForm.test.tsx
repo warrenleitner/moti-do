@@ -25,6 +25,7 @@ describe('TaskForm', () => {
   it('renders when open', () => {
     render(<TaskForm {...defaultProps} />);
     expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/icon/i)).toBeInTheDocument();
   });
 
   it('does not render when closed', () => {
@@ -98,6 +99,13 @@ describe('TaskForm', () => {
     const descriptionInput = screen.getByLabelText(/description/i);
     await user.type(descriptionInput, 'Test description');
     expect(descriptionInput).toHaveValue('Test description');
+  });
+
+  it('allows editing icon field', async () => {
+    const { user } = render(<TaskForm {...defaultProps} />);
+    const iconInput = screen.getByLabelText(/icon/i);
+    await user.type(iconInput, '🚀');
+    expect(iconInput).toHaveValue('🚀');
   });
 
   it('allows changing priority', () => {
