@@ -411,6 +411,21 @@ describe('useFilteredTasks', () => {
     expect(result.current[0].tags).toContain('work');
   });
 
+  it('should filter by implicit tag from description', () => {
+    const store = useTaskStore.getState();
+    const implicitTask = {
+      ...mockTasks[0],
+      tags: [],
+      text_description: 'Contains #focus tag',
+    };
+    store.setTasks([implicitTask]);
+    store.setFilters({ status: 'all', tags: ['focus'] });
+
+    const { result } = renderHook(() => useFilteredTasks());
+    expect(result.current).toHaveLength(1);
+    expect(result.current[0].id).toBe(implicitTask.id);
+  });
+
   it('should filter by search term', () => {
     const store = useTaskStore.getState();
     store.setFilters({ status: 'all', search: 'habit' });

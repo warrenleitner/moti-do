@@ -7,6 +7,7 @@ import { devtools, persist } from 'zustand/middleware';
 import type { Task, TaskCompletionResponse } from '../types';
 import { Priority, Difficulty, Duration } from '../types';
 import { taskApi } from '../services/api';
+import { getCombinedTags } from '../utils/tags';
 
 interface TaskFilters {
   status: 'all' | 'active' | 'completed' | 'blocked' | 'future';
@@ -466,9 +467,12 @@ export const useFilteredTasks = (lastProcessedDate?: string) => {
       return false;
     }
 
-    // Tag filter (multi-select - task must have at least one of the selected tags)
-    if (filters.tags.length > 0 && !filters.tags.some((tag) => task.tags.includes(tag))) {
-      return false;
+    // Tag filter (multi-select - task must have at least one of the selected tags, including implicit)
+    if (filters.tags.length > 0) {
+      const taskTags = getCombinedTags(task).map((tag) => tag.toLowerCase());
+      if (!filters.tags.some((tag) => taskTags.includes(tag.toLowerCase()))) {
+        return false;
+      }
     }
 
     // Search filter

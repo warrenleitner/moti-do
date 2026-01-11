@@ -224,6 +224,26 @@ describe('TaskTable', () => {
     expect(screen.getByText('Another Task')).toBeInTheDocument();
   });
 
+  it('renders implicit tags alongside explicit tags', () => {
+    const taskWithImplicit: Task = {
+      ...mockTask,
+      tags: ['explicit'],
+      text_description: 'Contains #implicitTag',
+    };
+
+    render(
+      <TaskTable
+        tasks={[taskWithImplicit]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    expect(screen.getByText('explicit')).toBeInTheDocument();
+    expect(screen.getByText('implicittag')).toBeInTheDocument();
+  });
+
   it('supports multi-column sorting', () => {
     const tasks = [
       { ...mockTask, id: '1', priority: 'High' as Priority, score: 100 },
@@ -511,6 +531,39 @@ describe('TaskTable', () => {
     await user.type(input, '🚀{Enter}');
 
     expect(mockOnInlineEdit).toHaveBeenCalledWith('1', { icon: '🚀' });
+  });
+
+  it('includes implicit tags in CSV export', async () => {
+    const taskWithImplicit: Task = {
+      ...mockTask,
+      tags: ['explicit'],
+      text_description: 'Contains #implicit',
+    };
+    let capturedBlob: Blob | undefined;
+    const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockImplementation((blob: Blob) => {
+      capturedBlob = blob;
+      return 'blob:csv';
+    });
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+
+    const { user } = render(
+      <TaskTable
+        tasks={[taskWithImplicit]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    const exportButton = screen.getByRole('button', { name: /export to csv/i });
+    await user.click(exportButton);
+
+    expect(capturedBlob).toBeDefined();
+    const csvText = await capturedBlob!.text();
+    expect(csvText).toMatch(/explicit; implicit/);
+
+    createObjectURLSpy.mockRestore();
+    revokeSpy.mockRestore();
   });
 
 
