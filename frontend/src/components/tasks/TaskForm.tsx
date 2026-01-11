@@ -86,7 +86,6 @@ interface TaskFormProps {
 const defaultTask: Partial<Task> = {
   title: '',
   text_description: '',
-  icon: '',
   priority: Priority.MEDIUM,
   difficulty: Difficulty.MEDIUM,
   duration: Duration.MEDIUM,
@@ -170,26 +169,15 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
         <DialogTitle>{isEditing ? 'Edit Task' : 'Create New Task'}</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
-            {/* Title & Icon (Emoji) */}
-            <Stack direction="row" spacing={2}>
-              <TextField
-                label="Icon"
-                placeholder="Emoji"
-                value={formData.icon || ''}
-                onChange={(e) => handleChange('icon', e.target.value)}
-                sx={{ width: 80 }}
-                inputProps={{ maxLength: 5 }}
-                autoComplete="off"
-              />
-              <TextField
-                label="Title"
-                value={formData.title || ''}
-                onChange={(e) => handleChange('title', e.target.value)}
-                fullWidth
-                required
-                autoFocus
-              />
-            </Stack>
+            {/* Title */}
+            <TextField
+              label="Title"
+              value={formData.title || ''}
+              onChange={(e) => handleChange('title', e.target.value)}
+              fullWidth
+              required
+              autoFocus
+            />
 
             {/* Description */}
             <TextField
