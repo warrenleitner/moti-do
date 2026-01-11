@@ -336,7 +336,13 @@ export default function TasksPage() {
             <TableChart />
           </ToggleButton>
         </ToggleButtonGroup>
-        <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew} disabled={isLoading}>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={handleCreateNew}
+          disabled={isLoading}
+          data-testid="add-task-fab"
+        >
           New Task
         </Button>
       </Box>

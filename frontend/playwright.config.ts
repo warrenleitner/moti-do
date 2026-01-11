@@ -91,14 +91,14 @@ export default defineConfig({
 
   /* Run local dev server before starting the tests */
   /* Note: When running via `npx playwright test` directly, DATABASE_URL is cleared
-   * to use local JSON storage. When running via `./scripts/run-e2e.sh`, the script
-   * starts the backend with PostgreSQL and sets DATABASE_URL - Playwright will
-   * reuse that existing server. */
+   * to use local JSON storage. When running via `python3 scripts/verify.py`, the
+   * runner can start the backend with PostgreSQL and set DATABASE_URL - Playwright
+   * will reuse that existing server. */
   webServer: [
     {
       command: 'cd .. && env DATABASE_URL= poetry run uvicorn motido.api.main:app --host 0.0.0.0 --port 8000',
       url: 'http://localhost:8000/api/health',
-      reuseExistingServer: true, // Reuse existing server (e.g., when run-e2e.sh starts PostgreSQL backend)
+      reuseExistingServer: true, // Reuse existing server (e.g., when verify.py starts PostgreSQL backend)
       timeout: 120 * 1000,
       env: {
         ...process.env,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '../../test/utils';
 import TaskTable from './TaskTable';
 import { Task, Priority, Difficulty, Duration } from '../../types/models';
 
@@ -488,6 +488,32 @@ describe('TaskTable', () => {
     // But task should still render
     expect(screen.getByText('Test Task')).toBeInTheDocument();
   });
+
+  it('supports inline editing of task icon', async () => {
+    const mockOnInlineEdit = vi.fn().mockResolvedValue(undefined);
+    const { user } = render(
+      <TaskTable
+        tasks={[mockTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+        onInlineEdit={mockOnInlineEdit}
+      />
+    );
+
+    // Click the icon to start editing
+    const iconCell = screen.getByText('📝');
+    await user.click(iconCell);
+
+    // Find the editor input
+    const input = screen.getByPlaceholderText('Emoji');
+    await user.clear(input);
+    await user.type(input, '🚀{Enter}');
+
+    expect(mockOnInlineEdit).toHaveBeenCalledWith('1', { icon: '🚀' });
+  });
+
+
 
   it('loads sort configuration from localStorage', () => {
     const customSort = JSON.stringify([

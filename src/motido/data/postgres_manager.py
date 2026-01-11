@@ -115,6 +115,28 @@ class PostgresDataManager(DataManager):
                     """
                 )
 
+                # Migration: Add defined_tags and defined_projects to users
+                cursor.execute(
+                    """
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'users' AND column_name = 'defined_tags'
+                        ) THEN
+                            ALTER TABLE users ADD COLUMN defined_tags JSONB;
+                        END IF;
+
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'users' AND column_name = 'defined_projects'
+                        ) THEN
+                            ALTER TABLE users ADD COLUMN defined_projects JSONB;
+                        END IF;
+                    END $$;
+                    """
+                )
+
                 # Task table
                 cursor.execute(
                     """
@@ -148,6 +170,54 @@ class PostgresDataManager(DataManager):
                         subtask_recurrence_mode TEXT DEFAULT 'default'
                     )
                 """
+                )
+
+                # Migration: Add new columns to tasks if they don't exist
+                cursor.execute(
+                    """
+                    DO $$
+                    BEGIN
+                        -- icon
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'tasks' AND column_name = 'icon'
+                        ) THEN
+                            ALTER TABLE tasks ADD COLUMN icon TEXT;
+                        END IF;
+
+                        -- recurrence_type
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'tasks' AND column_name = 'recurrence_type'
+                        ) THEN
+                            ALTER TABLE tasks ADD COLUMN recurrence_type TEXT;
+                        END IF;
+
+                        -- parent_habit_id
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'tasks' AND column_name = 'parent_habit_id'
+                        ) THEN
+                            ALTER TABLE tasks ADD COLUMN parent_habit_id TEXT;
+                        END IF;
+
+                        -- habit_start_delta
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'tasks' AND column_name = 'habit_start_delta'
+                        ) THEN
+                            ALTER TABLE tasks ADD COLUMN habit_start_delta INTEGER;
+                        END IF;
+
+                        -- subtask_recurrence_mode
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'tasks' AND column_name = 'subtask_recurrence_mode'
+                        ) THEN
+                            ALTER TABLE tasks ADD COLUMN subtask_recurrence_mode TEXT DEFAULT 'default';
+                        END IF;
+                    END $$;
+                    """
                 )
 
                 # Create index on user_username for faster queries

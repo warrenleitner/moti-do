@@ -8,7 +8,7 @@ import { afterEach, beforeAll, afterAll, vi } from 'vitest';
 
 // Define global constants that Vite injects at build time
 // These are used for version display in the UI
-(globalThis as Record<string, unknown>).__APP_VERSION__ = '0.2.1';
+(globalThis as Record<string, unknown>).__APP_VERSION__ = '0.3.0';
 (globalThis as Record<string, unknown>).__BUILD_TIMESTAMP__ = new Date().toISOString();
 
 // Mock localStorage for Zustand persist middleware
