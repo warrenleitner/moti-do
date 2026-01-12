@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Box, Typography, Snackbar, Alert, Drawer, IconButton } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import { DependencyGraph } from '../components/graph';
@@ -9,7 +9,7 @@ import type { Task } from '../types';
 // UI component - tested via integration tests
 /* v8 ignore start */
 export default function GraphPage() {
-  const { tasks, updateTask } = useTaskStore();
+  const { tasks, updateTask, fetchTasks, hasCompletedData } = useTaskStore();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -17,6 +17,12 @@ export default function GraphPage() {
     message: '',
     severity: 'success',
   });
+
+  useEffect(() => {
+    if (!hasCompletedData) {
+      fetchTasks({ includeCompleted: true }).catch(() => {});
+    }
+  }, [fetchTasks, hasCompletedData]);
 
   const handleSelectTask = (task: Task) => {
     setSelectedTask(task);

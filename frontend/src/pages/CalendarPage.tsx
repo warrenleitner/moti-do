@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Typography, Snackbar, Alert } from '@mui/material';
 import { TaskCalendar } from '../components/calendar';
 import { TaskForm } from '../components/tasks';
@@ -9,7 +9,7 @@ import { Priority, Difficulty, Duration } from '../types';
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
 export default function CalendarPage() {
-  const { tasks, updateTask, addTask, saveTask } = useTaskStore();
+  const { tasks, updateTask, addTask, saveTask, fetchTasks, hasCompletedData } = useTaskStore();
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTaskDate, setNewTaskDate] = useState<Date | null>(null);
@@ -18,6 +18,13 @@ export default function CalendarPage() {
     message: '',
     severity: 'success',
   });
+
+  // Fetch tasks on mount (including completed for full calendar view)
+  useEffect(() => {
+    if (!hasCompletedData) {
+      fetchTasks({ includeCompleted: true }).catch(() => {});
+    }
+  }, [fetchTasks, hasCompletedData]);
 
   const handleCreateTask = (date: Date) => {
     setEditingTask(null);

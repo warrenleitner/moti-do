@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -47,6 +47,7 @@ import { format } from 'date-fns';
 import ColumnConfigDialog from './ColumnConfigDialog';
 import { useSystemStatus } from '../../store/userStore';
 import { getCombinedTags } from '../../utils/tags';
+import { deriveLifecycleStatus, type LifecycleStatus } from '../../utils/taskStatus';
 
 export type ColumnId =
   | 'select'
@@ -63,6 +64,7 @@ export type ColumnId =
   | 'tags'
   | 'streak'
   | 'subtasks'
+  | 'kanban_status'
   | 'status'
   | 'actions';
 
@@ -82,6 +84,7 @@ export interface SortConfig {
 
 interface TaskTableProps {
   tasks: Task[];
+  allTasks?: Task[];
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   onComplete: (taskId: string) => void;
@@ -110,6 +113,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: 'tags', label: 'Tags', visible: true, sortable: false, minWidth: 150 },
   { id: 'streak', label: 'Streak', visible: false, sortable: true, width: 80 },
   { id: 'subtasks', label: 'Subtasks', visible: false, sortable: false, width: 100 },
+  { id: 'kanban_status', label: 'Kanban Status', visible: false, sortable: true, width: 140 },
   { id: 'status', label: 'Status', visible: false, sortable: true, width: 120 },
   { id: 'actions', label: 'Actions', visible: true, sortable: false, width: 150 },
 ];
@@ -118,6 +122,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
 /* v8 ignore start */
 const TaskTable: React.FC<TaskTableProps> = ({
   tasks,
+  allTasks,
   onEdit,
   onDelete,
   onComplete,
@@ -130,21 +135,23 @@ const TaskTable: React.FC<TaskTableProps> = ({
   onDuplicate,
   onBulkDuplicate,
 }) => {
-  // Load saved column config from localStorage, merging in any new columns
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
+  const loadColumns = (): ColumnConfig[] => {
     const saved = localStorage.getItem('taskTableColumns');
     if (!saved) return DEFAULT_COLUMNS;
 
-    const savedColumns: ColumnConfig[] = JSON.parse(saved);
-    const savedIds = new Set(savedColumns.map((c) => c.id));
+    const savedColumns = JSON.parse(saved) as ColumnConfig[];
+    const migratedColumns: ColumnConfig[] = savedColumns.map((col) =>
+      col.id === 'status' ? { ...col, id: 'kanban_status', label: 'Kanban Status' } : col
+    );
+    const savedIds = new Set<ColumnId>(migratedColumns.map((c) => c.id));
 
     // Find new columns that aren't in saved config
     const newColumns = DEFAULT_COLUMNS.filter((c) => !savedIds.has(c.id));
 
-    if (newColumns.length === 0) return savedColumns;
+    if (newColumns.length === 0) return migratedColumns;
 
     // Insert new columns at their default positions
-    const merged = [...savedColumns];
+    const merged: ColumnConfig[] = [...migratedColumns];
     for (const newCol of newColumns) {
       const defaultIndex = DEFAULT_COLUMNS.findIndex((c) => c.id === newCol.id);
       // Find the best insertion point based on surrounding columns
@@ -163,7 +170,10 @@ const TaskTable: React.FC<TaskTableProps> = ({
     // Save the merged config
     localStorage.setItem('taskTableColumns', JSON.stringify(merged));
     return merged;
-  });
+  };
+
+  // Load saved column config from localStorage, merging in any new columns
+  const [columns, setColumns] = useState<ColumnConfig[]>(loadColumns);
 
   // Load saved sort config from localStorage
   const [sortConfig, setSortConfig] = useState<SortConfig[]>(() => {
@@ -174,6 +184,33 @@ const TaskTable: React.FC<TaskTableProps> = ({
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
 
   const systemStatus = useSystemStatus();
+
+  const lifecycleStatusById = useMemo(() => {
+    const statuses = new Map<string, LifecycleStatus>();
+    const sourceTasks = allTasks ?? tasks;
+    for (const task of tasks) {
+      statuses.set(
+        task.id,
+        deriveLifecycleStatus(task, {
+          allTasks: sourceTasks,
+          lastProcessedDate: systemStatus?.last_processed_date,
+        })
+      );
+    }
+    return statuses;
+  }, [allTasks, systemStatus?.last_processed_date, tasks]);
+
+  const getLifecycleStatus = useCallback(
+    (task: Task): LifecycleStatus => {
+      const cached = lifecycleStatusById.get(task.id);
+      if (cached) return cached;
+      return deriveLifecycleStatus(task, {
+        allTasks: allTasks ?? tasks,
+        lastProcessedDate: systemStatus?.last_processed_date,
+      });
+    },
+    [allTasks, lifecycleStatusById, systemStatus?.last_processed_date, tasks]
+  );
 
   // Calculate current processing date (last_processed_date + 1 day) for date comparisons
   const currentProcessingDate = (() => {
@@ -278,9 +315,19 @@ const TaskTable: React.FC<TaskTableProps> = ({
           case 'streak':
             comparison = a.streak_current - b.streak_current;
             break;
-          case 'status':
+          case 'kanban_status':
             comparison = (a.status || '').localeCompare(b.status || '');
             break;
+          case 'status': {
+            const statusOrder: Record<LifecycleStatus, number> = {
+              active: 0,
+              blocked: 1,
+              future: 2,
+              completed: 3,
+            };
+            comparison = statusOrder[getLifecycleStatus(a)] - statusOrder[getLifecycleStatus(b)];
+            break;
+          }
           default:
             comparison = 0;
         }
@@ -294,7 +341,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
     });
 
     return sorted;
-  }, [tasks, sortConfig]);
+  }, [tasks, sortConfig, getLifecycleStatus]);
 
   const visibleColumns = columns.filter((col) => col.visible);
   const allSelected = tasks.length > 0 && selectedTasks.length === tasks.length;
@@ -348,8 +395,12 @@ const TaskTable: React.FC<TaskTableProps> = ({
           const total = task.subtasks.length;
           return total > 0 ? `${completed}/${total}` : '';
         }
-        case 'status':
+        case 'kanban_status':
           return task.status ? task.status.replace('_', ' ') : '';
+        case 'status': {
+          const lifecycleStatus = getLifecycleStatus(task);
+          return lifecycleStatus.charAt(0).toUpperCase() + lifecycleStatus.slice(1);
+        }
         default:
           return '';
       }
@@ -716,7 +767,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
         return total > 0 ? `${completed}/${total}` : '-';
       }
 
-      case 'status':
+      case 'kanban_status':
         return task.status ? (
           <Chip
             label={task.status.replace('_', ' ')}
@@ -732,6 +783,21 @@ const TaskTable: React.FC<TaskTableProps> = ({
         ) : (
           '-'
         );
+
+      case 'status': {
+        const lifecycleStatus = getLifecycleStatus(task);
+        const label = lifecycleStatus.charAt(0).toUpperCase() + lifecycleStatus.slice(1);
+        const color =
+          lifecycleStatus === 'completed'
+            ? 'success'
+            : lifecycleStatus === 'blocked'
+            ? 'error'
+            : lifecycleStatus === 'future'
+            ? 'info'
+            : 'primary';
+
+        return <Chip label={label} size="small" color={color} variant={lifecycleStatus === 'active' ? 'outlined' : 'filled'} />;
+      }
 
       case 'actions':
         return (

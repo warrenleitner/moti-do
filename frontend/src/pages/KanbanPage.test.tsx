@@ -43,6 +43,7 @@ describe('KanbanPage', () => {
   const mockCompleteTask = vi.fn().mockResolvedValue({ task: mockTask, xp_earned: 100 });
   const mockUncompleteTask = vi.fn().mockResolvedValue(undefined);
   const mockFetchStats = vi.fn().mockResolvedValue(undefined);
+  const mockFetchTasks = vi.fn().mockResolvedValue(undefined);
   const mockSetSort = vi.fn();
 
   const defaultFilters = {
@@ -74,6 +75,8 @@ describe('KanbanPage', () => {
       resetFilters: mockResetFilters,
       sort: defaultSort,
       setSort: mockSetSort,
+      fetchTasks: mockFetchTasks,
+      hasCompletedData: true,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
     vi.mocked(userStore.useUserStore).mockReturnValue({
       fetchStats: mockFetchStats,

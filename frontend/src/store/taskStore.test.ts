@@ -15,6 +15,7 @@ beforeEach(() => {
   store.selectTask(null);
   store.resetFilters();
   store.setError(null);
+  useTaskStore.setState({ hasCompletedData: false });
 });
 
 describe('TaskStore', () => {
@@ -182,16 +183,38 @@ describe('TaskStore', () => {
   });
 
   describe('API actions', () => {
-    it('should fetch tasks from API', async () => {
+    it('fetches pending tasks by default and preserves completed cache flag', async () => {
       const { result } = renderHook(() => useTaskStore());
+      const taskApi = await import('../services/api');
+      const spy = vi.spyOn(taskApi.taskApi, 'getTasks');
 
       await act(async () => {
         await result.current.fetchTasks();
       });
 
+      expect(spy).toHaveBeenCalledWith({ status_filter: 'pending', include_completed: false });
       expect(result.current.tasks).toHaveLength(3);
+      expect(result.current.hasCompletedData).toBe(false);
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
+
+      spy.mockRestore();
+    });
+
+    it('fetches completed tasks when requested and caches them', async () => {
+      const { result } = renderHook(() => useTaskStore());
+      const taskApi = await import('../services/api');
+      const spy = vi.spyOn(taskApi.taskApi, 'getTasks');
+
+      await act(async () => {
+        await result.current.fetchTasks({ includeCompleted: true });
+      });
+
+      expect(spy).toHaveBeenCalledWith(undefined);
+      expect(result.current.hasCompletedData).toBe(true);
+      expect(result.current.tasks).toHaveLength(3);
+
+      spy.mockRestore();
     });
 
     it('should create a task via API', async () => {

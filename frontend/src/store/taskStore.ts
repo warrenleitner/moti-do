@@ -8,6 +8,7 @@ import type { Task, TaskCompletionResponse } from '../types';
 import { Priority, Difficulty, Duration } from '../types';
 import { taskApi } from '../services/api';
 import { getCombinedTags } from '../utils/tags';
+import { deriveLifecycleStatus } from '../utils/taskStatus';
 
 interface TaskFilters {
   status: 'all' | 'active' | 'completed' | 'blocked' | 'future';
@@ -33,6 +34,7 @@ interface TaskState {
   selectedTaskId: string | null;
   isLoading: boolean;
   error: string | null;
+  hasCompletedData: boolean;
 
   // Filters and sorting
   filters: TaskFilters;
@@ -57,7 +59,7 @@ interface TaskState {
   setError: (error: string | null) => void;
 
   // API actions (async with API calls)
-  fetchTasks: () => Promise<void>;
+  fetchTasks: (options?: { includeCompleted?: boolean }) => Promise<void>;
   createTask: (task: Partial<Task>) => Promise<Task>;
   saveTask: (id: string, updates: Partial<Task>) => Promise<Task>;
   deleteTask: (id: string) => Promise<void>;
@@ -81,6 +83,19 @@ const defaultSort: TaskSort = {
   order: 'desc',
 };
 
+const mergeTaskLists = (existing: Task[], incoming: Task[]): Task[] => {
+  const incomingById = new Map(incoming.map((task) => [task.id, task]));
+  const merged = existing.map((task) => incomingById.get(task.id) ?? task);
+
+  for (const task of incoming) {
+    if (!existing.some((t) => t.id === task.id)) {
+      merged.push(task);
+    }
+  }
+
+  return merged;
+};
+
 export const useTaskStore = create<TaskState>()(
   devtools(
     persist(
@@ -90,6 +105,7 @@ export const useTaskStore = create<TaskState>()(
         selectedTaskId: null,
         isLoading: false,
         error: null,
+        hasCompletedData: false,
         filters: defaultFilters,
         sort: defaultSort,
         subtaskViewMode: 'inline',
@@ -136,11 +152,26 @@ export const useTaskStore = create<TaskState>()(
         setError: (error) => set({ error, isLoading: false }),
 
         // API actions
-        fetchTasks: async () => {
+        fetchTasks: async (options) => {
+          const includeCompleted = options?.includeCompleted ?? false;
           set({ isLoading: true, error: null });
           try {
-            const tasks = await taskApi.getTasks();
-            set({ tasks, isLoading: false });
+            const tasks = await taskApi.getTasks(
+              includeCompleted ? undefined : { status_filter: 'pending', include_completed: false }
+            );
+
+            set((state) => {
+              if (includeCompleted) {
+                return { tasks, isLoading: false, hasCompletedData: true };
+              }
+
+              const completedCache = state.hasCompletedData
+                ? state.tasks.filter((t) => t.is_complete)
+                : [];
+              const merged = mergeTaskLists(completedCache, tasks);
+
+              return { tasks: merged, isLoading: false };
+            });
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to fetch tasks';
             set({ error: message, isLoading: false });
@@ -399,50 +430,23 @@ export const useTaskStore = create<TaskState>()(
 export const useFilteredTasks = (lastProcessedDate?: string) => {
   const { tasks, filters, sort } = useTaskStore();
 
-  // Helper: check if a task is blocked (has incomplete dependencies)
-  const isBlocked = (task: Task): boolean => {
-    if (task.dependencies.length === 0) return false;
-    return task.dependencies.some((depId) => {
-      const dep = tasks.find((t) => t.id === depId);
-      return dep && !dep.is_complete;
-    });
-  };
-
-  // Helper: check if a task is in the future (start_date > current_processing_date)
-  // Current processing date = last_processed_date + 1 day
-  const isFuture = (task: Task): boolean => {
-    if (!lastProcessedDate || !task.start_date) return false;
-    // Parse last_processed_date and add 1 day to get current processing date
-    const [year, month, day] = lastProcessedDate.split('-').map(Number);
-    const currentProcessingDate = new Date(year, month - 1, day + 1);
-    // Parse task start_date
-    const startDateStr = task.start_date.includes('T') ? task.start_date.split('T')[0] : task.start_date;
-    const [sYear, sMonth, sDay] = startDateStr.split('-').map(Number);
-    const taskStartDate = new Date(sYear, sMonth - 1, sDay);
-    // Task is future if start_date is AFTER current processing date
-    return taskStartDate > currentProcessingDate;
-  };
-
   // Apply filters
   const filtered = tasks.filter((task) => {
+    const lifecycleStatus = deriveLifecycleStatus(task, { allTasks: tasks, lastProcessedDate });
+
     // Status filter (unified: active, completed, blocked, future, all)
     switch (filters.status) {
       case 'completed':
-        if (!task.is_complete) return false;
+        if (lifecycleStatus !== 'completed') return false;
         break;
       case 'blocked':
-        // Show only blocked tasks (not completed)
-        if (task.is_complete || !isBlocked(task)) return false;
+        if (lifecycleStatus !== 'blocked') return false;
         break;
       case 'future':
-        // Show only future tasks (not completed)
-        if (task.is_complete || !isFuture(task)) return false;
+        if (lifecycleStatus !== 'future') return false;
         break;
       case 'active':
-        // Show tasks that are not completed, not blocked, and not future
-        if (task.is_complete) return false;
-        if (isBlocked(task)) return false;
-        if (isFuture(task)) return false;
+        if (lifecycleStatus !== 'active') return false;
         break;
       // 'all' shows everything
     }

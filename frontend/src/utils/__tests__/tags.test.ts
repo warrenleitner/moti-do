@@ -40,6 +40,18 @@ describe('tags utilities', () => {
     expect(implicit).toContain('deadline');
   });
 
+  it('adds implicit metadata tags for habits and recurrence', () => {
+    const task: Task = {
+      ...baseTask,
+      is_habit: true,
+      recurrence_rule: 'FREQ=DAILY',
+    };
+
+    const implicit = getImplicitTagsForTask(task);
+    expect(implicit).toContain('habit');
+    expect(implicit).toContain('recurring');
+  });
+
   it('merges explicit and implicit tags without duplicates', () => {
     const task: Task = {
       ...baseTask,
