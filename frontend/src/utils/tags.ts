@@ -19,9 +19,17 @@ export const extractImplicitTags = (text?: string): string[] => {
  */
 export const getImplicitTagsForTask = (task: Task): string[] => {
   const parts = [task.title, task.text_description, task.description];
-  const tags = parts.flatMap((part) => extractImplicitTags(part));
+  const hashtagTags = parts.flatMap((part) => extractImplicitTags(part));
 
-  return Array.from(new Set(tags));
+  const implicitMeta: string[] = [];
+  if (task.is_habit) {
+    implicitMeta.push('habit');
+  }
+  if (task.recurrence_rule || task.recurrence_type) {
+    implicitMeta.push('recurring');
+  }
+
+  return Array.from(new Set([...hashtagTags, ...implicitMeta]));
 };
 
 /**

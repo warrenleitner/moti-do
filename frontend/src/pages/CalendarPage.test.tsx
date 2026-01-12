@@ -32,6 +32,7 @@ describe('CalendarPage', () => {
 
   const mockUpdateTask = vi.fn();
   const mockAddTask = vi.fn();
+  const mockFetchTasks = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -39,6 +40,8 @@ describe('CalendarPage', () => {
       tasks: [mockTask],
       updateTask: mockUpdateTask,
       addTask: mockAddTask,
+      fetchTasks: mockFetchTasks,
+      hasCompletedData: true,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
 
     vi.mocked(stores.useUserStore).mockReturnValue({

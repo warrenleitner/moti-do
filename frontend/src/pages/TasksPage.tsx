@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton, Link as MuiLink, Typography, Chip } from '@mui/material';
 import {
   Add,
@@ -60,6 +60,8 @@ export default function TasksPage() {
     filters,
     setFilters,
     resetFilters,
+    fetchTasks,
+    hasCompletedData,
   } = useTaskStore();
   const { fetchStats } = useUserStore();
   const systemStatus = useSystemStatus();
@@ -112,6 +114,21 @@ export default function TasksPage() {
     () => selectedTasks.filter((id) => visibleTaskIdSet.has(id)),
     [selectedTasks, visibleTaskIdSet]
   );
+
+  useEffect(() => {
+    if ((filters.status === 'completed' || filters.status === 'all') && !hasCompletedData) {
+      fetchTasks({ includeCompleted: true }).catch(() => {
+        // Errors surface via store error state/snackbar elsewhere
+      });
+    }
+  }, [fetchTasks, filters.status, hasCompletedData]);
+
+  // Update visible row count when filtered tasks change
+  useEffect(() => {
+    setVisibleRowCount((prev) => (filteredTasks.length > prev ? filteredTasks.length : prev));
+    // Intentionally updating state in effect based on external data
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredTasks.length]);
 
   const handleViewModeChange = (_: React.MouseEvent<HTMLElement>, newMode: 'list' | 'table' | null) => {
     if (newMode !== null) {
@@ -485,6 +502,7 @@ export default function TasksPage() {
           )}
           <TaskTable
             tasks={visibleTasks}
+            allTasks={allTasks}
             onEdit={handleEdit}
             onDelete={handleDeleteClick}
             onComplete={handleComplete}

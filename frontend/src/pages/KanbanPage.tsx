@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Box, Snackbar, Alert } from '@mui/material';
 import { KanbanBoard } from '../components/kanban';
 import { TaskForm } from '../components/tasks';
@@ -10,9 +10,22 @@ import { Priority, Difficulty, Duration } from '../types';
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
 export default function KanbanPage() {
-  const { tasks, updateTask, addTask, completeTask, uncompleteTask } = useTaskStore();
+  const { tasks, updateTask, addTask, completeTask, uncompleteTask, fetchTasks, hasCompletedData } = useTaskStore();
   const { fetchStats } = useUserStore();
   const systemStatus = useSystemStatus();
+  const [ready, setReady] = useState(hasCompletedData);
+
+  useEffect(() => {
+    if (!hasCompletedData) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      fetchTasks({ includeCompleted: true })
+        .catch(() => {})
+        .finally(() => setReady(true));
+    } else {
+      setReady(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchTasks, hasCompletedData]);
 
   // Filter out future tasks (start_date > current_processing_date)
   // Kanban shows all statuses (active/completed) in columns, so we don't use useFilteredTasks
@@ -136,6 +149,7 @@ export default function KanbanPage() {
 
   return (
     <Box>
+      {!ready ? null : (
       <KanbanBoard
         tasks={kanbanTasks}
         onUpdateTask={handleUpdateTask}
@@ -143,6 +157,7 @@ export default function KanbanPage() {
         onCompleteTask={handleCompleteTask}
         onUncompleteTask={handleUncompleteTask}
       />
+      )}
 
       {/* Task form dialog */}
       <TaskForm

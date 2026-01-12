@@ -17,7 +17,7 @@ export class CalendarPage {
     // FullCalendar container
     this.calendar = page.locator('.fc');
     // Project filter select
-    this.projectFilter = page.getByLabel('Project');
+    this.projectFilter = page.getByRole('combobox', { name: 'Project' });
     // Task details dialog
     this.taskDetailsDialog = page.getByRole('dialog');
   }
@@ -50,67 +50,151 @@ export class CalendarPage {
    * Get all events visible on the calendar.
    */
   getEvents(): Locator {
-    return this.page.locator('.fc-event');
+    return this.page.locator('.fc-view-harness-active .fc-event');
   }
 
   /**
    * Get an event by its title.
    */
   getEventByTitle(title: string): Locator {
-    return this.page.locator('.fc-event').filter({ hasText: title });
+    return this.getEvents().filter({ hasText: title });
   }
 
   /**
-   * Expand the "+more" popover if events are collapsed.
-   * FullCalendar collapses events when there are too many on a day.
+   * Filter to the specified project if the select and option are available.
    */
-  async expandMoreEventsIfNeeded(): Promise<void> {
-    // Look for "+N more" links on today or any day
-    const moreLinks = this.page.locator('.fc-more-link, .fc-daygrid-more-link');
-    const count = await moreLinks.count();
-
-    if (count > 0) {
-      // Click the first "+more" link to expand
-      await moreLinks.first().click();
-      // Wait for the popover to appear
-      await this.page.waitForTimeout(300);
+  async filterByProject(project: string): Promise<boolean> {
+    if (!(await this.projectFilter.isVisible())) {
+      return false;
     }
+
+    // Get initial event count
+    const initialCount = await this.getEventCount();
+
+    await this.projectFilter.click();
+    const option = this.page.getByRole('option', { name: new RegExp(`^${project}$`, 'i') });
+    const optionVisible = await option
+      .first()
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (!optionVisible) {
+      await this.page.keyboard.press('Escape');
+      return false;
+    }
+
+    await option.first().click();
+    // Wait for MUI Select to close and calendar to update
+    await this.page.waitForTimeout(500);
+
+    const selectedText = (await this.projectFilter.textContent()) || '';
+    const isSelected = selectedText.toLowerCase().includes(project.toLowerCase());
+    
+    if (!isSelected) {
+      return false;
+    }
+
+    // Wait for calendar to re-render with filtered events
+    // The event count should change when filtering is applied
+    for (let i = 0; i < 10; i++) {
+      const newCount = await this.getEventCount();
+      if (newCount !== initialCount) {
+        return true;
+      }
+      await this.page.waitForTimeout(200);
+    }
+
+    // Even if count didn't change, filtering may have worked (could be same count)
+    return true;
+  }
+
+  /**
+   * Apply the dedicated calendar project filter used by seeded tasks.
+   */
+  async filterCalendarProject(project = 'calendar-e2e'): Promise<boolean> {
+    return await this.filterByProject(project);
   }
 
   /**
    * Find an event, expanding "+more" popovers if necessary.
    * Uses .first() to handle cases where the same event appears in multiple places.
    */
-  async findEventByTitle(title: string): Promise<Locator> {
+  async findEventByTitle(title: string, project?: string): Promise<Locator> {
+    // Only attempt filtering if project is provided
+    if (project) {
+      let filtered = false;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        filtered = await this.filterCalendarProject(project).catch(() => false);
+        if (filtered) break;
+        await this.page.waitForTimeout(500);
+      }
+
+      // Wait for FullCalendar to finish rendering after filter change
+      await this.page.waitForTimeout(1000);
+    } else {
+      // No filtering, just wait for events to load
+      await this.getEvents().first().waitFor({ state: 'attached', timeout: 10000 }).catch(() => undefined);
+    }
+
     // First check if event is directly visible (use first() to avoid strict mode violations)
     const event = this.getEventByTitle(title).first();
-    if (await event.count() > 0 && await event.isVisible()) {
+    await this.page
+      .waitForFunction(
+        (text) => {
+          const events = document.querySelectorAll('.fc-view-harness-active .fc-event');
+          return Array.from(events).some((el) => el.textContent?.includes(text));
+        },
+        title,
+        { timeout: 10000 }
+      )
+      .catch(() => undefined);
+    if (await event.isVisible()) {
       return event;
     }
 
-    // Try expanding "+more" links
-    await this.expandMoreEventsIfNeeded();
+    // Try expanding each "+more" link until the event is found
+    const moreLinks = this.page.locator('.fc-view-harness-active .fc-more-link, .fc-view-harness-active .fc-daygrid-more-link');
+    const linkCount = await moreLinks.count();
+    for (let i = 0; i < linkCount; i += 1) {
+      const link = moreLinks.nth(i);
+      await link.click();
+      await this.page
+        .waitForSelector('.fc-popover, .fc-more-popover', { timeout: 1000 })
+        .catch(() => undefined);
+      const popoverEvent = this.page
+        .locator('.fc-popover .fc-event, .fc-more-popover .fc-event')
+        .filter({ hasText: title })
+        .first();
+      const popoverVisible = await popoverEvent
+        .waitFor({ state: 'visible', timeout: 500 })
+        .then(() => true)
+        .catch(() => false);
+      if (popoverVisible || await popoverEvent.isVisible()) {
+        return popoverEvent;
+      }
+      // Close the popover before trying the next link
+      await this.page.keyboard.press('Escape');
+      await this.page.waitForTimeout(50);
+    }
 
-    // Check again in the popover or main view
-    if (await event.count() > 0 && await event.isVisible()) {
+    // Check again in the main view in case events render after interactions
+    if (await event.isVisible()) {
       return event;
     }
 
-    // Also check in the popover specifically
-    const popoverEvent = this.page.locator('.fc-popover .fc-event, .fc-more-popover .fc-event').filter({ hasText: title }).first();
-    if (await popoverEvent.count() > 0 && await popoverEvent.isVisible()) {
-      return popoverEvent;
-    }
-
-    // Return the first event (may not be visible, but let test handle assertion)
+    // Ensure the locator is attached before returning for assertion
+    await event.first().waitFor({ state: 'attached', timeout: 2000 }).catch(() => undefined);
     return event;
   }
 
   /**
    * Click on an event to view details.
    */
-  async clickEvent(title: string): Promise<void> {
-    const event = await this.findEventByTitle(title);
+  async clickEvent(title: string, project?: string): Promise<void> {
+    const event = await this.findEventByTitle(title, project);
+    await event.waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
+    await event.scrollIntoViewIfNeeded().catch(() => undefined);
     await event.click();
     await this.taskDetailsDialog.waitFor({ timeout: 5000 });
   }
@@ -168,14 +252,6 @@ export class CalendarPage {
    */
   async switchToWeekView(): Promise<void> {
     await this.page.locator('.fc-timeGridWeek-button').click();
-  }
-
-  /**
-   * Filter by project.
-   */
-  async filterByProject(project: string): Promise<void> {
-    await this.projectFilter.click();
-    await this.page.getByRole('option', { name: project }).click();
   }
 
   /**

@@ -228,7 +228,15 @@ export class GraphPage {
    * Get the number of visible edges.
    */
   async getEdgeCount(): Promise<number> {
-    return await this.getEdges().count();
+    const edges = this.getEdges();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const count = await edges.count();
+      if (count > 0) {
+        return count;
+      }
+      await this.page.waitForTimeout(400);
+    }
+    return await edges.count();
   }
 
   /**

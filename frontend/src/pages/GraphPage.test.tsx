@@ -43,6 +43,7 @@ vi.mock('../components/tasks', () => ({
 
 describe('GraphPage', () => {
   const mockUpdateTask = vi.fn();
+  const mockFetchTasks = vi.fn().mockResolvedValue(undefined);
 
   const createMockTask = (overrides: Partial<Task> = {}): Task => ({
     id: '1',
@@ -73,6 +74,7 @@ describe('GraphPage', () => {
     vi.mocked(stores.useTaskStore).mockReturnValue({
       tasks: [],
       updateTask: mockUpdateTask,
+      fetchTasks: mockFetchTasks,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
   });
 
@@ -97,6 +99,7 @@ describe('GraphPage', () => {
     vi.mocked(stores.useTaskStore).mockReturnValue({
       tasks: [task],
       updateTask: mockUpdateTask,
+      fetchTasks: mockFetchTasks,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
 
     render(<GraphPage />);
@@ -115,6 +118,7 @@ describe('GraphPage', () => {
     vi.mocked(stores.useTaskStore).mockReturnValue({
       tasks: [task],
       updateTask: mockUpdateTask,
+      fetchTasks: mockFetchTasks,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
 
     render(<GraphPage />);
@@ -142,6 +146,7 @@ describe('GraphPage', () => {
     vi.mocked(stores.useTaskStore).mockReturnValue({
       tasks: [task],
       updateTask: mockUpdateTask,
+      fetchTasks: mockFetchTasks,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
 
     render(<GraphPage />);
@@ -171,6 +176,7 @@ describe('GraphPage', () => {
     vi.mocked(stores.useTaskStore).mockReturnValue({
       tasks: [task],
       updateTask: mockUpdateTask,
+      fetchTasks: mockFetchTasks,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
 
     render(<GraphPage />);
@@ -201,6 +207,7 @@ describe('GraphPage', () => {
     vi.mocked(stores.useTaskStore).mockReturnValue({
       tasks: [task, dep],
       updateTask: mockUpdateTask,
+      fetchTasks: mockFetchTasks,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
 
     render(<GraphPage />);
@@ -224,6 +231,7 @@ describe('GraphPage', () => {
     vi.mocked(stores.useTaskStore).mockReturnValue({
       tasks: [task, dependent],
       updateTask: mockUpdateTask,
+      fetchTasks: mockFetchTasks,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
 
     render(<GraphPage />);
@@ -246,6 +254,7 @@ describe('GraphPage', () => {
     vi.mocked(stores.useTaskStore).mockReturnValue({
       tasks: [task],
       updateTask: mockUpdateTask,
+      fetchTasks: mockFetchTasks,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
 
     render(<GraphPage />);
@@ -267,6 +276,7 @@ describe('GraphPage', () => {
     vi.mocked(stores.useTaskStore).mockReturnValue({
       tasks: [task],
       updateTask: mockUpdateTask,
+      fetchTasks: mockFetchTasks,
     } as unknown as ReturnType<typeof stores.useTaskStore>);
 
     render(<GraphPage />);

@@ -21,6 +21,8 @@ interface TaskData {
 interface CreatedTask {
   id: string;
   title: string;
+  project?: string;
+  due_date?: string;
 }
 
 /**
@@ -225,8 +227,17 @@ export async function seedTaskWithDueDate(
 
     const timestamp = Date.now();
     const unique = Math.random().toString(36).substring(7);
+  const project = `calendar-e2e-${unique}`;
 
-    // Create task with due_date included in initial request
+    // Use a lightly-loaded day within the current month to avoid "+more" overflow hiding the event in month view
+    const targetDate = new Date(dueDate);
+    const daysInMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate();
+    const shiftedDay = Math.min(targetDate.getDate() + 2, daysInMonth);
+    targetDate.setDate(shiftedDay);
+    targetDate.setHours(12, 0, 0, 0);
+    const scheduledDueDate = targetDate.toISOString();
+
+    // Create task with adjusted due_date to keep it visible on the calendar
     const response = await apiContext.post(`${API_BASE}/tasks`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -241,7 +252,8 @@ export async function seedTaskWithDueDate(
         tags: [],
         subtasks: [],
         dependencies: [],
-        due_date: dueDate,
+        project,
+        due_date: scheduledDueDate,
       },
     });
 
@@ -252,10 +264,10 @@ export async function seedTaskWithDueDate(
 
     const task = await response.json();
 
-    await page.reload();
-    await page.waitForTimeout(500);
+    // Don't reload - let the test navigate to where it needs to go
+    // The calendar page will fetch fresh data when it loads
 
-    return { id: task.id, title: task.title };
+    return { id: task.id, title: task.title, project, due_date: scheduledDueDate };
   } finally {
     await apiContext.dispose();
   }
