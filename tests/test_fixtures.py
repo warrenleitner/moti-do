@@ -8,22 +8,22 @@ from typing import Any, Dict
 def get_default_scoring_config() -> Dict[str, Any]:
     """Return a default scoring configuration for tests."""
     return {
-        "base_score": 10,
-        "field_presence_bonus": {"title": 5},
+        "base_score": 20,
+        "field_presence_bonus": {"text_description": 2},
         "difficulty_multiplier": {
             "NOT_SET": 1.0,
-            "TRIVIAL": 1.1,
-            "LOW": 1.5,
-            "MEDIUM": 2.0,
-            "HIGH": 3.0,
-            "HERCULEAN": 5.0,
+            "TRIVIAL": 0.5,
+            "LOW": 0.8,
+            "MEDIUM": 1.0,
+            "HIGH": 1.5,
+            "HERCULEAN": 2.5,
         },
         "duration_multiplier": {
             "NOT_SET": 1.0,
-            "MINUSCULE": 1.05,
-            "SHORT": 1.2,
-            "MEDIUM": 1.5,
-            "LONG": 2.0,
+            "MINUSCULE": 0.5,
+            "SHORT": 0.8,
+            "MEDIUM": 1.0,
+            "LONG": 1.5,
             "ODYSSEYAN": 3.0,
         },
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
@@ -46,10 +46,10 @@ def get_default_scoring_config() -> Dict[str, Any]:
         "project_multipliers": {},
         "priority_multiplier": {
             "NOT_SET": 1.0,
-            "LOW": 1.2,
-            "MEDIUM": 1.5,
-            "HIGH": 2.0,
-            "DEFCON_ONE": 3.0,
+            "LOW": 0.8,
+            "MEDIUM": 1.0,
+            "HIGH": 1.5,
+            "DEFCON_ONE": 2.5,
         },
         "habit_streak_bonus": {
             "enabled": True,
@@ -57,8 +57,8 @@ def get_default_scoring_config() -> Dict[str, Any]:
             "max_bonus": 50.0,
         },
         "status_bumps": {
-            "in_progress_bonus": 5.0,
-            "next_up_bonus": 10.0,
+            "in_progress_bonus": 2.0,
+            "next_up_bonus": 5.0,
             "next_up_threshold_days": 3,
         },
     }
@@ -67,22 +67,22 @@ def get_default_scoring_config() -> Dict[str, Any]:
 def get_simple_scoring_config() -> Dict[str, Any]:
     """Return a simplified scoring configuration for tests."""
     return {
-        "base_score": 10,
-        "field_presence_bonus": {"title": 5},
+        "base_score": 20,
+        "field_presence_bonus": {"text_description": 2},
         "difficulty_multiplier": {
             "NOT_SET": 1.0,
-            "TRIVIAL": 1.1,
-            "LOW": 1.5,
-            "MEDIUM": 2.0,
-            "HIGH": 3.0,
-            "HERCULEAN": 5.0,
+            "TRIVIAL": 0.5,
+            "LOW": 0.8,
+            "MEDIUM": 1.0,
+            "HIGH": 1.5,
+            "HERCULEAN": 2.5,
         },
         "duration_multiplier": {
             "NOT_SET": 1.0,
-            "MINUSCULE": 1.05,
-            "SHORT": 1.2,
-            "MEDIUM": 1.5,
-            "LONG": 2.0,
+            "MINUSCULE": 0.5,
+            "SHORT": 0.8,
+            "MEDIUM": 1.0,
+            "LONG": 1.5,
             "ODYSSEYAN": 3.0,
         },
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
@@ -105,10 +105,10 @@ def get_simple_scoring_config() -> Dict[str, Any]:
         "project_multipliers": {},
         "priority_multiplier": {
             "NOT_SET": 1.0,
-            "LOW": 1.2,
-            "MEDIUM": 1.5,
-            "HIGH": 2.0,
-            "DEFCON_ONE": 3.0,
+            "LOW": 0.8,
+            "MEDIUM": 1.0,
+            "HIGH": 1.5,
+            "DEFCON_ONE": 2.5,
         },
         "habit_streak_bonus": {
             "enabled": True,
@@ -116,8 +116,8 @@ def get_simple_scoring_config() -> Dict[str, Any]:
             "max_bonus": 50.0,
         },
         "status_bumps": {
-            "in_progress_bonus": 5.0,
-            "next_up_bonus": 10.0,
+            "in_progress_bonus": 2.0,
+            "next_up_bonus": 5.0,
             "next_up_threshold_days": 3,
         },
     }

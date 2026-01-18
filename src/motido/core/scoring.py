@@ -31,22 +31,22 @@ def get_default_scoring_config() -> Dict[str, Any]:
         Dictionary containing all default scoring configuration values.
     """
     return {
-        "base_score": 10,
-        "field_presence_bonus": {"text_description": 5},
+        "base_score": 20,
+        "field_presence_bonus": {"text_description": 2},
         "difficulty_multiplier": {
             "NOT_SET": 1.0,
-            "TRIVIAL": 1.1,
-            "LOW": 1.5,
-            "MEDIUM": 2.0,
-            "HIGH": 3.0,
-            "HERCULEAN": 5.0,
+            "TRIVIAL": 0.5,
+            "LOW": 0.8,
+            "MEDIUM": 1.0,
+            "HIGH": 1.5,
+            "HERCULEAN": 2.5,
         },
         "duration_multiplier": {
             "NOT_SET": 1.0,
-            "MINUSCULE": 1.05,
-            "SHORT": 1.2,
-            "MEDIUM": 1.5,
-            "LONG": 2.0,
+            "MINUSCULE": 0.5,
+            "SHORT": 0.8,
+            "MEDIUM": 1.0,
+            "LONG": 1.5,
             "ODYSSEYAN": 3.0,
         },
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
@@ -70,10 +70,10 @@ def get_default_scoring_config() -> Dict[str, Any]:
         "project_multipliers": {},
         "priority_multiplier": {
             "NOT_SET": 1.0,
-            "LOW": 1.2,
-            "MEDIUM": 1.5,
-            "HIGH": 2.0,
-            "DEFCON_ONE": 3.0,
+            "LOW": 0.8,
+            "MEDIUM": 1.0,
+            "HIGH": 1.5,
+            "DEFCON_ONE": 2.5,
         },
         "habit_streak_bonus": {
             "enabled": True,
@@ -81,8 +81,8 @@ def get_default_scoring_config() -> Dict[str, Any]:
             "max_bonus": 50.0,
         },
         "status_bumps": {
-            "in_progress_bonus": 5.0,
-            "next_up_bonus": 10.0,
+            "in_progress_bonus": 2.0,
+            "next_up_bonus": 5.0,
             "next_up_threshold_days": 3,
         },
     }
@@ -147,14 +147,14 @@ def load_scoring_config() -> Dict[str, Any]:
             if not isinstance(config_data[mult_key], dict):
                 raise ValueError(f"'{mult_key}' must be a dictionary.")
 
-            # Check that all values are numeric and >= 1.0
+            # Check that all values are numeric and >= 0.1
             for _, multiplier_value in config_data[mult_key].items():
                 if (
                     not isinstance(multiplier_value, (int, float))
-                    or multiplier_value < 1.0
+                    or multiplier_value < 0.1
                 ):
                     raise ValueError(
-                        f"All multipliers in '{mult_key}' must be numeric and >= 1.0"
+                        f"All multipliers in '{mult_key}' must be numeric and >= 0.1"
                     )
 
         # Validate age_factor
@@ -1005,14 +1005,17 @@ def get_penalty_multiplier(
     difficulty: Difficulty, duration: Duration, config: Dict[str, Any]
 ) -> float:
     """
-    Calculate penalty multiplier - INVERTED from XP multiplier.
+    Calculate penalty multiplier using RECIPROCAL of XP multiplier.
 
     Easy/short tasks get HIGHER penalties (no excuse for skipping).
     Hard/long tasks get LOWER penalties (understandable to defer).
 
-    XP multipliers range from ~1.0 to ~5.0 where higher = harder/longer.
-    Invert using: penalty_mult = 6.0 - xp_mult
-    So trivial (1.1) becomes 4.9, herculean (5.0) becomes 1.0.
+    New logic: penalty_mult = (1 / difficulty_xp) * (1 / duration_xp)
+
+    Examples:
+    - TRIVIAL (0.5) -> 2.0 (High penalty)
+    - HERCULEAN (2.5) -> 0.4 (Low penalty)
+    - MEDIUM (1.0) -> 1.0 (Normal penalty)
 
     Args:
         difficulty: The task's difficulty level
@@ -1020,7 +1023,7 @@ def get_penalty_multiplier(
         config: The scoring configuration containing multipliers
 
     Returns:
-        Combined inverted penalty multiplier (difficulty_penalty * duration_penalty)
+        Combined penalty multiplier
     """
     # Get XP multipliers from config (with explicit float conversion for type safety)
     difficulty_xp: float = float(
@@ -1028,13 +1031,13 @@ def get_penalty_multiplier(
     )
     duration_xp: float = float(config["duration_multiplier"].get(duration.name, 1.0))
 
-    # Invert: 6.0 - xp_mult
-    # TRIVIAL (1.1) -> 4.9 (high penalty)
-    # HERCULEAN (5.0) -> 1.0 (low penalty)
-    # MINUSCULE (1.05) -> 4.95 (high penalty)
-    # ODYSSEYAN (3.0) -> 3.0 (medium penalty)
-    difficulty_penalty: float = 6.0 - difficulty_xp
-    duration_penalty: float = 6.0 - duration_xp
+    # Reciprocal calculation
+    # Avoid division by zero by ensuring min value is small positive epsilon if somehow 0
+    difficulty_xp = max(0.1, difficulty_xp)
+    duration_xp = max(0.1, duration_xp)
+
+    difficulty_penalty: float = 1.0 / difficulty_xp
+    duration_penalty: float = 1.0 / duration_xp
 
     return difficulty_penalty * duration_penalty
 
@@ -1070,14 +1073,23 @@ def calculate_penalty_score(
     if task_due_date > effective_date:
         return 0.0
 
-    # Calculate penalty using inverted multipliers
+    # Calculate penalty
+    # Formula: Base * PenaltyMult * PriorityMult
+    # Note: Priority increases BOTH Score AND Penalty (Importance cuts both ways)
     penalty_multiplier = get_penalty_multiplier(task.difficulty, task.duration, config)
-    base_score: float = float(config.get("base_score", 10))
-    raw_penalty: float = base_score * penalty_multiplier
+    base_score: float = float(config.get("base_score", 20))
 
-    # Normalize (same as in apply_penalties)
-    normalizer: float = 25.0
-    return max(1.0, raw_penalty / normalizer)
+    # Get priority multiplier for penalty scaling
+    priority_level = task.priority
+    priority_key = priority_level.name
+    priority_mult = float(
+        config.get("priority_multiplier", {}).get(priority_key, 1.0)
+    )
+
+    penalty = base_score * penalty_multiplier * priority_mult
+
+    # Ensure at least 1 point penalty if due
+    return max(1.0, penalty)
 
 
 def calculate_task_scores(
@@ -1151,19 +1163,9 @@ def apply_penalties(
             if task.due_date.date() > effective_date:
                 continue
 
-            # Get inverted penalty multiplier
-            # Easy/short tasks get higher penalties (no excuse for skipping)
-            # Hard/long tasks get lower penalties (understandable to defer)
-            penalty_multiplier = get_penalty_multiplier(
-                task.difficulty, task.duration, config
-            )
-
-            # Calculate penalty using base score and inverted multiplier
-            # Normalize to keep penalties in a reasonable range
-            base_score = config.get("base_score", 10)
-            raw_penalty = base_score * penalty_multiplier
-            normalizer = 25.0
-            penalty = max(1, int(raw_penalty / normalizer))
+            # Calculate penalty using standardized function
+            # This handles multipliers, base score, and priority adjustments
+            penalty = int(calculate_penalty_score(task, config, effective_date))
 
             penalties_applied += 1
             add_xp(
