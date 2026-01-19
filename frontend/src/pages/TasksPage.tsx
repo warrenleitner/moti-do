@@ -125,7 +125,9 @@ export default function TasksPage() {
 
   // Update visible row count when filtered tasks change
   useEffect(() => {
-    setVisibleRowCount((prev) => (filteredTasks.length > prev ? filteredTasks.length : prev));
+    setVisibleRowCount((prev) =>
+      Math.min(filteredTasks.length, Math.max(DEFAULT_VISIBLE_COUNT, prev))
+    );
     // Intentionally updating state in effect based on external data
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredTasks.length]);

@@ -1,83 +1,71 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { extractImplicitTags, getImplicitTagsForTask, getCombinedTags } from '../tags';
+import { Priority, Difficulty, Duration } from '../../types';
 import type { Task } from '../../types';
-import { extractImplicitTags, getCombinedTags, getImplicitTagsForTask } from '../tags';
 
 const baseTask: Task = {
   id: 'task-1',
-  title: 'Sample task',
+  title: 'Base Task',
   creation_date: '2024-01-01T00:00:00Z',
-  priority: 'Medium' as Task['priority'],
-  difficulty: 'Medium' as Task['difficulty'],
-  duration: 'Short' as Task['duration'],
+  priority: Priority.MEDIUM,
+  difficulty: Difficulty.MEDIUM,
+  duration: Duration.MEDIUM,
   is_complete: false,
-  is_habit: false,
   tags: [],
   subtasks: [],
   dependencies: [],
+  is_habit: false,
   streak_current: 0,
   streak_best: 0,
   history: [],
-  score: 10,
+  score: 0,
   penalty_score: 0,
-  net_score: 10,
+  net_score: 0,
+  current_count: 0,
 };
 
-describe('tags utilities', () => {
-  it('extracts implicit tags from text', () => {
-    const tags = extractImplicitTags('Title with #Work and #focus and repeated #work');
-    expect(tags).toEqual(['work', 'focus']);
+describe('tags utils', () => {
+  it('extracts implicit tags from text with deduplication', () => {
+    const text = 'Mix of #One #two and #one plus #three_four';
+    expect(extractImplicitTags(text)).toEqual(['one', 'two', 'three_four']);
   });
 
-  it('derives implicit tags from task fields', () => {
-    const task: Task = {
-      ...baseTask,
-      title: 'Complete the #Report',
-      text_description: 'Remember the #deadline',
-    };
-
-    const implicit = getImplicitTagsForTask(task);
-    expect(implicit).toContain('report');
-    expect(implicit).toContain('deadline');
+  it('returns empty array when text is missing', () => {
+    expect(extractImplicitTags()).toEqual([]);
+    expect(extractImplicitTags('')).toEqual([]);
   });
 
-  it('adds implicit metadata tags for habits and recurrence', () => {
+  it('derives implicit tags from task fields and meta flags', () => {
     const task: Task = {
       ...baseTask,
+      title: 'Title with #Alpha',
+      text_description: 'Body has #beta too',
       is_habit: true,
       recurrence_rule: 'FREQ=DAILY',
     };
 
     const implicit = getImplicitTagsForTask(task);
-    expect(implicit).toContain('habit');
-    expect(implicit).toContain('recurring');
+    expect(implicit.sort()).toEqual(['alpha', 'beta', 'habit', 'recurring'].sort());
   });
 
-  it('merges explicit and implicit tags without duplicates', () => {
+  it('combines explicit and implicit tags case-insensitively, preserving explicit casing first', () => {
     const task: Task = {
       ...baseTask,
-      title: 'Finish #Work items',
-      text_description: 'Focus on #deep_work',
-      tags: ['work', 'urgent'],
+      title: 'Task with #Alpha and #beta',
+      text_description: 'Another #Beta mention',
+      tags: ['Explicit', 'ALPHA'],
     };
 
     const combined = getCombinedTags(task);
-    expect(combined).toEqual(['work', 'urgent', 'deep_work']);
+    expect(combined).toEqual(['Explicit', 'ALPHA', 'beta']);
   });
 
-  it('returns empty list when text is missing', () => {
-    expect(extractImplicitTags()).toEqual([]);
-    expect(extractImplicitTags('')).toEqual([]);
-  });
-
-  it('preserves explicit casing while removing duplicate tags', () => {
+  it('dedupes explicit tags case-insensitively while preserving first casing', () => {
     const task: Task = {
       ...baseTask,
-      title: 'Complete #work items',
-      text_description: 'Another #Work mention',
-      tags: ['Work', 'work', 'FoCus'],
+      tags: ['Alpha', 'alpha', 'ALPHA'],
     };
 
-    const combined = getCombinedTags(task);
-    expect(combined).toEqual(['Work', 'FoCus']);
+    expect(getCombinedTags(task)).toEqual(['Alpha']);
   });
 });

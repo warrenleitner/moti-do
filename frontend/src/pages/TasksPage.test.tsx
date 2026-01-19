@@ -177,7 +177,7 @@ describe('TasksPage', () => {
     expect(screen.getByPlaceholderText('Search tasks...')).toBeInTheDocument();
   });
 
-  it.skip('loads additional tasks with load more control', async () => {
+  it('loads additional tasks with load more control', async () => {
     localStorage.setItem('taskViewMode', 'table');
     const manyTasks: Task[] = Array.from({ length: 60 }).map((_, index) => ({
       id: `task-${index}`,
@@ -221,21 +221,21 @@ describe('TasksPage', () => {
 
     const { user } = render(<TasksPage />);
 
-    // Wait for table to render
-    await waitFor(() => {
-      expect(screen.getAllByRole('row').length).toBeGreaterThan(1);
-    }, { timeout: 5000 });
+    await screen.findByRole('button', { name: /table view/i });
 
-    const initialRows = screen.getAllByRole('row').length;
-    
+    await waitFor(() => {
+      expect(screen.getByText(/Showing 50 of 60 tasks/i)).toBeInTheDocument();
+    });
+
     const loadMoreButton = await screen.findByRole('button', { name: /load more/i }, { timeout: 5000 });
-    expect(loadMoreButton).toBeInTheDocument();
+    expect(loadMoreButton).toBeEnabled();
 
     await user.click(loadMoreButton);
-    
+
     await waitFor(() => {
-      const expandedRows = screen.getAllByRole('row').length;
-      expect(expandedRows).toBeGreaterThan(initialRows);
-    }, { timeout: 5000 });
+      expect(screen.getByText(/Showing 60 of 60 tasks/i)).toBeInTheDocument();
+    });
+
+    expect(loadMoreButton).toBeDisabled();
   });
 });
