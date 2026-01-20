@@ -3,13 +3,18 @@
 Tests for the system API endpoints (health, status, advance, vacation).
 """
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
-from motido.core.models import User
+from motido.core.models import (
+    RecurrenceType,
+    SubtaskRecurrenceMode,
+    Task,
+    User,
+)
 
 
 class TestHealthEndpoint:
@@ -169,6 +174,56 @@ class TestAdvanceDateEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["vacation_mode"] is True
+
+    def test_advance_generates_recurring_habits(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Advance should create missing habit instances with preserved metadata."""
+
+        start_day = date.today() - timedelta(days=3)
+        base_due = datetime.combine(start_day, datetime.min.time())
+        test_user.last_processed_date = start_day
+
+        habit = Task(
+            title="Daily Habit",
+            creation_date=base_due,
+            start_date=base_due - timedelta(days=2),
+            due_date=base_due,
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            recurrence_type=RecurrenceType.STRICT,
+            habit_start_delta=2,
+            tags=["focus"],
+            subtasks=[
+                {"text": "Prep", "complete": True},
+                {"text": "Do", "complete": False},
+            ],
+            subtask_recurrence_mode=SubtaskRecurrenceMode.PARTIAL,
+        )
+        test_user.add_task(habit)
+
+        response = client.post("/api/system/advance", json={"days": 2})
+        assert response.status_code == 200
+
+        due_map = {
+            task.due_date.date(): task
+            for task in test_user.tasks
+            if task.title == "Daily Habit" and task.due_date
+        }
+
+        first_due = start_day + timedelta(days=1)
+        second_due = start_day + timedelta(days=2)
+
+        assert first_due in due_map
+        assert second_due in due_map
+
+        first_instance = due_map[first_due]
+        assert first_instance.parent_habit_id == habit.id
+        assert first_instance.habit_start_delta == habit.habit_start_delta
+        assert first_instance.start_date is not None
+        assert first_instance.start_date.date() == first_due - timedelta(days=2)
+        assert first_instance.tags == habit.tags
+        assert first_instance.subtasks == [{"text": "Prep", "complete": False}]
 
     def test_advance_uses_save_user_progress_when_available(
         self, client: TestClient, test_user: User, mock_manager: Any

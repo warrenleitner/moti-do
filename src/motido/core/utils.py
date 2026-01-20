@@ -8,7 +8,8 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
-from motido.core.models import Difficulty, Duration, Priority
+from motido.core.models import Difficulty, Duration, Priority, Task
+from motido.core.recurrence import create_next_habit_instance
 
 # This file is intentionally simple for now.
 # We could add helper functions here as the application grows.
@@ -166,7 +167,12 @@ def parse_date(date_str: str) -> datetime:
 
 
 def process_day(
-    user: Any, manager: Any, effective_date: Any, scoring_config: Any
+    user: Any,
+    manager: Any,
+    effective_date: Any,
+    scoring_config: Any,
+    *,
+    persist: bool = True,
 ) -> int:
     """
     Process penalties for a single day.
@@ -177,6 +183,10 @@ def process_day(
         effective_date: Date to process penalties for
         scoring_config: Scoring configuration dict
 
+    Args:
+        persist: Whether to persist changes during processing. When False, the
+            caller is responsible for saving the user after processing.
+
     Returns:
         int: XP change (negative for penalty, 0 for no penalty)
     """
@@ -185,7 +195,14 @@ def process_day(
     from motido.core.scoring import apply_penalties
 
     initial_xp: int = user.total_xp
-    apply_penalties(user, manager, effective_date, scoring_config, user.tasks)
+    apply_penalties(
+        user,
+        manager,
+        effective_date,
+        scoring_config,
+        user.tasks,
+        persist=persist,
+    )
     xp_change: int = user.total_xp - initial_xp
 
     # Process recurrences
@@ -194,7 +211,9 @@ def process_day(
     return xp_change
 
 
-def _process_recurrences(user: Any, effective_date: Any) -> None:
+def _process_recurrences(
+    user: Any, effective_date: Any
+) -> None:  # pylint: disable=too-many-locals
     """
     Process task recurrences and generate new instances.
 
@@ -202,56 +221,48 @@ def _process_recurrences(user: Any, effective_date: Any) -> None:
         user: User object
         effective_date: Date to process recurrences for
     """
-    # Import here to avoid circular dependency
-    # pylint: disable=import-outside-toplevel
-    from motido.core.models import Task
-    from motido.core.recurrence import calculate_next_occurrence
-
     new_tasks: list[Task] = []
     # Create a set of existing (title, due_date) tuples for fast lookup
     existing_instances = {
         (t.title, t.due_date.date() if t.due_date else None) for t in user.tasks
     }
+    pending_instances: set[tuple[str, Any]] = set()
+    effective_datetime = datetime.combine(effective_date, datetime.min.time())
 
     for task in user.tasks:
         if task.is_habit and task.recurrence_rule:
-            next_date = calculate_next_occurrence(task)
+            current = task
+            last_due_date = task.due_date.date() if task.due_date else None
 
-            # If next_date is valid and falls on or before the effective date
-            if next_date and next_date.date() <= effective_date:
-                # Check if this instance already exists
-                instance_key = (task.title, next_date.date())
+            while True:
+                next_instance = create_next_habit_instance(
+                    current, completion_date=effective_datetime
+                )
 
-                # Also check in new_tasks to avoid duplicates within the same batch
-                already_created = False
-                for nt in new_tasks:
-                    if (
-                        nt.title == task.title
-                        and nt.due_date
-                        and nt.due_date.date() == next_date.date()
-                    ):
-                        already_created = True
-                        break
+                if not next_instance or not next_instance.due_date:
+                    break
 
-                if instance_key not in existing_instances and not already_created:
-                    # Create new instance
-                    new_instance = Task(
-                        title=task.title,
-                        priority=task.priority,
-                        difficulty=task.difficulty,
-                        duration=task.duration,
-                        creation_date=datetime.now(),
-                        due_date=next_date,
-                        is_habit=True,
-                        recurrence_rule=task.recurrence_rule,
-                        recurrence_type=task.recurrence_type,
-                        tags=task.tags.copy(),
-                        project=task.project,
-                        is_complete=False,
-                        streak_current=task.streak_current,  # Carry over streak? Or shared?
-                        streak_best=task.streak_best,
-                    )
-                    new_tasks.append(new_instance)
+                next_due = next_instance.due_date.date()
+
+                if next_due > effective_date:
+                    break
+
+                instance_key = (next_instance.title, next_due)
+                already_created = instance_key in existing_instances or (
+                    instance_key in pending_instances
+                )
+
+                if not already_created:
+                    new_tasks.append(next_instance)
+                    pending_instances.add(instance_key)
+
+                # Continue advancing the chain to catch up when multiple periods were skipped
+                current = next_instance
+
+                if last_due_date == next_due:
+                    break
+
+                last_due_date = next_due
 
     for t in new_tasks:
         user.add_task(t)

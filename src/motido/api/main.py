@@ -21,6 +21,7 @@ from motido.api.middleware.rate_limit import RateLimitMiddleware
 from motido.api.routers import auth, tasks, user, views
 from motido.api.schemas import AdvanceRequest, SystemStatus
 from motido.core import scoring
+from motido.core.utils import process_day
 
 # Create FastAPI app
 app = FastAPI(
@@ -148,13 +149,12 @@ async def advance_date(
         days_processed += 1
 
         if not user.vacation_mode:
-            # Apply penalties for overdue tasks
-            scoring.apply_penalties(
+            # Apply penalties and generate recurrences for the current day
+            process_day(
                 user,
                 manager,
                 processing_date,
                 config,
-                user.tasks,
                 persist=False,
             )
 
