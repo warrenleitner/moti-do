@@ -47,9 +47,13 @@ def test_handle_advance_success(mocker: Any, mock_advance_user: User) -> None:
     )
     # Mock the apply_penalties function called inside process_day
     mock_apply = mocker.patch("motido.core.scoring.apply_penalties")
-    mock_apply.side_effect = lambda user, mgr, date, config, tasks: setattr(
-        user, "total_xp", user.total_xp - 5
-    )
+
+    def _decrease_xp(  # pylint: disable=unused-argument
+        user: User, *args: Any, **kwargs: Any
+    ) -> None:
+        setattr(user, "total_xp", user.total_xp - 5)
+
+    mock_apply.side_effect = _decrease_xp
 
     # Create args namespace
     args = _create_advance_args()
@@ -74,9 +78,13 @@ def test_handle_advance_verbose_mode(
         "motido.cli.main.load_scoring_config", return_value=mock_scoring_config
     )
     mock_apply = mocker.patch("motido.core.scoring.apply_penalties")
-    mock_apply.side_effect = lambda user, mgr, dt, config, tasks: setattr(
-        user, "total_xp", user.total_xp - 5
-    )
+
+    def _decrease_xp(  # pylint: disable=unused-argument
+        user: User, *args: Any, **kwargs: Any
+    ) -> None:
+        setattr(user, "total_xp", user.total_xp - 5)
+
+    mock_apply.side_effect = _decrease_xp
 
     # Create args namespace
     args = _create_advance_args(verbose=True)
@@ -100,9 +108,13 @@ def test_handle_advance_with_xp_penalty(
         "motido.cli.main.load_scoring_config", return_value=mock_scoring_config
     )
     mock_apply = mocker.patch("motido.core.scoring.apply_penalties")
-    mock_apply.side_effect = lambda user, mgr, dt, config, tasks: setattr(
-        user, "total_xp", user.total_xp - 10
-    )
+
+    def _decrease_xp(  # pylint: disable=unused-argument
+        user: User, *args: Any, **kwargs: Any
+    ) -> None:
+        setattr(user, "total_xp", user.total_xp - 10)
+
+    mock_apply.side_effect = _decrease_xp
 
     # Create args namespace
     args = _create_advance_args()
@@ -214,9 +226,13 @@ def test_handle_advance_to_date_multiple_days(
         "motido.cli.main.load_scoring_config", return_value=mock_scoring_config
     )
     mock_apply = mocker.patch("motido.core.scoring.apply_penalties")
-    mock_apply.side_effect = lambda user, mgr, dt, config, tasks: setattr(
-        user, "total_xp", user.total_xp - 5
-    )
+
+    def _decrease_xp(  # pylint: disable=unused-argument
+        user: User, *args: Any, **kwargs: Any
+    ) -> None:
+        setattr(user, "total_xp", user.total_xp - 5)
+
+    mock_apply.side_effect = _decrease_xp
 
     # Create args with target date (3 days forward)
     args = _create_advance_args(to_date="2025-11-18")

@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime, timedelta
-from typing import List
+from typing import Any, List
 
 import pytest
 
@@ -174,3 +174,149 @@ def test_process_recurrences_duplicate_prevention() -> None:
     # Should only create ONE new task
     assert len(user.added_tasks) == 1
     assert user.added_tasks[0].title == "Recurring Task"
+
+
+def test_process_recurrences_skips_future_instances(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """_process_recurrences should not add instances beyond the effective date."""
+    # pylint: disable=import-outside-toplevel,protected-access
+    from motido.core.utils import _process_recurrences
+
+    base_date = datetime(2023, 1, 1)
+    task = Task(
+        title="Future Habit",
+        creation_date=base_date,
+        due_date=base_date,
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.STRICT,
+    )
+
+    class MockUser:  # pylint: disable=too-few-public-methods
+        """Mock user for testing future cutoff."""
+
+        def __init__(self) -> None:
+            self.tasks = [task]
+            self.added_tasks: list[Task] = []
+
+        def add_task(self, new_task: Task) -> None:
+            """Record added tasks for assertion."""
+            self.added_tasks.append(new_task)
+
+    user = MockUser()
+    effective_date = (base_date + timedelta(days=1)).date()
+
+    def _future_instance(*_: Any, **__: Any) -> Task:
+        """Return a future-dated instance to trigger cutoff."""
+        return Task(
+            title="Future Habit",
+            creation_date=datetime.now(),
+            due_date=base_date + timedelta(days=5),
+            is_habit=True,
+            recurrence_rule="daily",
+            recurrence_type=RecurrenceType.STRICT,
+        )
+
+    monkeypatch.setattr(
+        "motido.core.utils.create_next_habit_instance", _future_instance
+    )
+
+    _process_recurrences(user, effective_date)
+
+    assert not user.added_tasks
+
+
+def test_process_recurrences_breaks_on_stalled_rule(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Guard against recurrences that fail to advance the due date."""
+    # pylint: disable=import-outside-toplevel,protected-access
+    from motido.core.utils import _process_recurrences
+
+    base_date = datetime(2023, 1, 1)
+    task = Task(
+        title="Stalled Habit",
+        creation_date=base_date,
+        due_date=base_date,
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.STRICT,
+    )
+
+    class MockUser:  # pylint: disable=too-few-public-methods
+        """Mock user for stalled recurrence advancement."""
+
+        def __init__(self) -> None:
+            self.tasks = [task]
+            self.added_tasks: list[Task] = []
+
+        def add_task(self, new_task: Task) -> None:
+            """Record added tasks for assertion."""
+            self.added_tasks.append(new_task)
+
+    user = MockUser()
+    effective_date = base_date.date()
+
+    def _stalled_instance(*_: Any, **__: Any) -> Task:
+        """Return a non-advancing instance to force break."""
+        return Task(
+            title="Stalled Habit",
+            creation_date=datetime.now(),
+            due_date=base_date,
+            is_habit=True,
+            recurrence_rule="daily",
+            recurrence_type=RecurrenceType.STRICT,
+        )
+
+    monkeypatch.setattr(
+        "motido.core.utils.create_next_habit_instance", _stalled_instance
+    )
+
+    _process_recurrences(user, effective_date)
+
+    # Should avoid infinite loops even when the recurrence does not advance
+    assert not user.added_tasks
+
+
+def test_process_recurrences_ignores_missing_instance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If recurrence generation fails, _process_recurrences should no-op gracefully."""
+    # pylint: disable=import-outside-toplevel,protected-access
+    from motido.core.utils import _process_recurrences
+
+    base_date = datetime(2023, 1, 1)
+    task = Task(
+        title="Broken Habit",
+        creation_date=base_date,
+        due_date=base_date,
+        is_habit=True,
+        recurrence_rule="daily",
+        recurrence_type=RecurrenceType.STRICT,
+    )
+
+    class MockUser:  # pylint: disable=too-few-public-methods
+        """Mock user for missing recurrence instance."""
+
+        def __init__(self) -> None:
+            self.tasks = [task]
+            self.added_tasks: list[Task] = []
+
+        def add_task(self, new_task: Task) -> None:
+            """Record added tasks for assertion."""
+            self.added_tasks.append(new_task)
+
+    user = MockUser()
+
+    def _missing_instance(*_: Any, **__: Any) -> None:
+        """Simulate failure to generate a recurrence instance."""
+        return None
+
+    monkeypatch.setattr(
+        "motido.core.utils.create_next_habit_instance", _missing_instance
+    )
+
+    _process_recurrences(user, base_date.date())
+
+    assert not user.added_tasks
