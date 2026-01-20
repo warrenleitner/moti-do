@@ -7,6 +7,56 @@ from motido.core.scoring import calculate_score
 from tests.test_fixtures import get_default_scoring_config
 
 
+def _component_contrib(
+    base_score: float, delta: float, weight: float, cap: float | None
+) -> float:
+    capped_delta = max(0.0, delta)
+    if cap is not None:
+        capped_delta = min(capped_delta, cap)
+    return base_score * weight * capped_delta
+
+
+def expected_simple_score(task: Task, config: dict) -> int:
+    """Compute expected additive score for zero-age, no-due tasks."""
+    base_score = config["base_score"]
+    weights = config["component_weights"]
+    caps = config.get("component_caps", {})
+
+    priority_mult = float(config["priority_multiplier"].get(task.priority.name, 1.0))
+    difficulty_mult = float(
+        config["difficulty_multiplier"].get(task.difficulty.name, 1.0)
+    )
+    duration_mult = float(config["duration_multiplier"].get(task.duration.name, 1.0))
+
+    tag_mult = 1.0
+    if task.tags:
+        for tag in task.tags:
+            if tag in config["tag_multipliers"]:
+                tag_mult *= float(config["tag_multipliers"][tag])
+
+    project_mult = 1.0
+    if task.project and task.project in config["project_multipliers"]:
+        project_mult = float(config["project_multipliers"][task.project])
+
+    total = base_score
+    total += _component_contrib(
+        base_score, priority_mult - 1, weights["priority"], caps.get("priority")
+    )
+    total += _component_contrib(
+        base_score, difficulty_mult - 1, weights["difficulty"], caps.get("difficulty")
+    )
+    total += _component_contrib(
+        base_score, duration_mult - 1, weights["duration"], caps.get("duration")
+    )
+    total += _component_contrib(
+        base_score, tag_mult - 1, weights["tag"], caps.get("tag")
+    )
+    total += _component_contrib(
+        base_score, project_mult - 1, weights["project"], caps.get("project")
+    )
+    return int(round(total))
+
+
 def test_calculate_score_with_single_tag_multiplier() -> None:
     """Test score calculation with a single tag multiplier."""
     config = get_default_scoring_config()
@@ -21,11 +71,9 @@ def test_calculate_score_with_single_tag_multiplier() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Base: 10, Difficulty: 1.1, Duration: 1.05, Age: 1.0, Due date: 1.0, Tag: 1.5
-    # Priority: 1.0 (defaults to LOW which is 1.2, but we'll use NOT_SET)
-    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.5 = 20.79 = 21
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 21
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    assert score == expected_simple_score(task, config)
 
 
 def test_calculate_score_with_multiple_tag_multipliers() -> None:
@@ -42,11 +90,9 @@ def test_calculate_score_with_multiple_tag_multipliers() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Base: 10, Difficulty: 1.1, Duration: 1.05, Age: 1.0, Due date: 1.0
-    # Tag: 1.5 * 1.3 = 1.95
-    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.95 = 27.027 = 27
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 27
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    assert score == expected_simple_score(task, config)
 
 
 def test_calculate_score_with_tag_not_in_config() -> None:
@@ -63,10 +109,9 @@ def test_calculate_score_with_tag_not_in_config() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Tag "other" not in config, so tag_mult = 1.0
-    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 = 13.86 = 14
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 14
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    assert score == expected_simple_score(task, config)
 
 
 def test_calculate_score_with_project_multiplier() -> None:
@@ -83,10 +128,9 @@ def test_calculate_score_with_project_multiplier() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Base: 10, Difficulty: 1.1, Duration: 1.05, Age: 1.0, Due date: 1.0, Project: 1.8
-    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.8 = 24.948 = 25
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 25
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    assert score == expected_simple_score(task, config)
 
 
 def test_calculate_score_with_project_not_in_config() -> None:
@@ -103,10 +147,9 @@ def test_calculate_score_with_project_not_in_config() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Project "PersonalProject" not in config, so project_mult = 1.0
-    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 = 13.86 = 14
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 14
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    assert score == expected_simple_score(task, config)
 
 
 def test_calculate_score_with_both_tag_and_project_multipliers() -> None:
@@ -125,11 +168,9 @@ def test_calculate_score_with_both_tag_and_project_multipliers() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Base: 10, Difficulty: 1.1, Duration: 1.05, Age: 1.0, Due date: 1.0
-    # Tag: 1.5, Project: 1.2
-    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.5 * 1.2 = 24.948 = 25
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 25
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    assert score == expected_simple_score(task, config)
 
 
 def test_calculate_score_with_no_tags_or_project() -> None:
@@ -146,10 +187,9 @@ def test_calculate_score_with_no_tags_or_project() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # No tags or project, so tag/project multipliers = 1.0
-    # Score = 10 * 1.2 (LOW) * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 * 1.0 = 13.86 = 14
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 14
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    assert score == expected_simple_score(task, config)
 
 
 def test_calculate_score_with_mixed_tags() -> None:
@@ -166,11 +206,9 @@ def test_calculate_score_with_mixed_tags() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Only "urgent" and "work" contribute
-    # Tag: 1.5 * 1.2 = 1.8
-    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.8 = 24.948 = 25
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 25
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    assert score == expected_simple_score(task, config)
 
 
 def test_calculate_score_with_complex_multipliers() -> None:
@@ -189,16 +227,9 @@ def test_calculate_score_with_complex_multipliers() -> None:
         duration=Duration.LONG,
     )
 
-    # Base: 10
-    # Difficulty: 2.0 (MEDIUM)
-    # Duration: 2.0 (LONG)
-    # Age: 1.0
-    # Due date: 1.0
-    # Tag: 2.0
-    # Project: 1.5
-    # Score = 10 * 2.0 (HIGH) * 2.0 * 2.0 * 1.0 * 1.0 * 2.0 * 1.5 = 240
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 240
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    assert score == expected_simple_score(task, config)
 
 
 def test_calculate_score_with_empty_tag_list() -> None:
@@ -215,7 +246,6 @@ def test_calculate_score_with_empty_tag_list() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Empty tags, so tag_mult = 1.0
-    # Score = 10 * 1.2 * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 = 13.86 = 14
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 14
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    assert score == expected_simple_score(task, config)

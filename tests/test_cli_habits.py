@@ -57,7 +57,7 @@ def test_handle_advance_creates_recurrence(mocker: MockerFixture) -> None:
     # Mock scoring config
     mocker.patch(
         "motido.cli.main.load_scoring_config",
-        return_value={"daily_penalty": {"apply_penalty": False}},
+        return_value={},
     )
 
     # Advance by 1 day

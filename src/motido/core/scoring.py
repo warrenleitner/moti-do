@@ -2,13 +2,17 @@
 # pylint: disable=too-many-lines
 """
 Provides functionality for task scoring and XP calculation.
+
+The default configuration is calibrated to yield a modest weekly XP total
+for representative workloads (see tests for the calibration fixture) so
+that XP feels meaningful without runaway inflation.
 """
 
 import json
-import math
 import os
+from dataclasses import dataclass, field
 from datetime import date
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from motido.core.models import Difficulty, Duration, Task, User
 
@@ -31,64 +35,77 @@ def get_default_scoring_config() -> Dict[str, Any]:
         Dictionary containing all default scoring configuration values.
     """
     return {
-        "base_score": 20,
-        "field_presence_bonus": {"text_description": 2},
+        "base_score": 10,
+        "component_weights": {
+            "priority": 1.15,
+            "difficulty": 1.05,
+            "duration": 0.95,
+            "age": 0.6,
+            "due_date": 1.2,
+            "tag": 0.5,
+            "project": 0.6,
+        },
         "difficulty_multiplier": {
             "NOT_SET": 1.0,
-            "TRIVIAL": 0.5,
-            "LOW": 0.8,
-            "MEDIUM": 1.0,
-            "HIGH": 1.5,
-            "HERCULEAN": 2.5,
+            "TRIVIAL": 1.05,
+            "LOW": 1.2,
+            "MEDIUM": 1.45,
+            "HIGH": 1.8,
+            "HERCULEAN": 2.1,
         },
         "duration_multiplier": {
             "NOT_SET": 1.0,
-            "MINUSCULE": 0.5,
-            "SHORT": 0.8,
-            "MEDIUM": 1.0,
-            "LONG": 1.5,
-            "ODYSSEYAN": 3.0,
+            "MINUSCULE": 1.05,
+            "SHORT": 1.2,
+            "MEDIUM": 1.45,
+            "LONG": 1.8,
+            "ODYSSEYAN": 2.1,
         },
-        "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "age_factor": {
+            "enabled": True,
+            "unit": "days",
+            "multiplier_per_unit": 0.025,
+            "max_multiplier": 1.5,
+        },
         "due_date_proximity": {
             "enabled": True,
-            "overdue_scaling": "logarithmic",
-            "overdue_scale_factor": 0.75,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.05,
-        },
-        "start_date_aging": {
-            "enabled": True,
-            "bonus_points_per_day": 0.5,
+            "unit": "days",
+            "multiplier_per_unit": 0.02,
+            "max_multiplier": 1.5,
         },
         "dependency_chain": {
             "enabled": True,
-            "dependent_score_percentage": 0.1,
+            "dependent_score_percentage": 0.12,
         },
         "tag_multipliers": {},
         "project_multipliers": {},
         "priority_multiplier": {
             "NOT_SET": 1.0,
-            "LOW": 0.8,
-            "MEDIUM": 1.0,
-            "HIGH": 1.5,
-            "DEFCON_ONE": 2.5,
+            "TRIVIAL": 1.05,
+            "LOW": 1.2,
+            "MEDIUM": 1.45,
+            "HIGH": 1.8,
+            "DEFCON_ONE": 2.1,
+        },
+        "penalty_invert_weights": {
+            "base": True,
+            "priority": True,
+            "difficulty": True,
+            "duration": True,
+            "age": True,
+            "due_date": True,
+            "tag": True,
+            "project": True,
         },
         "habit_streak_bonus": {
             "enabled": True,
-            "bonus_per_streak_day": 1.0,
-            "max_bonus": 50.0,
-        },
-        "status_bumps": {
-            "in_progress_bonus": 2.0,
-            "next_up_bonus": 5.0,
-            "next_up_threshold_days": 3,
+            "bonus_per_streak_day": 1.2,
+            "max_bonus": 25.0,
         },
     }
 
 
-# pylint: disable=too-many-branches,too-many-statements
+# pylint: disable=too-many-branches,too-many-statements,too-many-locals
 def load_scoring_config() -> Dict[str, Any]:
     """
     Loads the scoring configuration from the scoring_config.json file.
@@ -110,23 +127,62 @@ def load_scoring_config() -> Dict[str, Any]:
         with open(config_path, "r", encoding="utf-8") as f:
             config_data: Dict[str, Any] = json.load(f)
 
+        # Normalize legacy due_date_proximity fields before validation
+        proximity = config_data.get("due_date_proximity")
+        if not isinstance(proximity, dict):
+            raise ValueError("'due_date_proximity' must be a dictionary.")
+
+        if "multiplier_per_unit" not in proximity:
+            if "daily_multiplier_per_day" in proximity:
+                proximity["multiplier_per_unit"] = proximity["daily_multiplier_per_day"]
+            elif "approaching_multiplier_per_day" in proximity:
+                proximity["multiplier_per_unit"] = proximity[
+                    "approaching_multiplier_per_day"
+                ]
+        if "unit" not in proximity:
+            proximity["unit"] = default_config["due_date_proximity"]["unit"]
+
+        # Normalize age_factor to use the same shape as due_date_proximity
+        age_factor = config_data.get("age_factor")
+        if not isinstance(age_factor, dict):
+            raise ValueError("'age_factor' must be a dictionary.")
+
+        if "enabled" not in age_factor:
+            age_factor["enabled"] = default_config["age_factor"]["enabled"]
+        if "unit" not in age_factor:
+            age_factor["unit"] = default_config["age_factor"]["unit"]
+        if "max_multiplier" not in age_factor:
+            age_factor["max_multiplier"] = default_config["age_factor"][
+                "max_multiplier"
+            ]
+
+        # Normalize penalty_invert_weights to a per-component map
+        default_penalty_map = default_config["penalty_invert_weights"]
+        penalty_config = config_data.get("penalty_invert_weights", default_penalty_map)
+        if isinstance(penalty_config, bool):
+            penalty_config = {key: penalty_config for key in default_penalty_map}
+        elif isinstance(penalty_config, dict):
+            penalty_config = {
+                key: bool(penalty_config.get(key, default_value))
+                for key, default_value in default_penalty_map.items()
+            }
+        else:
+            raise ValueError(
+                "'penalty_invert_weights' must be a boolean or dictionary of booleans."
+            )
+        config_data["penalty_invert_weights"] = penalty_config
+
         # Validate config
         required_keys = [
             "base_score",
-            "field_presence_bonus",
             "difficulty_multiplier",
             "duration_multiplier",
             "age_factor",
-            "daily_penalty",
             "due_date_proximity",
-            "start_date_aging",
             "dependency_chain",
             "tag_multipliers",
             "project_multipliers",
             "priority_multiplier",
-            # Optional keys for backward compatibility, but we'll check them if present
-            # "habit_streak_bonus",
-            # "status_bumps",
         ]
         for key in required_keys:
             if key not in config_data:
@@ -135,8 +191,8 @@ def load_scoring_config() -> Dict[str, Any]:
         # Ensure new keys are present even if not in required_keys list (for logic below)
         if "habit_streak_bonus" not in config_data:
             config_data["habit_streak_bonus"] = default_config["habit_streak_bonus"]
-        if "status_bumps" not in config_data:
-            config_data["status_bumps"] = default_config["status_bumps"]
+        if "component_weights" not in config_data:
+            config_data["component_weights"] = default_config["component_weights"]
 
         # Validate multiplier structures
         for mult_key in [
@@ -147,27 +203,29 @@ def load_scoring_config() -> Dict[str, Any]:
             if not isinstance(config_data[mult_key], dict):
                 raise ValueError(f"'{mult_key}' must be a dictionary.")
 
-            # Check that all values are numeric and >= 0.1
+            # Check that all values are numeric and >= 1.0
             for _, multiplier_value in config_data[mult_key].items():
                 if (
                     not isinstance(multiplier_value, (int, float))
-                    or multiplier_value < 0.1
+                    or multiplier_value < 1.0
                 ):
                     raise ValueError(
-                        f"All multipliers in '{mult_key}' must be numeric and >= 0.1"
+                        f"All multipliers in '{mult_key}' must be numeric and >= 1.0"
                     )
 
         # Validate age_factor
-        if not isinstance(config_data["age_factor"], dict):
-            raise ValueError("'age_factor' must be a dictionary.")
-
         if (
-            "unit" not in config_data["age_factor"]
+            "enabled" not in config_data["age_factor"]
+            or "unit" not in config_data["age_factor"]
             or "multiplier_per_unit" not in config_data["age_factor"]
+            or "max_multiplier" not in config_data["age_factor"]
         ):
             raise ValueError(
-                "'age_factor' must contain 'unit' and 'multiplier_per_unit' keys."
+                "'age_factor' must contain 'enabled', 'unit', 'multiplier_per_unit', and 'max_multiplier' keys."
             )
+
+        if not isinstance(config_data["age_factor"]["enabled"], bool):
+            raise ValueError("'age_factor.enabled' must be a boolean.")
 
         if config_data["age_factor"]["unit"] not in ["days", "weeks"]:
             raise ValueError("'age_factor.unit' must be either 'days' or 'weeks'.")
@@ -182,134 +240,50 @@ def load_scoring_config() -> Dict[str, Any]:
                 "'age_factor.multiplier_per_unit' must be a non-negative number."
             )
 
-        # Validate daily_penalty
-        if not isinstance(config_data["daily_penalty"], dict):
-            raise ValueError("'daily_penalty' must be a dictionary.")
-
-        if "apply_penalty" not in config_data["daily_penalty"]:
-            raise ValueError("'daily_penalty' must contain 'apply_penalty' key.")
-
-        if not isinstance(config_data["daily_penalty"]["apply_penalty"], bool):
-            raise ValueError("'daily_penalty.apply_penalty' must be a boolean.")
-
-        if "penalty_points" not in config_data["daily_penalty"]:
-            raise ValueError("'daily_penalty' must contain 'penalty_points' key.")
-
         if (
-            not isinstance(config_data["daily_penalty"]["penalty_points"], (int, float))
-            or config_data["daily_penalty"]["penalty_points"] < 0
+            not isinstance(config_data["age_factor"]["max_multiplier"], (int, float))
+            or config_data["age_factor"]["max_multiplier"] < 1.0
         ):
-            raise ValueError(
-                "'daily_penalty.penalty_points' must be a non-negative number."
-            )
+            raise ValueError("'age_factor.max_multiplier' must be a number >= 1.0.")
 
         # Validate due_date_proximity
-        if not isinstance(config_data["due_date_proximity"], dict):
-            raise ValueError("'due_date_proximity' must be a dictionary.")
-
-        if "enabled" not in config_data["due_date_proximity"]:
-            raise ValueError("'due_date_proximity' must contain 'enabled' key.")
+        if (
+            "enabled" not in config_data["due_date_proximity"]
+            or "unit" not in config_data["due_date_proximity"]
+            or "multiplier_per_unit" not in config_data["due_date_proximity"]
+            or "max_multiplier" not in config_data["due_date_proximity"]
+        ):
+            raise ValueError(
+                "'due_date_proximity' must contain 'enabled', 'unit', 'multiplier_per_unit', and 'max_multiplier' keys."
+            )
 
         if not isinstance(config_data["due_date_proximity"]["enabled"], bool):
             raise ValueError("'due_date_proximity.enabled' must be a boolean.")
 
-        # Handle both old (linear) and new (logarithmic) config formats
-        if "overdue_scaling" in config_data["due_date_proximity"]:
-            # New logarithmic format
-            if config_data["due_date_proximity"]["overdue_scaling"] not in [
-                "linear",
-                "logarithmic",
-            ]:
-                raise ValueError(
-                    "'due_date_proximity.overdue_scaling' must be 'linear' or 'logarithmic'."
-                )
-            if "overdue_scale_factor" not in config_data["due_date_proximity"]:
-                raise ValueError(
-                    "'due_date_proximity' must contain 'overdue_scale_factor' key when using scaling."
-                )
-            if (
-                not isinstance(
-                    config_data["due_date_proximity"]["overdue_scale_factor"],
-                    (int, float),
-                )
-                or config_data["due_date_proximity"]["overdue_scale_factor"] < 0
-            ):
-                raise ValueError(
-                    "'due_date_proximity.overdue_scale_factor' must be a non-negative number."
-                )
-        elif "overdue_multiplier_per_day" in config_data["due_date_proximity"]:
-            # Old linear format - still support it
-            if (
-                not isinstance(
-                    config_data["due_date_proximity"]["overdue_multiplier_per_day"],
-                    (int, float),
-                )
-                or config_data["due_date_proximity"]["overdue_multiplier_per_day"] < 0
-            ):
-                raise ValueError(
-                    "'due_date_proximity.overdue_multiplier_per_day' must be a non-negative number."
-                )
-        else:
+        if config_data["due_date_proximity"]["unit"] not in ["days", "weeks"]:
             raise ValueError(
-                "'due_date_proximity' must contain either 'overdue_scale_factor' or 'overdue_multiplier_per_day' key."
-            )
-
-        if "approaching_threshold_days" not in config_data["due_date_proximity"]:
-            raise ValueError(
-                "'due_date_proximity' must contain 'approaching_threshold_days' key."
+                "'due_date_proximity.unit' must be either 'days' or 'weeks'."
             )
 
         if (
             not isinstance(
-                config_data["due_date_proximity"]["approaching_threshold_days"],
+                config_data["due_date_proximity"]["multiplier_per_unit"],
                 (int, float),
             )
-            or config_data["due_date_proximity"]["approaching_threshold_days"] < 0
+            or config_data["due_date_proximity"]["multiplier_per_unit"] < 0
         ):
             raise ValueError(
-                "'due_date_proximity.approaching_threshold_days' must be a non-negative number."
-            )
-
-        if "approaching_multiplier_per_day" not in config_data["due_date_proximity"]:
-            raise ValueError(
-                "'due_date_proximity' must contain 'approaching_multiplier_per_day' key."
+                "'due_date_proximity.multiplier_per_unit' must be a non-negative number."
             )
 
         if (
             not isinstance(
-                config_data["due_date_proximity"]["approaching_multiplier_per_day"],
-                (int, float),
+                config_data["due_date_proximity"]["max_multiplier"], (int, float)
             )
-            or config_data["due_date_proximity"]["approaching_multiplier_per_day"] < 0
+            or config_data["due_date_proximity"]["max_multiplier"] < 1.0
         ):
             raise ValueError(
-                "'due_date_proximity.approaching_multiplier_per_day' must be a non-negative number."
-            )
-
-        # Validate start_date_aging
-        if not isinstance(config_data["start_date_aging"], dict):
-            raise ValueError("'start_date_aging' must be a dictionary.")
-
-        if "enabled" not in config_data["start_date_aging"]:
-            raise ValueError("'start_date_aging' must contain 'enabled' key.")
-
-        if not isinstance(config_data["start_date_aging"]["enabled"], bool):
-            raise ValueError("'start_date_aging.enabled' must be a boolean.")
-
-        if "bonus_points_per_day" not in config_data["start_date_aging"]:
-            raise ValueError(
-                "'start_date_aging' must contain 'bonus_points_per_day' key."
-            )
-
-        if (
-            not isinstance(
-                config_data["start_date_aging"]["bonus_points_per_day"],
-                (int, float),
-            )
-            or config_data["start_date_aging"]["bonus_points_per_day"] < 0
-        ):
-            raise ValueError(
-                "'start_date_aging.bonus_points_per_day' must be a non-negative number."
+                "'due_date_proximity.max_multiplier' must be a number >= 1.0."
             )
 
         # Validate dependency_chain configuration
@@ -362,6 +336,12 @@ def load_scoring_config() -> Dict[str, Any]:
                     f"Project multiplier for '{proj_name}' must be a number >= 1.0."
                 )
 
+        # Validate optional weight maps when present
+        if "component_weights" in config_data and not isinstance(
+            config_data["component_weights"], dict
+        ):
+            raise ValueError("'component_weights' must be a dictionary.")
+
         return config_data
 
     except json.JSONDecodeError as e:
@@ -385,17 +365,15 @@ def save_scoring_config(config: Dict[str, Any]) -> None:
     # Validate first by loading through the validation logic
     # We'll temporarily write to validate, then keep if valid
     config_path = get_scoring_config_path()
+    default_config = get_default_scoring_config()
 
     # Validate required keys
     required_keys = [
         "base_score",
-        "field_presence_bonus",
         "difficulty_multiplier",
         "duration_multiplier",
         "age_factor",
-        "daily_penalty",
         "due_date_proximity",
-        "start_date_aging",
         "dependency_chain",
         "priority_multiplier",
     ]
@@ -414,12 +392,28 @@ def save_scoring_config(config: Dict[str, Any]) -> None:
             "bonus_per_streak_day": 1.0,
             "max_bonus": 50.0,
         }
-    if "status_bumps" not in config:
-        config["status_bumps"] = {
-            "in_progress_bonus": 5.0,
-            "next_up_bonus": 10.0,
-            "next_up_threshold_days": 3,
+    for key in ["age_factor", "due_date_proximity"]:
+        default_section = default_config.get(key, {})
+        current_section = config.get(key, {})
+        if isinstance(current_section, dict):
+            config[key] = {**default_section, **current_section}
+        else:
+            config[key] = default_section
+    if "component_weights" not in config:
+        config["component_weights"] = default_config["component_weights"]
+
+    penalty_config = config.get("penalty_invert_weights", None)
+    default_penalty = default_config["penalty_invert_weights"]
+    if isinstance(penalty_config, bool):
+        penalty_config = {key: penalty_config for key in default_penalty}
+    elif isinstance(penalty_config, dict):
+        penalty_config = {
+            key: bool(penalty_config.get(key, default_value))
+            for key, default_value in default_penalty.items()
         }
+    else:
+        penalty_config = default_penalty
+    config["penalty_invert_weights"] = penalty_config
 
     try:
         with open(config_path, "w", encoding="utf-8") as f:
@@ -464,6 +458,208 @@ def build_scoring_config_with_user_multipliers(
     return merged_config
 
 
+def merge_config_with_defaults(config: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Merge a partial scoring config with defaults for backward compatibility.
+    """
+    default_config = get_default_scoring_config()
+    merged: Dict[str, Any] = {**default_config, **config}
+
+    for key in [
+        "component_weights",
+        "difficulty_multiplier",
+        "duration_multiplier",
+        "priority_multiplier",
+        "tag_multipliers",
+        "project_multipliers",
+        "due_date_proximity",
+        "dependency_chain",
+        "habit_streak_bonus",
+    ]:
+        merged[key] = {**default_config.get(key, {}), **config.get(key, {})}
+
+    merged["age_factor"] = {
+        **default_config.get("age_factor", {}),
+        **config.get("age_factor", {}),
+    }
+
+    default_penalty = default_config.get("penalty_invert_weights", {})
+    penalty_override = config.get("penalty_invert_weights", default_penalty)
+    if isinstance(penalty_override, bool):
+        merged_penalty = {key: penalty_override for key in default_penalty}
+    elif isinstance(penalty_override, dict):
+        merged_penalty = {
+            key: bool(penalty_override.get(key, default_penalty[key]))
+            for key in default_penalty
+        }
+    else:
+        merged_penalty = default_penalty
+
+    merged["penalty_invert_weights"] = merged_penalty
+
+    return merged
+
+
+def _get_weight(config: Dict[str, Any], key: str, fallback: float = 1.0) -> float:
+    """Get a component weight with a fallback."""
+    return float(config.get("component_weights", {}).get(key, fallback))
+
+
+def _get_penalty_weight(
+    config: Dict[str, Any], key: str, fallback: float = 1.0
+) -> float:
+    """Get a penalty weight with a fallback."""
+    base_weight = float(config.get("component_weights", {}).get(key, fallback))
+    invert_cfg = config.get("penalty_invert_weights", False)
+
+    invert = False
+    if isinstance(invert_cfg, bool):
+        invert = invert_cfg
+    elif isinstance(invert_cfg, dict):
+        invert = bool(invert_cfg.get(key, False))
+
+    if invert:
+        if base_weight <= 0:
+            return fallback
+        return 1.0 / base_weight
+    return base_weight
+
+
+def _component_value(base_score: float, delta: float, weight: float) -> float:
+    """Compute weighted component contribution."""
+    contribution_delta = max(0.0, delta)
+    return base_score * weight * contribution_delta
+
+
+def _multiplier_delta(multiplier: float) -> float:
+    """Return positive delta from a multiplier (>=1.0)."""
+    return max(0.0, multiplier - 1.0)
+
+
+def _inverted_delta(multiplier: float, ceiling: float) -> float:
+    """Return inverted delta so smaller multipliers yield larger penalties."""
+    if ceiling <= 1.0:
+        return 0.0
+    return max(0.0, (ceiling - multiplier) / (ceiling - 1.0))
+
+
+def _get_max_multiplier(multiplier_map: Dict[str, Any]) -> float:
+    """Return the maximum multiplier value from a multiplier map."""
+    return max(float(value) for value in multiplier_map.values() if value is not None)
+
+
+@dataclass(frozen=True)
+class ComponentAggregationSettings:
+    """Settings that drive additive component aggregation."""
+
+    weight_func: Callable[[Dict[str, Any], str], float]
+    inverted_keys: set[str] = field(default_factory=set)
+    ceilings: dict[str, float] = field(default_factory=dict)
+
+
+def _calculate_age_multiplier(
+    task: Task, config: Dict[str, Any], effective_date: date
+) -> float:
+    """Return the age multiplier for a task."""
+    age_config = config.get("age_factor", {})
+    if not age_config.get("enabled", True):
+        return 1.0
+
+    task_creation_date = task.creation_date.date()
+    task_age = effective_date - task_creation_date
+    unit_length = 7 if age_config.get("unit", "days") == "weeks" else 1
+    age_in_units = max(0, task_age.days // unit_length)
+
+    mult_per_unit = float(age_config.get("multiplier_per_unit", 0.0))
+    max_multiplier = float(age_config.get("max_multiplier", 1.0))
+
+    if mult_per_unit <= 0 or max_multiplier <= 1.0:
+        return 1.0
+
+    multiplier = 1.0 + (age_in_units * mult_per_unit)
+    return min(max_multiplier, max(1.0, multiplier))
+
+
+def _calculate_tag_multiplier(task: Task, config: Dict[str, Any]) -> float:
+    """Return the combined multiplier for all tags on the task."""
+    tag_mult = 1.0
+    if task.tags:
+        for tag in task.tags:
+            if tag in config["tag_multipliers"]:
+                tag_mult *= float(config["tag_multipliers"][tag])
+    return tag_mult
+
+
+def _calculate_project_multiplier(task: Task, config: Dict[str, Any]) -> float:
+    """Return the project multiplier for the task if configured."""
+    if task.project and task.project in config["project_multipliers"]:
+        return float(config["project_multipliers"][task.project])
+    return 1.0
+
+
+def _collect_multipliers(
+    task: Task, config: Dict[str, Any], effective_date: date
+) -> tuple[dict[str, float], dict[str, float]]:
+    """Build multiplier map and ceilings for all additive components."""
+    priority_mult = float(
+        config.get("priority_multiplier", {}).get(task.priority.name, 1.0)
+    )
+    difficulty_mult = float(
+        config["difficulty_multiplier"].get(task.difficulty.name, 1.0)
+    )
+    duration_mult = float(config["duration_multiplier"].get(task.duration.name, 1.0))
+
+    age_mult = _calculate_age_multiplier(task, config, effective_date)
+    tag_mult = _calculate_tag_multiplier(task, config)
+    project_mult = _calculate_project_multiplier(task, config)
+    due_date_mult = calculate_due_date_multiplier(task, config, effective_date)
+
+    multipliers: dict[str, float] = {
+        "priority": priority_mult,
+        "difficulty": difficulty_mult,
+        "duration": duration_mult,
+        "age": age_mult,
+        "due_date": due_date_mult,
+        "tag": tag_mult,
+        "project": project_mult,
+    }
+
+    ceilings = {
+        "difficulty": _get_max_multiplier(config["difficulty_multiplier"]),
+        "duration": _get_max_multiplier(config["duration_multiplier"]),
+    }
+
+    return multipliers, ceilings
+
+
+def _sum_weighted_components(
+    base_score: float,
+    multipliers: dict[str, float],
+    config: Dict[str, Any],
+    settings: ComponentAggregationSettings,
+) -> float:
+    """Aggregate weighted component contributions."""
+    inverted_keys = settings.inverted_keys or set()
+    ceilings = settings.ceilings or {}
+    weight_func = settings.weight_func
+
+    total = 0.0
+    for key, multiplier in multipliers.items():
+        if key in inverted_keys:
+            ceiling = ceilings.get(key, multiplier)
+            delta = _inverted_delta(multiplier, ceiling)
+        else:
+            delta = _multiplier_delta(multiplier)
+
+        total += _component_value(
+            base_score,
+            delta,
+            weight_func(config, key),
+        )
+
+    return total
+
+
 def calculate_due_date_multiplier(
     task: Task, config: Dict[str, Any], effective_date: date
 ) -> float:
@@ -471,10 +667,9 @@ def calculate_due_date_multiplier(
     Calculate the due date proximity multiplier for a task.
 
     Returns a multiplier based on how close the task is to its due date:
-    - Overdue tasks (logarithmic): 1.0 + (log(days_overdue + 1) * scale_factor)
-    - Overdue tasks (linear): 1.0 + (days_overdue * overdue_multiplier_per_day)
-    - Approaching tasks: 1.0 + max(0, (threshold - days_until_due) * approaching_multiplier_per_day)
-    - Future tasks (beyond threshold): 1.0 (no bonus)
+    - Future tasks beyond the configured window: 1.0 (no bonus)
+    - Approaching tasks: 1.0 + (proximity_units * multiplier_per_unit)
+    - Overdue tasks: multiplier increases and caps at max_multiplier
     - No due date: 1.0 (no bonus)
 
     Args:
@@ -485,8 +680,10 @@ def calculate_due_date_multiplier(
     Returns:
         The due date multiplier (>= 1.0)
     """
+    proximity_config = config.get("due_date_proximity", {})
+
     # Check if due date proximity scoring is enabled
-    if not config.get("due_date_proximity", {}).get("enabled", False):
+    if not proximity_config.get("enabled", False):
         return 1.0
 
     # No due date = no multiplier
@@ -497,36 +694,26 @@ def calculate_due_date_multiplier(
     due_date = task.due_date.date()
     days_until_due = (due_date - effective_date).days
 
-    # Get configuration values
-    threshold_days = int(config["due_date_proximity"]["approaching_threshold_days"])
-    approaching_mult_per_day = float(
-        config["due_date_proximity"]["approaching_multiplier_per_day"]
-    )
+    mult_per_unit = float(proximity_config.get("multiplier_per_unit", 0.0))
+    max_multiplier = float(proximity_config.get("max_multiplier", 1.0))
+    unit_length = 7 if proximity_config.get("unit", "days") == "weeks" else 1
 
-    # Overdue tasks: use logarithmic or linear scaling
-    if days_until_due < 0:
-        days_overdue = abs(days_until_due)
+    if mult_per_unit <= 0 or max_multiplier <= 1.0:
+        return 1.0
 
-        # Check if using new logarithmic scaling
-        scaling_type = config["due_date_proximity"].get("overdue_scaling", "linear")
+    max_units = max(0.0, (max_multiplier - 1.0) / mult_per_unit)
+    units_until_due = days_until_due / unit_length
 
-        if scaling_type == "logarithmic":
-            scale_factor = float(config["due_date_proximity"]["overdue_scale_factor"])
-            return 1.0 + (math.log(days_overdue + 1) * scale_factor)
-        else:
-            # Linear scaling (backward compatibility)
-            overdue_mult_per_day = float(
-                config["due_date_proximity"]["overdue_multiplier_per_day"]
-            )
-            return 1.0 + (days_overdue * overdue_mult_per_day)
+    if units_until_due > max_units:
+        return 1.0
 
-    # Approaching due date: gradual increase
-    if days_until_due <= threshold_days:
-        days_within_threshold = threshold_days - days_until_due
-        return 1.0 + (days_within_threshold * approaching_mult_per_day)
+    if units_until_due < 0:
+        proximity_units = min(abs(units_until_due), max_units)
+    else:
+        proximity_units = max(0.0, max_units - units_until_due)
 
-    # Future task beyond threshold: no bonus
-    return 1.0
+    proximity_delta = min(max_multiplier - 1.0, proximity_units * mult_per_unit)
+    return 1.0 + proximity_delta
 
 
 def calculate_start_date_bonus(
@@ -536,18 +723,20 @@ def calculate_start_date_bonus(
     Calculate the start date aging bonus for a task.
 
     Adds linear bonus based on days past the start date.
-    Only applies if start_date is set, in the past, and task is not overdue.
+    Uses due_date_proximity configuration with inverted timing semantics.
 
     Args:
         task: The task to calculate the bonus for
-        config: The scoring configuration containing start_date_aging settings
+        config: The scoring configuration containing due_date_proximity settings
         effective_date: The date to calculate from
 
     Returns:
         Bonus points to add to base score (0.0 if disabled or not applicable)
     """
+    proximity_config = config.get("due_date_proximity", {})
+
     # Check if feature is enabled
-    if not config.get("start_date_aging", {}).get("enabled", False):
+    if not proximity_config.get("enabled", False):
         return 0.0
 
     # No start date set
@@ -570,11 +759,18 @@ def calculate_start_date_bonus(
     # Calculate days past start date
     days_past_start = (effective_date - start_date).days
 
-    # Get config value with type cast
-    bonus_per_day = float(config["start_date_aging"]["bonus_points_per_day"])
+    base_score = float(config.get("base_score", 0.0))
+    mult_per_unit = float(proximity_config.get("multiplier_per_unit", 0.0))
+    max_multiplier = float(proximity_config.get("max_multiplier", 1.0))
+    unit_length = 7 if proximity_config.get("unit", "days") == "weeks" else 1
 
-    # Linear bonus: days_past_start * 0.5 (default)
-    return days_past_start * bonus_per_day
+    if mult_per_unit <= 0 or max_multiplier <= 1.0:
+        return 0.0
+
+    max_bonus = base_score * (max_multiplier - 1.0)
+    bonus_units = days_past_start / unit_length
+    bonus = base_score * (bonus_units * mult_per_unit)
+    return min(max_bonus, bonus)
 
 
 def calculate_dependency_chain_bonus(
@@ -668,123 +864,37 @@ def calculate_score(
     Returns:
         The calculated score as an integer
     """
-    # Calculate additive base
-    additive_base = config["base_score"]
-    # Bonus for having a text description (rich text content)
-    if task.text_description:
-        additive_base += config["field_presence_bonus"].get("text_description", 5)
+    config = merge_config_with_defaults(config)
 
-    # Add start date aging bonus (additive, not multiplicative)
-    start_date_bonus = calculate_start_date_bonus(task, config, effective_date)
-    additive_base += start_date_bonus
+    base_score = float(config.get("base_score", 0.0))
+    multipliers, _ = _collect_multipliers(task, config, effective_date)
 
-    # Get difficulty multiplier
-    difficulty_level = task.difficulty
-    difficulty_key = (
-        difficulty_level.name
-    )  # Enum.name gets the constant name (e.g., "MEDIUM")
-    difficulty_mult = config["difficulty_multiplier"].get(difficulty_key, 1.0)
+    additive_base = base_score
+    additive_base += calculate_start_date_bonus(task, config, effective_date)
 
-    # Get duration multiplier
-    duration_level = task.duration
-    duration_key = (
-        duration_level.name
-    )  # Enum.name gets the constant name (e.g., "MEDIUM")
-    duration_mult = config["duration_multiplier"].get(duration_key, 1.0)
-
-    # Get priority multiplier
-    priority_level = task.priority
-    priority_key = (
-        priority_level.name
-    )  # Enum.name gets the constant name (e.g., "HIGH")
-    priority_mult = config.get("priority_multiplier", {}).get(priority_key, 1.0)
-
-    # Calculate age multiplier
-    task_creation_date = task.creation_date.date()
-    task_age = effective_date - task_creation_date
-
-    # Determine age in appropriate units
-    if config["age_factor"]["unit"] == "weeks":
-        # Convert days to weeks (integer division)
-        age_in_units = max(0, task_age.days // 7)
-    else:  # Default to days
-        age_in_units = max(0, task_age.days)
-
-    # Calculate age multiplier
-    mult_per_unit = config["age_factor"]["multiplier_per_unit"]
-    age_mult = 1.0 + (age_in_units * mult_per_unit)
-    age_mult = max(1.0, age_mult)  # Ensure age_mult is at least 1.0
-
-    # Calculate tag multipliers (all tags stack multiplicatively)
-    tag_mult = 1.0
-    if task.tags:
-        for tag in task.tags:
-            if tag in config["tag_multipliers"]:
-                tag_mult *= float(config["tag_multipliers"][tag])
-
-    # Calculate project multiplier
-    project_mult = 1.0
-    if task.project and task.project in config["project_multipliers"]:
-        project_mult = float(config["project_multipliers"][task.project])
-
-    # Calculate due date proximity multiplier
-    due_date_mult = calculate_due_date_multiplier(task, config, effective_date)
-
-    # Calculate habit streak bonus (additive)
-    habit_bonus = 0.0
     if task.is_habit and config.get("habit_streak_bonus", {}).get("enabled", False):
         streak_bonus_per_day = config["habit_streak_bonus"].get(
             "bonus_per_streak_day", 1.0
         )
         max_streak_bonus = config["habit_streak_bonus"].get("max_bonus", 50.0)
-        habit_bonus = min(task.streak_current * streak_bonus_per_day, max_streak_bonus)
-        additive_base += habit_bonus
+        additive_base += min(
+            task.streak_current * streak_bonus_per_day, max_streak_bonus
+        )
 
-    # Calculate status bumps (additive)
-    status_bonus = 0.0
-    status_config = config.get("status_bumps", {})
-
-    # "In Progress" bonus: Start date <= effective date and not complete
-    if (
-        task.start_date
-        and task.start_date.date() <= effective_date
-        and not task.is_complete
-    ):
-        status_bonus += status_config.get("in_progress_bonus", 0.0)
-
-    # "Next Up" bonus: Due date within threshold
-    if task.due_date and not task.is_complete:
-        days_until_due = (task.due_date.date() - effective_date).days
-        threshold = status_config.get("next_up_threshold_days", 3)
-        if 0 <= days_until_due <= threshold:
-            status_bonus += status_config.get("next_up_bonus", 0.0)
-
-    additive_base += status_bonus
-
-    # Calculate base score (before dependency bonus)
-    # Priority, tags, and projects are multiplicative like difficulty/duration
-    base_final_score = (
-        additive_base
-        * priority_mult
-        * difficulty_mult
-        * duration_mult
-        * age_mult
-        * due_date_mult
-        * tag_mult
-        * project_mult
+    total_components = _sum_weighted_components(
+        base_score,
+        multipliers,
+        config,
+        ComponentAggregationSettings(weight_func=_get_weight),
     )
 
-    # Add dependency chain bonus (additive, not multiplicative)
     dependency_bonus = 0.0
     if all_tasks is not None:
         dependency_bonus = calculate_dependency_chain_bonus(
             task, all_tasks, config, effective_date, visited
         )
 
-    # Calculate final score with dependency bonus
-    final_score = base_final_score + dependency_bonus
-
-    # Return rounded integer
+    final_score = additive_base + total_components + dependency_bonus
     return int(round(final_score))
 
 
@@ -1005,17 +1115,7 @@ def get_penalty_multiplier(
     difficulty: Difficulty, duration: Duration, config: Dict[str, Any]
 ) -> float:
     """
-    Calculate penalty multiplier using RECIPROCAL of XP multiplier.
-
-    Easy/short tasks get HIGHER penalties (no excuse for skipping).
-    Hard/long tasks get LOWER penalties (understandable to defer).
-
-    New logic: penalty_mult = (1 / difficulty_xp) * (1 / duration_xp)
-
-    Examples:
-    - TRIVIAL (0.5) -> 2.0 (High penalty)
-    - HERCULEAN (2.5) -> 0.4 (Low penalty)
-    - MEDIUM (1.0) -> 1.0 (Normal penalty)
+    Calculate penalty intensity by inverting difficulty/duration emphasis.
 
     Args:
         difficulty: The task's difficulty level
@@ -1023,23 +1123,17 @@ def get_penalty_multiplier(
         config: The scoring configuration containing multipliers
 
     Returns:
-        Combined penalty multiplier
+        Combined inverted penalty multiplier delta (higher means harsher penalty)
     """
-    # Get XP multipliers from config (with explicit float conversion for type safety)
     difficulty_xp: float = float(
         config["difficulty_multiplier"].get(difficulty.name, 1.0)
     )
     duration_xp: float = float(config["duration_multiplier"].get(duration.name, 1.0))
-
-    # Reciprocal calculation
-    # Avoid division by zero by ensuring min value is small positive epsilon if somehow 0
-    difficulty_xp = max(0.1, difficulty_xp)
-    duration_xp = max(0.1, duration_xp)
-
-    difficulty_penalty: float = 1.0 / difficulty_xp
-    duration_penalty: float = 1.0 / duration_xp
-
-    return difficulty_penalty * duration_penalty
+    max_difficulty = _get_max_multiplier(config["difficulty_multiplier"])
+    max_duration = _get_max_multiplier(config["duration_multiplier"])
+    difficulty_penalty = _inverted_delta(difficulty_xp, max_difficulty)
+    duration_penalty = _inverted_delta(duration_xp, max_duration)
+    return difficulty_penalty + duration_penalty
 
 
 def calculate_penalty_score(
@@ -1058,6 +1152,8 @@ def calculate_penalty_score(
     Returns:
         The penalty score (positive value representing XP that would be lost)
     """
+    config = merge_config_with_defaults(config)
+
     # No penalty for completed tasks
     if task.is_complete:
         return 0.0
@@ -1073,23 +1169,26 @@ def calculate_penalty_score(
     if task_due_date > effective_date:
         return 0.0
 
-    # Calculate penalty
-    # Formula: Base * PenaltyMult * PriorityMult
-    # Note: Priority increases BOTH Score AND Penalty (Importance cuts both ways)
-    penalty_multiplier = get_penalty_multiplier(task.difficulty, task.duration, config)
-    base_score: float = float(config.get("base_score", 20))
+    base_score: float = float(config.get("base_score", 10.0))
+    multipliers, ceilings = _collect_multipliers(task, config, effective_date)
 
-    # Get priority multiplier for penalty scaling
-    priority_level = task.priority
-    priority_key = priority_level.name
-    priority_mult = float(
-        config.get("priority_multiplier", {}).get(priority_key, 1.0)
+    penalty_total = _component_value(
+        base_score,
+        1.0,
+        _get_penalty_weight(config, "base"),
+    )
+    penalty_total += _sum_weighted_components(
+        base_score,
+        multipliers,
+        config,
+        ComponentAggregationSettings(
+            weight_func=_get_penalty_weight,
+            inverted_keys={"difficulty", "duration"},
+            ceilings=ceilings,
+        ),
     )
 
-    penalty = base_score * penalty_multiplier * priority_mult
-
-    # Ensure at least 1 point penalty if due
-    return max(1.0, penalty)
+    return max(0.0, penalty_total)
 
 
 def calculate_task_scores(
@@ -1143,10 +1242,6 @@ def apply_penalties(
         config: The scoring configuration
         all_tasks: List of all tasks to check for penalties
     """
-    # Check if penalties are enabled
-    if not config["daily_penalty"]["apply_penalty"]:
-        return
-
     # Check if user is in vacation mode
     if getattr(user, "vacation_mode", False):
         print("Vacation mode enabled. Skipping penalties.")
@@ -1163,9 +1258,8 @@ def apply_penalties(
             if task.due_date.date() > effective_date:
                 continue
 
-            # Calculate penalty using standardized function
-            # This handles multipliers, base score, and priority adjustments
-            penalty = int(calculate_penalty_score(task, config, effective_date))
+            penalty_value = calculate_penalty_score(task, config, effective_date)
+            penalty = max(1, int(round(penalty_value)))
 
             penalties_applied += 1
             add_xp(

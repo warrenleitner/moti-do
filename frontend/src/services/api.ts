@@ -134,31 +134,29 @@ export interface SystemStatus {
 }
 
 // Scoring configuration types
-export interface FieldPresenceBonus {
-  text_description: number;
-}
-
 export interface AgeFactorConfig {
+  enabled: boolean;
   unit: 'days' | 'weeks';
   multiplier_per_unit: number;
-}
-
-export interface DailyPenaltyConfig {
-  apply_penalty: boolean;
-  penalty_points: number;
+  max_multiplier: number;
 }
 
 export interface DueDateProximityConfig {
   enabled: boolean;
-  overdue_scaling: 'linear' | 'logarithmic';
-  overdue_scale_factor: number;
-  approaching_threshold_days: number;
-  approaching_multiplier_per_day: number;
+  unit: 'days' | 'weeks';
+  multiplier_per_unit: number;
+  max_multiplier: number;
 }
 
-export interface StartDateAgingConfig {
-  enabled: boolean;
-  bonus_points_per_day: number;
+export interface PenaltyInvertWeightsConfig {
+  base: boolean;
+  priority: boolean;
+  difficulty: boolean;
+  duration: boolean;
+  age: boolean;
+  due_date: boolean;
+  tag: boolean;
+  project: boolean;
 }
 
 export interface DependencyChainConfig {
@@ -172,25 +170,16 @@ export interface HabitStreakBonusConfig {
   max_bonus: number;
 }
 
-export interface StatusBumpsConfig {
-  in_progress_bonus: number;
-  next_up_bonus: number;
-  next_up_threshold_days: number;
-}
-
 export interface ScoringConfig {
   base_score: number;
-  field_presence_bonus: FieldPresenceBonus;
   difficulty_multiplier: Record<string, number>;
   duration_multiplier: Record<string, number>;
   priority_multiplier: Record<string, number>;
   age_factor: AgeFactorConfig;
-  daily_penalty: DailyPenaltyConfig;
   due_date_proximity: DueDateProximityConfig;
-  start_date_aging: StartDateAgingConfig;
   dependency_chain: DependencyChainConfig;
   habit_streak_bonus: HabitStreakBonusConfig;
-  status_bumps: StatusBumpsConfig;
+  penalty_invert_weights: PenaltyInvertWeightsConfig;
 }
 
 export interface TokenResponse {

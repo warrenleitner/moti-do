@@ -48,7 +48,16 @@ import {
   CardGiftcard as RewardIcon,
   RestartAlt as ResetIcon,
 } from '@mui/icons-material';
-import { dataApi, authApi, userApi, systemApi, type XPTransaction, type TagDefinition, type ProjectDefinition, type ScoringConfig } from '../services/api';
+import {
+  dataApi,
+  authApi,
+  userApi,
+  systemApi,
+  type XPTransaction,
+  type TagDefinition,
+  type ProjectDefinition,
+  type ScoringConfig,
+} from '../services/api';
 import { useUserStore, useSystemStatus, useUserStats } from '../store/userStore';
 import InfoIcon from '@mui/icons-material/Info';
 
@@ -1009,7 +1018,7 @@ export default function SettingsPage() {
               <Box>
                 <Typography variant="subtitle2" gutterBottom>Priority Multipliers</Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                  Recommended: 1.0-3.0 (defaults: NOT_SET=1.0, LOW=1.2, MEDIUM=1.5, HIGH=2.0, DEFCON_ONE=3.0)
+                  Recommended: 1.0-2.5 (defaults: NOT_SET=1.0, TRIVIAL=1.05, LOW=1.2, MEDIUM=1.45, HIGH=1.8, DEFCON_ONE=2.1)
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                   {Object.entries(scoringConfig.priority_multiplier).map(([key, value]) => (
@@ -1036,7 +1045,7 @@ export default function SettingsPage() {
               <Box>
                 <Typography variant="subtitle2" gutterBottom>Difficulty Multipliers</Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                  Recommended: 1.0-5.0 (defaults: NOT_SET=1.0, TRIVIAL=1.1, LOW=1.5, MEDIUM=2.0, HIGH=3.0, HERCULEAN=5.0)
+                  Recommended: 1.0-2.5 (defaults: NOT_SET=1.0, TRIVIAL=1.05, LOW=1.2, MEDIUM=1.45, HIGH=1.8, HERCULEAN=2.1)
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                   {Object.entries(scoringConfig.difficulty_multiplier).map(([key, value]) => (
@@ -1063,7 +1072,7 @@ export default function SettingsPage() {
               <Box>
                 <Typography variant="subtitle2" gutterBottom>Duration Multipliers</Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                  Recommended: 1.0-3.0 (defaults: NOT_SET=1.0, MINUSCULE=1.05, SHORT=1.2, MEDIUM=1.5, LONG=2.0, ODYSSEYAN=3.0)
+                  Recommended: 1.0-2.5 (defaults: NOT_SET=1.0, MINUSCULE=1.05, SHORT=1.2, MEDIUM=1.45, LONG=1.8, ODYSSEYAN=2.1)
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                   {Object.entries(scoringConfig.duration_multiplier).map(([key, value]) => (
@@ -1089,38 +1098,67 @@ export default function SettingsPage() {
               {/* Age Factor */}
               <Box>
                 <Typography variant="subtitle2" gutterBottom>Age Factor</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Bonus multiplier applied as tasks age (default: 0.01/day, recommended: 0.01-0.1)
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  <TextField
-                    type="number"
-                    size="small"
-                    label="Multiplier per unit"
-                    value={scoringConfig.age_factor.multiplier_per_unit}
-                    onChange={(e) => updateScoringField('age_factor', {
-                      ...scoringConfig.age_factor,
-                      multiplier_per_unit: parseFloat(e.target.value) || 0
-                    })}
-                    inputProps={{ step: 0.01, min: 0 }}
-                    sx={{ width: 150 }}
-                  />
-                  <TextField
-                    select
-                    size="small"
-                    label="Unit"
-                    value={scoringConfig.age_factor.unit}
-                    onChange={(e) => updateScoringField('age_factor', {
-                      ...scoringConfig.age_factor,
-                      unit: e.target.value as 'days' | 'weeks'
-                    })}
-                    sx={{ width: 120 }}
-                    SelectProps={{ native: true }}
-                  >
-                    <option value="days">Days</option>
-                    <option value="weeks">Weeks</option>
-                  </TextField>
-                </Box>
+                <FormControlLabel
+                  control={(
+                    <Switch
+                      checked={scoringConfig.age_factor.enabled}
+                      onChange={(e) => updateScoringField('age_factor', {
+                        ...scoringConfig.age_factor,
+                        enabled: e.target.checked,
+                      })}
+                    />
+                  )}
+                  label="Enable age-based bonus"
+                />
+                {scoringConfig.age_factor.enabled && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Defaults: 0.025 per unit (days), max multiplier 1.5
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      <TextField
+                        type="number"
+                        size="small"
+                        label="Multiplier per unit"
+                        value={scoringConfig.age_factor.multiplier_per_unit}
+                        onChange={(e) => updateScoringField('age_factor', {
+                          ...scoringConfig.age_factor,
+                          multiplier_per_unit: parseFloat(e.target.value) || 0,
+                        })}
+                        inputProps={{ step: 0.01, min: 0 }}
+                        sx={{ width: 150 }}
+                      />
+                      <TextField
+                        type="number"
+                        size="small"
+                        label="Max multiplier"
+                        value={scoringConfig.age_factor.max_multiplier}
+                        onChange={(e) => updateScoringField('age_factor', {
+                          ...scoringConfig.age_factor,
+                          max_multiplier: parseFloat(e.target.value) || 1,
+                        })}
+                        helperText="1.0-3.0"
+                        inputProps={{ step: 0.1, min: 1 }}
+                        sx={{ width: 150 }}
+                      />
+                      <TextField
+                        select
+                        size="small"
+                        label="Unit"
+                        value={scoringConfig.age_factor.unit}
+                        onChange={(e) => updateScoringField('age_factor', {
+                          ...scoringConfig.age_factor,
+                          unit: e.target.value as 'days' | 'weeks',
+                        })}
+                        sx={{ width: 120 }}
+                        SelectProps={{ native: true }}
+                      >
+                        <option value="days">Days</option>
+                        <option value="weeks">Weeks</option>
+                      </TextField>
+                    </Box>
+                  </Box>
+                )}
               </Box>
 
               <Divider />
@@ -1143,51 +1181,89 @@ export default function SettingsPage() {
                 {scoringConfig.due_date_proximity.enabled && (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                     <Typography variant="caption" color="text.secondary">
-                      Defaults: scale factor=0.75, threshold=14 days, approaching=0.05/day
+                      Defaults: 0.02 per unit (days), max multiplier 1.5
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                       <TextField
                         type="number"
                         size="small"
-                        label="Overdue scale factor"
-                        value={scoringConfig.due_date_proximity.overdue_scale_factor}
+                        label="Multiplier per unit"
+                        value={scoringConfig.due_date_proximity.multiplier_per_unit}
                         onChange={(e) => updateScoringField('due_date_proximity', {
                           ...scoringConfig.due_date_proximity,
-                          overdue_scale_factor: parseFloat(e.target.value) || 0
+                          multiplier_per_unit: parseFloat(e.target.value) || 0,
                         })}
-                        helperText="0.5-1.5"
-                        inputProps={{ step: 0.1, min: 0 }}
-                        sx={{ width: 150 }}
-                      />
-                      <TextField
-                        type="number"
-                        size="small"
-                        label="Threshold days"
-                        value={scoringConfig.due_date_proximity.approaching_threshold_days}
-                        onChange={(e) => updateScoringField('due_date_proximity', {
-                          ...scoringConfig.due_date_proximity,
-                          approaching_threshold_days: parseFloat(e.target.value) || 0
-                        })}
-                        helperText="7-30"
-                        inputProps={{ step: 1, min: 0 }}
-                        sx={{ width: 130 }}
-                      />
-                      <TextField
-                        type="number"
-                        size="small"
-                        label="Approaching mult/day"
-                        value={scoringConfig.due_date_proximity.approaching_multiplier_per_day}
-                        onChange={(e) => updateScoringField('due_date_proximity', {
-                          ...scoringConfig.due_date_proximity,
-                          approaching_multiplier_per_day: parseFloat(e.target.value) || 0
-                        })}
-                        helperText="0.01-0.2"
+                        helperText="0.01-0.1"
                         inputProps={{ step: 0.01, min: 0 }}
+                        sx={{ width: 190 }}
+                      />
+                      <TextField
+                        type="number"
+                        size="small"
+                        label="Max multiplier"
+                        value={scoringConfig.due_date_proximity.max_multiplier}
+                        onChange={(e) => updateScoringField('due_date_proximity', {
+                          ...scoringConfig.due_date_proximity,
+                          max_multiplier: parseFloat(e.target.value) || 1,
+                        })}
+                        helperText="1.0-3.0"
+                        inputProps={{ step: 0.1, min: 1 }}
                         sx={{ width: 150 }}
                       />
+                      <TextField
+                        select
+                        size="small"
+                        label="Unit"
+                        value={scoringConfig.due_date_proximity.unit}
+                        onChange={(e) => updateScoringField('due_date_proximity', {
+                          ...scoringConfig.due_date_proximity,
+                          unit: e.target.value as 'days' | 'weeks',
+                        })}
+                        sx={{ width: 120 }}
+                        SelectProps={{ native: true }}
+                      >
+                        <option value="days">Days</option>
+                        <option value="weeks">Weeks</option>
+                      </TextField>
                     </Box>
                   </Box>
                 )}
+              </Box>
+
+              <Divider />
+
+              {/* Penalty Weight Inversion */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Penalty Weighting</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  Choose which components use inverted weights when calculating penalties.
+                </Typography>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: 1,
+                  }}
+                >
+                  {Object.entries(scoringConfig.penalty_invert_weights).map(([key, value]) => {
+                    const label = key.replace(/_/g, ' ');
+                    return (
+                      <FormControlLabel
+                        key={key}
+                        control={(
+                          <Switch
+                            checked={value}
+                            onChange={(e) => updateScoringField('penalty_invert_weights', {
+                              ...scoringConfig.penalty_invert_weights,
+                              [key]: e.target.checked,
+                            })}
+                          />
+                        )}
+                        label={`Invert ${label} weight`}
+                      />
+                    );
+                  })}
+                </Box>
               </Box>
 
               <Divider />
@@ -1210,7 +1286,7 @@ export default function SettingsPage() {
                 {scoringConfig.habit_streak_bonus.enabled && (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                     <Typography variant="caption" color="text.secondary">
-                      Defaults: 1.0/streak day, max 50 bonus
+                      Defaults: 1.2/streak day, max 25 bonus
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                       <TextField
@@ -1245,55 +1321,6 @@ export default function SettingsPage() {
               </Box>
 
               <Divider />
-
-              {/* Status Bumps */}
-              <Box>
-                <Typography variant="subtitle2" gutterBottom>Status Bonuses</Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                  Defaults: In Progress=5, Next Up=10, threshold=3 days
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  <TextField
-                    type="number"
-                    size="small"
-                    label="In Progress bonus"
-                    value={scoringConfig.status_bumps.in_progress_bonus}
-                    onChange={(e) => updateScoringField('status_bumps', {
-                      ...scoringConfig.status_bumps,
-                      in_progress_bonus: parseFloat(e.target.value) || 0
-                    })}
-                    helperText="0-20"
-                    inputProps={{ step: 1, min: 0 }}
-                    sx={{ width: 140 }}
-                  />
-                  <TextField
-                    type="number"
-                    size="small"
-                    label="Next Up bonus"
-                    value={scoringConfig.status_bumps.next_up_bonus}
-                    onChange={(e) => updateScoringField('status_bumps', {
-                      ...scoringConfig.status_bumps,
-                      next_up_bonus: parseFloat(e.target.value) || 0
-                    })}
-                    helperText="0-30"
-                    inputProps={{ step: 1, min: 0 }}
-                    sx={{ width: 130 }}
-                  />
-                  <TextField
-                    type="number"
-                    size="small"
-                    label="Next Up threshold days"
-                    value={scoringConfig.status_bumps.next_up_threshold_days}
-                    onChange={(e) => updateScoringField('status_bumps', {
-                      ...scoringConfig.status_bumps,
-                      next_up_threshold_days: parseInt(e.target.value, 10) || 0
-                    })}
-                    helperText="1-7"
-                    inputProps={{ step: 1, min: 0 }}
-                    sx={{ width: 160 }}
-                  />
-                </Box>
-              </Box>
 
               <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
                 <Button

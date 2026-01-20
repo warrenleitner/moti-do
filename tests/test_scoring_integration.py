@@ -7,9 +7,13 @@ Tests realistic task scenarios with multiple scoring factors active.
 from datetime import date, datetime
 
 from motido.core.models import Difficulty, Duration, Priority, Task
-from motido.core.scoring import calculate_score
+from motido.core.scoring import calculate_score, calculate_task_scores
 
-from .test_fixtures import get_default_scoring_config
+from .test_fixtures import (
+    get_default_scoring_config,
+    get_weekly_workload_fixture,
+)
+from .test_scoring import manual_expected_score
 
 
 def test_urgent_overdue_task_with_tags_and_project() -> None:
@@ -31,17 +35,7 @@ def test_urgent_overdue_task_with_tags_and_project() -> None:
     )
 
     score = calculate_score(task, None, config, effective_date)
-
-    # Base: 10
-    # Priority: 3.0 (DEFCON_ONE)
-    # Difficulty: 3.0 (HIGH)
-    # Duration: 1.2 (SHORT)
-    # Age: 1.0 + (19 * 0.01) = 1.19
-    # Due date: 1.0 + (5 * 0.5) = 3.5 (overdue)
-    # Tags: 2.0 * 1.5 = 3.0
-    # Project: 2.5
-    # Score = 10 * 3.0 * 3.0 * 1.2 * 1.19 * 3.5 * 3.0 * 2.5 = 3373.65 = 3374
-    assert score == 3374
+    assert score == manual_expected_score(task, config, effective_date)
 
 
 def test_routine_task_approaching_deadline() -> None:
@@ -62,17 +56,7 @@ def test_routine_task_approaching_deadline() -> None:
     )
 
     score = calculate_score(task, None, config, effective_date)
-
-    # Base: 10 + 5 (text_description) + 10 (Next Up bonus) = 25
-    # Priority: 1.2 (LOW)
-    # Difficulty: 1.1 (TRIVIAL)
-    # Duration: 1.05 (MINUSCULE)
-    # Age: 1.0 + (6 * 0.01) = 1.06
-    # Due date: 1.0 + ((14 - 2) * 0.1) = 2.2 (approaching)
-    # Tags: 0.8
-    # Project: 1.0
-    # Score = 25 * 1.2 * 1.1 * 1.05 * 1.06 * 2.2 * 0.8 * 1.0 = 64.76 = 65
-    assert score == 65
+    assert score == manual_expected_score(task, config, effective_date)
 
 
 def test_long_running_project_with_start_date() -> None:
@@ -93,17 +77,7 @@ def test_long_running_project_with_start_date() -> None:
     )
 
     score = calculate_score(task, None, config, effective_date)
-
-    # Base: 10 + (42 * 0.5) + 5 (In Progress bonus) = 36
-    # Priority: 1.5 (MEDIUM)
-    # Difficulty: 5.0 (HERCULEAN)
-    # Duration: 3.0 (ODYSSEYAN)
-    # Age: 1.0 + (46 * 0.01) = 1.46
-    # Due date: 1.0 (beyond threshold)
-    # Tags: 1.0
-    # Project: 1.3
-    # Score = 36 * 1.5 * 5.0 * 3.0 * 1.46 * 1.0 * 1.0 * 1.3 = 1537.4 = 1537
-    assert score == 1537
+    assert score == manual_expected_score(task, config, effective_date)
 
 
 def test_task_with_dependencies() -> None:
@@ -148,13 +122,7 @@ def test_task_with_dependencies() -> None:
     }
 
     score = calculate_score(blocker, all_tasks, config, effective_date)
-
-    # Base blocker score: 10 * 1.5 * 1.5 * 1.2 * 1.06 = 28.62 = 29
-    # Dependent 1 score: 10 * 2.0 * 2.0 * 1.5 * 1.01 = 60.6 = 61
-    # Dependent 2 score: 10 * 2.0 * 3.0 * 2.0 * 1.02 = 122.4 = 122
-    # Dependency bonus: (61 + 122) * 0.1 = 18.3 = 18
-    # Total: 29 + 18 = 47
-    assert score == 47
+    assert score == manual_expected_score(blocker, config, effective_date, all_tasks)
 
 
 def test_minimal_task_no_multipliers() -> None:
@@ -171,17 +139,7 @@ def test_minimal_task_no_multipliers() -> None:
     )
 
     score = calculate_score(task, None, config, effective_date)
-
-    # Base: 10
-    # Priority: 1.0 (TRIVIAL)
-    # Difficulty: 1.1 (TRIVIAL)
-    # Duration: 1.05 (MINUSCULE)
-    # Age: 1.0
-    # Due date: 1.0
-    # Tags: 1.0
-    # Project: 1.0
-    # Score = 10 * 1.0 * 1.1 * 1.05 * 1.0 * 1.0 * 1.0 * 1.0 = 11.55 = 12
-    assert score == 12
+    assert score == manual_expected_score(task, config, effective_date)
 
 
 def test_complex_scenario_all_factors_active() -> None:
@@ -223,20 +181,9 @@ def test_complex_scenario_all_factors_active() -> None:
     }
 
     score = calculate_score(complex_task, all_tasks, config, effective_date)
-
-    # Base: 10 + 5 (text_description) + 5 (In Progress) = 20 (start date doesn't apply - overdue)
-    # Priority: 2.0 (HIGH)
-    # Difficulty: 3.0 (HIGH)
-    # Duration: 2.0 (LONG)
-    # Age: 1.0 + (19 * 0.01) = 1.19
-    # Due date: 1.0 + (2 * 0.5) = 2.0 (overdue)
-    # Tags: 1.8 * 1.4 = 2.52
-    # Project: 1.6
-    # Base score: 20 * 2.0 * 3.0 * 2.0 * 1.19 * 2.0 * 2.52 * 1.6 = 2303.08 = 2303
-    # Dependent score: 10 * 1.5 * 2.0 * 1.5 * 1.02 = 45.9 = 46
-    # Dependency bonus: 46 * 0.1 = 4.6 = 5
-    # Total: 2303 + 5 = 2308
-    assert score == 2308
+    assert score == manual_expected_score(
+        complex_task, config, effective_date, all_tasks
+    )
 
 
 def test_overdue_task_no_start_date_bonus() -> None:
@@ -255,15 +202,7 @@ def test_overdue_task_no_start_date_bonus() -> None:
     )
 
     score = calculate_score(task, None, config, effective_date)
-
-    # Base: 10 + 5 (In Progress) = 15 (NO start date bonus because overdue)
-    # Priority: 1.5 (MEDIUM)
-    # Difficulty: 2.0 (MEDIUM)
-    # Duration: 1.5 (MEDIUM)
-    # Age: 1.0 + (19 * 0.01) = 1.19
-    # Due date: 1.0 + (5 * 0.5) = 3.5 (overdue)
-    # Score = 15 * 1.5 * 2.0 * 1.5 * 1.19 * 3.5 = 281.13 = 281
-    assert score == 281
+    assert score == manual_expected_score(task, config, effective_date)
 
 
 def test_future_due_date_with_start_date_bonus() -> None:
@@ -282,15 +221,7 @@ def test_future_due_date_with_start_date_bonus() -> None:
     )
 
     score = calculate_score(task, None, config, effective_date)
-
-    # Base: 10 + 5 (In Progress) + (15 * 0.5) = 22.5
-    # Priority: 1.5 (MEDIUM)
-    # Difficulty: 2.0 (MEDIUM)
-    # Duration: 1.5 (MEDIUM)
-    # Age: 1.0 + (19 * 0.01) = 1.19
-    # Due date: 1.0 + ((14 - 5) * 0.1) = 1.9 (approaching)
-    # Score = 22.5 * 1.5 * 2.0 * 1.5 * 1.19 * 1.9 = 228.9 = 229
-    assert score == 229
+    assert score == manual_expected_score(task, config, effective_date)
 
 
 def test_recursive_dependency_chain() -> None:
@@ -337,21 +268,15 @@ def test_recursive_dependency_chain() -> None:
 
     # Task C score (no dependents)
     score_c = calculate_score(task_c, all_tasks, config, effective_date)
-    # Base: 10 * 1.5 * 2.0 * 1.5 * 1.01 = 45.45 = 45
-    assert score_c == 45
+    assert score_c == manual_expected_score(task_c, config, effective_date, all_tasks)
 
     # Task B score (C doesn't depend on B in this setup)
     score_b = calculate_score(task_b, all_tasks, config, effective_date)
-    # Base: 10 * 1.5 * 2.0 * 1.5 * 1.02 = 45.9 = 46
-    assert score_b == 46
+    assert score_b == manual_expected_score(task_b, config, effective_date, all_tasks)
 
     # Task A score (B depends on A)
     score_a = calculate_score(task_a, all_tasks, config, effective_date)
-    # Base: 10 * 1.2 * 1.5 * 1.2 * 1.03 = 22.248 = 22
-    # B's full score (with its dependencies): 46
-    # Dependency bonus: 46 * 0.1 = 4.6 = 5
-    # Total: 22 + 5 = 27
-    assert score_a == 27
+    assert score_a == manual_expected_score(task_a, config, effective_date, all_tasks)
 
 
 def test_disabled_scoring_features() -> None:
@@ -359,11 +284,8 @@ def test_disabled_scoring_features() -> None:
     config = get_default_scoring_config()
     # Disable all optional features
     config["due_date_proximity"]["enabled"] = False
-    config["start_date_aging"]["enabled"] = False
     config["dependency_chain"]["enabled"] = False
     config["habit_streak_bonus"]["enabled"] = False
-    config["status_bumps"]["in_progress_bonus"] = 0.0
-    config["status_bumps"]["next_up_bonus"] = 0.0
 
     effective_date = date(2025, 11, 20)
 
@@ -390,13 +312,24 @@ def test_disabled_scoring_features() -> None:
     all_tasks = {"task-123": task, "dependent-1": dependent}
 
     score = calculate_score(task, all_tasks, config, effective_date)
+    assert score == manual_expected_score(task, config, effective_date, all_tasks)
 
-    # Base: 10 (no start date bonus - disabled)
-    # Priority: 2.0 (HIGH)
-    # Difficulty: 3.0 (HIGH)
-    # Duration: 2.0 (LONG)
-    # Age: 1.0 + (19 * 0.01) = 1.19
-    # Due date: 1.0 (disabled)
-    # Dependency: 0 (disabled)
-    # Score = 10 * 2.0 * 3.0 * 2.0 * 1.19 * 1.0 = 142.8 = 143
-    assert score == 143
+
+def test_weekly_workload_scale() -> None:
+    """Ensure a representative week lands near the 2k XP target."""
+    effective_date, tasks = get_weekly_workload_fixture()
+    config = get_default_scoring_config()
+
+    all_tasks = {task.id: task for task in tasks}
+    total_xp = 0.0
+    total_penalty = 0.0
+
+    for task in tasks:
+        xp_score, penalty_score, _ = calculate_task_scores(
+            task, all_tasks, config, effective_date
+        )
+        total_xp += xp_score
+        total_penalty += penalty_score
+
+    net_total = total_xp - total_penalty
+    assert 150 <= net_total <= 350

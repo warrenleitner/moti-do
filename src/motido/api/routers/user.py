@@ -590,19 +590,14 @@ async def get_scoring_config(  # pragma: no cover
     # Convert to response schema (excluding tag/project multipliers)
     return ScoringConfigResponse(
         base_score=config.get("base_score", 10),
-        field_presence_bonus=config.get(
-            "field_presence_bonus", {"text_description": 5}
-        ),
         difficulty_multiplier=config.get("difficulty_multiplier", {}),
         duration_multiplier=config.get("duration_multiplier", {}),
         priority_multiplier=config.get("priority_multiplier", {}),
         age_factor=config.get("age_factor", {}),
-        daily_penalty=config.get("daily_penalty", {}),
         due_date_proximity=config.get("due_date_proximity", {}),
-        start_date_aging=config.get("start_date_aging", {}),
         dependency_chain=config.get("dependency_chain", {}),
         habit_streak_bonus=config.get("habit_streak_bonus", {}),
-        status_bumps=config.get("status_bumps", {}),
+        penalty_invert_weights=config.get("penalty_invert_weights", {}),
     )
 
 
@@ -622,19 +617,14 @@ async def reset_scoring_config(  # pragma: no cover
 
     return ScoringConfigResponse(
         base_score=config.get("base_score", 10),
-        field_presence_bonus=config.get(
-            "field_presence_bonus", {"text_description": 5}
-        ),
         difficulty_multiplier=config.get("difficulty_multiplier", {}),
         duration_multiplier=config.get("duration_multiplier", {}),
         priority_multiplier=config.get("priority_multiplier", {}),
         age_factor=config.get("age_factor", {}),
-        daily_penalty=config.get("daily_penalty", {}),
         due_date_proximity=config.get("due_date_proximity", {}),
-        start_date_aging=config.get("start_date_aging", {}),
         dependency_chain=config.get("dependency_chain", {}),
         habit_streak_bonus=config.get("habit_streak_bonus", {}),
-        status_bumps=config.get("status_bumps", {}),
+        penalty_invert_weights=config.get("penalty_invert_weights", {}),
     )
 
 
@@ -664,14 +654,11 @@ async def update_scoring_config(  # pragma: no cover
     ]
     # Fields that are Pydantic models (need model_dump)
     model_fields = [
-        "field_presence_bonus",
         "age_factor",
-        "daily_penalty",
         "due_date_proximity",
-        "start_date_aging",
         "dependency_chain",
         "habit_streak_bonus",
-        "status_bumps",
+        "penalty_invert_weights",
     ]
 
     # Update simple fields
@@ -698,17 +685,12 @@ async def update_scoring_config(  # pragma: no cover
     # Return updated config
     return ScoringConfigResponse(
         base_score=config.get("base_score", 10),
-        field_presence_bonus=config.get(
-            "field_presence_bonus", {"text_description": 5}
-        ),
         difficulty_multiplier=config.get("difficulty_multiplier", {}),
         duration_multiplier=config.get("duration_multiplier", {}),
         priority_multiplier=config.get("priority_multiplier", {}),
         age_factor=config.get("age_factor", {}),
-        daily_penalty=config.get("daily_penalty", {}),
         due_date_proximity=config.get("due_date_proximity", {}),
-        start_date_aging=config.get("start_date_aging", {}),
         dependency_chain=config.get("dependency_chain", {}),
         habit_streak_bonus=config.get("habit_streak_bonus", {}),
-        status_bumps=config.get("status_bumps", {}),
+        penalty_invert_weights=config.get("penalty_invert_weights", {}),
     )

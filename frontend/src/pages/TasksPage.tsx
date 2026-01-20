@@ -125,9 +125,9 @@ export default function TasksPage() {
 
   // Update visible row count when filtered tasks change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisibleRowCount((prev) => (filteredTasks.length > prev ? filteredTasks.length : prev));
     // Intentionally updating state in effect based on external data
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredTasks.length]);
 
   const handleViewModeChange = (_: React.MouseEvent<HTMLElement>, newMode: 'list' | 'table' | null) => {

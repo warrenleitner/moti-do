@@ -1,18 +1,25 @@
 """Additional tests for the scoring module to improve coverage."""
 
+# pylint: disable=protected-access
+
 import json
 from datetime import date, datetime, timedelta
+from typing import cast
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
 from motido.core.models import Difficulty, Duration, Task, User
 from motido.core.scoring import (
+    _calculate_age_multiplier,
+    _get_penalty_weight,
     add_xp,
     apply_penalties,
     calculate_score,
     get_last_penalty_check_date,
     load_scoring_config,
+    merge_config_with_defaults,
+    save_scoring_config,
     set_last_penalty_check_date,
 )
 
@@ -76,8 +83,9 @@ def test_load_scoring_config_missing_age_factor_keys() -> None:
             with pytest.raises(ValueError) as excinfo:
                 load_scoring_config()
 
-    assert "'age_factor' must contain 'unit' and 'multiplier_per_unit' keys" in str(
-        excinfo.value
+    assert (
+        "'age_factor' must contain 'enabled', 'unit', 'multiplier_per_unit', and "
+        "'max_multiplier' keys" in str(excinfo.value)
     )
 
 
@@ -95,6 +103,24 @@ def test_load_scoring_config_invalid_age_factor_unit() -> None:
                 load_scoring_config()
 
     assert "'age_factor.unit' must be either 'days' or 'weeks'" in str(excinfo.value)
+
+
+def test_load_scoring_config_invalid_age_factor_enabled_type() -> None:
+    """Test load_scoring_config raises when age_factor.enabled is not boolean."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["age_factor"] = {
+        "enabled": "yes",
+        "unit": "days",
+        "multiplier_per_unit": 0.01,
+        "max_multiplier": 1.5,
+    }
+
+    with patch("json.load", return_value=invalid_config):
+        with patch("builtins.open", mock_open()):
+            with pytest.raises(ValueError) as excinfo:
+                load_scoring_config()
+
+    assert "'age_factor.enabled' must be a boolean" in str(excinfo.value)
 
 
 def test_load_scoring_config_invalid_age_factor_multiplier() -> None:
@@ -115,38 +141,14 @@ def test_load_scoring_config_invalid_age_factor_multiplier() -> None:
     )
 
 
-def test_load_scoring_config_invalid_daily_penalty_type() -> None:
-    """Test load_scoring_config with invalid daily_penalty type."""
+def test_load_scoring_config_invalid_age_factor_max_multiplier() -> None:
+    """Test load_scoring_config with invalid age_factor max_multiplier value."""
     invalid_config = get_simple_scoring_config()
-    invalid_config["daily_penalty"] = "not a dictionary"  # Invalid type
-
-    with patch("json.load", return_value=invalid_config):
-        with patch("builtins.open", mock_open()):
-            with pytest.raises(ValueError) as excinfo:
-                load_scoring_config()
-
-    assert "'daily_penalty' must be a dictionary" in str(excinfo.value)
-
-
-def test_load_scoring_config_missing_daily_penalty_apply_key() -> None:
-    """Test load_scoring_config with missing daily_penalty apply_penalty key."""
-    invalid_config = get_simple_scoring_config()
-    invalid_config["daily_penalty"] = {"penalty_points": 5}  # Missing apply_penalty
-
-    with patch("json.load", return_value=invalid_config):
-        with patch("builtins.open", mock_open()):
-            with pytest.raises(ValueError) as excinfo:
-                load_scoring_config()
-
-    assert "'daily_penalty' must contain 'apply_penalty' key" in str(excinfo.value)
-
-
-def test_load_scoring_config_invalid_daily_penalty_apply_type() -> None:
-    """Test load_scoring_config with invalid daily_penalty apply_penalty type."""
-    invalid_config = get_simple_scoring_config()
-    invalid_config["daily_penalty"] = {
-        "apply_penalty": "yes",  # String, not bool
-        "penalty_points": 5,
+    invalid_config["age_factor"] = {
+        "enabled": True,
+        "unit": "days",
+        "multiplier_per_unit": 0.02,
+        "max_multiplier": 0.5,
     }
 
     with patch("json.load", return_value=invalid_config):
@@ -154,38 +156,7 @@ def test_load_scoring_config_invalid_daily_penalty_apply_type() -> None:
             with pytest.raises(ValueError) as excinfo:
                 load_scoring_config()
 
-    assert "'daily_penalty.apply_penalty' must be a boolean" in str(excinfo.value)
-
-
-def test_load_scoring_config_missing_daily_penalty_points_key() -> None:
-    """Test load_scoring_config with missing daily_penalty penalty_points key."""
-    invalid_config = get_simple_scoring_config()
-    invalid_config["daily_penalty"] = {"apply_penalty": True}  # Missing penalty_points
-
-    with patch("json.load", return_value=invalid_config):
-        with patch("builtins.open", mock_open()):
-            with pytest.raises(ValueError) as excinfo:
-                load_scoring_config()
-
-    assert "'daily_penalty' must contain 'penalty_points' key" in str(excinfo.value)
-
-
-def test_load_scoring_config_invalid_daily_penalty_points_value() -> None:
-    """Test load_scoring_config with invalid daily_penalty penalty_points value."""
-    invalid_config = get_simple_scoring_config()
-    invalid_config["daily_penalty"] = {
-        "apply_penalty": True,
-        "penalty_points": -5,  # Negative value
-    }
-
-    with patch("json.load", return_value=invalid_config):
-        with patch("builtins.open", mock_open()):
-            with pytest.raises(ValueError) as excinfo:
-                load_scoring_config()
-
-    assert "'daily_penalty.penalty_points' must be a non-negative number" in str(
-        excinfo.value
-    )
+    assert "'age_factor.max_multiplier' must be a number >= 1.0" in str(excinfo.value)
 
 
 def test_load_scoring_config_invalid_due_date_proximity_type() -> None:
@@ -205,9 +176,8 @@ def test_load_scoring_config_missing_due_date_proximity_enabled_key() -> None:
     """Test load_scoring_config with missing due_date_proximity enabled key."""
     invalid_config = get_simple_scoring_config()
     invalid_config["due_date_proximity"] = {
-        "overdue_multiplier_per_day": 0.5,
-        "approaching_threshold_days": 14,
-        "approaching_multiplier_per_day": 0.1,
+        "multiplier_per_unit": 0.02,
+        "max_multiplier": 1.5,
     }  # Missing enabled
 
     with patch("json.load", return_value=invalid_config):
@@ -215,7 +185,10 @@ def test_load_scoring_config_missing_due_date_proximity_enabled_key() -> None:
             with pytest.raises(ValueError) as excinfo:
                 load_scoring_config()
 
-    assert "'due_date_proximity' must contain 'enabled' key" in str(excinfo.value)
+    assert (
+        "'due_date_proximity' must contain 'enabled', 'unit', "
+        "'multiplier_per_unit', and 'max_multiplier' keys" in str(excinfo.value)
+    )
 
 
 def test_load_scoring_config_invalid_due_date_proximity_enabled_type() -> None:
@@ -223,9 +196,8 @@ def test_load_scoring_config_invalid_due_date_proximity_enabled_type() -> None:
     invalid_config = get_simple_scoring_config()
     invalid_config["due_date_proximity"] = {
         "enabled": "yes",  # String, not bool
-        "overdue_multiplier_per_day": 0.5,
-        "approaching_threshold_days": 14,
-        "approaching_multiplier_per_day": 0.1,
+        "multiplier_per_unit": 0.02,
+        "max_multiplier": 1.5,
     }
 
     with patch("json.load", return_value=invalid_config):
@@ -236,34 +208,14 @@ def test_load_scoring_config_invalid_due_date_proximity_enabled_type() -> None:
     assert "'due_date_proximity.enabled' must be a boolean" in str(excinfo.value)
 
 
-def test_load_scoring_config_missing_overdue_multiplier_per_day_key() -> None:
-    """Test load_scoring_config with missing overdue_multiplier_per_day key."""
+def test_load_scoring_config_invalid_due_date_proximity_unit() -> None:
+    """Test load_scoring_config with invalid due_date_proximity unit."""
     invalid_config = get_simple_scoring_config()
     invalid_config["due_date_proximity"] = {
         "enabled": True,
-        "approaching_threshold_days": 14,
-        "approaching_multiplier_per_day": 0.1,
-    }  # Missing both overdue_multiplier_per_day and overdue_scale_factor
-
-    with patch("json.load", return_value=invalid_config):
-        with patch("builtins.open", mock_open()):
-            with pytest.raises(ValueError) as excinfo:
-                load_scoring_config()
-
-    assert (
-        "'due_date_proximity' must contain either 'overdue_scale_factor' or 'overdue_multiplier_per_day' key"
-        in str(excinfo.value)
-    )
-
-
-def test_load_scoring_config_invalid_overdue_multiplier_per_day_value() -> None:
-    """Test load_scoring_config with invalid overdue_multiplier_per_day value."""
-    invalid_config = get_simple_scoring_config()
-    invalid_config["due_date_proximity"] = {
-        "enabled": True,
-        "overdue_multiplier_per_day": -0.5,  # Negative value
-        "approaching_threshold_days": 14,
-        "approaching_multiplier_per_day": 0.1,
+        "unit": "months",
+        "multiplier_per_unit": 0.02,
+        "max_multiplier": 1.5,
     }
 
     with patch("json.load", return_value=invalid_config):
@@ -271,39 +223,77 @@ def test_load_scoring_config_invalid_overdue_multiplier_per_day_value() -> None:
             with pytest.raises(ValueError) as excinfo:
                 load_scoring_config()
 
-    assert (
-        "'due_date_proximity.overdue_multiplier_per_day' must be a non-negative number"
-        in str(excinfo.value)
-    )
-
-
-def test_load_scoring_config_missing_approaching_threshold_days_key() -> None:
-    """Test load_scoring_config with missing approaching_threshold_days key."""
-    invalid_config = get_simple_scoring_config()
-    invalid_config["due_date_proximity"] = {
-        "enabled": True,
-        "overdue_multiplier_per_day": 0.5,
-        "approaching_multiplier_per_day": 0.1,
-    }  # Missing approaching_threshold_days
-
-    with patch("json.load", return_value=invalid_config):
-        with patch("builtins.open", mock_open()):
-            with pytest.raises(ValueError) as excinfo:
-                load_scoring_config()
-
-    assert "'due_date_proximity' must contain 'approaching_threshold_days' key" in str(
+    assert "'due_date_proximity.unit' must be either 'days' or 'weeks'" in str(
         excinfo.value
     )
 
 
-def test_load_scoring_config_invalid_approaching_threshold_days_value() -> None:
-    """Test load_scoring_config with invalid approaching_threshold_days value."""
+def test_load_scoring_config_invalid_penalty_invert_weights_type() -> None:
+    """Test load_scoring_config with invalid penalty_invert_weights type."""
+    invalid_config = get_simple_scoring_config()
+    invalid_config["penalty_invert_weights"] = "yes"
+
+    with patch("os.path.exists", return_value=True):
+        with patch("json.load", return_value=invalid_config):
+            with patch("builtins.open", mock_open()):
+                with pytest.raises(ValueError) as excinfo:
+                    load_scoring_config()
+
+    assert (
+        "'penalty_invert_weights' must be a boolean or dictionary of booleans"
+        in str(excinfo.value)
+    )
+
+
+def test_load_scoring_config_maps_legacy_approaching_multiplier() -> None:
+    """Test legacy approaching_multiplier_per_day maps to multiplier_per_unit."""
+    legacy_config = get_simple_scoring_config()
+    legacy_config["due_date_proximity"] = {
+        "enabled": True,
+        "approaching_multiplier_per_day": 0.04,
+        "max_multiplier": 1.5,
+    }
+
+    with patch("os.path.exists", return_value=True):
+        with patch("json.load", return_value=legacy_config):
+            with patch("builtins.open", mock_open()):
+                config = load_scoring_config()
+
+    assert config["due_date_proximity"]["multiplier_per_unit"] == 0.04
+
+
+def test_load_scoring_config_maps_legacy_daily_multiplier() -> None:
+    """Test legacy daily_multiplier_per_day maps to multiplier_per_unit and defaults fill gaps."""
+    legacy_config = get_simple_scoring_config()
+    legacy_config["due_date_proximity"] = {
+        "enabled": True,
+        "daily_multiplier_per_day": 0.03,
+        "max_multiplier": 1.4,
+    }
+    legacy_config["age_factor"] = {
+        "enabled": True,
+        "multiplier_per_unit": 0.05,
+        "max_multiplier": 2.0,
+    }
+    legacy_config["penalty_invert_weights"] = True
+
+    with patch("os.path.exists", return_value=True):
+        with patch("json.load", return_value=legacy_config):
+            with patch("builtins.open", mock_open()):
+                config = load_scoring_config()
+
+    assert config["due_date_proximity"]["multiplier_per_unit"] == 0.03
+    assert config["due_date_proximity"]["unit"] == "days"
+    assert config["age_factor"]["unit"] == "days"
+    assert all(config["penalty_invert_weights"].values())
+
+
+def test_load_scoring_config_missing_multiplier_per_unit_key() -> None:
+    """Test load_scoring_config with missing multiplier_per_unit key."""
     invalid_config = get_simple_scoring_config()
     invalid_config["due_date_proximity"] = {
         "enabled": True,
-        "overdue_multiplier_per_day": 0.5,
-        "approaching_threshold_days": -14,  # Negative value
-        "approaching_multiplier_per_day": 0.1,
+        "max_multiplier": 1.5,
     }
 
     with patch("json.load", return_value=invalid_config):
@@ -312,39 +302,18 @@ def test_load_scoring_config_invalid_approaching_threshold_days_value() -> None:
                 load_scoring_config()
 
     assert (
-        "'due_date_proximity.approaching_threshold_days' must be a non-negative number"
-        in str(excinfo.value)
+        "'due_date_proximity' must contain 'enabled', 'unit', "
+        "'multiplier_per_unit', and 'max_multiplier' keys" in str(excinfo.value)
     )
 
 
-def test_load_scoring_config_missing_approaching_multiplier_per_day_key() -> None:
-    """Test load_scoring_config with missing approaching_multiplier_per_day key."""
+def test_load_scoring_config_invalid_multiplier_per_unit_value() -> None:
+    """Test load_scoring_config with invalid multiplier_per_unit value."""
     invalid_config = get_simple_scoring_config()
     invalid_config["due_date_proximity"] = {
         "enabled": True,
-        "overdue_multiplier_per_day": 0.5,
-        "approaching_threshold_days": 14,
-    }  # Missing approaching_multiplier_per_day
-
-    with patch("json.load", return_value=invalid_config):
-        with patch("builtins.open", mock_open()):
-            with pytest.raises(ValueError) as excinfo:
-                load_scoring_config()
-
-    assert (
-        "'due_date_proximity' must contain 'approaching_multiplier_per_day' key"
-        in str(excinfo.value)
-    )
-
-
-def test_load_scoring_config_invalid_approaching_multiplier_per_day_value() -> None:
-    """Test load_scoring_config with invalid approaching_multiplier_per_day value."""
-    invalid_config = get_simple_scoring_config()
-    invalid_config["due_date_proximity"] = {
-        "enabled": True,
-        "overdue_multiplier_per_day": 0.5,
-        "approaching_threshold_days": 14,
-        "approaching_multiplier_per_day": -0.1,  # Negative value
+        "multiplier_per_unit": -0.1,
+        "max_multiplier": 1.5,
     }
 
     with patch("json.load", return_value=invalid_config):
@@ -353,45 +322,17 @@ def test_load_scoring_config_invalid_approaching_multiplier_per_day_value() -> N
                 load_scoring_config()
 
     assert (
-        "'due_date_proximity.approaching_multiplier_per_day' must be a non-negative number"
+        "'due_date_proximity.multiplier_per_unit' must be a non-negative number"
         in str(excinfo.value)
     )
 
 
-def test_load_scoring_config_invalid_start_date_aging_type() -> None:
-    """Test load_scoring_config with invalid start_date_aging type."""
+def test_load_scoring_config_missing_max_multiplier_key() -> None:
+    """Test load_scoring_config with missing max_multiplier key."""
     invalid_config = get_simple_scoring_config()
-    invalid_config["start_date_aging"] = "not a dictionary"  # Invalid type
-
-    with patch("json.load", return_value=invalid_config):
-        with patch("builtins.open", mock_open()):
-            with pytest.raises(ValueError) as excinfo:
-                load_scoring_config()
-
-    assert "'start_date_aging' must be a dictionary" in str(excinfo.value)
-
-
-def test_load_scoring_config_missing_start_date_aging_enabled_key() -> None:
-    """Test load_scoring_config with missing start_date_aging enabled key."""
-    invalid_config = get_simple_scoring_config()
-    invalid_config["start_date_aging"] = {
-        "bonus_points_per_day": 0.5,
-    }  # Missing enabled
-
-    with patch("json.load", return_value=invalid_config):
-        with patch("builtins.open", mock_open()):
-            with pytest.raises(ValueError) as excinfo:
-                load_scoring_config()
-
-    assert "'start_date_aging' must contain 'enabled' key" in str(excinfo.value)
-
-
-def test_load_scoring_config_invalid_start_date_aging_enabled_type() -> None:
-    """Test load_scoring_config with invalid start_date_aging enabled type."""
-    invalid_config = get_simple_scoring_config()
-    invalid_config["start_date_aging"] = {
-        "enabled": "yes",  # String, not bool
-        "bonus_points_per_day": 0.5,
+    invalid_config["due_date_proximity"] = {
+        "enabled": True,
+        "multiplier_per_unit": 0.02,
     }
 
     with patch("json.load", return_value=invalid_config):
@@ -399,43 +340,94 @@ def test_load_scoring_config_invalid_start_date_aging_enabled_type() -> None:
             with pytest.raises(ValueError) as excinfo:
                 load_scoring_config()
 
-    assert "'start_date_aging.enabled' must be a boolean" in str(excinfo.value)
+    assert (
+        "'due_date_proximity' must contain 'enabled', 'unit', "
+        "'multiplier_per_unit', and 'max_multiplier' keys" in str(excinfo.value)
+    )
 
 
-def test_load_scoring_config_missing_bonus_points_per_day_key() -> None:
-    """Test load_scoring_config with missing bonus_points_per_day key."""
+def test_load_scoring_config_invalid_max_multiplier_value() -> None:
+    """Test load_scoring_config with invalid max_multiplier value."""
     invalid_config = get_simple_scoring_config()
-    invalid_config["start_date_aging"] = {
+    invalid_config["due_date_proximity"] = {
         "enabled": True,
-    }  # Missing bonus_points_per_day
+        "multiplier_per_unit": 0.02,
+        "max_multiplier": 0.5,
+    }
 
     with patch("json.load", return_value=invalid_config):
         with patch("builtins.open", mock_open()):
             with pytest.raises(ValueError) as excinfo:
                 load_scoring_config()
 
-    assert "'start_date_aging' must contain 'bonus_points_per_day' key" in str(
+    assert "'due_date_proximity.max_multiplier' must be a number >= 1.0" in str(
         excinfo.value
     )
 
 
-def test_load_scoring_config_invalid_bonus_points_per_day_value() -> None:
-    """Test load_scoring_config with invalid bonus_points_per_day value."""
-    invalid_config = get_simple_scoring_config()
-    invalid_config["start_date_aging"] = {
-        "enabled": True,
-        "bonus_points_per_day": -0.5,  # Negative value
+def test_merge_config_with_defaults_penalty_branches() -> None:
+    """Ensure merge_config_with_defaults handles boolean and invalid penalty inputs."""
+    default_penalty = get_simple_scoring_config()["penalty_invert_weights"]
+
+    merged_bool = merge_config_with_defaults({"penalty_invert_weights": False})
+    merged_bool_penalty: dict[str, bool] = cast(
+        dict[str, bool], merged_bool["penalty_invert_weights"]
+    )
+    expected_penalty = {key: False for key in default_penalty}
+    assert merged_bool_penalty == expected_penalty
+
+    merged_fallback = merge_config_with_defaults({"penalty_invert_weights": "nope"})
+    assert merged_fallback["penalty_invert_weights"] == default_penalty
+
+
+def test_get_penalty_weight_inverts_with_boolean_config() -> None:
+    """_get_penalty_weight inverts weights when global inversion is enabled."""
+    config = {
+        "component_weights": {"due_date": 2.0},
+        "penalty_invert_weights": True,
     }
 
-    with patch("json.load", return_value=invalid_config):
-        with patch("builtins.open", mock_open()):
-            with pytest.raises(ValueError) as excinfo:
-                load_scoring_config()
+    penalty_weight = _get_penalty_weight(config, "due_date", 1.0)
 
-    assert (
-        "'start_date_aging.bonus_points_per_day' must be a non-negative number"
-        in str(excinfo.value)
-    )
+    assert penalty_weight == 0.5
+
+
+def test_calculate_age_multiplier_disabled() -> None:
+    """_calculate_age_multiplier returns neutral multiplier when disabled."""
+    config = {"age_factor": {"enabled": False}}
+    task = Task(title="Age Off", creation_date=datetime(2025, 1, 1, 12, 0))
+
+    multiplier = _calculate_age_multiplier(task, config, date(2025, 1, 5))
+
+    assert multiplier == 1.0
+
+
+def test_save_scoring_config_falls_back_to_defaults_for_invalid_sections() -> None:
+    """save_scoring_config should replace invalid section types with defaults."""
+    config = get_simple_scoring_config()
+    config["age_factor"] = "invalid"
+    config["due_date_proximity"] = "invalid"
+    config["penalty_invert_weights"] = True
+
+    with patch("json.dump"), patch("builtins.open", mock_open()):
+        save_scoring_config(config)
+
+    assert isinstance(config["age_factor"], dict)
+    assert isinstance(config["due_date_proximity"], dict)
+    penalty_map = cast(dict[str, bool], config["penalty_invert_weights"])
+    assert all(penalty_map.values())
+
+
+def test_save_scoring_config_merges_penalty_dict_with_defaults() -> None:
+    """save_scoring_config should merge partial penalty maps."""
+    config = get_simple_scoring_config()
+    config["penalty_invert_weights"] = {"age": False}
+
+    with patch("json.dump"), patch("builtins.open", mock_open()):
+        save_scoring_config(config)
+
+    assert config["penalty_invert_weights"]["age"] is False
+    assert config["penalty_invert_weights"]["priority"] is True
 
 
 def test_load_scoring_config_invalid_dependency_chain_type() -> None:
@@ -712,7 +704,6 @@ def test_calculate_score_with_green_style_range() -> None:
     config = get_simple_scoring_config()
     # Modify for green style test
     config["base_score"] = 20  # Set base score to 20 to test green style range
-    config["field_presence_bonus"] = {"title": 0}
     config["priority_multiplier"] = {
         "NOT_SET": 1.0,
         "LOW": 1.0,  # Override default 1.2 to get exact score of 20
@@ -739,7 +730,7 @@ def test_calculate_score_with_green_style_range() -> None:
     )
 
     score = calculate_score(task, None, config, date.today())
-    assert score == 20  # Should be in the green range (20-29)
+    assert score == int(round(config["base_score"]))
 
 
 def test_add_xp_with_negative_points() -> None:
@@ -810,25 +801,6 @@ def test_set_last_penalty_check_date_ioerror() -> None:
 
 
 # --- Test Apply Penalties Function ---
-
-
-def test_apply_penalties_disabled() -> None:
-    """Test apply_penalties when penalties are disabled."""
-    config = get_simple_scoring_config()
-    config["daily_penalty"] = {"apply_penalty": False, "penalty_points": 5}  # Disabled
-
-    tasks = [
-        Task(title="Task 1", creation_date=datetime.now(), id="task1"),
-        Task(title="Task 2", creation_date=datetime.now(), id="task2"),
-    ]
-
-    # Create mock user and manager
-    mock_user = User(username="testuser")
-    mock_manager = MagicMock()
-
-    # No exception should be raised, and function should return early
-    apply_penalties(mock_user, mock_manager, date.today(), config, tasks)
-    # No assertions needed as we're just testing that no exception occurs
 
 
 def test_apply_penalties_last_check_is_today() -> None:

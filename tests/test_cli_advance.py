@@ -12,6 +12,8 @@ from motido.cli.main import handle_advance
 from motido.core.models import Task, User
 from motido.data.json_manager import JsonDataManager
 
+ScoringConfig = dict[str, Any]
+
 
 @pytest.fixture
 def mock_advance_user() -> User:
@@ -39,9 +41,7 @@ def test_handle_advance_success(mocker: Any, mock_advance_user: User) -> None:
     """Test advance command successfully advances date by 1 day."""
     # Mock dependencies
     mock_manager = MagicMock(spec=JsonDataManager)
-    mock_scoring_config = {
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5}
-    }
+    mock_scoring_config: ScoringConfig = {}
     mocker.patch(
         "motido.cli.main.load_scoring_config", return_value=mock_scoring_config
     )
@@ -69,9 +69,7 @@ def test_handle_advance_verbose_mode(
     """Test advance command in verbose mode."""
     # Mock dependencies
     mock_manager = MagicMock(spec=JsonDataManager)
-    mock_scoring_config = {
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5}
-    }
+    mock_scoring_config: ScoringConfig = {}
     mocker.patch(
         "motido.cli.main.load_scoring_config", return_value=mock_scoring_config
     )
@@ -97,9 +95,7 @@ def test_handle_advance_with_xp_penalty(
     """Test advance command displays XP penalty correctly."""
     # Mock dependencies
     mock_manager = MagicMock(spec=JsonDataManager)
-    mock_scoring_config = {
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 10}
-    }
+    mock_scoring_config: ScoringConfig = {}
     mocker.patch(
         "motido.cli.main.load_scoring_config", return_value=mock_scoring_config
     )
@@ -128,9 +124,7 @@ def test_handle_advance_no_penalty(
 
     # Mock dependencies
     mock_manager = MagicMock(spec=JsonDataManager)
-    mock_scoring_config = {
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5}
-    }
+    mock_scoring_config: ScoringConfig = {}
     mocker.patch(
         "motido.cli.main.load_scoring_config", return_value=mock_scoring_config
     )
@@ -187,7 +181,7 @@ def test_handle_advance_generic_exception(
 ) -> None:
     """Test advance command handles generic exceptions."""
     mock_manager = MagicMock(spec=JsonDataManager)
-    mock_scoring_config = {"daily_penalty": {"apply_penalty": True}}
+    mock_scoring_config: ScoringConfig = {}
     mocker.patch(
         "motido.cli.main.load_scoring_config", return_value=mock_scoring_config
     )
@@ -215,9 +209,7 @@ def test_handle_advance_to_date_multiple_days(
 ) -> None:
     """Test advance --to skips multiple days."""
     mock_manager = MagicMock(spec=JsonDataManager)
-    mock_scoring_config = {
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5}
-    }
+    mock_scoring_config: ScoringConfig = {}
     mocker.patch(
         "motido.cli.main.load_scoring_config", return_value=mock_scoring_config
     )
@@ -247,9 +239,7 @@ def test_handle_advance_to_date_single_day(
 ) -> None:
     """Test advance --to with target exactly 1 day forward."""
     mock_manager = MagicMock(spec=JsonDataManager)
-    mock_scoring_config = {
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5}
-    }
+    mock_scoring_config: ScoringConfig = {}
     mocker.patch(
         "motido.cli.main.load_scoring_config", return_value=mock_scoring_config
     )
@@ -328,9 +318,7 @@ def test_handle_advance_to_date_verbose(
 ) -> None:
     """Test advance --to with verbose mode shows target date."""
     mock_manager = MagicMock(spec=JsonDataManager)
-    mock_scoring_config = {
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5}
-    }
+    mock_scoring_config: ScoringConfig = {}
     mocker.patch(
         "motido.cli.main.load_scoring_config", return_value=mock_scoring_config
     )

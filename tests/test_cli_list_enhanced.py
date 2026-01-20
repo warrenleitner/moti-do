@@ -140,7 +140,6 @@ def test_handle_list_with_all_fields(  # type: ignore[misc]
     mock_manager = MagicMock()
     mock_load_config.return_value = {
         "base_score": 10,
-        "field_presence_bonus": {},
         "difficulty_multiplier": {
             "TRIVIAL": 1.0,
             "LOW": 1.0,
@@ -183,7 +182,6 @@ def test_handle_list_with_partial_fields(  # type: ignore[misc]
     mock_manager = MagicMock()
     mock_load_config.return_value = {
         "base_score": 10,
-        "field_presence_bonus": {},
         "difficulty_multiplier": {
             "TRIVIAL": 1.0,
             "LOW": 1.0,
@@ -223,7 +221,6 @@ def test_handle_list_without_optional_fields(  # type: ignore[misc]
     mock_manager = MagicMock()
     mock_load_config.return_value = {
         "base_score": 10,
-        "field_presence_bonus": {},
         "difficulty_multiplier": {
             "TRIVIAL": 1.0,
             "LOW": 1.0,
