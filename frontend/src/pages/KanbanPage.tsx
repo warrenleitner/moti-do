@@ -17,14 +17,13 @@ export default function KanbanPage() {
 
   useEffect(() => {
     if (!hasCompletedData) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fetchTasks({ includeCompleted: true })
         .catch(() => {})
         .finally(() => setReady(true));
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setReady(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchTasks, hasCompletedData]);
 
   // Filter out future tasks (start_date > current_processing_date)

@@ -69,10 +69,11 @@ def test_calculate_dependency_chain_bonus_single_dependent() -> None:
     # Calculate task_b score first (for reference)
     task_b_score = calculate_score(task_b, all_tasks, config, effective_date)
 
-    # Task A should get 10% of task_b's score as bonus
+    # Task A should get the configured percentage of task_b's score as bonus
     bonus = calculate_dependency_chain_bonus(task_a, all_tasks, config, effective_date)
 
-    expected_bonus = task_b_score * 0.1
+    percentage = config["dependency_chain"]["dependent_score_percentage"]
+    expected_bonus = task_b_score * percentage
     assert bonus == pytest.approx(expected_bonus)
 
 
@@ -102,10 +103,11 @@ def test_calculate_dependency_chain_bonus_multiple_dependents() -> None:
     task_b_score = calculate_score(task_b, all_tasks, config, effective_date)
     task_c_score = calculate_score(task_c, all_tasks, config, effective_date)
 
-    # Task A should get 10% of sum of task_b and task_c scores
+    # Task A should get the configured percentage of sum of task_b and task_c scores
     bonus = calculate_dependency_chain_bonus(task_a, all_tasks, config, effective_date)
 
-    expected_bonus = (task_b_score + task_c_score) * 0.1
+    percentage = config["dependency_chain"]["dependent_score_percentage"]
+    expected_bonus = (task_b_score + task_c_score) * percentage
     assert bonus == pytest.approx(expected_bonus)
 
 
@@ -155,15 +157,16 @@ def test_calculate_dependency_chain_bonus_recursive() -> None:
     config = get_default_scoring_config()
     effective_date = date(2025, 1, 15)
 
-    # Task B's full score already includes 10% of task C's score
+    # Task B's full score already includes the configured share of task C's score
     task_b_full_score = calculate_score(task_b, all_tasks, config, effective_date)
 
-    # Task A should get 10% of task B's full score (including B's dependency bonus from C)
+    # Task A should get the configured share of task B's full score (including B's dependency bonus from C)
     bonus_a = calculate_dependency_chain_bonus(
         task_a, all_tasks, config, effective_date
     )
 
-    expected_bonus_a = task_b_full_score * 0.1
+    percentage = config["dependency_chain"]["dependent_score_percentage"]
+    expected_bonus_a = task_b_full_score * percentage
     assert bonus_a == pytest.approx(expected_bonus_a, rel=1e-5)
 
 

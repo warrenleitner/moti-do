@@ -1,55 +1,70 @@
 {
   "base_score": 10,
-  "field_presence_bonus": {
-    "text_description": 5
+  "component_weights": {
+    "priority": 1.15,
+    "difficulty": 1.05,
+    "duration": 0.95,
+    "age": 0.6,
+    "due_date": 1.2,
+    "tag": 0.5,
+    "project": 0.6
   },
   "difficulty_multiplier": {
     "NOT_SET": 1.0,
-    "TRIVIAL": 1.1,
-    "LOW": 1.5,
-    "MEDIUM": 2.0,
-    "HIGH": 3.0,
-    "HERCULEAN": 5.0
+    "TRIVIAL": 1.05,
+    "LOW": 1.2,
+    "MEDIUM": 1.45,
+    "HIGH": 1.8,
+    "HERCULEAN": 2.1
   },
   "duration_multiplier": {
     "NOT_SET": 1.0,
     "MINUSCULE": 1.05,
     "SHORT": 1.2,
-    "MEDIUM": 1.5,
-    "LONG": 2.0,
-    "ODYSSEYAN": 3.0
+    "MEDIUM": 1.45,
+    "LONG": 1.8,
+    "ODYSSEYAN": 2.1
   },
   "age_factor": {
+    "enabled": true,
     "unit": "days",
-    "multiplier_per_unit": 0.005
-  },
-  "daily_penalty": {
-    "apply_penalty": true,
-    "penalty_points": 5
+    "multiplier_per_unit": 0.025,
+    "max_multiplier": 1.5
   },
   "due_date_proximity": {
     "enabled": true,
-    "overdue_scaling": "logarithmic",
-    "overdue_scale_factor": 0.75,
-    "approaching_threshold_days": 14,
-    "approaching_multiplier_per_day": 0.05
-  },
-  "start_date_aging": {
-    "enabled": true,
-    "bonus_points_per_day": 0.2
+    "unit": "days",
+    "multiplier_per_unit": 0.02,
+    "max_multiplier": 1.5
   },
   "dependency_chain": {
     "enabled": true,
-    "dependent_score_percentage": 0.1
+    "dependent_score_percentage": 0.12
   },
   "tag_multipliers": {},
   "project_multipliers": {},
   "priority_multiplier": {
     "NOT_SET": 1.0,
+    "TRIVIAL": 1.05,
     "LOW": 1.2,
-    "MEDIUM": 1.5,
-    "HIGH": 2.0,
-    "DEFCON_ONE": 3.0
+    "MEDIUM": 1.45,
+    "HIGH": 1.8,
+    "DEFCON_ONE": 2.1
+  },
+  "penalty_invert_weights": {
+    "base": true,
+    "priority": true,
+    "difficulty": true,
+    "duration": true,
+    "age": true,
+    "due_date": true,
+    "tag": true,
+    "project": true
+  },
+  "habit_streak_bonus": {
+    "enabled": true,
+    "bonus_per_streak_day": 1.2,
+    "max_bonus": 25.0
   },
   "badges": [
     {

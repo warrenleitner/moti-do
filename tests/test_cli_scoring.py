@@ -65,7 +65,6 @@ def mock_config() -> dict:
     """Create a mock scoring config."""
     return {
         "base_score": 10,
-        "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {
             "NOT_SET": 1.0,
             "TRIVIAL": 1.1,
@@ -82,8 +81,18 @@ def mock_config() -> dict:
             "LONG": 2.0,
             "ODYSSEYAN": 3.0,
         },
-        "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "age_factor": {
+            "enabled": True,
+            "unit": "days",
+            "multiplier_per_unit": 0.01,
+            "max_multiplier": 1.5,
+        },
+        "due_date_proximity": {
+            "enabled": True,
+            "unit": "days",
+            "multiplier_per_unit": 0.02,
+            "max_multiplier": 1.5,
+        },
     }
 
 

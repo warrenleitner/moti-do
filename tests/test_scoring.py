@@ -5,7 +5,6 @@ Tests for the scoring module functionality.
 # pylint: disable=redefined-outer-name,duplicate-code,too-many-lines
 
 import json
-import math
 import os
 import tempfile
 from datetime import date, datetime, timedelta
@@ -28,6 +27,7 @@ from motido.core.scoring import (
     add_xp,
     apply_penalties,
     build_scoring_config_with_user_multipliers,
+    calculate_dependency_chain_bonus,
     calculate_due_date_multiplier,
     calculate_penalty_score,
     calculate_score,
@@ -36,6 +36,7 @@ from motido.core.scoring import (
     get_last_penalty_check_date,
     get_penalty_multiplier,
     load_scoring_config,
+    merge_config_with_defaults,
     save_scoring_config,
     withdraw_xp,
 )
@@ -43,66 +44,104 @@ from motido.data.abstraction import DEFAULT_USERNAME
 
 from .test_fixtures import get_default_scoring_config, get_simple_scoring_config
 
+
+def _component_value(base_score: float, delta: float, weight: float) -> float:
+    """Helper to mirror additive component math."""
+    return base_score * weight * max(0.0, delta)
+
+
+# pylint: disable-next=too-many-locals
+def manual_expected_score(
+    task: Task,
+    config: Dict[str, Any],
+    effective_date: date,
+    all_tasks: Dict[str, Task] | None = None,
+) -> int:
+    """Lightweight reproduction of the additive scoring formula for tests."""
+    config = merge_config_with_defaults(config)
+
+    base_score = float(config["base_score"])
+    weights = config.get("component_weights", {})
+
+    additive_base = base_score
+    additive_base += calculate_start_date_bonus(task, config, effective_date)
+
+    if task.is_habit and config.get("habit_streak_bonus", {}).get("enabled", False):
+        streak_bonus_per_day = config["habit_streak_bonus"].get(
+            "bonus_per_streak_day", 1.0
+        )
+        max_streak_bonus = config["habit_streak_bonus"].get("max_bonus", 50.0)
+        additive_base += min(
+            task.streak_current * streak_bonus_per_day, max_streak_bonus
+        )
+
+    priority_mult = float(
+        config.get("priority_multiplier", {}).get(task.priority.name, 1.0)
+    )
+    difficulty_mult = float(
+        config["difficulty_multiplier"].get(task.difficulty.name, 1.0)
+    )
+    duration_mult = float(config["duration_multiplier"].get(task.duration.name, 1.0))
+
+    task_age_days = (effective_date - task.creation_date.date()).days
+    age_config = config["age_factor"]
+    unit_length = 7 if age_config["unit"] == "weeks" else 1
+    task_age_units = max(0, task_age_days // unit_length)
+    age_mult = 1.0
+    if age_config.get("enabled", True):
+        raw_age_mult = 1.0 + task_age_units * float(age_config["multiplier_per_unit"])
+        age_mult = min(
+            float(age_config.get("max_multiplier", 1.0)),
+            max(1.0, raw_age_mult),
+        )
+
+    due_mult = calculate_due_date_multiplier(task, config, effective_date)
+
+    tag_mult = 1.0
+    if task.tags:
+        for tag in task.tags:
+            if tag in config["tag_multipliers"]:
+                tag_mult *= float(config["tag_multipliers"][tag])
+
+    project_mult = 1.0
+    if task.project and task.project in config["project_multipliers"]:
+        project_mult = float(config["project_multipliers"][task.project])
+
+    total = additive_base
+    total += _component_value(
+        base_score,
+        priority_mult - 1,
+        weights.get("priority", 1.0),
+    )
+    total += _component_value(
+        base_score,
+        difficulty_mult - 1,
+        weights.get("difficulty", 1.0),
+    )
+    total += _component_value(
+        base_score,
+        duration_mult - 1,
+        weights.get("duration", 1.0),
+    )
+    total += _component_value(base_score, age_mult - 1, weights.get("age", 1.0))
+    total += _component_value(base_score, due_mult - 1, weights.get("due_date", 1.0))
+    total += _component_value(base_score, tag_mult - 1, weights.get("tag", 1.0))
+    total += _component_value(base_score, project_mult - 1, weights.get("project", 1.0))
+
+    if all_tasks is not None:
+        total += calculate_dependency_chain_bonus(
+            task, all_tasks, config, effective_date
+        )
+
+    return int(round(total))
+
+
 # --- Test Configuration Loading ---
 
 
 def test_load_scoring_config_valid() -> None:
     """Test loading a valid scoring configuration."""
-    mock_config = {
-        "base_score": 10,
-        "field_presence_bonus": {"text_description": 5},
-        "difficulty_multiplier": {
-            "NOT_SET": 1.0,
-            "TRIVIAL": 1.1,
-            "LOW": 1.5,
-            "MEDIUM": 2.0,
-            "HIGH": 3.0,
-            "HERCULEAN": 5.0,
-        },
-        "duration_multiplier": {
-            "NOT_SET": 1.0,
-            "MINUSCULE": 1.05,
-            "SHORT": 1.2,
-            "MEDIUM": 1.5,
-            "LONG": 2.0,
-            "ODYSSEYAN": 3.0,
-        },
-        "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
-        "due_date_proximity": {
-            "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
-        },
-        "start_date_aging": {
-            "enabled": True,
-            "bonus_points_per_day": 0.5,
-        },
-        "dependency_chain": {
-            "enabled": True,
-            "dependent_score_percentage": 0.1,
-        },
-        "tag_multipliers": {},
-        "project_multipliers": {},
-        "priority_multiplier": {
-            "NOT_SET": 1.0,
-            "LOW": 1.2,
-            "MEDIUM": 1.5,
-            "HIGH": 2.0,
-            "DEFCON_ONE": 3.0,
-        },
-        "habit_streak_bonus": {
-            "enabled": True,
-            "bonus_per_streak_day": 1.0,
-            "max_bonus": 50.0,
-        },
-        "status_bumps": {
-            "in_progress_bonus": 5.0,
-            "next_up_bonus": 10.0,
-            "next_up_threshold_days": 3,
-        },
-    }
+    mock_config = get_default_scoring_config()
 
     with patch("os.path.exists", return_value=True), patch(
         "builtins.open", mock_open(read_data=json.dumps(mock_config))
@@ -111,11 +150,10 @@ def test_load_scoring_config_valid() -> None:
 
         assert config == mock_config
         assert config["base_score"] == 10
-        assert config["field_presence_bonus"]["text_description"] == 5
-        assert config["difficulty_multiplier"]["MEDIUM"] == 2.0
-        assert config["duration_multiplier"]["LONG"] == 2.0
+        assert config["difficulty_multiplier"]["MEDIUM"] == 1.45
+        assert config["duration_multiplier"]["LONG"] == 1.8
         assert config["age_factor"]["unit"] == "days"
-        assert config["age_factor"]["multiplier_per_unit"] == 0.01
+        assert config["age_factor"]["multiplier_per_unit"] == 0.025
 
 
 def test_load_scoring_config_missing_file() -> None:
@@ -133,7 +171,7 @@ def test_load_scoring_config_missing_file() -> None:
         assert "difficulty_multiplier" in config
         assert "duration_multiplier" in config
         assert "age_factor" in config
-        assert "daily_penalty" in config
+        assert "due_date_proximity" in config
 
 
 def test_load_scoring_config_invalid_json() -> None:
@@ -150,10 +188,17 @@ def test_load_scoring_config_missing_required_key() -> None:
     # Missing difficulty_multiplier
     mock_config = {
         "base_score": 10,
-        "field_presence_bonus": {"title": 5},
         "duration_multiplier": {"MINUSCULE": 1.05},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "due_date_proximity": {
+            "enabled": True,
+            "multiplier_per_unit": 0.02,
+            "max_multiplier": 1.5,
+        },
+        "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
+        "tag_multipliers": {},
+        "project_multipliers": {},
+        "priority_multiplier": {"NOT_SET": 1.0},
     }
 
     with patch("os.path.exists", return_value=True), patch(
@@ -170,20 +215,13 @@ def test_load_scoring_config_invalid_multiplier() -> None:
     # Multiplier less than 1.0
     mock_config = {
         "base_score": 10,
-        "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {"MEDIUM": 0.5},  # Invalid: less than 1.0
         "duration_multiplier": {"MINUSCULE": 1.05},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "due_date_proximity": {
             "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
-        },
-        "start_date_aging": {
-            "enabled": True,
-            "bonus_points_per_day": 0.5,
+            "multiplier_per_unit": 0.02,
+            "max_multiplier": 1.5,
         },
         "dependency_chain": {
             "enabled": True,
@@ -215,20 +253,13 @@ def test_load_scoring_config_invalid_age_factor() -> None:
     # Invalid unit
     mock_config = {
         "base_score": 10,
-        "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {"MEDIUM": 2.0},
         "duration_multiplier": {"MINUSCULE": 1.05},
         "age_factor": {"unit": "months", "multiplier_per_unit": 0.01},  # Invalid unit
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "due_date_proximity": {
             "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
-        },
-        "start_date_aging": {
-            "enabled": True,
-            "bonus_points_per_day": 0.5,
+            "multiplier_per_unit": 0.02,
+            "max_multiplier": 1.5,
         },
         "dependency_chain": {
             "enabled": True,
@@ -254,69 +285,44 @@ def test_load_scoring_config_invalid_age_factor() -> None:
             load_scoring_config()
 
 
-def test_load_scoring_config_invalid_daily_penalty() -> None:
-    """Test loading with invalid daily penalty configuration."""
-    # Missing apply_penalty key
-    mock_config = {
-        "base_score": 10,
-        "field_presence_bonus": {"title": 5},
-        "difficulty_multiplier": {"MEDIUM": 2.0},
-        "duration_multiplier": {"MINUSCULE": 1.05},
-        "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"penalty_points": 5},  # Missing apply_penalty
-        "due_date_proximity": {
-            "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
-        },
-        "start_date_aging": {
-            "enabled": True,
-            "bonus_points_per_day": 0.5,
-        },
-        "dependency_chain": {
-            "enabled": True,
-            "dependent_score_percentage": 0.1,
-        },
-        "tag_multipliers": {},
-        "project_multipliers": {},
-        "priority_multiplier": {
-            "NOT_SET": 1.0,
-            "LOW": 1.2,
-            "MEDIUM": 1.5,
-            "HIGH": 2.0,
-            "DEFCON_ONE": 3.0,
-        },
-    }
+def test_load_scoring_config_invalid_max_multiplier() -> None:
+    """Max multiplier must be at least 1.0 when provided."""
+    mock_config = get_default_scoring_config()
+    mock_config["due_date_proximity"]["max_multiplier"] = 0.5
 
     with patch("os.path.exists", return_value=True), patch(
         "builtins.open", mock_open(read_data=json.dumps(mock_config))
     ):
         with pytest.raises(
-            ValueError, match="'daily_penalty' must contain 'apply_penalty' key"
+            ValueError,
+            match="due_date_proximity\\.max_multiplier.*>= 1.0",
         ):
             load_scoring_config()
 
 
-def test_load_scoring_config_invalid_overdue_scaling() -> None:
-    """Test loading with invalid overdue_scaling value."""
+def test_load_scoring_config_invalid_component_weights_type() -> None:
+    """Component weight map must be a dictionary when provided."""
+    mock_config = get_default_scoring_config()
+    mock_config["component_weights"] = ["priority", "difficulty"]
+
+    with patch("os.path.exists", return_value=True), patch(
+        "builtins.open", mock_open(read_data=json.dumps(mock_config))
+    ):
+        with pytest.raises(ValueError, match="component_weights.*must be a dictionary"):
+            load_scoring_config()
+
+
+def test_load_scoring_config_invalid_multiplier_per_unit() -> None:
+    """Test loading with invalid multiplier_per_unit value."""
     mock_config = {
         "base_score": 10,
-        "field_presence_bonus": {"title": 5},
         "difficulty_multiplier": {"MEDIUM": 2.0},
         "duration_multiplier": {"MINUSCULE": 1.05},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "due_date_proximity": {
             "enabled": True,
-            "overdue_scaling": "invalid",  # Invalid value
-            "overdue_scale_factor": 0.75,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
-        },
-        "start_date_aging": {
-            "enabled": True,
-            "bonus_points_per_day": 0.5,
+            "multiplier_per_unit": -0.1,
+            "max_multiplier": 1.5,
         },
         "dependency_chain": {
             "enabled": True,
@@ -338,97 +344,7 @@ def test_load_scoring_config_invalid_overdue_scaling() -> None:
     ):
         with pytest.raises(
             ValueError,
-            match="'due_date_proximity.overdue_scaling' must be 'linear' or 'logarithmic'",
-        ):
-            load_scoring_config()
-
-
-def test_load_scoring_config_missing_overdue_scale_factor() -> None:
-    """Test loading with missing overdue_scale_factor when using scaling."""
-    mock_config = {
-        "base_score": 10,
-        "field_presence_bonus": {"title": 5},
-        "difficulty_multiplier": {"MEDIUM": 2.0},
-        "duration_multiplier": {"MINUSCULE": 1.05},
-        "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
-        "due_date_proximity": {
-            "enabled": True,
-            "overdue_scaling": "logarithmic",
-            # Missing overdue_scale_factor
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
-        },
-        "start_date_aging": {
-            "enabled": True,
-            "bonus_points_per_day": 0.5,
-        },
-        "dependency_chain": {
-            "enabled": True,
-            "dependent_score_percentage": 0.1,
-        },
-        "tag_multipliers": {},
-        "project_multipliers": {},
-        "priority_multiplier": {
-            "NOT_SET": 1.0,
-            "LOW": 1.2,
-            "MEDIUM": 1.5,
-            "HIGH": 2.0,
-            "DEFCON_ONE": 3.0,
-        },
-    }
-
-    with patch("os.path.exists", return_value=True), patch(
-        "builtins.open", mock_open(read_data=json.dumps(mock_config))
-    ):
-        with pytest.raises(
-            ValueError,
-            match="'due_date_proximity' must contain 'overdue_scale_factor' key",
-        ):
-            load_scoring_config()
-
-
-def test_load_scoring_config_invalid_overdue_scale_factor() -> None:
-    """Test loading with invalid overdue_scale_factor value."""
-    mock_config = {
-        "base_score": 10,
-        "field_presence_bonus": {"title": 5},
-        "difficulty_multiplier": {"MEDIUM": 2.0},
-        "duration_multiplier": {"MINUSCULE": 1.05},
-        "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
-        "due_date_proximity": {
-            "enabled": True,
-            "overdue_scaling": "logarithmic",
-            "overdue_scale_factor": -0.5,  # Invalid: negative value
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
-        },
-        "start_date_aging": {
-            "enabled": True,
-            "bonus_points_per_day": 0.5,
-        },
-        "dependency_chain": {
-            "enabled": True,
-            "dependent_score_percentage": 0.1,
-        },
-        "tag_multipliers": {},
-        "project_multipliers": {},
-        "priority_multiplier": {
-            "NOT_SET": 1.0,
-            "LOW": 1.2,
-            "MEDIUM": 1.5,
-            "HIGH": 2.0,
-            "DEFCON_ONE": 3.0,
-        },
-    }
-
-    with patch("os.path.exists", return_value=True), patch(
-        "builtins.open", mock_open(read_data=json.dumps(mock_config))
-    ):
-        with pytest.raises(
-            ValueError,
-            match="'due_date_proximity.overdue_scale_factor' must be a non-negative number",
+            match="'due_date_proximity.multiplier_per_unit' must be a non-negative number",
         ):
             load_scoring_config()
 
@@ -440,21 +356,13 @@ def test_save_scoring_config_valid() -> None:
     """Test saving a valid scoring configuration."""
     config = {
         "base_score": 15,
-        "field_presence_bonus": {"text_description": 5},
         "difficulty_multiplier": {"MEDIUM": 2.0},
         "duration_multiplier": {"MEDIUM": 1.5},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "due_date_proximity": {
             "enabled": True,
-            "overdue_scaling": "logarithmic",
-            "overdue_scale_factor": 0.75,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.05,
-        },
-        "start_date_aging": {
-            "enabled": True,
-            "bonus_points_per_day": 0.5,
+            "multiplier_per_unit": 0.02,
+            "max_multiplier": 1.5,
         },
         "dependency_chain": {
             "enabled": True,
@@ -483,22 +391,18 @@ def test_save_scoring_config_adds_optional_defaults() -> None:
     """Test saving config adds default values for optional keys."""
     config = {
         "base_score": 10,
-        "field_presence_bonus": {"text_description": 5},
         "difficulty_multiplier": {"MEDIUM": 2.0},
         "duration_multiplier": {"MEDIUM": 1.5},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "due_date_proximity": {
             "enabled": True,
-            "overdue_scaling": "logarithmic",
-            "overdue_scale_factor": 0.75,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.05,
+            "multiplier_per_unit": 0.02,
+            "max_multiplier": 1.5,
         },
-        "start_date_aging": {"enabled": True, "bonus_points_per_day": 0.5},
         "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
         "priority_multiplier": {"MEDIUM": 1.5},
-        # No tag_multipliers, project_multipliers, habit_streak_bonus, or status_bumps
+        # No tag_multipliers, project_multipliers, habit_streak_bonus,
+        # component_weights, or penalty_invert_weights
     }
 
     with patch("builtins.open", mock_open()) as mock_file:
@@ -508,26 +412,22 @@ def test_save_scoring_config_adds_optional_defaults() -> None:
         assert "tag_multipliers" in config
         assert "project_multipliers" in config
         assert "habit_streak_bonus" in config
-        assert "status_bumps" in config
+        assert "component_weights" in config
+        assert "penalty_invert_weights" in config
 
 
 def test_save_scoring_config_io_error() -> None:
     """Test saving config with IO error raises ValueError."""
     config = {
         "base_score": 10,
-        "field_presence_bonus": {"text_description": 5},
         "difficulty_multiplier": {"MEDIUM": 2.0},
         "duration_multiplier": {"MEDIUM": 1.5},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.01},
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "due_date_proximity": {
             "enabled": True,
-            "overdue_scaling": "logarithmic",
-            "overdue_scale_factor": 0.75,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.05,
+            "multiplier_per_unit": 0.02,
+            "max_multiplier": 1.5,
         },
-        "start_date_aging": {"enabled": True, "bonus_points_per_day": 0.5},
         "dependency_chain": {"enabled": True, "dependent_score_percentage": 0.1},
         "priority_multiplier": {"MEDIUM": 1.5},
     }
@@ -556,12 +456,9 @@ def test_calculate_score_base_case(sample_config: Dict[str, Any]) -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Calculate score with today's date
-    score = calculate_score(task, None, sample_config, date.today())
-
-    # Expected: base_score * difficulty_mult * duration_mult * priority_mult * age_mult
-    # 10 * 1.1 * 1.05 * 1.2 * 1.0 = 13.86 -> rounded to 14
-    expected_score = int(round(10 * 1.1 * 1.05 * 1.2 * 1.0))
+    effective_date = date.today()
+    score = calculate_score(task, None, sample_config, effective_date)
+    expected_score = manual_expected_score(task, sample_config, effective_date)
     assert score == expected_score
 
 
@@ -576,10 +473,9 @@ def test_calculate_score_high_difficulty_long_duration(
         duration=Duration.LONG,
     )
 
-    score = calculate_score(task, None, sample_config, date.today())
-
-    # Expected: 10 * 1.2 (LOW) * 3.0 * 2.0 * 1.0 = 72
-    expected_score = int(round(10 * 1.2 * 3.0 * 2.0 * 1.0))
+    effective_date = date.today()
+    score = calculate_score(task, None, sample_config, effective_date)
+    expected_score = manual_expected_score(task, sample_config, effective_date)
     assert score == expected_score
 
 
@@ -594,11 +490,9 @@ def test_calculate_score_with_age(sample_config: Dict[str, Any]) -> None:
         duration=Duration.MEDIUM,
     )
 
-    score = calculate_score(task, None, sample_config, date.today())
-
-    # Expected: 10 * 1.2 (LOW) * 2.0 * 1.5 * (1.0 + 10 * 0.01) = 39.6 -> rounded to 40
-    age_mult = 1.0 + (10 * 0.01)  # 1.1
-    expected_score = int(round(10 * 1.2 * 2.0 * 1.5 * age_mult))
+    effective_date = date.today()
+    score = calculate_score(task, None, sample_config, effective_date)
+    expected_score = manual_expected_score(task, sample_config, effective_date)
     assert score == expected_score
 
 
@@ -617,11 +511,11 @@ def test_calculate_score_weeks_age_unit(sample_config: Dict[str, Any]) -> None:
         duration=Duration.MEDIUM,
     )
 
-    score = calculate_score(task, None, sample_config_with_weeks, date.today())
-
-    # Expected: 10 * 2.0 * 1.5 * 1.2 * (1.0 + 3 * 0.01) = 37.08 -> rounded to 37
-    age_mult = 1.0 + (3 * 0.01)  # 1.03
-    expected_score = int(round(10 * 2.0 * 1.5 * 1.2 * age_mult))
+    effective_date = date.today()
+    score = calculate_score(task, None, sample_config_with_weeks, effective_date)
+    expected_score = manual_expected_score(
+        task, sample_config_with_weeks, effective_date
+    )
     assert score == expected_score
 
 
@@ -638,11 +532,9 @@ def test_calculate_score_missing_enum_keys(sample_config: Dict[str, Any]) -> Non
         duration=Duration.MEDIUM,
     )
 
-    score = calculate_score(task, None, custom_config, date.today())
-
-    # Expected: 10 * 1.0 * 1.5 * 1.2 * 1.0 = 18.0 -> rounded to 18
-    # Uses default multiplier 1.0 for missing difficulty key
-    expected_score = int(round(10 * 1.0 * 1.5 * 1.2 * 1.0))
+    effective_date = date.today()
+    score = calculate_score(task, None, custom_config, effective_date)
+    expected_score = manual_expected_score(task, custom_config, effective_date)
     assert score == expected_score
 
 
@@ -687,7 +579,6 @@ def test_apply_penalties_basic(
     """
     # Sample config
     sample_config: Dict[str, Any] = {
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "difficulty_multiplier": {"NOT_SET": 1.0},
         "duration_multiplier": {"NOT_SET": 1.0},
     }
@@ -720,11 +611,11 @@ def test_apply_penalties_basic(
     apply_penalties(mock_user, mock_manager, today, sample_config, [task1, task2])
 
     # Verify add_xp was called once for the incomplete task created yesterday
-    # With inverted multipliers: NOT_SET (1.0) -> penalty_mult = 5.0 * 5.0 = 25
-    # penalty = max(1, int(10 * 25 / 25)) = 10
     mock_add_xp.assert_called_once()
     call_args = mock_add_xp.call_args
-    assert call_args[0] == (mock_user, mock_manager, -10)
+    merged_config = merge_config_with_defaults(sample_config)
+    expected_penalty = -int(round(calculate_penalty_score(task1, merged_config, today)))
+    assert call_args[0][:3] == (mock_user, mock_manager, expected_penalty)
     assert call_args[1]["source"] == "penalty"
     assert call_args[1]["task_id"] == task1.id
     assert "Penalty for incomplete" in call_args[1]["description"]
@@ -744,7 +635,6 @@ def test_apply_penalties_multiple_days(
     """
     # Sample config
     sample_config: Dict[str, Any] = {
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "difficulty_multiplier": {"NOT_SET": 1.0},
         "duration_multiplier": {"NOT_SET": 1.0},
     }
@@ -780,7 +670,9 @@ def test_apply_penalties_multiple_days(
 
     # Check the last call has the expected args for today's date
     call_args = mock_add_xp.call_args
-    assert call_args[0] == (mock_user, mock_manager, -10)
+    merged_config = merge_config_with_defaults(sample_config)
+    expected_penalty = -int(round(calculate_penalty_score(task, merged_config, today)))
+    assert call_args[0][:3] == (mock_user, mock_manager, expected_penalty)
     assert call_args[1]["source"] == "penalty"
     assert call_args[1]["task_id"] == task.id
     assert call_args[1]["game_date"] == today
@@ -793,7 +685,8 @@ def test_apply_penalties_completed_task(
     """Test that completed tasks don't receive penalties."""
     # Sample config
     sample_config: Dict[str, Any] = {
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
+        "difficulty_multiplier": {"NOT_SET": 1.0},
+        "duration_multiplier": {"NOT_SET": 1.0},
     }
 
     today = date.today()
@@ -814,38 +707,6 @@ def test_apply_penalties_completed_task(
     apply_penalties(mock_user, mock_manager, today, sample_config, [task])
 
     # Verify add_xp was not called (no penalties for completed tasks)
-    mock_add_xp.assert_not_called()
-
-
-@patch("motido.core.scoring.add_xp")
-def test_apply_penalties_disabled(
-    mock_add_xp: MagicMock,
-) -> None:
-    """Test that penalties are not applied when disabled in config."""
-    # Config with penalties disabled
-    disabled_config: Dict[str, Any] = {
-        "daily_penalty": {"apply_penalty": False, "penalty_points": 5},
-    }
-
-    today = date.today()
-    yesterday = today - timedelta(days=1)
-
-    # Create mock user and manager
-    mock_user = MagicMock()
-    mock_user.vacation_mode = False
-    mock_manager = MagicMock()
-
-    # Create an incomplete task
-    task = Task(
-        title="Task",
-        creation_date=datetime.combine(yesterday, datetime.min.time()),
-        is_complete=False,
-    )
-
-    # Apply penalties with today's date
-    apply_penalties(mock_user, mock_manager, today, disabled_config, [task])
-
-    # Verify add_xp was not called (penalties disabled)
     mock_add_xp.assert_not_called()
 
 
@@ -874,12 +735,10 @@ def test_get_penalty_multiplier_trivial_has_highest() -> None:
         Difficulty.HERCULEAN, Duration.ODYSSEYAN, config
     )
 
-    # Trivial should have MUCH higher penalty multiplier
+    # Trivial should have higher penalty intensity
     assert trivial_mult > herculean_mult
-    # Expected: trivial = (6-1.1)*(6-1.05) = 4.9 * 4.95 ≈ 24.3
-    # Expected: herculean = (6-5.0)*(6-3.0) = 1.0 * 3.0 = 3.0
-    assert trivial_mult > 20  # Should be ~24.3
-    assert herculean_mult < 5  # Should be ~3.0
+    assert pytest.approx(trivial_mult, rel=0.1) == 1.95
+    assert herculean_mult == 0.0
 
 
 def test_get_penalty_multiplier_ratio() -> None:
@@ -902,9 +761,8 @@ def test_get_penalty_multiplier_ratio() -> None:
         Difficulty.HERCULEAN, Duration.ODYSSEYAN, config
     )
 
-    ratio = trivial_mult / herculean_mult
-    # Expected ratio: 24.3 / 3.0 ≈ 8.1
-    assert 7 < ratio < 10, f"Expected ratio ~8x, got {ratio}"
+    assert trivial_mult > herculean_mult
+    assert pytest.approx(trivial_mult, rel=0.1) == 1.95
 
 
 def test_get_penalty_multiplier_medium_in_between() -> None:
@@ -932,12 +790,26 @@ def test_get_penalty_multiplier_medium_in_between() -> None:
 
     # Medium should be between trivial (highest) and herculean (lowest)
     assert trivial_mult > medium_mult > herculean_mult
-    # Expected medium: (6-2.0)*(6-1.5) = 4.0 * 4.5 = 18.0
-    assert 15 < medium_mult < 20
+
+
+def test_get_penalty_multiplier_zero_when_no_inversion_headroom() -> None:
+    """Penalty multiplier is zero when all multipliers are neutral."""
+    config = get_default_scoring_config()
+    config["difficulty_multiplier"] = {
+        name: 1.0 for name in config["difficulty_multiplier"]
+    }
+    config["duration_multiplier"] = {
+        name: 1.0 for name in config["duration_multiplier"]
+    }
+
+    penalty_mult = get_penalty_multiplier(Difficulty.MEDIUM, Duration.MEDIUM, config)
+
+    assert penalty_mult == 0.0
 
 
 @patch("motido.core.scoring.calculate_score")
 @patch("motido.core.scoring.add_xp")
+# pylint: disable-next=too-many-locals
 def test_apply_penalties_inverted_trivial_vs_herculean(
     mock_add_xp: MagicMock,
     mock_calculate_score: MagicMock,
@@ -945,7 +817,6 @@ def test_apply_penalties_inverted_trivial_vs_herculean(
     """Test that trivial tasks get higher penalties than herculean tasks."""
     config: Dict[str, Any] = {
         "base_score": 10,
-        "daily_penalty": {"apply_penalty": True, "penalty_points": 5},
         "difficulty_multiplier": {
             "TRIVIAL": 1.1,
             "HERCULEAN": 5.0,
@@ -998,11 +869,15 @@ def test_apply_penalties_inverted_trivial_vs_herculean(
 
     # Trivial task should have HIGHER penalty than herculean
     assert trivial_penalty > herculean_penalty
-    # Expected: trivial ≈ 10 XP, herculean ≈ 1 XP
-    assert trivial_penalty >= 5, f"Expected trivial penalty >= 5, got {trivial_penalty}"
-    assert (
-        herculean_penalty <= 3
-    ), f"Expected herculean penalty <= 3, got {herculean_penalty}"
+    merged_config = merge_config_with_defaults(config)
+    expected_trivial = int(
+        round(calculate_penalty_score(trivial_task, merged_config, today))
+    )
+    expected_herculean = int(
+        round(calculate_penalty_score(herculean_task, merged_config, today))
+    )
+    assert trivial_penalty == expected_trivial
+    assert herculean_penalty == expected_herculean
 
 
 # --- Penalty Score and Net Score Tests ---
@@ -1078,6 +953,99 @@ def test_calculate_penalty_score_for_overdue_task() -> None:
     assert penalty > 0
     # Expected: (6-1.1)*(6-1.05) = 4.9 * 4.95 ≈ 24.3 -> 10 * 24.3 / 25 ≈ 9.7
     assert penalty >= 5
+
+
+def test_calculate_penalty_score_inverts_base_weight() -> None:
+    """Test penalty base weight inversion uses reciprocal when enabled."""
+    config = get_default_scoring_config()
+    config["base_score"] = 10
+    config["penalty_invert_weights"] = {
+        key: True for key in config["penalty_invert_weights"]
+    }
+    config["component_weights"]["base"] = 2.0
+    config["due_date_proximity"]["enabled"] = False
+    config["age_factor"]["multiplier_per_unit"] = 0.0
+    config["difficulty_multiplier"] = {
+        name: 1.0 for name in config["difficulty_multiplier"]
+    }
+    config["duration_multiplier"] = {
+        name: 1.0 for name in config["duration_multiplier"]
+    }
+    config["priority_multiplier"] = {
+        name: 1.0 for name in config["priority_multiplier"]
+    }
+
+    task = Task(
+        title="Due today",
+        creation_date=datetime(2025, 1, 1),
+        due_date=datetime(2025, 1, 1),
+    )
+    effective_date = date(2025, 1, 1)
+
+    penalty = calculate_penalty_score(task, config, effective_date)
+    assert penalty == pytest.approx(5.0)
+
+
+def test_calculate_penalty_score_base_weight_fallback() -> None:
+    """Test penalty base weight falls back when base weight is non-positive."""
+    config = get_default_scoring_config()
+    config["base_score"] = 10
+    config["penalty_invert_weights"] = {
+        key: True for key in config["penalty_invert_weights"]
+    }
+    config["component_weights"]["base"] = 0.0
+    config["due_date_proximity"]["enabled"] = False
+    config["age_factor"]["multiplier_per_unit"] = 0.0
+    config["difficulty_multiplier"] = {
+        name: 1.0 for name in config["difficulty_multiplier"]
+    }
+    config["duration_multiplier"] = {
+        name: 1.0 for name in config["duration_multiplier"]
+    }
+    config["priority_multiplier"] = {
+        name: 1.0 for name in config["priority_multiplier"]
+    }
+
+    task = Task(
+        title="Due today",
+        creation_date=datetime(2025, 1, 1),
+        due_date=datetime(2025, 1, 1),
+    )
+    effective_date = date(2025, 1, 1)
+
+    penalty = calculate_penalty_score(task, config, effective_date)
+    assert penalty == pytest.approx(10.0)
+
+
+def test_calculate_penalty_score_uses_base_weight_when_not_inverted() -> None:
+    """Test penalty base weight uses component weight when inversion is disabled."""
+    config = get_default_scoring_config()
+    config["base_score"] = 10
+    config["penalty_invert_weights"] = {
+        key: False for key in config["penalty_invert_weights"]
+    }
+    config["component_weights"]["base"] = 2.0
+    config["due_date_proximity"]["enabled"] = False
+    config["age_factor"]["multiplier_per_unit"] = 0.0
+    config["difficulty_multiplier"] = {
+        name: 1.0 for name in config["difficulty_multiplier"]
+    }
+    config["duration_multiplier"] = {
+        name: 1.0 for name in config["duration_multiplier"]
+    }
+    config["priority_multiplier"] = {
+        name: 1.0 for name in config["priority_multiplier"]
+    }
+
+    task = Task(
+        title="Due today",
+        creation_date=datetime(2025, 1, 1),
+        due_date=datetime(2025, 1, 1),
+    )
+    effective_date = date(2025, 1, 1)
+
+    penalty = calculate_penalty_score(task, config, effective_date)
+    assert penalty == pytest.approx(20.0)
 
 
 @patch("motido.core.scoring.calculate_score")
@@ -1302,7 +1270,6 @@ def test_apply_penalties_skips_undated_and_future_due_tasks_and_persists() -> No
     yesterday = today - timedelta(days=1)
 
     config = load_scoring_config()
-    config["daily_penalty"]["apply_penalty"] = True
 
     base_creation = datetime.combine(yesterday - timedelta(days=1), datetime.min.time())
 
@@ -1375,9 +1342,8 @@ def test_calculate_due_date_multiplier_no_due_date() -> None:
     config: Dict[str, Any] = {
         "due_date_proximity": {
             "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
+            "multiplier_per_unit": 0.1,
+            "max_multiplier": 2.0,
         }
     }
     effective_date = date.today()
@@ -1396,9 +1362,8 @@ def test_calculate_due_date_multiplier_disabled() -> None:
     config: Dict[str, Any] = {
         "due_date_proximity": {
             "enabled": False,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
+            "multiplier_per_unit": 0.1,
+            "max_multiplier": 2.0,
         }
     }
     effective_date = date.today()
@@ -1419,15 +1384,14 @@ def test_calculate_due_date_multiplier_overdue() -> None:
     config: Dict[str, Any] = {
         "due_date_proximity": {
             "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
+            "multiplier_per_unit": 0.1,
+            "max_multiplier": 2.0,
         }
     }
 
     multiplier = calculate_due_date_multiplier(task, config, effective_date)
-    # 1.0 + (7 days * 0.5) = 1.0 + 3.5 = 4.5
-    assert multiplier == 4.5
+    # 1.0 + (7 days * 0.1) = 1.7
+    assert multiplier == pytest.approx(1.7)
 
 
 def test_calculate_due_date_multiplier_approaching() -> None:
@@ -1442,41 +1406,35 @@ def test_calculate_due_date_multiplier_approaching() -> None:
     config: Dict[str, Any] = {
         "due_date_proximity": {
             "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
+            "multiplier_per_unit": 0.1,
+            "max_multiplier": 2.0,
         }
     }
 
     multiplier = calculate_due_date_multiplier(task, config, effective_date)
-    # days_until_due = 3, threshold = 14
-    # days_within_threshold = 14 - 3 = 11
-    # 1.0 + (11 * 0.1) = 1.0 + 1.1 = 2.1
-    assert multiplier == 2.1
+    # max window=10 days, proximity=7, 1.0 + (7 * 0.1) = 1.7
+    assert multiplier == pytest.approx(1.7)
 
 
 def test_calculate_due_date_multiplier_at_threshold() -> None:
     """Test due date multiplier at threshold boundary."""
     effective_date = date(2025, 11, 16)
-    # Task is exactly 14 days away (at threshold)
+    # Task is exactly 10 days away (at max window)
     task = Task(
         title="Test task",
         creation_date=datetime(2025, 11, 1),
-        due_date=datetime(2025, 11, 30),
+        due_date=datetime(2025, 11, 26),
     )
     config: Dict[str, Any] = {
         "due_date_proximity": {
             "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
+            "multiplier_per_unit": 0.1,
+            "max_multiplier": 2.0,
         }
     }
 
     multiplier = calculate_due_date_multiplier(task, config, effective_date)
-    # days_until_due = 14, threshold = 14
-    # days_within_threshold = 14 - 14 = 0
-    # 1.0 + (0 * 0.1) = 1.0
+    # max window=10 days, at boundary -> 1.0
     assert multiplier == 1.0
 
 
@@ -1492,9 +1450,8 @@ def test_calculate_due_date_multiplier_beyond_threshold() -> None:
     config: Dict[str, Any] = {
         "due_date_proximity": {
             "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
+            "multiplier_per_unit": 0.1,
+            "max_multiplier": 2.0,
         }
     }
 
@@ -1514,15 +1471,34 @@ def test_calculate_due_date_multiplier_one_day_overdue() -> None:
     config = {
         "due_date_proximity": {
             "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
+            "multiplier_per_unit": 0.1,
+            "max_multiplier": 2.0,
         }
     }
 
     multiplier = calculate_due_date_multiplier(task, config, effective_date)
-    # 1.0 + (1 day * 0.5) = 1.5
-    assert multiplier == 1.5
+    # 1.0 + (1 day * 0.1) = 1.1
+    assert multiplier == 1.1
+
+
+def test_calculate_due_date_multiplier_zero_multiplier_per_unit() -> None:
+    """Test due date multiplier returns 1.0 when multiplier is zero."""
+    effective_date = date(2025, 11, 16)
+    task = Task(
+        title="Test task",
+        creation_date=datetime(2025, 11, 1),
+        due_date=datetime(2025, 11, 15),
+    )
+    config = {
+        "due_date_proximity": {
+            "enabled": True,
+            "multiplier_per_unit": 0.0,
+            "max_multiplier": 2.0,
+        }
+    }
+
+    multiplier = calculate_due_date_multiplier(task, config, effective_date)
+    assert multiplier == 1.0
 
 
 def test_calculate_score_with_due_date_multiplier() -> None:
@@ -1539,23 +1515,19 @@ def test_calculate_score_with_due_date_multiplier() -> None:
 
     config = {
         "base_score": 10,
-        "field_presence_bonus": {},
         "difficulty_multiplier": {"MEDIUM": 2.0},
         "duration_multiplier": {"MEDIUM": 1.5},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.0},
         "due_date_proximity": {
             "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
+            "multiplier_per_unit": 0.1,
+            "max_multiplier": 2.0,
         },
     }
 
     score = calculate_score(task, None, config, effective_date)
-    # base = 10, difficulty = 2.0, duration = 1.5, age = 1.0
-    # due_date_mult = 1.0 + ((14 - 3) * 0.1) = 1.0 + 1.1 = 2.1
-    # score = 10 * 2.0 * 1.5 * 1.0 * 2.1 = 63
-    assert score == 63
+    expected_score = manual_expected_score(task, config, effective_date)
+    assert score == expected_score
 
 
 def test_calculate_score_with_overdue_multiplier() -> None:
@@ -1572,23 +1544,19 @@ def test_calculate_score_with_overdue_multiplier() -> None:
 
     config = {
         "base_score": 10,
-        "field_presence_bonus": {},
         "difficulty_multiplier": {"LOW": 1.5},
         "duration_multiplier": {"SHORT": 1.2},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.0},
         "due_date_proximity": {
             "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
+            "multiplier_per_unit": 0.1,
+            "max_multiplier": 2.0,
         },
     }
 
     score = calculate_score(task, None, config, effective_date)
-    # base = 10, difficulty = 1.5, duration = 1.2, age = 1.0
-    # due_date_mult = 1.0 + (7 * 0.5) = 4.5
-    # score = 10 * 1.5 * 1.2 * 1.0 * 4.5 = 81
-    assert score == 81
+    expected_score = manual_expected_score(task, config, effective_date)
+    assert score == expected_score
 
 
 def test_calculate_start_date_bonus_no_start_date() -> None:
@@ -1615,7 +1583,7 @@ def test_calculate_start_date_bonus_disabled() -> None:
     )
 
     config = get_default_scoring_config()
-    config["start_date_aging"]["enabled"] = False
+    config["due_date_proximity"]["enabled"] = False
     effective_date = date(2025, 1, 15)
 
     bonus = calculate_start_date_bonus(task, config, effective_date)
@@ -1637,6 +1605,22 @@ def test_calculate_start_date_bonus_future_start() -> None:
     assert bonus == 0.0
 
 
+def test_calculate_start_date_bonus_max_multiplier_one() -> None:
+    """Test start date bonus returns 0 when max_multiplier is 1.0."""
+    task = Task(
+        title="Past start",
+        creation_date=datetime(2025, 1, 1, 12, 0, 0),
+        start_date=datetime(2025, 1, 5, 0, 0, 0),
+    )
+
+    config = get_default_scoring_config()
+    config["due_date_proximity"]["max_multiplier"] = 1.0
+    effective_date = date(2025, 1, 15)
+
+    bonus = calculate_start_date_bonus(task, config, effective_date)
+    assert bonus == 0.0
+
+
 def test_calculate_start_date_bonus_past_start() -> None:
     """Test calculate_start_date_bonus for task 10 days past start date."""
     task = Task(
@@ -1649,8 +1633,8 @@ def test_calculate_start_date_bonus_past_start() -> None:
     effective_date = date(2025, 1, 15)
 
     bonus = calculate_start_date_bonus(task, config, effective_date)
-    # 10 days past start * 0.5 = 5.0
-    assert bonus == 5.0
+    # 10 days past start * (base_score * 0.02) = 2.0
+    assert bonus == 2.0
 
 
 def test_calculate_start_date_bonus_overdue_task() -> None:
@@ -1684,7 +1668,7 @@ def test_calculate_start_date_bonus_with_future_due_date() -> None:
 
     bonus = calculate_start_date_bonus(task, config, effective_date)
     # 10 days past start, due date in future, so bonus applies
-    assert bonus == 5.0
+    assert bonus == 2.0
 
 
 def test_calculate_score_with_start_date_bonus() -> None:
@@ -1700,19 +1684,13 @@ def test_calculate_score_with_start_date_bonus() -> None:
 
     config = {
         "base_score": 10,
-        "field_presence_bonus": {},
         "difficulty_multiplier": {"MEDIUM": 2.0},
         "duration_multiplier": {"MEDIUM": 1.5},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.0},
         "due_date_proximity": {
-            "enabled": False,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
-        },
-        "start_date_aging": {
             "enabled": True,
-            "bonus_points_per_day": 0.5,
+            "multiplier_per_unit": 0.02,
+            "max_multiplier": 1.5,
         },
         "dependency_chain": {
             "enabled": True,
@@ -1723,10 +1701,8 @@ def test_calculate_score_with_start_date_bonus() -> None:
     }
 
     score = calculate_score(task, None, config, effective_date)
-    # base = 10 + (10 days * 0.5) = 15
-    # difficulty = 2.0, duration = 1.5, age = 1.0, due_date = 1.0
-    # score = 15 * 2.0 * 1.5 * 1.0 * 1.0 = 45
-    assert score == 45
+    expected_score = manual_expected_score(task, config, effective_date)
+    assert score == expected_score
 
 
 def test_calculate_score_with_both_start_and_due_date() -> None:
@@ -1743,19 +1719,13 @@ def test_calculate_score_with_both_start_and_due_date() -> None:
 
     config = {
         "base_score": 10,
-        "field_presence_bonus": {},
         "difficulty_multiplier": {"HIGH": 3.0},
         "duration_multiplier": {"MEDIUM": 1.5},
         "age_factor": {"unit": "days", "multiplier_per_unit": 0.0},
         "due_date_proximity": {
             "enabled": True,
-            "overdue_multiplier_per_day": 0.5,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.1,
-        },
-        "start_date_aging": {
-            "enabled": True,
-            "bonus_points_per_day": 0.5,
+            "multiplier_per_unit": 0.02,
+            "max_multiplier": 1.5,
         },
         "dependency_chain": {
             "enabled": True,
@@ -1766,10 +1736,8 @@ def test_calculate_score_with_both_start_and_due_date() -> None:
     }
 
     score = calculate_score(task, None, config, effective_date)
-    # base = 10 + (10 days past start * 0.5) = 15
-    # due in 3 days: 1.0 + ((14 - 3) * 0.1) = 2.1
-    # score = 15 * 3.0 * 1.5 * 1.0 * 2.1 = 141.75 = 142
-    assert score == 142
+    expected_score = manual_expected_score(task, config, effective_date)
+    assert score == expected_score
 
 
 def test_calculate_score_with_priority_low() -> None:
@@ -1784,9 +1752,10 @@ def test_calculate_score_with_priority_low() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Score = 10 * 1.2 (LOW) * 1.1 (TRIVIAL) * 1.05 (MINUSCULE) = 13.86 = 14
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 14
+    effective_date = datetime(2025, 1, 1).date()
+    expected_score = manual_expected_score(task, config, effective_date)
+    score = calculate_score(task, None, config, effective_date)
+    assert score == expected_score
 
 
 def test_calculate_score_with_priority_medium() -> None:
@@ -1801,9 +1770,10 @@ def test_calculate_score_with_priority_medium() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Score = 10 * 1.5 (MEDIUM) * 1.1 (TRIVIAL) * 1.05 (MINUSCULE) = 17.325 = 17
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 17
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    expected_score = manual_expected_score(task, config, effective_date)
+    assert score == expected_score
 
 
 def test_calculate_score_with_priority_high() -> None:
@@ -1818,9 +1788,10 @@ def test_calculate_score_with_priority_high() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Score = 10 * 2.0 (HIGH) * 1.1 (TRIVIAL) * 1.05 (MINUSCULE) = 23.1 = 23
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 23
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    expected_score = manual_expected_score(task, config, effective_date)
+    assert score == expected_score
 
 
 def test_calculate_score_with_priority_defcon_one() -> None:
@@ -1835,9 +1806,10 @@ def test_calculate_score_with_priority_defcon_one() -> None:
         duration=Duration.MINUSCULE,
     )
 
-    # Score = 10 * 3.0 (DEFCON_ONE) * 1.1 (TRIVIAL) * 1.05 (MINUSCULE) = 34.65 = 35
-    score = calculate_score(task, None, config, datetime(2025, 1, 1).date())
-    assert score == 35
+    effective_date = datetime(2025, 1, 1).date()
+    score = calculate_score(task, None, config, effective_date)
+    expected_score = manual_expected_score(task, config, effective_date)
+    assert score == expected_score
 
 
 def test_calculate_score_with_all_multipliers_active() -> None:
@@ -1858,10 +1830,9 @@ def test_calculate_score_with_all_multipliers_active() -> None:
     )
 
     effective_date = date(2025, 1, 1)
-    # Score = 10 * 2.0 (HIGH) * 2.0 (MED diff) * 2.0 (LONG) * 1.0 (age) * 1.7 (due 7 days) * 1.5 (tag) * 1.2 (proj)
-    # = 10 * 2.0 * 2.0 * 2.0 * 1.0 * 1.7 * 1.5 * 1.2 = 244.8 = 245
     score = calculate_score(task, None, config, effective_date)
-    assert score == 245
+    expected_score = manual_expected_score(task, config, effective_date)
+    assert score == expected_score
 
 
 def test_calculate_score_habit_streak_bonus(sample_config: Dict[str, Any]) -> None:
@@ -1873,13 +1844,9 @@ def test_calculate_score_habit_streak_bonus(sample_config: Dict[str, Any]) -> No
         streak_current=10,
     )
 
-    # Default config has bonus_per_streak_day=1.0
-    score = calculate_score(task, None, sample_config, date.today())
-
-    # Base (10) + Streak (10 * 1.0) = 20
-    # Multipliers: 1.1 (Trivial) * 1.05 (Minuscule) * 1.2 (Low) * 1.0 (Age) = 1.386
-    # 20 * 1.386 = 27.72 -> 28
-    expected_score = int(round(20 * 1.1 * 1.05 * 1.2 * 1.0))
+    effective_date = date.today()
+    score = calculate_score(task, None, sample_config, effective_date)
+    expected_score = manual_expected_score(task, sample_config, effective_date)
     assert score == expected_score
 
 
@@ -1892,12 +1859,9 @@ def test_calculate_score_habit_streak_max_bonus(sample_config: Dict[str, Any]) -
         streak_current=100,  # Should be capped at 50
     )
 
-    score = calculate_score(task, None, sample_config, date.today())
-
-    # Base (10) + Max Streak (50) = 60
-    # Multipliers: 1.386
-    # 60 * 1.386 = 83.16 -> 83
-    expected_score = int(round(60 * 1.1 * 1.05 * 1.2 * 1.0))
+    effective_date = date.today()
+    score = calculate_score(task, None, sample_config, effective_date)
+    expected_score = manual_expected_score(task, sample_config, effective_date)
     assert score == expected_score
 
 
@@ -1912,11 +1876,7 @@ def test_calculate_score_in_progress_bonus(sample_config: Dict[str, Any]) -> Non
     )
 
     score = calculate_score(task, None, sample_config, today)
-
-    # Base (10) + In Progress (5) = 15
-    # Multipliers: 1.386
-    # 15 * 1.386 = 20.79 -> 21
-    expected_score = int(round(15 * 1.1 * 1.05 * 1.2 * 1.0))
+    expected_score = manual_expected_score(task, sample_config, today)
     assert score == expected_score
 
 
@@ -1931,18 +1891,7 @@ def test_calculate_score_next_up_bonus(sample_config: Dict[str, Any]) -> None:
     )
 
     score = calculate_score(task, None, sample_config, today)
-
-    # Base (10) + Next Up (10) = 20
-    # Multipliers: 1.386
-    # Due Date Multiplier: 1.0 + (12 * 0.1) = 2.2 (14 - 2 = 12 days within threshold)
-    # Wait, due date proximity logic:
-    # threshold=14, days_until_due=2. days_within=12. mult = 1.0 + 1.2 = 2.2.
-    # Total Multiplier: 1.386 * 2.2 = 3.0492
-    # 20 * 3.0492 = 60.984 -> 61
-
-    # Let's verify due date multiplier calculation separately or trust the integration
-    # 20 * 1.1 * 1.05 * 1.2 * 1.0 * 2.2 = 60.984
-    expected_score = int(round(20 * 1.1 * 1.05 * 1.2 * 1.0 * 2.2))
+    expected_score = manual_expected_score(task, sample_config, today)
     assert score == expected_score
 
 
@@ -2041,147 +1990,6 @@ def test_apply_penalties_vacation_mode() -> None:
     # Verify - XP should not change (vacation mode skips penalties)
     assert user.total_xp == 100
     manager.save_user.assert_not_called()
-
-
-# --- Test Logarithmic Overdue Scaling ---
-
-
-def test_calculate_due_date_multiplier_logarithmic_1_day() -> None:
-    """Test logarithmic overdue multiplier for 1 day overdue."""
-    effective_date = date(2025, 11, 16)
-    task = Task(
-        title="Test task",
-        creation_date=datetime(2025, 11, 1),
-        due_date=datetime(2025, 11, 15),
-    )
-    config: Dict[str, Any] = {
-        "due_date_proximity": {
-            "enabled": True,
-            "overdue_scaling": "logarithmic",
-            "overdue_scale_factor": 0.75,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.05,
-        }
-    }
-
-    multiplier = calculate_due_date_multiplier(task, config, effective_date)
-    # 1.0 + (log(1 + 1) * 0.75) = 1.0 + (log(2) * 0.75) = 1.0 + 0.52 = 1.52
-    expected = 1.0 + (math.log(2) * 0.75)
-    assert abs(multiplier - expected) < 0.01
-
-
-def test_calculate_due_date_multiplier_logarithmic_7_days() -> None:
-    """Test logarithmic overdue multiplier for 7 days overdue."""
-    effective_date = date(2025, 11, 16)
-    task = Task(
-        title="Test task",
-        creation_date=datetime(2025, 11, 1),
-        due_date=datetime(2025, 11, 9),
-    )
-    config: Dict[str, Any] = {
-        "due_date_proximity": {
-            "enabled": True,
-            "overdue_scaling": "logarithmic",
-            "overdue_scale_factor": 0.75,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.05,
-        }
-    }
-
-    multiplier = calculate_due_date_multiplier(task, config, effective_date)
-    # 1.0 + (log(7 + 1) * 0.75) = 1.0 + (log(8) * 0.75) = 1.0 + 1.56 = 2.56
-    expected = 1.0 + (math.log(8) * 0.75)
-    assert abs(multiplier - expected) < 0.01
-
-
-def test_calculate_due_date_multiplier_logarithmic_30_days() -> None:
-    """Test logarithmic overdue multiplier for 30 days overdue."""
-    effective_date = date(2025, 11, 16)
-    task = Task(
-        title="Test task",
-        creation_date=datetime(2025, 10, 1),
-        due_date=datetime(2025, 10, 17),
-    )
-    config: Dict[str, Any] = {
-        "due_date_proximity": {
-            "enabled": True,
-            "overdue_scaling": "logarithmic",
-            "overdue_scale_factor": 0.75,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.05,
-        }
-    }
-
-    multiplier = calculate_due_date_multiplier(task, config, effective_date)
-    # 1.0 + (log(30 + 1) * 0.75) = 1.0 + (log(31) * 0.75) = 1.0 + 2.57 = 3.57
-    expected = 1.0 + (math.log(31) * 0.75)
-    assert abs(multiplier - expected) < 0.01
-
-
-def test_calculate_due_date_multiplier_logarithmic_100_days() -> None:
-    """Test logarithmic overdue multiplier plateaus for very old tasks."""
-    effective_date = date(2025, 11, 16)
-    task = Task(
-        title="Very old task",
-        creation_date=datetime(2025, 7, 1),
-        due_date=datetime(2025, 8, 8),
-    )
-    config: Dict[str, Any] = {
-        "due_date_proximity": {
-            "enabled": True,
-            "overdue_scaling": "logarithmic",
-            "overdue_scale_factor": 0.75,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.05,
-        }
-    }
-
-    multiplier = calculate_due_date_multiplier(task, config, effective_date)
-    # 1.0 + (log(100 + 1) * 0.75) = 1.0 + (log(101) * 0.75) = 1.0 + 3.46 = 4.46
-    expected = 1.0 + (math.log(101) * 0.75)
-    assert abs(multiplier - expected) < 0.01
-
-
-def test_calculate_score_with_logarithmic_overdue() -> None:
-    """Test calculate_score integration with logarithmic overdue multiplier."""
-    effective_date = date(2025, 11, 16)
-    # Task 30 days overdue
-    task = Task(
-        title="Overdue task",
-        creation_date=datetime(2025, 10, 1),
-        due_date=datetime(2025, 10, 17),
-        difficulty=Difficulty.MEDIUM,
-        duration=Duration.MEDIUM,
-    )
-
-    config = {
-        "base_score": 10,
-        "field_presence_bonus": {},
-        "difficulty_multiplier": {"MEDIUM": 2.0},
-        "duration_multiplier": {"MEDIUM": 1.5},
-        "age_factor": {"unit": "days", "multiplier_per_unit": 0.0},
-        "due_date_proximity": {
-            "enabled": True,
-            "overdue_scaling": "logarithmic",
-            "overdue_scale_factor": 0.75,
-            "approaching_threshold_days": 14,
-            "approaching_multiplier_per_day": 0.05,
-        },
-        "start_date_aging": {
-            "enabled": False,
-        },
-        "dependency_chain": {
-            "enabled": False,
-        },
-        "tag_multipliers": {},
-        "project_multipliers": {},
-    }
-
-    score = calculate_score(task, None, config, effective_date)
-    # base = 10, difficulty = 2.0, duration = 1.5, age = 1.0
-    # due_date_mult = 1.0 + (log(31) * 0.75) ≈ 3.57
-    # score = 10 * 2.0 * 1.5 * 1.0 * 3.57 = 107.1 ≈ 107
-    assert 105 <= score <= 109  # Allow small rounding variance
 
 
 # --- Test User Multipliers ---
@@ -2316,8 +2124,11 @@ def test_calculate_score_with_user_tag_multiplier() -> None:
     # Without the tag multiplier
     score_without = calculate_score(task, None, config, effective_date)
 
-    # Score with multiplier should be 2x the score without
-    assert score_with_multiplier == score_without * 2
+    assert score_with_multiplier == manual_expected_score(
+        task, merged_config, effective_date
+    )
+    assert score_without == manual_expected_score(task, config, effective_date)
+    assert score_with_multiplier > score_without
 
 
 def test_calculate_score_with_user_project_multiplier() -> None:
@@ -2343,6 +2154,8 @@ def test_calculate_score_with_user_project_multiplier() -> None:
     # Without the project multiplier
     score_without = calculate_score(task, None, config, effective_date)
 
-    # Score with 1.5x multiplier
-    expected = int(round(score_without * 1.5))
-    assert score_with_multiplier == expected
+    assert score_with_multiplier == manual_expected_score(
+        task, merged_config, effective_date
+    )
+    assert score_without == manual_expected_score(task, config, effective_date)
+    assert score_with_multiplier > score_without

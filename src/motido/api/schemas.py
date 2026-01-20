@@ -311,41 +311,34 @@ class SystemStatus(BaseModel):
 
 
 # === Scoring Configuration Schemas ===
-class FieldPresenceBonus(BaseModel):
-    """Schema for field presence bonus settings."""
-
-    text_description: float = 5.0
-
-
 class AgeFactorConfig(BaseModel):
     """Schema for age factor settings."""
 
+    enabled: bool = True
     unit: str = "days"  # "days" or "weeks"
-    multiplier_per_unit: float = 0.01
-
-
-class DailyPenaltyConfig(BaseModel):
-    """Schema for daily penalty settings."""
-
-    apply_penalty: bool = True
-    penalty_points: float = 5.0
+    multiplier_per_unit: float = 0.025
+    max_multiplier: float = 1.5
 
 
 class DueDateProximityConfig(BaseModel):
     """Schema for due date proximity settings."""
 
     enabled: bool = True
-    overdue_scaling: str = "logarithmic"  # "linear" or "logarithmic"
-    overdue_scale_factor: float = 0.75
-    approaching_threshold_days: float = 14.0
-    approaching_multiplier_per_day: float = 0.05
+    unit: str = "days"  # "days" or "weeks"
+    multiplier_per_unit: float = 0.02
+    max_multiplier: float = 1.5
 
 
-class StartDateAgingConfig(BaseModel):
-    """Schema for start date aging settings."""
+class PenaltyInvertWeightsConfig(BaseModel):
+    """Schema for per-component penalty inversion flags."""
 
-    enabled: bool = True
-    bonus_points_per_day: float = 0.5
+    priority: bool = True
+    difficulty: bool = True
+    duration: bool = True
+    age: bool = True
+    due_date: bool = True
+    tag: bool = True
+    project: bool = True
 
 
 class DependencyChainConfig(BaseModel):
@@ -363,49 +356,37 @@ class HabitStreakBonusConfig(BaseModel):
     max_bonus: float = 50.0
 
 
-class StatusBumpsConfig(BaseModel):
-    """Schema for status bumps settings."""
-
-    in_progress_bonus: float = 5.0
-    next_up_bonus: float = 10.0
-    next_up_threshold_days: int = 3
-
-
 class ScoringConfigResponse(BaseModel):
     """Schema for scoring configuration response."""
 
     base_score: float = 10.0
-    field_presence_bonus: FieldPresenceBonus = Field(default_factory=FieldPresenceBonus)
     difficulty_multiplier: dict[str, float] = Field(default_factory=dict)
     duration_multiplier: dict[str, float] = Field(default_factory=dict)
     priority_multiplier: dict[str, float] = Field(default_factory=dict)
     age_factor: AgeFactorConfig = Field(default_factory=AgeFactorConfig)
-    daily_penalty: DailyPenaltyConfig = Field(default_factory=DailyPenaltyConfig)
     due_date_proximity: DueDateProximityConfig = Field(
         default_factory=DueDateProximityConfig
     )
-    start_date_aging: StartDateAgingConfig = Field(default_factory=StartDateAgingConfig)
     dependency_chain: DependencyChainConfig = Field(
         default_factory=DependencyChainConfig
     )
     habit_streak_bonus: HabitStreakBonusConfig = Field(
         default_factory=HabitStreakBonusConfig
     )
-    status_bumps: StatusBumpsConfig = Field(default_factory=StatusBumpsConfig)
+    penalty_invert_weights: PenaltyInvertWeightsConfig = Field(
+        default_factory=PenaltyInvertWeightsConfig
+    )
 
 
 class ScoringConfigUpdate(BaseModel):
     """Schema for updating scoring configuration."""
 
     base_score: float | None = None
-    field_presence_bonus: FieldPresenceBonus | None = None
     difficulty_multiplier: dict[str, float] | None = None
     duration_multiplier: dict[str, float] | None = None
     priority_multiplier: dict[str, float] | None = None
     age_factor: AgeFactorConfig | None = None
-    daily_penalty: DailyPenaltyConfig | None = None
     due_date_proximity: DueDateProximityConfig | None = None
-    start_date_aging: StartDateAgingConfig | None = None
     dependency_chain: DependencyChainConfig | None = None
     habit_streak_bonus: HabitStreakBonusConfig | None = None
-    status_bumps: StatusBumpsConfig | None = None
+    penalty_invert_weights: PenaltyInvertWeightsConfig | None = None

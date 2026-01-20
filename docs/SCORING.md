@@ -15,116 +15,64 @@ Completed tasks award XP to the user, contributing to their overall level (100 X
 
 ## Score Calculation Formula
 
-The scoring formula uses a **hybrid additive + multiplicative approach**:
+The scoring formula is **fully additive**:
 
 ```
-ADDITIVE BASE = base_score
-              + text_description_bonus (if present)
-              + start_date_aging_bonus
-              + habit_streak_bonus (if habit)
-              + status_bumps
+COMPONENT(task, weight, multiplier_delta) =
+    base_score * weight * max(multiplier_delta, 0)
 
-FINAL SCORE = (ADDITIVE BASE * priority_mult * difficulty_mult * duration_mult
-              * age_mult * due_date_mult * tag_mult * project_mult)
-              + dependency_chain_bonus
+FINAL SCORE = base_score
+            + start_date_aging_bonus
+            + habit_streak_bonus
+            + COMPONENT(priority)
+            + COMPONENT(difficulty)
+            + COMPONENT(duration)
+            + COMPONENT(age)
+            + COMPONENT(due_date)
+            + COMPONENT(tags)
+            + COMPONENT(project)
+            + dependency_chain_bonus
 ```
 
-## Additive Base Components
+Each multiplier delta is `(multiplier - 1.0)`.
 
-| Component | Default Value | Description |
-|-----------|---------------|-------------|
+## Additive Components
+
+| Component | Defaults | Notes |
+|-----------|----------|-------|
 | **base_score** | 10 | Starting points for every task |
-| **text_description** | +5 | Bonus if task has rich text content |
-| **start_date_bonus** | days_past_start × 0.2 | Disabled if task is overdue |
-| **habit_streak_bonus** | min(streak × 1.0, 50.0) | Capped at 50 points max |
-| **in_progress_bonus** | +5.0 | If start_date ≤ today & not complete |
-| **next_up_bonus** | +10.0 | If due within 3 days & not complete |
+| **start_date_bonus** | base_score × multiplier_per_unit × units_past_start (capped) | Disabled if overdue |
+| **habit_streak_bonus** | min(streak × 1.2, 25) | Habit-only |
+| **dependency_chain_bonus** | 12% of dependent tasks | Additive |
 
-## Multiplicative Factors
+## Weighted Multipliers (deltas)
 
-### Difficulty Multiplier
+| Factor | Weight | Notes |
+|--------|--------|-------|
+| **Priority** | 1.15 | Higher priority = larger delta |
+| **Difficulty** | 1.05 | Harder tasks add more XP |
+| **Duration** | 0.95 | Longer tasks add more XP |
+| **Age** | 0.6 | Linear, capped at max_multiplier (days or weeks) |
+| **Due Date** | 1.2 | Linear proximity bump with cap (days or weeks) |
+| **Tags** | 0.5 | Product of configured tag multipliers |
+| **Project** | 0.6 | Single project multiplier |
 
-| Difficulty | Multiplier |
-|------------|------------|
-| NOT_SET | 1.0 |
-| TRIVIAL | 1.1 |
-| LOW | 1.5 |
-| MEDIUM | 2.0 |
-| HIGH | 3.0 |
-| HERCULEAN | 5.0 |
+Multipliers are modest (e.g., MEDIUM difficulty ≈ 1.45), so a typical task lands around 10–40 XP, with urgent outliers above 100 XP.
 
-### Duration Multiplier
+### Due Date Proximity Multiplier
 
-| Duration | Multiplier |
-|----------|------------|
-| NOT_SET | 1.0 |
-| MINUSCULE | 1.05 |
-| SHORT | 1.2 |
-| MEDIUM | 1.5 |
-| LONG | 2.0 |
-| ODYSSEYAN | 3.0 |
-
-### Priority Multiplier
-
-| Priority | Multiplier |
-|----------|------------|
-| NOT_SET | 1.0 |
-| LOW | 1.2 |
-| MEDIUM | 1.5 |
-| HIGH | 2.0 |
-| DEFCON_ONE | 3.0 |
-
-### Age Multiplier
-
-Rewards older tasks to prevent them from being forgotten:
+Rewards urgency with a **linear bump per unit** (days or weeks) and a hard cap:
 
 ```
-age_multiplier = 1.0 + (task_age_days × 0.005)
+max_units = (max_multiplier - 1) / multiplier_per_unit
+overdue: 1.0 + min(units_overdue, max_units) × multiplier_per_unit
+approaching: 1.0 + (max_units - units_until_due) × multiplier_per_unit
+cap: max_multiplier (default 1.5)
 ```
 
-- Task age = days since creation
-- Minimum: 1.0 (never penalizes fresh tasks)
-- Example: 100-day-old task = 1.0 + (100 × 0.005) = **1.5×**
-
-### Tag and Project Multipliers
-
-- **Tags**: User-defined multipliers that stack multiplicatively
-  - Example: tags ["urgent"=1.8, "critical"=1.4] → combined = 1.8 × 1.4 = **2.52×**
-- **Projects**: Single project multiplier applied per task
-
-## Due Date Proximity Multiplier
-
-Rewards urgency with **logarithmic scaling for overdue tasks**:
-
-### Overdue (days_until_due < 0)
-
-```
-multiplier = 1.0 + (log(days_overdue + 1) × 0.75)
-```
-
-| Days Overdue | Multiplier |
-|--------------|------------|
-| 1 day | ~1.52× |
-| 5 days | ~2.30× |
-| 10 days | ~2.80× |
-
-Logarithmic scaling prevents infinite escalation.
-
-### Approaching (0 ≤ days_until_due ≤ 14)
-
-```
-multiplier = 1.0 + ((14 - days_until_due) × 0.05)
-```
-
-| Days Until Due | Multiplier |
-|----------------|------------|
-| Due today (0) | 1.70× |
-| 7 days away | 1.35× |
-| 14 days away | 1.0× |
-
-### Future (days_until_due > 14)
-
-No bonus: **1.0×**
+`unit` applies to both due date proximity and age_factor, so changing it to `weeks`
+will scale both urgency and aging the same way (one increases as the due date nears,
+the other as the task gets older).
 
 ## Dependency Chain Bonus
 
@@ -132,7 +80,7 @@ Rewards completing tasks that unblock other work:
 
 - Finds all incomplete tasks listing this task as a dependency
 - Recursively calculates the score of each dependent task
-- Returns: `sum(dependent_scores) × 0.1` (10% of total)
+- Returns: `sum(dependent_scores) × 0.12` (12% of total)
 - **Circular dependency detection** prevents infinite loops
 
 **Example**: If completing this task unblocks 2 tasks worth 100 XP each:
@@ -150,62 +98,42 @@ bonus = 200 × 0.1 = +20 XP
 - Due: 5 days ago (overdue)
 - Tags: ["urgent"=1.8, "critical"=1.4]
 - Project: "ProductionFix"=2.5
-- Text description: Yes
+- Text description: Optional
 
-### Calculation
+Using the defaults above on the reference date:
 
-**1. Additive Base:**
-```
-base_score: 10
-text_description: +5
-Total: 15
-```
+- Additive base: 10 + start date bonus + habit streak bonus
+- Component contributions: priority, difficulty, duration, age, due date, tags, project
+- Total (without dependencies): ≈ 70–140 XP
 
-**2. Multiplicative Stack:**
-```
-Priority (DEFCON_ONE): 3.0
-Difficulty (HIGH): 3.0
-Duration (SHORT): 1.2
-Age (20 days): 1.0 + (20 × 0.005) = 1.1
-Due date (5 days overdue): 1.0 + log(6) × 0.75 ≈ 2.30
-Tags: 1.8 × 1.4 = 2.52
-Project: 2.5
-Product: 3.0 × 3.0 × 1.2 × 1.1 × 2.30 × 2.52 × 2.5 = 630.54
-```
-
-**3. Final Score:**
-```
-15 × 630.54 = 9,458 XP (rounded)
-```
+The exact value is produced by `calculate_score()` using the same additive formula.
 
 ## Penalty System
 
 The penalty system discourages leaving tasks incomplete past their due date.
 
-### Penalty Multiplier Calculation
+### Penalty Weighting
 
-The penalty multiplier is **inverted** from the XP multiplier:
-```
-penalty_multiplier = 6.0 - xp_multiplier
-```
-
-This means:
-- **Easy tasks** get **higher** penalties (no excuse to skip)
-- **Hard tasks** get **lower** penalties (understandable to defer)
+Penalties mirror XP component weights and let you choose which components invert:
+- `penalty_invert_weights.<component> = true` → penalty weight uses $1 / weight$.
+- Difficulty and duration still use inverted deltas (easy/short penalize more).
+- Priority, age, due-date urgency, tags, project, and base can each be toggled.
 
 ### When Penalties Apply
 
 - Only to **incomplete** tasks
 - Only to tasks **with due dates**
 - Only when `due_date ≤ today`
+- Only when `creation_date < today`
 
 ### Penalty Formula
 
 ```
-penalty = max(1, int((base_score × penalty_multiplier) / 25))
+penalty = base_score * penalty_weight_base
+        + weighted_components(priority, inverted_difficulty, inverted_duration,
+                              age, due_date, tags, project)
 ```
-
-Example: TRIVIAL + MINUSCULE task → ~10 XP lost per day overdue
+With defaults this yields low double-digits for substantial work and higher double-digits for trivial overdue items.
 
 ### Daily Penalty Processing
 
@@ -250,15 +178,14 @@ All scoring parameters are configurable in `src/motido/data/scoring_config.json`
 
 ### Key Configuration Sections
 
-1. **Base scoring values** - `base_score`, `text_description_bonus`
+1. **Base scoring values** - `base_score`
 2. **Difficulty/duration/priority multipliers** - Per-level values
-3. **Age factor** - `multiplier_per_unit`, `unit` (days/weeks)
-4. **Due date proximity** - `approaching_multiplier_per_day`, `overdue_scale_factor`
-5. **Start date aging bonus** - `bonus_points_per_day`
-6. **Dependency chain** - `dependent_score_percentage` (default 10%)
-7. **Habit streak bonus** - `bonus_per_streak_day`, `max_bonus`
-8. **Status bumps** - `in_progress_bonus`, `next_up_bonus`
-9. **Badge definitions** - Achievement thresholds
+3. **Age factor** - `enabled`, `multiplier_per_unit`, `unit` (days/weeks), `max_multiplier`
+4. **Due date proximity** - `enabled`, `multiplier_per_unit`, `unit` (days/weeks), `max_multiplier`
+5. **Dependency chain** - `dependent_score_percentage` (default 10%)
+6. **Habit streak bonus** - `bonus_per_streak_day`, `max_bonus`
+7. **Penalty weighting** - `penalty_invert_weights.<component>` map (base, priority, difficulty, duration, age, due_date, tag, project)
+8. **Badge definitions** - Achievement thresholds
 
 ### User Customization
 
@@ -303,7 +230,7 @@ These are merged with the base config via `build_scoring_config_with_user_multip
 - **Tasks with no due date**: No due date proximity bonus
 - **Overdue tasks**: No start_date_aging bonus (avoid double-counting urgency)
 - **Completed tasks**: No penalty applied
-- **Future tasks beyond threshold**: No approaching bonus
+- **Future tasks beyond max window**: No proximity bonus
 - **Circular dependencies**: Detected and prevented during calculation
 
 ### Source Files
