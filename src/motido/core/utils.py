@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
-from motido.core.models import Difficulty, Duration, Priority, Task
+from motido.core.models import Difficulty, Duration, Priority, RecurrenceType, Task
 from motido.core.recurrence import create_next_habit_instance
 
 # This file is intentionally simple for now.
@@ -217,6 +217,13 @@ def _process_recurrences(
     """
     Process task recurrences and generate new instances.
 
+    Handles two categories of recurring tasks:
+    1. FROM_DUE_DATE / STRICT: Chains forward from the task's due_date, creating
+       all missing instances up to effective_date.
+    2. FROM_COMPLETION: Recovers orphaned tasks (completed with no active child)
+       by chaining forward from the last completed instance's due_date to find
+       the most recent instance that should exist by effective_date.
+
     Args:
         user: User object
         effective_date: Date to process recurrences for
@@ -229,8 +236,13 @@ def _process_recurrences(
     pending_instances: set[tuple[str, Any]] = set()
     effective_datetime = datetime.combine(effective_date, datetime.min.time())
 
+    # --- Phase 1: FROM_DUE_DATE and STRICT tasks (chain from due_date) ---
     for task in user.tasks:
-        if task.is_habit and task.recurrence_rule:
+        if (
+            task.is_habit
+            and task.recurrence_rule
+            and task.recurrence_type != RecurrenceType.FROM_COMPLETION
+        ):
             current = task
             last_due_date = task.due_date.date() if task.due_date else None
 
@@ -264,8 +276,103 @@ def _process_recurrences(
 
                 last_due_date = next_due
 
+    # --- Phase 2: FROM_COMPLETION recovery for orphaned tasks ---
+    _recover_orphaned_from_completion(
+        user, effective_date, new_tasks, existing_instances, pending_instances
+    )
+
     for t in new_tasks:
         user.add_task(t)
+
+
+def _recover_orphaned_from_completion(  # pylint: disable=too-many-locals
+    user: Any,
+    effective_date: Any,
+    new_tasks: list[Task],
+    existing_instances: set,
+    pending_instances: set,
+) -> None:
+    """
+    Recover FROM_COMPLETION habits that are completed but have no active child.
+
+    For each orphaned habit, chains forward from the last completed instance's
+    due_date to find the most recent occurrence that should exist by
+    effective_date. Only the single most recent instance is created (no
+    backfilling of all missed days).
+
+    Args:
+        user: User object
+        effective_date: Date to process recurrences for
+        new_tasks: List to append recovered tasks to (mutated in place)
+        existing_instances: Set of (title, due_date) for dedup
+        pending_instances: Set of (title, due_date) for dedup (mutated in place)
+    """
+    # Build set of habit titles that have at least one active (incomplete) instance
+    active_habit_titles = {
+        t.title
+        for t in user.tasks
+        if t.is_habit and t.recurrence_rule and not t.is_complete
+    }
+    # Also count titles already being recovered in this pass
+    for t in new_tasks:
+        if t.is_habit and not t.is_complete:
+            active_habit_titles.add(t.title)
+
+    # Find the latest completed instance for each orphaned FROM_COMPLETION habit
+    orphaned: dict[str, Task] = {}
+    for task in user.tasks:
+        if (
+            task.is_habit
+            and task.is_complete
+            and task.recurrence_rule
+            and task.recurrence_type == RecurrenceType.FROM_COMPLETION
+            and task.title not in active_habit_titles
+        ):
+            existing = orphaned.get(task.title)
+            if existing is None or (
+                task.due_date
+                and (not existing.due_date or task.due_date > existing.due_date)
+            ):
+                orphaned[task.title] = task
+
+    # For each orphaned habit, chain forward to the most recent valid instance
+    for task in orphaned.values():
+        current = task
+        last_valid: Task | None = None
+
+        # Chain forward from the completed task's due_date, advancing through
+        # recurrence periods until we pass effective_date. Keep only the last
+        # valid instance (the most recent one <= effective_date).
+        for _ in range(366):  # Safety limit to prevent infinite loops
+            proxy_date = datetime.combine(
+                current.due_date.date() if current.due_date else effective_date,
+                datetime.min.time(),
+            )
+            next_instance = create_next_habit_instance(
+                current, completion_date=proxy_date
+            )
+
+            if not next_instance or not next_instance.due_date:
+                break
+
+            next_due = next_instance.due_date.date()
+
+            if next_due > effective_date:
+                break
+
+            instance_key = (next_instance.title, next_due)
+            if (
+                instance_key not in existing_instances
+                and instance_key not in pending_instances
+            ):
+                last_valid = next_instance
+
+            current = next_instance
+
+        if last_valid and last_valid.due_date:
+            instance_key = (last_valid.title, last_valid.due_date.date())
+            new_tasks.append(last_valid)
+            pending_instances.add(instance_key)
 
 
 # Icon auto-generation mappings

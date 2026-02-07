@@ -575,8 +575,8 @@ async def complete_task(
     )
     user.xp_transactions.append(transaction)
 
-    # Check for badges
-    check_badges(user, manager, config)
+    # Check for badges (persist=False: single atomic save at the end)
+    check_badges(user, manager, config, persist=False)
 
     # Create next instance for recurring habits
     next_instance = None

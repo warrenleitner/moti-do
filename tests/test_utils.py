@@ -8,6 +8,7 @@ import pytest
 
 from motido.core.models import Difficulty, Duration, Priority, RecurrenceType, Task
 from motido.core.utils import (
+    _recover_orphaned_from_completion,
     generate_uuid,
     parse_difficulty_safely,
     parse_duration_safely,
@@ -320,3 +321,252 @@ def test_process_recurrences_ignores_missing_instance(
     _process_recurrences(user, base_date.date())
 
     assert not user.added_tasks
+
+
+# ---------------------------------------------------------------------------
+# FROM_COMPLETION recovery tests
+# ---------------------------------------------------------------------------
+
+
+class _MockUser:
+    """Reusable mock user for recurrence tests."""
+
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self, tasks: list[Task]) -> None:
+        self.tasks = list(tasks)
+        self.added_tasks: list[Task] = []
+
+    def add_task(self, task: Task) -> None:
+        """Record added tasks for assertion."""
+        self.added_tasks.append(task)
+
+
+def test_process_recurrences_recovers_orphaned_daily_from_completion() -> None:
+    """Completed daily FROM_COMPLETION task with no active child gets recovered."""
+    # pylint: disable=import-outside-toplevel,protected-access
+    from motido.core.utils import _process_recurrences
+
+    # Completed task due Jan 7, no active child — simulates the real bug
+    completed = Task(
+        title="Basic Duolingo",
+        creation_date=datetime(2026, 1, 7),
+        due_date=datetime(2026, 1, 7),
+        start_date=datetime(2026, 1, 7),
+        is_habit=True,
+        is_complete=True,
+        recurrence_rule="FREQ=DAILY;INTERVAL=1",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+
+    user = _MockUser([completed])
+    # Processing Feb 3 — should recover with an instance due on or before Feb 3
+    _process_recurrences(user, datetime(2026, 2, 3).date())
+
+    assert len(user.added_tasks) == 1
+    recovered = user.added_tasks[0]
+    assert recovered.title == "Basic Duolingo"
+    assert recovered.is_complete is False
+    assert recovered.is_habit is True
+    # Should be the most recent due date <= effective_date
+    assert recovered.due_date is not None
+    assert recovered.due_date.date() <= datetime(2026, 2, 3).date()
+    # For daily, the most recent should be exactly effective_date
+    assert recovered.due_date.date() == datetime(2026, 2, 3).date()
+
+
+def test_process_recurrences_recovers_orphaned_weekly_byday_from_completion() -> None:
+    """Completed weekly BYDAY FROM_COMPLETION task gets recovered on correct day."""
+    # pylint: disable=import-outside-toplevel,protected-access
+    from motido.core.utils import _process_recurrences
+
+    # Time Tracking: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR, last due Jan 7 (Wed)
+    completed = Task(
+        title="Time Tracking",
+        creation_date=datetime(2026, 1, 6),
+        due_date=datetime(2026, 1, 7),
+        start_date=datetime(2026, 1, 5),
+        is_habit=True,
+        is_complete=True,
+        recurrence_rule="FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+
+    user = _MockUser([completed])
+    # Feb 3 is a Monday — should recover with a weekday instance
+    _process_recurrences(user, datetime(2026, 2, 3).date())
+
+    assert len(user.added_tasks) == 1
+    recovered = user.added_tasks[0]
+    assert recovered.title == "Time Tracking"
+    assert recovered.is_complete is False
+    assert recovered.due_date is not None
+    assert recovered.due_date.date() <= datetime(2026, 2, 3).date()
+    # The recovered day should be a weekday (Mon-Fri)
+    assert recovered.due_date.weekday() < 5  # 0=Mon, 4=Fri
+
+
+def test_process_recurrences_recovers_orphaned_biweekly_from_completion() -> None:
+    """Completed biweekly FROM_COMPLETION task chains forward correctly."""
+    # pylint: disable=import-outside-toplevel,protected-access
+    from motido.core.utils import _process_recurrences
+
+    # Laundry: FREQ=WEEKLY;INTERVAL=2, last due Jan 18
+    completed = Task(
+        title="Laundry",
+        creation_date=datetime(2026, 1, 17),
+        due_date=datetime(2026, 1, 18),
+        start_date=datetime(2026, 1, 17),
+        is_habit=True,
+        is_complete=True,
+        recurrence_rule="FREQ=WEEKLY;INTERVAL=2",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+
+    user = _MockUser([completed])
+    # Processing Feb 3 — 2 weeks after Jan 18 is Feb 1, which is <= Feb 3
+    _process_recurrences(user, datetime(2026, 2, 3).date())
+
+    assert len(user.added_tasks) == 1
+    recovered = user.added_tasks[0]
+    assert recovered.title == "Laundry"
+    assert recovered.is_complete is False
+    assert recovered.due_date is not None
+    assert recovered.due_date.date() <= datetime(2026, 2, 3).date()
+    # Should be Feb 1 (2 weeks after Jan 18)
+    assert recovered.due_date.date() == datetime(2026, 2, 1).date()
+
+
+def test_process_recurrences_no_duplicate_recovery() -> None:
+    """FROM_COMPLETION tasks with an active child are NOT recovered (no dups)."""
+    # pylint: disable=import-outside-toplevel,protected-access
+    from motido.core.utils import _process_recurrences
+
+    completed = Task(
+        title="Calorie Goal",
+        creation_date=datetime(2026, 1, 1),
+        due_date=datetime(2026, 2, 2),
+        start_date=datetime(2026, 2, 2),
+        is_habit=True,
+        is_complete=True,
+        recurrence_rule="FREQ=DAILY;INTERVAL=1",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+    active_child = Task(
+        title="Calorie Goal",
+        creation_date=datetime(2026, 2, 2),
+        due_date=datetime(2026, 2, 3),
+        start_date=datetime(2026, 2, 3),
+        is_habit=True,
+        is_complete=False,
+        recurrence_rule="FREQ=DAILY;INTERVAL=1",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+
+    user = _MockUser([completed, active_child])
+    _process_recurrences(user, datetime(2026, 2, 3).date())
+
+    # No new tasks — the active child already exists
+    assert len(user.added_tasks) == 0
+
+
+def test_process_recurrences_skips_from_completion_in_main_loop() -> None:
+    """FROM_COMPLETION tasks should not produce phantom instances from Phase 1."""
+    # pylint: disable=import-outside-toplevel,protected-access
+    from motido.core.utils import _process_recurrences
+
+    # Incomplete FROM_COMPLETION task — Phase 1 should skip it entirely
+    incomplete = Task(
+        title="Active Daily",
+        creation_date=datetime(2026, 1, 1),
+        due_date=datetime(2026, 2, 3),
+        start_date=datetime(2026, 2, 3),
+        is_habit=True,
+        is_complete=False,
+        recurrence_rule="FREQ=DAILY;INTERVAL=1",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+
+    user = _MockUser([incomplete])
+    _process_recurrences(user, datetime(2026, 2, 3).date())
+
+    # No new tasks — task is active, and Phase 1 skips FROM_COMPLETION
+    assert len(user.added_tasks) == 0
+
+
+def test_recover_orphaned_picks_latest_completed_instance() -> None:
+    """When multiple completed instances exist, recovery uses the latest one."""
+    # Two completed instances of the same habit
+    old_completed = Task(
+        title="Night Time Routine",
+        creation_date=datetime(2026, 1, 3),
+        due_date=datetime(2026, 1, 5),
+        start_date=datetime(2026, 1, 5),
+        is_habit=True,
+        is_complete=True,
+        recurrence_rule="FREQ=DAILY;INTERVAL=1",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+    latest_completed = Task(
+        title="Night Time Routine",
+        creation_date=datetime(2026, 1, 6),
+        due_date=datetime(2026, 1, 7),
+        start_date=datetime(2026, 1, 7),
+        is_habit=True,
+        is_complete=True,
+        recurrence_rule="FREQ=DAILY;INTERVAL=1",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+
+    new_tasks: list[Task] = []
+    existing = {
+        ("Night Time Routine", datetime(2026, 1, 5).date()),
+        ("Night Time Routine", datetime(2026, 1, 7).date()),
+    }
+    pending: set[tuple[str, Any]] = set()
+
+    user = _MockUser([old_completed, latest_completed])
+    _recover_orphaned_from_completion(
+        user, datetime(2026, 2, 3).date(), new_tasks, existing, pending
+    )
+
+    assert len(new_tasks) == 1
+    recovered = new_tasks[0]
+    # Should chain from Jan 7 (latest), not Jan 5 (old)
+    # The recovered instance should be due on or after Jan 8
+    assert recovered.due_date is not None
+    assert recovered.due_date.date() > datetime(2026, 1, 7).date()
+    assert recovered.due_date.date() <= datetime(2026, 2, 3).date()
+
+
+def test_recover_orphaned_handles_broken_recurrence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Recovery gracefully handles tasks where recurrence calculation fails."""
+    orphaned = Task(
+        title="Broken Habit",
+        creation_date=datetime(2026, 1, 1),
+        due_date=datetime(2026, 1, 7),
+        start_date=datetime(2026, 1, 7),
+        is_habit=True,
+        is_complete=True,
+        recurrence_rule="FREQ=DAILY;INTERVAL=1",
+        recurrence_type=RecurrenceType.FROM_COMPLETION,
+    )
+
+    new_tasks: list[Task] = []
+    existing: set[tuple[str, Any]] = set()
+    pending: set[tuple[str, Any]] = set()
+
+    user = _MockUser([orphaned])
+
+    # Mock create_next_habit_instance to return None (simulating failure)
+    monkeypatch.setattr(
+        "motido.core.utils.create_next_habit_instance", lambda *a, **kw: None
+    )
+    _recover_orphaned_from_completion(
+        user, datetime(2026, 2, 3).date(), new_tasks, existing, pending
+    )
+
+    # No recovery possible — should not crash, just produce no tasks
+    assert len(new_tasks) == 0

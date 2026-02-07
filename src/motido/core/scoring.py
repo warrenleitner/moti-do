@@ -1278,7 +1278,13 @@ def apply_penalties(
         manager.save_user(user)
 
 
-def check_badges(user: Any, manager: Any, config: Dict[str, Any]) -> list[Any]:
+def check_badges(
+    user: Any,
+    manager: Any,
+    config: Dict[str, Any],
+    *,
+    persist: bool = True,
+) -> list[Any]:
     """
     Check if the user has earned any new badges based on current stats.
 
@@ -1286,6 +1292,9 @@ def check_badges(user: Any, manager: Any, config: Dict[str, Any]) -> list[Any]:
         user: The User object to check badges for
         manager: The DataManager instance to persist changes
         config: The scoring configuration containing badge definitions
+        persist: Whether to save the user immediately when badges are earned.
+            Set to False when the caller will save the user separately (e.g.,
+            during task completion where an atomic save is preferred).
 
     Returns:
         List of newly earned Badge objects
@@ -1358,8 +1367,8 @@ def check_badges(user: Any, manager: Any, config: Dict[str, Any]) -> list[Any]:
             user.badges.append(new_badge)
             newly_earned.append(new_badge)
 
-    # Save if any new badges were earned
-    if newly_earned:
+    # Save if any new badges were earned and persistence is requested
+    if newly_earned and persist:
         manager.save_user(user)
 
     return newly_earned
