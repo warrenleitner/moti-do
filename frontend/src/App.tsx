@@ -81,7 +81,7 @@ function App() {
           <ProtectedRoute>
             <Box sx={{ display: 'flex', minHeight: '100vh' }}>
               <MainLayout>
-                <Container maxWidth="xl" sx={{ py: 3 }}>
+                <Container maxWidth="xl" sx={{ py: 3, px: { xs: 0, sm: 2 } }}>
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/tasks" element={<TasksPage />} />
