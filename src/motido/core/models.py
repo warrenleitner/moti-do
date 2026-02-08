@@ -273,6 +273,11 @@ class Task:  # pylint: disable=too-many-instance-attributes
     target_count: int | None = None  # Target count to reach (None = not a counter task)
     current_count: int = 0  # Current progress toward target
 
+    # Defer/delay field
+    defer_until: datetime | None = (
+        None  # Task is hidden from active view until this date
+    )
+
     # Computed scoring fields (not persisted, calculated at runtime)
     score: float = field(default=0.0)
     penalty_score: float = field(default=0.0)  # Penalty if not completed today

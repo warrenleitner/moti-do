@@ -147,6 +147,10 @@ class JsonDataManager(DataManager):
             task_dict.get("start_date"), "start_date", task_id
         )
 
+        defer_until = self._parse_datetime_field(
+            task_dict.get("defer_until"), "defer_until", task_id
+        )
+
         # Handle migration from old 'description' field to new 'title' field
         title = task_dict.get("title") or task_dict.get("description", "Untitled Task")
 
@@ -185,6 +189,7 @@ class JsonDataManager(DataManager):
             subtask_recurrence_mode=self._parse_subtask_recurrence_mode(
                 task_dict.get("subtask_recurrence_mode")
             ),
+            defer_until=defer_until,
         )
 
     def _parse_subtask_recurrence_mode(
@@ -412,6 +417,11 @@ class JsonDataManager(DataManager):
                 "streak_best": task.streak_best,
                 "parent_habit_id": task.parent_habit_id,
                 "subtask_recurrence_mode": task.subtask_recurrence_mode.value,
+                "defer_until": (
+                    task.defer_until.strftime("%Y-%m-%d %H:%M:%S")
+                    if task.defer_until
+                    else None
+                ),
             }
             for task in user.tasks
         ]

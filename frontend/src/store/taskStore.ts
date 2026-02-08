@@ -67,6 +67,10 @@ interface TaskState {
   uncompleteTask: (id: string) => Promise<Task>;
   undoTask: (id: string) => Promise<Task>;
   duplicateTask: (id: string) => Promise<Task>;
+  deferTask: (
+    id: string,
+    params: { defer_until?: string; defer_to_next_recurrence?: boolean },
+  ) => Promise<Task>;
 }
 
 const defaultFilters: TaskFilters = {
@@ -375,6 +379,36 @@ export const useTaskStore = create<TaskState>()(
           };
 
           return createTask(newTaskData);
+        },
+
+        deferTask: async (id, params) => {
+          const { tasks } = get();
+          const originalTask = tasks.find((t) => t.id === id);
+
+          // Optimistic update
+          if (params.defer_until) {
+            set((state) => ({
+              tasks: state.tasks.map((t) =>
+                t.id === id ? { ...t, defer_until: params.defer_until } : t,
+              ),
+            }));
+          }
+
+          try {
+            const response = await taskApi.deferTask(id, params);
+            set((state) => ({
+              tasks: state.tasks.map((t) => (t.id === id ? response.task : t)),
+            }));
+            return response.task;
+          } catch (error) {
+            // Revert on error
+            if (originalTask) {
+              set((state) => ({
+                tasks: state.tasks.map((t) => (t.id === id ? originalTask : t)),
+              }));
+            }
+            throw error;
+          }
         },
       }),
       {

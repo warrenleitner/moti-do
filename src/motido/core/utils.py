@@ -194,6 +194,15 @@ def process_day(
     # pylint: disable=import-outside-toplevel
     from motido.core.scoring import apply_penalties
 
+    # Auto-clear expired deferrals
+    for task in user.tasks:
+        if (
+            task.defer_until
+            and not task.is_complete
+            and task.defer_until.date() <= effective_date
+        ):
+            task.defer_until = None
+
     initial_xp: int = user.total_xp
     apply_penalties(
         user,

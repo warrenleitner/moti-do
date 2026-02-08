@@ -17,6 +17,8 @@ from motido.api.schemas import (
     SubtaskSchema,
     TaskCompletionResponse,
     TaskCreate,
+    TaskDeferRequest,
+    TaskDeferResponse,
     TaskResponse,
     TaskUpdate,
 )
@@ -85,6 +87,7 @@ def task_to_response(
         net_score=net_score,
         target_count=task.target_count,
         current_count=task.current_count,
+        defer_until=task.defer_until,
     )
 
 
@@ -392,6 +395,11 @@ def apply_task_updates(  # pylint: disable=too-many-branches,too-many-statements
         )
         task.current_count = task_data.current_count
 
+    # Defer/delay field
+    if task_data.defer_until is not None:
+        record_history(task, "defer_until", task.defer_until, task_data.defer_until)
+        task.defer_until = task_data.defer_until
+
 
 @router.put("/{task_id}", response_model=TaskResponse)
 async def update_task(
@@ -500,6 +508,8 @@ async def undo_task_change(
         task.habit_start_delta = old_value
     elif field == "is_complete":
         task.is_complete = old_value
+    elif field == "defer_until":
+        task.defer_until = old_value
 
     manager.save_user(user)
 
@@ -510,6 +520,66 @@ async def undo_task_change(
     effective_date = date_type.today()
 
     return task_to_response(task, all_tasks, config, effective_date)
+
+
+@router.post("/{task_id}/defer", response_model=TaskDeferResponse)
+async def defer_task(
+    task_id: str,
+    request: TaskDeferRequest,
+    user: CurrentUser,
+    manager: ManagerDep,
+) -> TaskDeferResponse:
+    """
+    Defer a task until a specific date or until its next recurrence.
+
+    Either provide an explicit `defer_until` date, or set
+    `defer_to_next_recurrence=True` for recurring tasks.
+    """
+    from motido.core.recurrence import calculate_next_occurrence
+
+    task = user.find_task_by_id(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task with ID {task_id} not found",
+        )
+
+    defer_date: datetime | None = None
+
+    if request.defer_to_next_recurrence:
+        if not task.is_habit or not task.recurrence_rule:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Task is not a recurring habit",
+            )
+        defer_date = calculate_next_occurrence(task)
+        if not defer_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Could not calculate next recurrence date",
+            )
+    elif request.defer_until is not None:
+        defer_date = request.defer_until
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Must provide defer_until or set defer_to_next_recurrence=True",
+        )
+
+    record_history(task, "defer_until", task.defer_until, defer_date)
+    task.defer_until = defer_date
+
+    manager.save_user(user)
+
+    config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
+    all_tasks = {t.id: t for t in user.tasks}
+    effective_date = date_type.today()
+
+    return TaskDeferResponse(
+        task=task_to_response(task, all_tasks, config, effective_date),
+        deferred_until=defer_date,
+    )
 
 
 @router.post("/{task_id}/complete", response_model=TaskCompletionResponse)
