@@ -831,10 +831,8 @@ def handle_complete(args: Namespace, manager: DataManager, user: User | None) ->
                 task.streak_current += 1
                 task.streak_best = max(task.streak_best, task.streak_current)
 
-            # Save the updated user data
+            # Save all changes atomically
             try:
-                manager.save_user(user)
-
                 # Add XP based on score
                 if score_to_add > 0:
                     add_xp(user, manager, score_to_add)
@@ -847,23 +845,11 @@ def handle_complete(args: Namespace, manager: DataManager, user: User | None) ->
                         f"Marked task '{task.title}' (ID: {task.id[:8]}) as complete."
                     )
 
-                # Check for newly earned badges
-                try:
-                    newly_earned = check_badges(user, manager, scoring_config)
-                    for badge in newly_earned:
-                        print(
-                            f"  {badge.glyph} Badge Earned: {badge.name}! "
-                            f"- {badge.description}"
-                        )
-                except Exception as e:  # pylint: disable=broad-exception-caught
-                    print_verbose(args, f"Warning: Could not check badges: {e}")
-
                 # Auto-generate next habit instance if applicable
                 if task.is_habit and task.recurrence_rule:
                     next_instance = create_next_habit_instance(task, datetime.now())
                     if next_instance:
                         user.tasks.append(next_instance)
-                        manager.save_user(user)
                         due_str = (
                             next_instance.due_date.strftime("%Y-%m-%d")
                             if next_instance.due_date
@@ -873,6 +859,22 @@ def handle_complete(args: Namespace, manager: DataManager, user: User | None) ->
                             f"  → Next occurrence created: due {due_str} "
                             f"(ID: {next_instance.id[:8]})"
                         )
+
+                # Check for newly earned badges (persist=False: single save below)
+                try:
+                    newly_earned = check_badges(
+                        user, manager, scoring_config, persist=False
+                    )
+                    for badge in newly_earned:
+                        print(
+                            f"  {badge.glyph} Badge Earned: {badge.name}! "
+                            f"- {badge.description}"
+                        )
+                except Exception as e:  # pylint: disable=broad-exception-caught
+                    print_verbose(args, f"Warning: Could not check badges: {e}")
+
+                # Single atomic save with completion + next instance + badges
+                manager.save_user(user)
 
             except (IOError, OSError) as e:
                 print(f"Error saving task update: {e}")

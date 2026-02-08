@@ -121,6 +121,7 @@ class DatabaseDataManager(DataManager):
                 ("streak_current", "INTEGER NOT NULL DEFAULT 0"),
                 ("streak_best", "INTEGER NOT NULL DEFAULT 0"),
                 ("parent_habit_id", "TEXT"),
+                ("defer_until", "TEXT"),
             ]
 
             for col_name, col_def in new_columns:
@@ -209,7 +210,7 @@ class DatabaseDataManager(DataManager):
                     "SELECT id, title, text_description, priority, difficulty, duration, "
                     "is_complete, creation_date, due_date, start_date, icon, tags, "
                     "project, subtasks, dependencies, history, is_habit, recurrence_rule, "
-                    "recurrence_type, streak_current, streak_best, parent_habit_id FROM tasks "
+                    "recurrence_type, streak_current, streak_best, parent_habit_id, defer_until FROM tasks "
                     "WHERE user_username = ?",
                     (username,),
                 )
@@ -386,6 +387,11 @@ class DatabaseDataManager(DataManager):
                         parent_habit_id=(
                             row["parent_habit_id"]
                             if "parent_habit_id" in row.keys()
+                            else None
+                        ),
+                        defer_until=(
+                            datetime.strptime(row["defer_until"], "%Y-%m-%d %H:%M:%S")
+                            if "defer_until" in row.keys() and row["defer_until"]
                             else None
                         ),
                     )
@@ -605,6 +611,11 @@ class DatabaseDataManager(DataManager):
                         task.streak_current,
                         task.streak_best,
                         task.parent_habit_id,
+                        (
+                            task.defer_until.strftime("%Y-%m-%d %H:%M:%S")
+                            if task.defer_until
+                            else None
+                        ),
                     )
                     for task in user.tasks
                 ]
@@ -616,8 +627,8 @@ class DatabaseDataManager(DataManager):
                         "duration, is_complete, creation_date, due_date, start_date, "
                         "icon, tags, project, subtasks, dependencies, history, user_username, "
                         "is_habit, recurrence_rule, recurrence_type, streak_current, streak_best, "
-                        "parent_habit_id) "
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        "parent_habit_id, defer_until) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         tasks_to_insert,
                     )
                     print(

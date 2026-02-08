@@ -591,3 +591,67 @@ def test_handle_badges_shows_xp_progress(mocker: MockerFixture, capsys: Any) -> 
     # Rich table output - check for the key parts
     assert "XP Starter" in captured.out
     assert "0/1 badges" in captured.out  # Badge not earned yet
+
+
+def test_check_badges_persist_false_does_not_save(mocker: MockerFixture) -> None:
+    """check_badges with persist=False should not call save_user."""
+    mock_manager = mocker.Mock()
+    user = User(username="testuser")
+
+    task = Task(
+        title="First Task",
+        creation_date=datetime.now(),
+        is_complete=True,
+    )
+    user.tasks.append(task)
+
+    config = {
+        "badges": [
+            {
+                "id": "first_steps",
+                "name": "First Steps",
+                "glyph": "🌟",
+                "description": "Complete your first task",
+                "criteria": {"tasks_completed": 1},
+            },
+        ],
+    }
+
+    newly_earned = check_badges(user, mock_manager, config, persist=False)
+
+    # Badge is still earned and added to user
+    assert len(newly_earned) == 1
+    assert newly_earned[0].id == "first_steps"
+    assert any(b.id == "first_steps" for b in user.badges)
+    # But save_user should NOT have been called
+    mock_manager.save_user.assert_not_called()
+
+
+def test_check_badges_persist_true_saves(mocker: MockerFixture) -> None:
+    """check_badges with persist=True (default) should call save_user."""
+    mock_manager = mocker.Mock()
+    user = User(username="testuser")
+
+    task = Task(
+        title="First Task",
+        creation_date=datetime.now(),
+        is_complete=True,
+    )
+    user.tasks.append(task)
+
+    config = {
+        "badges": [
+            {
+                "id": "first_steps",
+                "name": "First Steps",
+                "glyph": "🌟",
+                "description": "Complete your first task",
+                "criteria": {"tasks_completed": 1},
+            },
+        ],
+    }
+
+    newly_earned = check_badges(user, mock_manager, config)
+
+    assert len(newly_earned) == 1
+    mock_manager.save_user.assert_called_once()

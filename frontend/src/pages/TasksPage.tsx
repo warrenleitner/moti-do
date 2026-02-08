@@ -13,6 +13,7 @@ import { TaskList, TaskForm } from '../components/tasks';
 import TaskTable from '../components/tasks/TaskTable';
 import QuickAddBox from '../components/tasks/QuickAddBox';
 import { ConfirmDialog, FilterBar } from '../components/common';
+import DeferDialog from '../components/common/DeferDialog';
 import { useTaskStore } from '../store';
 import { useFilteredTasks } from '../store/taskStore';
 import { useUserStore, useSystemStatus, useDefinedProjects } from '../store/userStore';
@@ -55,6 +56,7 @@ export default function TasksPage() {
     uncompleteTask,
     undoTask,
     duplicateTask,
+    deferTask,
     isLoading,
     tasks: allTasks,
     filters,
@@ -103,6 +105,8 @@ export default function TasksPage() {
   const [tasksToComplete, setTasksToComplete] = useState<string[]>([]);
   const [bulkDuplicateDialogOpen, setBulkDuplicateDialogOpen] = useState(false);
   const [tasksToDuplicate, setTasksToDuplicate] = useState<string[]>([]);
+  const [bulkDeferDialogOpen, setBulkDeferDialogOpen] = useState(false);
+  const [tasksToDefer, setTasksToDefer] = useState<string[]>([]);
   const visibleTasks = useMemo(
     () => filteredTasks.slice(0, Math.min(filteredTasks.length, visibleRowCount)),
     [filteredTasks, visibleRowCount]
@@ -389,6 +393,36 @@ export default function TasksPage() {
     setTasksToDuplicate([]);
   };
 
+  const handleBulkDeferClick = (taskIds: string[]) => {
+    setTasksToDefer(taskIds);
+    setBulkDeferDialogOpen(true);
+  };
+
+  const handleBulkDeferConfirm = async (params: {
+    defer_until?: string;
+    defer_to_next_recurrence?: boolean;
+  }) => {
+    let successCount = 0;
+    for (const taskId of tasksToDefer) {
+      try {
+        await deferTask(taskId, params);
+        successCount++;
+      } catch {
+        // Continue with other tasks even if one fails
+      }
+    }
+    if (successCount > 0) {
+      setSnackbar({
+        open: true,
+        message: `Deferred ${successCount} task${successCount > 1 ? 's' : ''}`,
+        severity: 'success',
+      });
+    }
+    setSelectedTasks([]);
+    setBulkDeferDialogOpen(false);
+    setTasksToDefer([]);
+  };
+
   // Calculate current processing date (last_processed_date + 1 day)
   const currentProcessingDate = systemStatus?.last_processed_date
     ? (() => {
@@ -514,6 +548,7 @@ export default function TasksPage() {
             onBulkDelete={handleBulkDeleteClick}
             onDuplicate={handleDuplicate}
             onBulkDuplicate={handleBulkDuplicateClick}
+            onBulkDefer={handleBulkDeferClick}
           />
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
             <Typography variant="caption" color="text.secondary">
@@ -592,6 +627,17 @@ export default function TasksPage() {
         onCancel={() => {
           setBulkDuplicateDialogOpen(false);
           setTasksToDuplicate([]);
+        }}
+      />
+
+      {/* Bulk defer dialog */}
+      <DeferDialog
+        open={bulkDeferDialogOpen}
+        tasks={allTasks.filter((t) => tasksToDefer.includes(t.id))}
+        onConfirm={handleBulkDeferConfirm}
+        onCancel={() => {
+          setBulkDeferDialogOpen(false);
+          setTasksToDefer([]);
         }}
       />
 

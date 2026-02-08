@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../types';
-import { deriveLifecycleStatus, isTaskBlocked, isTaskFuture } from '../taskStatus';
+import { deriveLifecycleStatus, isTaskBlocked, isTaskDeferred, isTaskFuture } from '../taskStatus';
 
 const baseTask: Task = {
   id: 'task-1',
@@ -57,5 +57,21 @@ describe('taskStatus utilities', () => {
     expect(deriveLifecycleStatus(blocked, { allTasks: [blocked, blocker], lastProcessedDate: '2025-01-10' })).toBe('blocked');
     expect(deriveLifecycleStatus(future, { allTasks: [future], lastProcessedDate: '2025-01-10' })).toBe('future');
     expect(deriveLifecycleStatus(active, { allTasks: [active], lastProcessedDate: '2025-01-10' })).toBe('active');
+  });
+
+  it('detects deferred tasks relative to processing date', () => {
+    const deferred: Task = { ...baseTask, defer_until: '2025-02-01' };
+    const isoDeferred: Task = { ...baseTask, defer_until: '2025-01-12T00:00:00Z' };
+    expect(isTaskDeferred(deferred, '2025-01-10')).toBe(true);
+    expect(isTaskDeferred(isoDeferred, '2025-01-10')).toBe(true);
+    expect(isTaskDeferred({ ...baseTask, defer_until: undefined }, '2025-01-10')).toBe(false);
+    expect(isTaskDeferred({ ...baseTask, defer_until: '2025-02-01' }, undefined)).toBe(false);
+    // Past defer date should not be deferred
+    expect(isTaskDeferred({ ...baseTask, defer_until: '2025-01-05' }, '2025-01-10')).toBe(false);
+  });
+
+  it('derives deferred tasks as future lifecycle status', () => {
+    const deferred: Task = { ...baseTask, id: 'deferred', defer_until: '2025-02-01' };
+    expect(deriveLifecycleStatus(deferred, { allTasks: [deferred], lastProcessedDate: '2025-01-10' })).toBe('future');
   });
 });

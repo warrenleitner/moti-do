@@ -100,6 +100,8 @@ export interface Task {
   // Counter task fields
   target_count?: number; // Target count to reach (undefined = not a counter task)
   current_count: number; // Current progress toward target (default 0)
+  // Defer/delay field
+  defer_until?: string; // ISO datetime string, task is deferred until this date
 }
 
 export interface TaskCompletionResponse {

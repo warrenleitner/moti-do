@@ -18,6 +18,16 @@ export const isTaskFuture = (task: Task, lastProcessedDate?: string): boolean =>
   return taskStartDate > currentProcessingDate;
 };
 
+export const isTaskDeferred = (task: Task, lastProcessedDate?: string): boolean => {
+  const currentProcessingDate = parseProcessingDate(lastProcessedDate);
+  if (!currentProcessingDate || !task.defer_until) return false;
+
+  const deferStr = task.defer_until.includes('T') ? task.defer_until.split('T')[0] : task.defer_until;
+  const [dYear, dMonth, dDay] = deferStr.split('-').map(Number);
+  const deferDate = new Date(dYear, dMonth - 1, dDay);
+  return deferDate > currentProcessingDate;
+};
+
 export const isTaskBlocked = (task: Task, allTasks: Task[]): boolean => {
   if (task.dependencies.length === 0) return false;
   return task.dependencies.some((depId) => {
@@ -32,6 +42,7 @@ export const deriveLifecycleStatus = (
 ): LifecycleStatus => {
   if (task.is_complete) return 'completed';
   if (isTaskBlocked(task, opts.allTasks)) return 'blocked';
+  if (isTaskDeferred(task, opts.lastProcessedDate)) return 'future';
   if (isTaskFuture(task, opts.lastProcessedDate)) return 'future';
   return 'active';
 };

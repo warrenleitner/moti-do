@@ -202,6 +202,7 @@ def test_create_tables(
         call("ALTER TABLE tasks ADD COLUMN streak_current INTEGER NOT NULL DEFAULT 0"),
         call("ALTER TABLE tasks ADD COLUMN streak_best INTEGER NOT NULL DEFAULT 0"),
         call("ALTER TABLE tasks ADD COLUMN parent_habit_id TEXT"),
+        call("ALTER TABLE tasks ADD COLUMN defer_until TEXT"),
         call("ALTER TABLE users ADD COLUMN vacation_mode INTEGER NOT NULL DEFAULT 0"),
     ]
     cursor.execute.assert_has_calls(expected_calls)
@@ -412,7 +413,7 @@ def test_load_user_no_tasks(
             "SELECT id, title, text_description, priority, difficulty, duration, "
             "is_complete, creation_date, due_date, start_date, icon, tags, "
             "project, subtasks, dependencies, history, is_habit, recurrence_rule, "
-            "recurrence_type, streak_current, streak_best, parent_habit_id FROM tasks "
+            "recurrence_type, streak_current, streak_best, parent_habit_id, defer_until FROM tasks "
             "WHERE user_username = ?",
             (username,),
         ),
@@ -530,9 +531,9 @@ def test_save_user(
     assert "due_date" in sql
     assert "start_date" in sql
     assert (
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         in sql
-    )  # 23 parameters for all task fields including parent_habit_id
+    )  # 24 parameters for all task fields including parent_habit_id and defer_until
 
     # Check that the task parameters include all field values
     assert len(params) == 2  # Two tasks

@@ -344,6 +344,18 @@ export const taskApi = {
     return response.data;
   },
 
+  // Defer task until a specific date or next recurrence
+  deferTask: async (
+    id: string,
+    params: { defer_until?: string; defer_to_next_recurrence?: boolean },
+  ): Promise<{ task: Task; deferred_until: string | null }> => {
+    const response = await apiClient.post<{ task: Task; deferred_until: string | null }>(
+      `/tasks/${id}/defer`,
+      params,
+    );
+    return response.data;
+  },
+
   // Subtask operations
   addSubtask: async (taskId: string, text: string): Promise<Task> => {
     const response = await apiClient.post<Task>(`/tasks/${taskId}/subtasks`, { text });

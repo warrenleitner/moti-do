@@ -216,6 +216,14 @@ class PostgresDataManager(DataManager):
                         ) THEN
                             ALTER TABLE tasks ADD COLUMN subtask_recurrence_mode TEXT DEFAULT 'default';
                         END IF;
+
+                        -- defer_until
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'tasks' AND column_name = 'defer_until'
+                        ) THEN
+                            ALTER TABLE tasks ADD COLUMN defer_until TEXT;
+                        END IF;
                     END $$;
                     """
                 )
@@ -499,6 +507,11 @@ class PostgresDataManager(DataManager):
             subtask_recurrence_mode=self._parse_subtask_recurrence_mode(
                 row.get("subtask_recurrence_mode")
             ),
+            defer_until=(
+                datetime.fromisoformat(row["defer_until"])
+                if row.get("defer_until") and isinstance(row["defer_until"], str)
+                else row.get("defer_until")
+            ),
         )
 
     def _parse_subtask_recurrence_mode(
@@ -640,6 +653,11 @@ class PostgresDataManager(DataManager):
                     task.parent_habit_id,
                     task.habit_start_delta,
                     task.subtask_recurrence_mode.value,
+                    (
+                        task.defer_until.strftime("%Y-%m-%d %H:%M:%S")
+                        if task.defer_until
+                        else None
+                    ),
                 )
                 for task in user.tasks
             ]
@@ -651,7 +669,7 @@ class PostgresDataManager(DataManager):
                     icon, tags, project, subtasks, dependencies, history,
                     user_username, is_habit, recurrence_rule, recurrence_type,
                     streak_current, streak_best, parent_habit_id, habit_start_delta,
-                    subtask_recurrence_mode
+                    subtask_recurrence_mode, defer_until
                 ) VALUES %s
                 ON CONFLICT (id) DO UPDATE SET
                     title = EXCLUDED.title,
@@ -677,7 +695,8 @@ class PostgresDataManager(DataManager):
                     streak_best = EXCLUDED.streak_best,
                     parent_habit_id = EXCLUDED.parent_habit_id,
                     habit_start_delta = EXCLUDED.habit_start_delta,
-                    subtask_recurrence_mode = EXCLUDED.subtask_recurrence_mode
+                    subtask_recurrence_mode = EXCLUDED.subtask_recurrence_mode,
+                    defer_until = EXCLUDED.defer_until
                 """
 
             sql_row = """
@@ -687,14 +706,14 @@ class PostgresDataManager(DataManager):
                     icon, tags, project, subtasks, dependencies, history,
                     user_username, is_habit, recurrence_rule, recurrence_type,
                     streak_current, streak_best, parent_habit_id, habit_start_delta,
-                    subtask_recurrence_mode
+                    subtask_recurrence_mode, defer_until
                 ) VALUES (
                     %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s,
                     %s, %s, %s, %s,
-                    %s
+                    %s, %s
                 )
                 ON CONFLICT (id) DO UPDATE SET
                     title = EXCLUDED.title,
@@ -720,7 +739,8 @@ class PostgresDataManager(DataManager):
                     streak_best = EXCLUDED.streak_best,
                     parent_habit_id = EXCLUDED.parent_habit_id,
                     habit_start_delta = EXCLUDED.habit_start_delta,
-                    subtask_recurrence_mode = EXCLUDED.subtask_recurrence_mode
+                    subtask_recurrence_mode = EXCLUDED.subtask_recurrence_mode,
+                    defer_until = EXCLUDED.defer_until
                 """
 
             self._bulk_upsert(cursor, sql_values, sql_row, rows)

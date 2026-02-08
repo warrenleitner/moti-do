@@ -85,6 +85,7 @@ def test_save_user_update_existing(
         "streak_best": 0,
         "parent_habit_id": None,
         "subtask_recurrence_mode": "default",
+        "defer_until": None,
     }
     task_b: Dict[str, Any] = {
         "id": "uuid-b",
@@ -110,6 +111,7 @@ def test_save_user_update_existing(
         "streak_best": 0,
         "parent_habit_id": None,
         "subtask_recurrence_mode": "default",
+        "defer_until": None,
     }
     task_c: Dict[str, Any] = {
         "id": "uuid-c",
@@ -135,6 +137,7 @@ def test_save_user_update_existing(
         "streak_best": 0,
         "parent_habit_id": None,
         "subtask_recurrence_mode": "default",
+        "defer_until": None,
     }
     expected_tasks_data = [task_a, task_b, task_c]
 

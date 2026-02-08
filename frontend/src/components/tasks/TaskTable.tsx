@@ -28,6 +28,7 @@ import {
   Repeat as RepeatIcon,
   Download as DownloadIcon,
   ContentCopy as ContentCopyIcon,
+  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import type { Task } from '../../types/models';
 import {
@@ -96,6 +97,7 @@ interface TaskTableProps {
   onBulkDelete?: (taskIds: string[]) => void;
   onDuplicate?: (taskId: string) => void;
   onBulkDuplicate?: (taskIds: string[]) => void;
+  onBulkDefer?: (taskIds: string[]) => void;
 }
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
@@ -134,6 +136,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
   onBulkDelete,
   onDuplicate,
   onBulkDuplicate,
+  onBulkDefer,
 }) => {
   const loadColumns = (): ColumnConfig[] => {
     const saved = localStorage.getItem('taskTableColumns');
@@ -889,6 +892,17 @@ const TaskTable: React.FC<TaskTableProps> = ({
               sx={{ mr: 1 }}
             >
               Duplicate Selected
+            </Button>
+          )}
+          {onBulkDefer && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<ScheduleIcon />}
+              onClick={() => onBulkDefer(selectedTasks)}
+              sx={{ mr: 1 }}
+            >
+              Delay Selected
             </Button>
           )}
           {onBulkDelete && (

@@ -59,6 +59,8 @@ class TaskBase(BaseModel):
     subtask_recurrence_mode: str | None = None
     # Counter task fields
     target_count: int | None = None  # Target count to reach (None = not a counter task)
+    # Defer/delay field
+    defer_until: datetime | None = None
 
 
 class TaskCreate(TaskBase):
@@ -90,6 +92,8 @@ class TaskUpdate(BaseModel):
     # Counter task fields
     target_count: int | None = None
     current_count: int | None = None
+    # Defer/delay field
+    defer_until: datetime | None = None
 
 
 class TaskResponse(TaskBase):
@@ -112,6 +116,20 @@ class TaskResponse(TaskBase):
     current_count: int = 0  # Current progress toward target
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TaskDeferRequest(BaseModel):
+    """Schema for task defer request."""
+
+    defer_until: datetime | None = None  # Explicit date to defer until
+    defer_to_next_recurrence: bool = False  # Calculate from recurrence rule
+
+
+class TaskDeferResponse(BaseModel):
+    """Schema for task defer response."""
+
+    task: TaskResponse
+    deferred_until: datetime | None = None
 
 
 class TaskCompletionRequest(BaseModel):
