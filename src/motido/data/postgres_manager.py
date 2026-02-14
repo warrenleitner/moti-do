@@ -85,8 +85,7 @@ class PostgresDataManager(DataManager):
         try:
             with conn.cursor() as cursor:
                 # User table
-                cursor.execute(
-                    """
+                cursor.execute("""
                     CREATE TABLE IF NOT EXISTS users (
                         username TEXT PRIMARY KEY,
                         total_xp INTEGER NOT NULL DEFAULT 0,
@@ -96,13 +95,11 @@ class PostgresDataManager(DataManager):
                         defined_tags JSONB,
                         defined_projects JSONB
                     )
-                """
-                )
+                """)
 
                 # Migration: Add password_hash column if it doesn't exist
                 # This handles upgrading existing databases
-                cursor.execute(
-                    """
+                cursor.execute("""
                     DO $$
                     BEGIN
                         IF NOT EXISTS (
@@ -112,12 +109,10 @@ class PostgresDataManager(DataManager):
                             ALTER TABLE users ADD COLUMN password_hash TEXT;
                         END IF;
                     END $$;
-                    """
-                )
+                    """)
 
                 # Migration: Add defined_tags and defined_projects to users
-                cursor.execute(
-                    """
+                cursor.execute("""
                     DO $$
                     BEGIN
                         IF NOT EXISTS (
@@ -134,12 +129,10 @@ class PostgresDataManager(DataManager):
                             ALTER TABLE users ADD COLUMN defined_projects JSONB;
                         END IF;
                     END $$;
-                    """
-                )
+                    """)
 
                 # Task table
-                cursor.execute(
-                    """
+                cursor.execute("""
                     CREATE TABLE IF NOT EXISTS tasks (
                         id TEXT PRIMARY KEY,
                         title TEXT NOT NULL,
@@ -169,12 +162,10 @@ class PostgresDataManager(DataManager):
                         habit_start_delta INTEGER,
                         subtask_recurrence_mode TEXT DEFAULT 'default'
                     )
-                """
-                )
+                """)
 
                 # Migration: Add new columns to tasks if they don't exist
-                cursor.execute(
-                    """
+                cursor.execute("""
                     DO $$
                     BEGIN
                         -- icon
@@ -225,20 +216,16 @@ class PostgresDataManager(DataManager):
                             ALTER TABLE tasks ADD COLUMN defer_until TEXT;
                         END IF;
                     END $$;
-                    """
-                )
+                    """)
 
                 # Create index on user_username for faster queries
-                cursor.execute(
-                    """
+                cursor.execute("""
                     CREATE INDEX IF NOT EXISTS idx_tasks_user
                     ON tasks(user_username)
-                """
-                )
+                """)
 
                 # XP Transactions table
-                cursor.execute(
-                    """
+                cursor.execute("""
                     CREATE TABLE IF NOT EXISTS xp_transactions (
                         id TEXT PRIMARY KEY,
                         user_username TEXT NOT NULL REFERENCES users(username)
@@ -250,16 +237,13 @@ class PostgresDataManager(DataManager):
                         description TEXT,
                         game_date DATE
                     )
-                """
-                )
+                """)
 
                 # Create index on user_username for faster transaction queries
-                cursor.execute(
-                    """
+                cursor.execute("""
                     CREATE INDEX IF NOT EXISTS idx_xp_transactions_user
                     ON xp_transactions(user_username)
-                """
-                )
+                """)
 
                 conn.commit()
         except Exception as e:  # pylint: disable=broad-exception-caught

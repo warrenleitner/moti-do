@@ -2,6 +2,7 @@
 """
 Tests for the scoring module functionality.
 """
+
 # pylint: disable=redefined-outer-name,duplicate-code,too-many-lines
 
 import json

@@ -2,6 +2,7 @@
 """
 Tests for CLI commands related to scoring.
 """
+
 # pylint: disable=redefined-outer-name,unused-argument,duplicate-code
 
 import argparse

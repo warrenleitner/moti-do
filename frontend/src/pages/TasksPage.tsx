@@ -436,7 +436,7 @@ export default function TasksPage() {
   return (
     <Box>
       {/* Processing date indicator */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
         <CalendarIcon fontSize="small" color="primary" />
         <Typography variant="body2" color="text.secondary">
           Processing:
@@ -458,9 +458,9 @@ export default function TasksPage() {
       </Box>
 
       {/* Header actions with quick-add on the same line */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
-        {/* Quick-add box takes available space */}
-        <Box sx={{ flex: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2, flexWrap: 'wrap' }}>
+        {/* Quick-add box takes available space; full width on mobile to avoid overflow */}
+        <Box sx={{ flex: 1, minWidth: { xs: '100%', sm: 200 } }}>
           <QuickAddBox />
         </Box>
         <ToggleButtonGroup

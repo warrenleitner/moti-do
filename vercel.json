@@ -13,7 +13,7 @@
   ],
   "functions": {
     "api/index.py": {
-      "runtime": "@vercel/python@4.5.0",
+      "runtime": "@vercel/python@6.12.0",
       "maxDuration": 30,
       "excludeFiles": "{tests/**,docs/**,frontend/**,*.md,poetry.lock,.git/**,**/__pycache__/**,**/*.pyc}"
     }

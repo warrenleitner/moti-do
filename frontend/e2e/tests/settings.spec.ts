@@ -143,9 +143,11 @@ test.describe('Settings Page', () => {
         // Try to submit with short password
         const currentPasswordInput = page.getByLabel(/current password/i);
         const newPasswordInput = page.getByLabel('New Password', { exact: true });
+        const confirmPasswordInput = page.getByLabel(/confirm new password/i);
 
         await currentPasswordInput.fill('testpassword123');
         await newPasswordInput.fill('short');
+        await confirmPasswordInput.fill('short');
 
         // Submit
         const submitBtn = page.getByRole('button', { name: /save|submit|change/i });
