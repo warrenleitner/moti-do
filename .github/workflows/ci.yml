@@ -32,7 +32,7 @@ jobs:
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: 1.8.5
+          version: 2.3.2
           virtualenvs-create: true
           virtualenvs-in-project: true
 
@@ -75,7 +75,7 @@ jobs:
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: 1.8.5
+          version: 2.3.2
           virtualenvs-create: true
           virtualenvs-in-project: true
 
@@ -112,7 +112,7 @@ jobs:
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: 1.8.5
+          version: 2.3.2
           virtualenvs-create: true
           virtualenvs-in-project: true
 
@@ -158,7 +158,7 @@ jobs:
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: 1.8.5
+          version: 2.3.2
           virtualenvs-create: true
           virtualenvs-in-project: true
 
@@ -197,7 +197,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -224,7 +224,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -263,7 +263,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -309,7 +309,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -321,7 +321,7 @@ jobs:
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: 1.8.5
+          version: 2.3.2
           virtualenvs-create: true
           virtualenvs-in-project: true
 

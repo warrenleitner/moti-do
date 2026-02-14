@@ -155,18 +155,15 @@ def test_create_tables(
     manager._create_tables(connection)
 
     expected_calls = [
-        call(
-            """
+        call("""
                 CREATE TABLE IF NOT EXISTS users (
                     username TEXT PRIMARY KEY,
                     total_xp INTEGER NOT NULL DEFAULT 0,
                     last_processed_date TEXT NOT NULL DEFAULT (date('now')),
                     vacation_mode INTEGER NOT NULL DEFAULT 0
                 )
-            """
-        ),
-        call(
-            """
+            """),
+        call("""
                 CREATE TABLE IF NOT EXISTS tasks (
                     id TEXT PRIMARY KEY,
                     title TEXT NOT NULL,
@@ -194,8 +191,7 @@ def test_create_tables(
                     FOREIGN KEY (user_username) REFERENCES users (username)
                         ON DELETE CASCADE ON UPDATE CASCADE
                 )
-            """
-        ),
+            """),
         call("ALTER TABLE tasks ADD COLUMN is_habit INTEGER NOT NULL DEFAULT 0"),
         call("ALTER TABLE tasks ADD COLUMN recurrence_rule TEXT"),
         call("ALTER TABLE tasks ADD COLUMN recurrence_type TEXT"),
