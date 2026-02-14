@@ -241,7 +241,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
           p: { xs: 2, md: 3 },
           backgroundColor: 'background.default',
           minHeight: '100vh',
-          overflowX: 'hidden',
         }}
       >
         <PullToRefreshWrapper>{children}</PullToRefreshWrapper>

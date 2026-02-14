@@ -252,7 +252,7 @@ export default function KanbanBoard({
       />
 
       {/* Sort controls */}
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2, flexWrap: 'wrap', rowGap: 1 }}>
         <Sort color="action" />
         <FormControl size="small" sx={{ minWidth: 150 }}>
           <InputLabel>Sort by</InputLabel>

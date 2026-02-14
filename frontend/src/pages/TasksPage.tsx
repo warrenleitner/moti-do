@@ -434,7 +434,7 @@ export default function TasksPage() {
     : null;
 
   return (
-    <Box sx={{ overflowX: 'hidden' }}>
+    <Box>
       {/* Processing date indicator */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
         <CalendarIcon fontSize="small" color="primary" />
