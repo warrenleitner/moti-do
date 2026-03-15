@@ -295,7 +295,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
             label="Start Date"
             value={formData.start_date ? new Date(formData.start_date.includes('T') ? formData.start_date : formData.start_date + 'T00:00:00') : null}
             onChange={(value) =>
-              handleChange('start_date', value ? value.toISOString().split('T')[0] : undefined)
+              handleChange('start_date', value ? new Date(value).toISOString().split('T')[0] : undefined)
             }
             clearable
           />
@@ -303,7 +303,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
             label="Due Date"
             value={formData.due_date ? new Date(formData.due_date.includes('T') ? formData.due_date : formData.due_date + 'T00:00:00') : null}
             onChange={(value) =>
-              handleChange('due_date', value ? value.toISOString().split('T')[0] : undefined)
+              handleChange('due_date', value ? new Date(value).toISOString().split('T')[0] : undefined)
             }
             clearable
           />

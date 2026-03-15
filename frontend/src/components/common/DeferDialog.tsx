@@ -83,7 +83,7 @@ export default function DeferDialog({ open, tasks, onConfirm, onCancel }: DeferD
           <DatePickerInput
             label="Defer until"
             value={selectedDate}
-            onChange={(date) => setSelectedDate(date)}
+            onChange={(date: string | Date | null) => setSelectedDate(date ? new Date(date) : null)}
             minDate={new Date()}
             mt="xs"
           />

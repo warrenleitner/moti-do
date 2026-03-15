@@ -3,6 +3,7 @@ import {
   Box,
   Select,
   Badge,
+  Indicator,
   Group,
   Stack,
   Button,
@@ -285,9 +286,10 @@ export default function FilterBar({
         size="sm"
         w={isMobile ? '100%' : 160}
         value={maxDueDate ? new Date(maxDueDate + 'T00:00:00') : null}
-        onChange={(date) => {
-          if (date && !isNaN(date.getTime())) {
-            onMaxDueDateChange(format(date, 'yyyy-MM-dd'));
+        onChange={(date: string | Date | null) => {
+          const d = date ? new Date(date) : null;
+          if (d && !isNaN(d.getTime())) {
+            onMaxDueDateChange(format(d, 'yyyy-MM-dd'));
           } else {
             onMaxDueDateChange(undefined);
           }
@@ -423,7 +425,7 @@ export default function FilterBar({
               placeholder="Search tasks..."
             />
           </Box>
-          <Badge count={activeFilterCount} color="blue" size="lg" circle style={{ display: activeFilterCount > 0 ? undefined : 'none' }}>
+          <Indicator label={activeFilterCount} color="blue" size={16} disabled={activeFilterCount === 0}>
             <Button
               variant="outline"
               leftSection={<IconFilter size={16} />}
@@ -432,7 +434,7 @@ export default function FilterBar({
             >
               Filters
             </Button>
-          </Badge>
+          </Indicator>
           {activeFilterCount === 0 && (
             <Button
               variant="outline"

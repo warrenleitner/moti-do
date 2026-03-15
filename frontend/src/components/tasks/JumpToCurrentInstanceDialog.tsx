@@ -44,7 +44,7 @@ export default function JumpToCurrentInstanceDialog({
         </Text>
 
         <ScrollArea>
-          <Table fontSize="sm">
+          <Table fz="sm">
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Task</Table.Th>

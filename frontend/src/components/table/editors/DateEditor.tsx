@@ -16,7 +16,6 @@ export interface DateEditorProps {
 export function DateEditor({
   value,
   onChange,
-  onClose,
   onSave,
   label = 'Date',
 }: DateEditorProps) {
@@ -44,9 +43,10 @@ export function DateEditor({
   }, []);
 
   const handleChange = useCallback(
-    (newDate: Date | null) => {
+    (newDate: string | Date | null) => {
       // Convert Date to ISO date string (YYYY-MM-DD) or undefined
-      const newValue = newDate ? newDate.toISOString().split('T')[0] : undefined;
+      const dateObj = newDate ? new Date(newDate) : null;
+      const newValue = dateObj ? dateObj.toISOString().split('T')[0] : undefined;
       onChange(newValue);
       // Auto-save on selection, passing value directly
       onSave(newValue);
