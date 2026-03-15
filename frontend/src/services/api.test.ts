@@ -394,6 +394,82 @@ describe('API Tests', () => {
       });
     });
 
+    describe('previewJumpToCurrentInstance', () => {
+      it('should preview a recurring task catch-up jump', async () => {
+        const mockResponse = {
+          previews: [
+            {
+              task_id: 'habit-1',
+              title: 'Daily Habit',
+              current_start_date: '2024-01-01T00:00:00',
+              current_due_date: '2024-01-02T00:00:00',
+              new_start_date: '2024-01-08T00:00:00',
+              new_due_date: '2024-01-09T00:00:00',
+              can_apply: true,
+              reason: undefined,
+            },
+          ],
+          updated_tasks: [],
+          updated_count: 0,
+        };
+
+        mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
+
+        const result = await taskApi.previewJumpToCurrentInstance(['habit-1']);
+
+        expect(result).toEqual(mockResponse);
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+          '/tasks/bulk/jump-to-current-instance',
+          {
+            task_ids: ['habit-1'],
+            dry_run: true,
+          },
+        );
+      });
+    });
+
+    describe('jumpToCurrentInstance', () => {
+      it('should apply a recurring task catch-up jump', async () => {
+        const mockResponse = {
+          previews: [],
+          updated_tasks: [
+            {
+              id: 'habit-1',
+              title: 'Daily Habit',
+              priority: Priority.MEDIUM,
+              difficulty: Difficulty.LOW,
+              duration: Duration.SHORT,
+              is_complete: false,
+              is_habit: true,
+              tags: [],
+              subtasks: [],
+              dependencies: [],
+              creation_date: '2024-01-01',
+              score: 50,
+              streak_current: 0,
+              streak_best: 0,
+              history: [],
+              start_date: '2024-01-08T00:00:00',
+              due_date: '2024-01-09T00:00:00',
+            },
+          ],
+          updated_count: 1,
+        };
+
+        mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
+
+        const result = await taskApi.jumpToCurrentInstance(['habit-1']);
+
+        expect(result).toEqual(mockResponse);
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+          '/tasks/bulk/jump-to-current-instance',
+          {
+            task_ids: ['habit-1'],
+          },
+        );
+      });
+    });
+
     describe('uncompleteTask', () => {
       it('should uncomplete a task', async () => {
         const uncompletedTask = {
@@ -988,6 +1064,24 @@ describe('API Tests', () => {
 
         expect(result).toEqual(mockResponse);
         expect(mockAxiosInstance.post).toHaveBeenCalledWith('/system/vacation', null, { params: { enable: true } });
+      });
+    });
+
+    describe('resetScoreTracking', () => {
+      it('should reset score tracking', async () => {
+        const mockStatus = {
+          last_processed_date: '2024-01-09',
+          current_date: '2024-01-09',
+          vacation_mode: false,
+          pending_days: 0,
+        };
+
+        mockAxiosInstance.post.mockResolvedValue({ data: mockStatus });
+
+        const result = await systemApi.resetScoreTracking();
+
+        expect(result).toEqual(mockStatus);
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith('/system/reset-score-tracking');
       });
     });
   });

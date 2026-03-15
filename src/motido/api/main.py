@@ -192,6 +192,34 @@ async def toggle_vacation_mode(
     return {"vacation_mode": user.vacation_mode}
 
 
+@app.post("/api/system/reset-score-tracking", response_model=SystemStatus)
+async def reset_score_tracking(
+    user: CurrentUser,
+    manager: ManagerDep,
+) -> SystemStatus:
+    """
+    Reset score-oriented progress and align processing with the real date.
+    """
+    current = date.today()
+    user.total_xp = 0
+    user.xp_transactions.clear()
+    user.badges.clear()
+    user.last_processed_date = current
+
+    save_progress = getattr(manager, "save_user_progress", None)
+    if callable(save_progress):
+        save_progress(user)
+    else:
+        manager.save_user(user)
+
+    return SystemStatus(
+        last_processed_date=user.last_processed_date,
+        current_date=current,
+        vacation_mode=user.vacation_mode,
+        pending_days=0,
+    )
+
+
 # Entry point for running with uvicorn
 def run_server(
     host: str = "127.0.0.1", port: int = 8000, reload: bool = True

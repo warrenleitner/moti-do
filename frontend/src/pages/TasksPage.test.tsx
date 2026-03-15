@@ -72,6 +72,9 @@ describe('TasksPage', () => {
   const mockCompleteTask = vi.fn();
   const mockUncompleteTask = vi.fn();
   const mockFetchStats = vi.fn();
+  const mockPreviewJumpToCurrentInstance = vi.fn();
+  const mockJumpToCurrentInstance = vi.fn();
+  const mockActivateCrisisMode = vi.fn();
 
   beforeEach(() => {
     localStorageMock.clear();
@@ -94,9 +97,14 @@ describe('TasksPage', () => {
       completeTask: mockCompleteTask,
       uncompleteTask: mockUncompleteTask,
       undoTask: vi.fn(),
-      duplicateTask: vi.fn(),
-      isLoading: false,
-    } as unknown as ReturnType<typeof stores.useTaskStore>);
+        duplicateTask: vi.fn(),
+        previewJumpToCurrentInstance: mockPreviewJumpToCurrentInstance,
+        jumpToCurrentInstance: mockJumpToCurrentInstance,
+        activateCrisisMode: mockActivateCrisisMode,
+        crisisModeActive: false,
+        crisisTaskIds: [],
+        isLoading: false,
+      } as unknown as ReturnType<typeof stores.useTaskStore>);
 
     // Mock getState for subtask toggle
     (stores.useTaskStore as unknown as { getState: () => { tasks: Task[] } }).getState = vi.fn(() => ({
@@ -175,6 +183,49 @@ describe('TasksPage', () => {
     await user.click(screen.getByRole('button', { name: /show filters/i }));
     expect(localStorage.getItem('taskFiltersVisible')).toBe('true');
     expect(screen.getByPlaceholderText('Search tasks...')).toBeInTheDocument();
+  });
+
+  it('previews jump to current instance from the bulk toolbar', async () => {
+    localStorage.setItem('taskViewMode', 'table');
+    mockPreviewJumpToCurrentInstance.mockResolvedValue({
+      previews: [
+        {
+          task_id: 'task-1',
+          title: 'Test Task',
+          current_start_date: '2024-01-01T00:00:00',
+          current_due_date: '2024-01-02T00:00:00',
+          new_start_date: '2024-01-08T00:00:00',
+          new_due_date: '2024-01-09T00:00:00',
+          can_apply: true,
+          reason: null,
+        },
+      ],
+      updated_tasks: [],
+      updated_count: 0,
+    });
+
+    const { user } = render(<TasksPage />);
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    await user.click(checkboxes[1]);
+    await user.click(screen.getByRole('button', { name: /jump to current/i }));
+
+    expect(mockPreviewJumpToCurrentInstance).toHaveBeenCalledWith(['task-1']);
+    expect(
+      await screen.findByText(/jump selected tasks to their current instance/i),
+    ).toBeInTheDocument();
+  });
+
+  it('activates crisis mode from the bulk toolbar', async () => {
+    localStorage.setItem('taskViewMode', 'table');
+    const { user } = render(<TasksPage />);
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    await user.click(checkboxes[1]);
+    await user.click(screen.getByRole('button', { name: /crisis mode/i }));
+    await user.click(screen.getByRole('button', { name: /^activate$/i }));
+
+    expect(mockActivateCrisisMode).toHaveBeenCalledWith(['task-1']);
   });
 
   it.skip('loads additional tasks with load more control', async () => {

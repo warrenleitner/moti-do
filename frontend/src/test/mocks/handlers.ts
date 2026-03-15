@@ -186,6 +186,74 @@ export const handlers = [
     return HttpResponse.json({ ...task, title: 'Undone Task', history: [] });
   }),
 
+  http.post(`${API_BASE}/tasks/bulk/jump-to-current-instance`, async ({ request }) => {
+    const body = await request.json() as { task_ids: string[]; dry_run?: boolean };
+    const previews = body.task_ids.map((taskId) => {
+      const task = mockTasks.find((item) => item.id === taskId);
+      if (!task) {
+        return {
+          task_id: taskId,
+          title: 'Unknown task',
+          current_start_date: null,
+          current_due_date: null,
+          new_start_date: null,
+          new_due_date: null,
+          can_apply: false,
+          reason: 'Task not found',
+        };
+      }
+
+      if (!task.is_habit || !task.recurrence_rule) {
+        return {
+          task_id: task.id,
+          title: task.title,
+          current_start_date: task.start_date || null,
+          current_due_date: task.due_date || null,
+          new_start_date: null,
+          new_due_date: null,
+          can_apply: false,
+          reason: 'Task is not a recurring task',
+        };
+      }
+
+      return {
+        task_id: task.id,
+        title: task.title,
+        current_start_date: task.start_date || null,
+        current_due_date: task.due_date || null,
+        new_start_date: '2025-01-08T00:00:00',
+        new_due_date: '2025-01-09T00:00:00',
+        can_apply: true,
+        reason: null,
+      };
+    });
+
+    if (body.dry_run) {
+      return HttpResponse.json({
+        previews,
+        updated_tasks: [],
+        updated_count: 0,
+      });
+    }
+
+    const updatedTasks = previews
+      .filter((preview) => preview.can_apply)
+      .map((preview) => {
+        const task = mockTasks.find((item) => item.id === preview.task_id)!;
+        return {
+          ...task,
+          start_date: preview.new_start_date,
+          due_date: preview.new_due_date,
+        };
+      });
+
+    return HttpResponse.json({
+      previews,
+      updated_tasks: updatedTasks,
+      updated_count: updatedTasks.length,
+    });
+  }),
+
   // User endpoints
   http.get(`${API_BASE}/user/profile`, () => {
     return HttpResponse.json(mockUserProfile);
@@ -201,6 +269,25 @@ export const handlers = [
 
   http.get(`${API_BASE}/user/xp`, () => {
     return HttpResponse.json([]);
+  }),
+
+  // System endpoints
+  http.get(`${API_BASE}/system/status`, () => {
+    return HttpResponse.json({
+      last_processed_date: '2025-01-08',
+      current_date: '2025-01-09',
+      vacation_mode: false,
+      pending_days: 0,
+    });
+  }),
+
+  http.post(`${API_BASE}/system/reset-score-tracking`, () => {
+    return HttpResponse.json({
+      last_processed_date: '2025-01-09',
+      current_date: '2025-01-09',
+      vacation_mode: false,
+      pending_days: 0,
+    });
   }),
 
   // Views endpoints

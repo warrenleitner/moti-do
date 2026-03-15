@@ -3,7 +3,12 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useTaskStore, useFilteredTasks, useSelectedTask } from './taskStore';
+import {
+  useTaskStore,
+  useFilteredTasks,
+  useSelectedTask,
+  useVisibleTasks,
+} from './taskStore';
 import { renderHook, act } from '@testing-library/react';
 import { mockTasks } from '../test/mocks/handlers';
 import { Priority, Difficulty, Duration } from '../types';
@@ -15,7 +20,11 @@ beforeEach(() => {
   store.selectTask(null);
   store.resetFilters();
   store.setError(null);
-  useTaskStore.setState({ hasCompletedData: false });
+  useTaskStore.setState({
+    hasCompletedData: false,
+    crisisModeActive: false,
+    crisisTaskIds: [],
+  });
 });
 
 describe('TaskStore', () => {
@@ -151,6 +160,24 @@ describe('TaskStore', () => {
       expect(result.current.sort.field).toBe('due_date');
       expect(result.current.sort.order).toBe('asc');
     });
+
+    it('should activate and exit crisis mode', () => {
+      const { result } = renderHook(() => useTaskStore());
+
+      act(() => {
+        result.current.activateCrisisMode(['task-1', 'habit-1']);
+      });
+
+      expect(result.current.crisisModeActive).toBe(true);
+      expect(result.current.crisisTaskIds).toEqual(['task-1', 'habit-1']);
+
+      act(() => {
+        result.current.exitCrisisMode();
+      });
+
+      expect(result.current.crisisModeActive).toBe(false);
+      expect(result.current.crisisTaskIds).toEqual([]);
+    });
   });
 
   describe('Loading state', () => {
@@ -259,6 +286,34 @@ describe('TaskStore', () => {
         const uncompleted = await result.current.uncompleteTask('task-2');
         expect(uncompleted.is_complete).toBe(false);
       });
+    });
+
+    it('should preview jump to current instance via API', async () => {
+      const { result } = renderHook(() => useTaskStore());
+
+      const response = await result.current.previewJumpToCurrentInstance(['habit-1']);
+
+      expect(response.previews).toHaveLength(1);
+      expect(response.previews[0].task_id).toBe('habit-1');
+      expect(response.previews[0].can_apply).toBe(true);
+    });
+
+    it('should apply jump to current instance via API', async () => {
+      const { result } = renderHook(() => useTaskStore());
+
+      await act(async () => {
+        await result.current.fetchTasks();
+      });
+
+      let response: Awaited<ReturnType<typeof result.current.jumpToCurrentInstance>>;
+      await act(async () => {
+        response = await result.current.jumpToCurrentInstance(['habit-1']);
+      });
+
+      expect(response!.updated_count).toBe(1);
+      const updatedHabit = result.current.tasks.find((task) => task.id === 'habit-1');
+      expect(updatedHabit?.start_date).toBe('2025-01-08T00:00:00');
+      expect(updatedHabit?.due_date).toBe('2025-01-09T00:00:00');
     });
 
     it('should handle uncomplete task error and revert state', async () => {
@@ -945,6 +1000,17 @@ describe('useFilteredTasks', () => {
     expect(result.current.length).toBe(1);
     expect(result.current[0].id).toBe('task-due-on-max');
   });
+
+  it('should apply crisis mode visibility after regular filters', () => {
+    const store = useTaskStore.getState();
+    store.setFilters({ status: 'all' });
+    store.activateCrisisMode(['habit-1']);
+
+    const { result } = renderHook(() => useFilteredTasks());
+
+    expect(result.current).toHaveLength(1);
+    expect(result.current[0].id).toBe('habit-1');
+  });
 });
 
 describe('useSelectedTask', () => {
@@ -965,5 +1031,18 @@ describe('useSelectedTask', () => {
     const { result } = renderHook(() => useSelectedTask());
     expect(result.current?.id).toBe('task-1');
     expect(result.current?.title).toBe('Test Task 1');
+  });
+});
+
+describe('useVisibleTasks', () => {
+  it('returns only crisis-mode tasks when active', () => {
+    act(() => {
+      useTaskStore.getState().activateCrisisMode(['task-1']);
+    });
+
+    const { result } = renderHook(() => useVisibleTasks(mockTasks));
+
+    expect(result.current).toHaveLength(1);
+    expect(result.current[0].id).toBe('task-1');
   });
 });

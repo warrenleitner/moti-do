@@ -29,6 +29,8 @@ import {
   Download as DownloadIcon,
   ContentCopy as ContentCopyIcon,
   Schedule as ScheduleIcon,
+  SkipNext as JumpIcon,
+  PriorityHigh as CrisisIcon,
 } from '@mui/icons-material';
 import type { Task } from '../../types/models';
 import {
@@ -98,6 +100,8 @@ interface TaskTableProps {
   onDuplicate?: (taskId: string) => void;
   onBulkDuplicate?: (taskIds: string[]) => void;
   onBulkDefer?: (taskIds: string[]) => void;
+  onBulkJumpToCurrent?: (taskIds: string[]) => void;
+  onActivateCrisisMode?: (taskIds: string[]) => void;
 }
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
@@ -137,6 +141,8 @@ const TaskTable: React.FC<TaskTableProps> = ({
   onDuplicate,
   onBulkDuplicate,
   onBulkDefer,
+  onBulkJumpToCurrent,
+  onActivateCrisisMode,
 }) => {
   const loadColumns = (): ColumnConfig[] => {
     const saved = localStorage.getItem('taskTableColumns');
@@ -903,6 +909,29 @@ const TaskTable: React.FC<TaskTableProps> = ({
               sx={{ mr: 1 }}
             >
               Delay Selected
+            </Button>
+          )}
+          {onBulkJumpToCurrent && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<JumpIcon />}
+              onClick={() => onBulkJumpToCurrent(selectedTasks)}
+              sx={{ mr: 1 }}
+            >
+              Jump to Current
+            </Button>
+          )}
+          {onActivateCrisisMode && (
+            <Button
+              variant="outlined"
+              color="warning"
+              size="small"
+              startIcon={<CrisisIcon />}
+              onClick={() => onActivateCrisisMode(selectedTasks)}
+              sx={{ mr: 1 }}
+            >
+              Crisis Mode
             </Button>
           )}
           {onBulkDelete && (

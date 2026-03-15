@@ -3,6 +3,7 @@ Logic for calculating task recurrences.
 """
 
 import uuid
+from datetime import date as date_type
 from datetime import datetime, timedelta
 from typing import Optional, cast
 
@@ -78,15 +79,8 @@ def create_next_habit_instance(
     if not next_due:
         return None
 
-    # Determine effective habit_start_delta:
-    # Use explicit value if set, otherwise infer from original start_date/due_date
-    effective_delta = task.habit_start_delta
-    if effective_delta is None and task.start_date and task.due_date:
-        # Infer delta from the original task's dates
-        # Include 0 to handle same-day start/due dates
-        inferred_delta = (task.due_date - task.start_date).days
-        if inferred_delta >= 0:
-            effective_delta = inferred_delta
+    # Preserve the original start/due offset when creating the next instance.
+    effective_delta = _get_effective_habit_start_delta(task)
 
     # Calculate start_date based on effective delta
     start_date = _calculate_start_date(next_due, effective_delta)
@@ -137,6 +131,39 @@ def create_next_habit_instance(
     return new_task
 
 
+def calculate_current_instance_dates(
+    task: Task, current_date: date_type
+) -> Optional[tuple[Optional[datetime], Optional[datetime]]]:
+    """
+    Calculate the recurring instance that matches the current real date.
+
+    The recurrence rule still defines the task's due-date cadence. The
+    task's start date (or inferred start delta) is then used to determine the
+    visibility window for that due-date occurrence, so catch-up behavior
+    respects habits that should appear before their due date.
+    """
+    if not task.is_habit or not task.recurrence_rule:
+        return None
+
+    effective_delta = _get_effective_habit_start_delta(task)
+    reference_due_date = _get_reference_due_date(task, effective_delta)
+    target_due_date = datetime.combine(current_date, reference_due_date.time())
+
+    try:
+        rule_str = _normalize_rule(task.recurrence_rule)
+        rule = rrulestr(rule_str, dtstart=reference_due_date)
+        next_due = cast(Optional[datetime], rule.after(target_due_date, inc=True))
+    except (ValueError, TypeError) as error:
+        print(f"Error calculating current instance for task {task.id[:8]}: {error}")
+        return None
+
+    if next_due is None:
+        return None
+
+    start_date = _calculate_start_date(next_due, effective_delta)
+    return start_date, next_due
+
+
 def _calculate_start_date(
     due_date: datetime, habit_start_delta: Optional[int]
 ) -> Optional[datetime]:
@@ -154,6 +181,41 @@ def _calculate_start_date(
     if habit_start_delta is not None and habit_start_delta >= 0:
         return due_date - timedelta(days=habit_start_delta)
     return None
+
+
+def _get_effective_habit_start_delta(task: Task) -> Optional[int]:
+    """
+    Determine the start offset that should be preserved for a recurring task.
+    """
+    if task.habit_start_delta is not None:
+        return task.habit_start_delta
+
+    if task.start_date and task.due_date:
+        inferred_delta = (task.due_date - task.start_date).days
+        if inferred_delta >= 0:
+            return inferred_delta
+
+    return None
+
+
+def _get_reference_due_date(task: Task, effective_delta: Optional[int]) -> datetime:
+    """
+    Choose the due-date anchor used for catch-up recurrence calculations.
+
+    Recurrence rules are modeled around due dates, so that date remains the
+    primary anchor. When a task only has a start date, fall back to it while
+    preserving the known start/due offset if one exists.
+    """
+    if task.due_date is not None:
+        return task.due_date
+
+    if task.start_date is not None and effective_delta is not None:
+        return task.start_date + timedelta(days=effective_delta)
+
+    if task.start_date is not None:
+        return task.start_date
+
+    return task.creation_date
 
 
 def _advance_to_future_start(

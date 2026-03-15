@@ -340,6 +340,49 @@ describe('TaskTable', () => {
     expect(mockOnSelectAll).toHaveBeenCalledWith(true);
   });
 
+  it('shows jump and crisis bulk actions for selected tasks', () => {
+    const mockOnBulkJumpToCurrent = vi.fn();
+    const mockOnActivateCrisisMode = vi.fn();
+
+    render(
+      <TaskTable
+        tasks={[mockTask, mockTask2]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+        selectedTasks={['1', '2']}
+        onBulkJumpToCurrent={mockOnBulkJumpToCurrent}
+        onActivateCrisisMode={mockOnActivateCrisisMode}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /jump to current/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /crisis mode/i })).toBeInTheDocument();
+  });
+
+  it('calls jump and crisis bulk callbacks', () => {
+    const mockOnBulkJumpToCurrent = vi.fn();
+    const mockOnActivateCrisisMode = vi.fn();
+
+    render(
+      <TaskTable
+        tasks={[mockTask, mockTask2]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onComplete={mockOnComplete}
+        selectedTasks={['1', '2']}
+        onBulkJumpToCurrent={mockOnBulkJumpToCurrent}
+        onActivateCrisisMode={mockOnActivateCrisisMode}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /jump to current/i }));
+    fireEvent.click(screen.getByRole('button', { name: /crisis mode/i }));
+
+    expect(mockOnBulkJumpToCurrent).toHaveBeenCalledWith(['1', '2']);
+    expect(mockOnActivateCrisisMode).toHaveBeenCalledWith(['1', '2']);
+  });
+
   it('handles column config reset', () => {
     render(
       <TaskTable

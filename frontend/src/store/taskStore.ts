@@ -6,7 +6,7 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import type { Task, TaskCompletionResponse } from '../types';
 import { Priority, Difficulty, Duration } from '../types';
-import { taskApi } from '../services/api';
+import { taskApi, type BulkJumpToCurrentInstanceResponse } from '../services/api';
 import { getCombinedTags } from '../utils/tags';
 import { deriveLifecycleStatus } from '../utils/taskStatus';
 
@@ -35,6 +35,8 @@ interface TaskState {
   isLoading: boolean;
   error: string | null;
   hasCompletedData: boolean;
+  crisisModeActive: boolean;
+  crisisTaskIds: string[];
 
   // Filters and sorting
   filters: TaskFilters;
@@ -53,6 +55,8 @@ interface TaskState {
   resetFilters: () => void;
   setSort: (sort: TaskSort) => void;
   setSubtaskViewMode: (mode: SubtaskViewMode) => void;
+  activateCrisisMode: (taskIds: string[]) => void;
+  exitCrisisMode: () => void;
 
   // Loading state
   setLoading: (loading: boolean) => void;
@@ -71,6 +75,12 @@ interface TaskState {
     id: string,
     params: { defer_until?: string; defer_to_next_recurrence?: boolean },
   ) => Promise<Task>;
+  previewJumpToCurrentInstance: (
+    taskIds: string[],
+  ) => Promise<BulkJumpToCurrentInstanceResponse>;
+  jumpToCurrentInstance: (
+    taskIds: string[],
+  ) => Promise<BulkJumpToCurrentInstanceResponse>;
 }
 
 const defaultFilters: TaskFilters = {
@@ -87,6 +97,11 @@ const defaultSort: TaskSort = {
   order: 'desc',
 };
 
+const defaultCrisisMode = {
+  crisisModeActive: false,
+  crisisTaskIds: [] as string[],
+};
+
 const mergeTaskLists = (existing: Task[], incoming: Task[]): Task[] => {
   const incomingById = new Map(incoming.map((task) => [task.id, task]));
   const merged = existing.map((task) => incomingById.get(task.id) ?? task);
@@ -100,6 +115,19 @@ const mergeTaskLists = (existing: Task[], incoming: Task[]): Task[] => {
   return merged;
 };
 
+export const filterTasksForCrisisMode = (
+  tasks: Task[],
+  crisisModeActive: boolean,
+  crisisTaskIds: string[],
+): Task[] => {
+  if (!crisisModeActive) {
+    return tasks;
+  }
+
+  const allowedTaskIds = new Set(crisisTaskIds);
+  return tasks.filter((task) => allowedTaskIds.has(task.id));
+};
+
 export const useTaskStore = create<TaskState>()(
   devtools(
     persist(
@@ -110,6 +138,8 @@ export const useTaskStore = create<TaskState>()(
         isLoading: false,
         error: null,
         hasCompletedData: false,
+        crisisModeActive: defaultCrisisMode.crisisModeActive,
+        crisisTaskIds: defaultCrisisMode.crisisTaskIds,
         filters: defaultFilters,
         sort: defaultSort,
         subtaskViewMode: 'inline',
@@ -135,6 +165,10 @@ export const useTaskStore = create<TaskState>()(
           set((state) => ({
             tasks: state.tasks.filter((t) => t.id !== id),
             selectedTaskId: state.selectedTaskId === id ? null : state.selectedTaskId,
+            crisisTaskIds: state.crisisTaskIds.filter((taskId) => taskId !== id),
+            crisisModeActive:
+              state.crisisModeActive &&
+              state.crisisTaskIds.some((taskId) => taskId !== id),
           })),
 
         selectTask: (id) => set({ selectedTaskId: id }),
@@ -150,6 +184,14 @@ export const useTaskStore = create<TaskState>()(
         setSort: (sort) => set({ sort }),
 
         setSubtaskViewMode: (mode) => set({ subtaskViewMode: mode }),
+
+        activateCrisisMode: (taskIds) =>
+          set({
+            crisisModeActive: taskIds.length > 0,
+            crisisTaskIds: [...new Set(taskIds)],
+          }),
+
+        exitCrisisMode: () => set({ ...defaultCrisisMode }),
 
         // Loading state
         setLoading: (loading) => set({ isLoading: loading }),
@@ -241,6 +283,10 @@ export const useTaskStore = create<TaskState>()(
           set({
             tasks: tasks.filter((t) => t.id !== id),
             selectedTaskId: selectedTaskId === id ? null : selectedTaskId,
+            crisisTaskIds: get().crisisTaskIds.filter((taskId) => taskId !== id),
+            crisisModeActive:
+              get().crisisModeActive &&
+              get().crisisTaskIds.some((taskId) => taskId !== id),
           });
 
           try {
@@ -410,14 +456,45 @@ export const useTaskStore = create<TaskState>()(
             throw error;
           }
         },
+
+        previewJumpToCurrentInstance: async (taskIds) => {
+          try {
+            return await taskApi.previewJumpToCurrentInstance(taskIds);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to preview task jump';
+            set({ error: message });
+            throw error;
+          }
+        },
+
+        jumpToCurrentInstance: async (taskIds) => {
+          try {
+            const response = await taskApi.jumpToCurrentInstance(taskIds);
+            const updatedTasksById = new Map(
+              response.updated_tasks.map((task) => [task.id, task]),
+            );
+
+            set((state) => ({
+              tasks: state.tasks.map((task) => updatedTasksById.get(task.id) ?? task),
+            }));
+
+            return response;
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to jump tasks to current instance';
+            set({ error: message });
+            throw error;
+          }
+        },
       }),
       {
         name: 'motido-task-store',
-        version: 3, // Merged startDateFilter into status, removed includeBlocked
+        version: 4,
         partialize: (state) => ({
           filters: state.filters,
           sort: state.sort,
           subtaskViewMode: state.subtaskViewMode,
+          crisisModeActive: state.crisisModeActive,
+          crisisTaskIds: state.crisisTaskIds,
         }),
         // Migrate old filter structure to new unified status
         migrate: (persistedState, version) => {
@@ -452,6 +529,13 @@ export const useTaskStore = create<TaskState>()(
               search: persisted.filters?.search,
               maxDueDate: persisted.filters?.maxDueDate,
             },
+            crisisModeActive:
+              typeof persisted.crisisModeActive === 'boolean'
+                ? persisted.crisisModeActive
+                : defaultCrisisMode.crisisModeActive,
+            crisisTaskIds: Array.isArray(persisted.crisisTaskIds)
+              ? persisted.crisisTaskIds
+              : defaultCrisisMode.crisisTaskIds,
           };
         },
       }
@@ -462,7 +546,7 @@ export const useTaskStore = create<TaskState>()(
 
 // Selector hooks for computed values
 export const useFilteredTasks = (lastProcessedDate?: string) => {
-  const { tasks, filters, sort } = useTaskStore();
+  const { tasks, filters, sort, crisisModeActive, crisisTaskIds } = useTaskStore();
 
   // Apply filters
   const filtered = tasks.filter((task) => {
@@ -576,10 +660,15 @@ export const useFilteredTasks = (lastProcessedDate?: string) => {
     return sort.order === 'asc' ? comparison : -comparison;
   });
 
-  return filtered;
+  return filterTasksForCrisisMode(filtered, crisisModeActive, crisisTaskIds);
 };
 
 export const useSelectedTask = () => {
   const { tasks, selectedTaskId } = useTaskStore();
   return tasks.find((t) => t.id === selectedTaskId) ?? null;
+};
+
+export const useVisibleTasks = (tasks: Task[]) => {
+  const { crisisModeActive, crisisTaskIds } = useTaskStore();
+  return filterTasksForCrisisMode(tasks, crisisModeActive, crisisTaskIds);
 };
