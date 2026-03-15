@@ -9,11 +9,10 @@ import TaskCard from './TaskCard';
 import type { Task } from '../../types';
 import { Priority, Difficulty, Duration } from '../../types';
 
-// Mock useMediaQuery to control mobile/desktop state
-// Using a ref object so the mock can be updated during tests
+// Mock useMediaQuery from Mantine hooks (via ../../ui)
 const mockMediaQueryResult = { current: false };
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material');
+vi.mock('@mantine/hooks', async () => {
+  const actual = await vi.importActual('@mantine/hooks');
   return {
     ...actual,
     useMediaQuery: () => mockMediaQueryResult.current,
@@ -139,7 +138,7 @@ describe('TaskCard', () => {
     );
 
     // Find the complete button by the RadioButtonUnchecked icon (uncompleted task)
-    const completeButton = screen.getByTestId('RadioButtonUncheckedIcon').closest('button');
+    const completeButton = screen.getByRole('button', { name: 'Mark Complete' });
     expect(completeButton).toBeInTheDocument();
     if (completeButton) {
       await user.click(completeButton);
@@ -180,7 +179,7 @@ describe('TaskCard', () => {
   });
 
   it('shows habit icon for habit tasks', () => {
-    render(
+    const { container } = render(
       <TaskCard
         task={mockHabit}
         onComplete={mockOnComplete}
@@ -188,8 +187,8 @@ describe('TaskCard', () => {
         onDelete={mockOnDelete}
       />
     );
-    // The Loop icon is rendered for habits
-    expect(screen.getByTestId('LoopIcon')).toBeInTheDocument();
+    // The IconRepeat is rendered for habits (check for SVG icon)
+    expect(container.querySelector('.tabler-icon-repeat')).toBeInTheDocument();
   });
 
   it('shows streak badge for habits', () => {
@@ -232,7 +231,7 @@ describe('TaskCard', () => {
         isBlocked={true}
       />
     );
-    const completeButton = screen.getByTestId('RadioButtonUncheckedIcon').closest('button');
+    const completeButton = screen.getByRole('button', { name: 'Mark Complete' });
     expect(completeButton).toBeDisabled();
   });
 
@@ -260,8 +259,8 @@ describe('TaskCard', () => {
         onDelete={mockOnDelete}
       />
     );
-    expect(screen.getByTestId('CheckCircleIcon')).toBeInTheDocument();
-    expect(screen.queryByTestId('RadioButtonUncheckedIcon')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mark Incomplete' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mark Complete' })).not.toBeInTheDocument();
   });
 
   it('expands to show description when expand button clicked', async () => {
@@ -275,17 +274,15 @@ describe('TaskCard', () => {
       />
     );
 
-    // Description should not be visible initially
-    expect(screen.queryByText('This is a test task description')).not.toBeVisible();
+    // Description should not be visible initially (inside collapsed section)
+    expect(screen.queryByText('This is a test task description')).toBeNull();
 
     // Click expand button
-    const expandButton = screen.getByTestId('ExpandMoreIcon').closest('button');
-    if (expandButton) {
-      await user.click(expandButton);
-    }
+    const expandButton = screen.getByRole('button', { name: 'Expand details' });
+    await user.click(expandButton);
 
     // Description should now be visible
-    expect(screen.getByText('This is a test task description')).toBeVisible();
+    expect(screen.getByText('This is a test task description')).toBeInTheDocument();
   });
 
   it('expands to show tags when expanded', async () => {
@@ -300,14 +297,12 @@ describe('TaskCard', () => {
     );
 
     // Click expand button
-    const expandButton = screen.getByTestId('ExpandMoreIcon').closest('button');
-    if (expandButton) {
-      await user.click(expandButton);
-    }
+    const expandButton = screen.getByRole('button', { name: 'Expand details' });
+    await user.click(expandButton);
 
-    // Tags should be visible
-    expect(screen.getByText('work')).toBeVisible();
-    expect(screen.getByText('important')).toBeVisible();
+    // Tags should be visible after expanding
+    expect(screen.getByText('work')).toBeInTheDocument();
+    expect(screen.getByText('important')).toBeInTheDocument();
   });
 
   it('calls onSubtaskToggle when subtask is toggled', async () => {
@@ -325,10 +320,8 @@ describe('TaskCard', () => {
     );
 
     // Expand to show subtasks
-    const expandButton = screen.getByTestId('ExpandMoreIcon').closest('button');
-    if (expandButton) {
-      await user.click(expandButton);
-    }
+    const expandButton = screen.getByRole('button', { name: 'Expand details' });
+    await user.click(expandButton);
 
     // Find and click a subtask checkbox (only subtask checkboxes exist now)
     const subtaskCheckboxes = screen.getAllByRole('checkbox');
@@ -352,13 +345,11 @@ describe('TaskCard', () => {
     );
 
     // Expand to show subtasks
-    const expandButton = screen.getByTestId('ExpandMoreIcon').closest('button');
-    if (expandButton) {
-      await user.click(expandButton);
-    }
+    const expandButton = screen.getByRole('button', { name: 'Expand details' });
+    await user.click(expandButton);
 
     // Subtasks should still be visible but not interactive
-    expect(screen.getByText(/Subtask 1/)).toBeVisible();
+    expect(screen.getByText(/Subtask 1/)).toBeInTheDocument();
   });
 
   it('shows task without expand button when no details', () => {
@@ -379,8 +370,8 @@ describe('TaskCard', () => {
     );
 
     // Should not have expand button
-    expect(screen.queryByTestId('ExpandMoreIcon')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('ExpandLessIcon')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /expand|collapse/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /expand|collapse/i })).not.toBeInTheDocument();
   });
 
   it('renders task with icon', () => {
@@ -407,7 +398,7 @@ describe('TaskCard', () => {
       dependencies: ['dep1', 'dep2'],
     };
 
-    render(
+    const { container } = render(
       <TaskCard
         task={taskWithDeps}
         onComplete={mockOnComplete}
@@ -416,8 +407,8 @@ describe('TaskCard', () => {
       />
     );
 
-    // Should show link icon for dependencies
-    expect(screen.getByTestId('LinkIcon')).toBeInTheDocument();
+    // Should show link icon for dependencies (Tabler IconLink)
+    expect(container.querySelector('.tabler-icon-link')).toBeInTheDocument();
   });
 
   it('renders task with due date', () => {
@@ -441,7 +432,7 @@ describe('TaskCard', () => {
     );
 
     // Should show calendar icon (DateDisplay component renders CalendarToday icon for future dates)
-    expect(screen.getByTestId('CalendarTodayIcon')).toBeInTheDocument();
+    expect(document.querySelector('.tabler-icon-calendar, .tabler-icon-alert-triangle')!).toBeInTheDocument();
   });
 
   it('shows undo button when task has history and onUndo is provided', () => {
@@ -463,7 +454,7 @@ describe('TaskCard', () => {
     );
 
     // Should show undo icon
-    expect(screen.getByTestId('UndoIcon')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo last change' })).toBeInTheDocument();
   });
 
   it('calls onUndo when undo button is clicked', async () => {
@@ -486,7 +477,7 @@ describe('TaskCard', () => {
       />
     );
 
-    const undoButton = screen.getByTestId('UndoIcon').closest('button');
+    const undoButton = screen.getByRole('button', { name: 'Undo last change' });
     if (undoButton) {
       await user.click(undoButton);
     }
@@ -505,7 +496,7 @@ describe('TaskCard', () => {
     );
 
     // Should not show undo icon since history is empty
-    expect(screen.queryByTestId('UndoIcon')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Undo last change' })).not.toBeInTheDocument();
   });
 
   it('does not show undo button when onUndo is not provided', () => {
@@ -527,7 +518,7 @@ describe('TaskCard', () => {
     );
 
     // Should not show undo icon since onUndo is not provided
-    expect(screen.queryByTestId('UndoIcon')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Undo last change' })).not.toBeInTheDocument();
   });
 
   describe('mobile behavior', () => {
@@ -559,9 +550,10 @@ describe('TaskCard', () => {
       // XP should be visible
       expect(screen.getByText(/XP/)).toBeInTheDocument();
       // Due date icon should be visible (CalendarToday for future dates)
-      expect(screen.getByTestId('CalendarTodayIcon')).toBeInTheDocument();
-      // Priority chip is in the DOM (inside Collapse) but NOT visible when collapsed
-      expect(screen.queryByText(/High/i)).not.toBeVisible();
+      expect(document.querySelector('.tabler-icon-calendar, .tabler-icon-alert-triangle')!).toBeInTheDocument();
+      // Priority chip is hidden inside collapsed section on mobile
+      const priorityText = screen.queryByText(/High/i);
+      expect(priorityText === null || !priorityText.checkVisibility?.()).toBe(true);
     });
 
     it('shows expand button on mobile even with no description/tags', () => {
@@ -582,7 +574,7 @@ describe('TaskCard', () => {
       );
 
       // Should have expand button on mobile (to reveal hidden metadata)
-      expect(screen.getByTestId('ExpandMoreIcon')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Expand details' })).toBeInTheDocument();
     });
 
     it('shows priority, difficulty, duration when expanded on mobile', async () => {
@@ -597,17 +589,16 @@ describe('TaskCard', () => {
         />
       );
 
-      // Priority is in DOM (inside Collapse) but not visible initially on mobile
-      expect(screen.queryByText(/High/i)).not.toBeVisible();
+      // Priority is hidden in collapsed section on mobile
+      const priorityText = screen.queryByText(/High/i);
+      expect(priorityText).toBeNull();
 
       // Click expand button
-      const expandButton = screen.getByTestId('ExpandMoreIcon').closest('button');
-      if (expandButton) {
-        await user.click(expandButton);
-      }
+      const expandButton = screen.getByRole('button', { name: 'Expand details' });
+      await user.click(expandButton);
 
       // Priority should now be visible after expanding
-      expect(screen.getByText(/High/i)).toBeVisible();
+      expect(screen.getByText(/High/i)).toBeInTheDocument();
     });
 
     it('shows project badge when expanded on mobile', async () => {
@@ -622,17 +613,15 @@ describe('TaskCard', () => {
         />
       );
 
-      // Project is in DOM (inside Collapse) but not visible initially on mobile
-      expect(screen.queryByText('Test Project')).not.toBeVisible();
+      // Project is hidden in collapsed section on mobile
+      expect(screen.queryByText('Test Project')).toBeNull();
 
       // Click expand button
-      const expandButton = screen.getByTestId('ExpandMoreIcon').closest('button');
-      if (expandButton) {
-        await user.click(expandButton);
-      }
+      const expandButton = screen.getByRole('button', { name: 'Expand details' });
+      await user.click(expandButton);
 
       // Project should now be visible
-      expect(screen.getByText('Test Project')).toBeVisible();
+      expect(screen.getByText('Test Project')).toBeInTheDocument();
     });
 
     describe('swipe to complete', () => {

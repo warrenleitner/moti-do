@@ -32,7 +32,7 @@ export default function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   return (
-    <Modal opened={open} onClose={onCancel} title={title} size="xs" centered>
+    <Modal opened={open} onClose={onCancel} title={title} size="xs" centered transitionProps={{ duration: 0 }}>
       <Stack>
         <Text c="dimmed">{message}</Text>
         <Group justify="flex-end" mt="md">

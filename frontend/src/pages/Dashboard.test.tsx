@@ -92,7 +92,9 @@ describe('Dashboard', () => {
     const user = userEvent.setup();
 
     await user.click(screen.getByRole('button', { name: /reset score tracking/i }));
-    await user.click(screen.getByRole('button', { name: /reset tracking/i }));
+    // Wait for the modal to render its content
+    const resetTrackingBtn = await screen.findByRole('button', { name: /reset tracking/i });
+    await user.click(resetTrackingBtn);
 
     await waitFor(() => {
       expect(resetScoreTracking).toHaveBeenCalled();

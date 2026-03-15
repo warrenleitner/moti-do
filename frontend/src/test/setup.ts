@@ -49,6 +49,9 @@ Object.defineProperty(window, 'ResizeObserver', {
   value: ResizeObserverMock,
 });
 
+// Mock scrollIntoView for jsdom (Mantine Combobox uses it)
+Element.prototype.scrollIntoView = vi.fn() as unknown as typeof Element.prototype.scrollIntoView;
+
 // Import MSW server conditionally
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let server: any = null;

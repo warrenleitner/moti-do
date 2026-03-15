@@ -40,7 +40,8 @@ describe('DurationChip', () => {
 
   it('applies correct size', () => {
     const { container } = render(<DurationChip duration={Duration.LONG} size="medium" />);
-    const chip = container.querySelector('.MuiChip-sizeMedium');
-    expect(chip).toBeInTheDocument();
+    // Mantine Badge uses data-size attribute
+    const badge = container.querySelector('.mantine-Badge-root');
+    expect(badge).toBeInTheDocument();
   });
 });

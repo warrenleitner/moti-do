@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render } from '../../test/utils';
+import { screen, fireEvent } from '@testing-library/react';
 import ColumnConfigDialog from './ColumnConfigDialog';
 import { ColumnConfig } from './TaskTable';
 
@@ -243,16 +244,16 @@ describe('ColumnConfigDialog', () => {
       />
     );
 
-    const listItems = screen.getAllByRole('listitem');
+    const draggableItems = document.querySelectorAll('[draggable="true"]');
 
     // Simulate drag start on first item
-    fireEvent.dragStart(listItems[0]);
+    fireEvent.dragStart(draggableItems[0]);
 
     // Simulate drag over second item
-    fireEvent.dragOver(listItems[1]);
+    fireEvent.dragOver(draggableItems[1]);
 
     // Simulate drag end
-    fireEvent.dragEnd(listItems[0]);
+    fireEvent.dragEnd(draggableItems[0]);
 
     // Columns should have been reordered
     expect(screen.getByText('Configure Columns')).toBeInTheDocument();
@@ -269,13 +270,13 @@ describe('ColumnConfigDialog', () => {
       />
     );
 
-    const listItems = screen.getAllByRole('listitem');
+    const draggableItems = document.querySelectorAll('[draggable="true"]');
 
     // Simulate drag start on first item
-    fireEvent.dragStart(listItems[0]);
+    fireEvent.dragStart(draggableItems[0]);
 
     // Simulate drag over same item (should do nothing)
-    fireEvent.dragOver(listItems[0]);
+    fireEvent.dragOver(draggableItems[0]);
 
     // Columns should remain unchanged
     expect(screen.getByText('Configure Columns')).toBeInTheDocument();
@@ -292,13 +293,13 @@ describe('ColumnConfigDialog', () => {
       />
     );
 
-    const listItems = screen.getAllByRole('listitem');
+    const draggableItems = document.querySelectorAll('[draggable="true"]');
 
     // Simulate drag start
-    fireEvent.dragStart(listItems[0]);
+    fireEvent.dragStart(draggableItems[0]);
 
     // Simulate drag end
-    fireEvent.dragEnd(listItems[0]);
+    fireEvent.dragEnd(draggableItems[0]);
 
     // State should be cleared
     expect(screen.getByText('Configure Columns')).toBeInTheDocument();
@@ -315,17 +316,17 @@ describe('ColumnConfigDialog', () => {
       />
     );
 
-    // Find a non-essential column's visibility icon button
-    const visibilityIcons = screen.getAllByTestId('VisibilityIcon');
+    // Find a non-essential column's visibility icon button (ActionIcon with title containing 'Hide column')
+    const visibilityButtons = screen.getAllByTitle(/hide column|show column/i);
 
     // Find the one that's not disabled (not essential)
-    const scoreVisibilityButton = visibilityIcons.find((icon) => {
-      const button = icon.closest('button');
+    const enabledVisibilityButton = visibilityButtons.find((btn) => {
+      const button = btn.closest('button');
       return button && !button.hasAttribute('disabled');
     });
 
-    if (scoreVisibilityButton) {
-      const button = scoreVisibilityButton.closest('button');
+    if (enabledVisibilityButton) {
+      const button = enabledVisibilityButton.closest('button');
       if (button) {
         fireEvent.click(button);
         // Visibility should toggle
@@ -368,9 +369,9 @@ describe('ColumnConfigDialog', () => {
       />
     );
 
-    // Each list item should have a drag indicator
-    const dragIndicators = screen.getAllByTestId('DragIndicatorIcon');
-    expect(dragIndicators.length).toBe(mockColumns.length);
+    // Each column row should be draggable - there should be as many as columns
+    const draggablePapers = document.querySelectorAll('[draggable="true"]');
+    expect(draggablePapers.length).toBe(mockColumns.length);
   });
 
   it('applies dragged styling during drag', () => {
@@ -384,13 +385,13 @@ describe('ColumnConfigDialog', () => {
       />
     );
 
-    const listItems = screen.getAllByRole('listitem');
+    const draggableItems = document.querySelectorAll('[draggable="true"]');
 
     // Start dragging
-    fireEvent.dragStart(listItems[0]);
+    fireEvent.dragStart(draggableItems[0]);
 
     // The item should have reduced opacity (this is handled by React state)
-    expect(listItems[0]).toHaveAttribute('draggable', 'true');
+    expect(draggableItems[0]).toHaveAttribute('draggable', 'true');
   });
 
   it('resets local state when dialog closes', () => {

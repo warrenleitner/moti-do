@@ -59,7 +59,7 @@ describe('LoginPage', () => {
       const user = userEvent.setup();
       render(<LoginPage />);
 
-      const registerButton = screen.getByRole('button', { name: /register/i });
+      const registerButton = screen.getByText('Register');
       await user.click(registerButton);
 
       expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('LoginPage', () => {
       const user = userEvent.setup();
       render(<LoginPage />);
 
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      const registerToggle = screen.getByText('Register');
       await user.click(registerToggle);
 
       // Check that submit button exists (type="submit")
@@ -88,7 +88,7 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'testpassword');
 
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      const registerToggle = screen.getByText('Register');
       await user.click(registerToggle);
 
       expect(passwordField).toHaveValue('');
@@ -109,7 +109,7 @@ describe('LoginPage', () => {
       expect(await screen.findByText(/password must be at least 8 characters/i)).toBeInTheDocument();
 
       // Switch to register mode
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      const registerToggle = screen.getByText('Register');
       await user.click(registerToggle);
 
       expect(screen.queryByText(/password must be at least 8 characters/i)).not.toBeInTheDocument();
@@ -137,7 +137,7 @@ describe('LoginPage', () => {
       render(<LoginPage />);
 
       // Switch to register mode
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      const registerToggle = screen.getByText('Register');
       await user.click(registerToggle);
 
       const passwordField = screen.getAllByLabelText(/password/i)[0];
@@ -271,7 +271,7 @@ describe('LoginPage', () => {
       render(<LoginPage />);
 
       // Switch to register mode
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      const registerToggle = screen.getByText('Register');
       await user.click(registerToggle);
 
       const usernameField = screen.getByLabelText(/username/i);
@@ -299,7 +299,7 @@ describe('LoginPage', () => {
       render(<LoginPage />);
 
       // Switch to register mode
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      const registerToggle = screen.getByText('Register');
       await user.click(registerToggle);
 
       const passwordField = screen.getAllByLabelText(/password/i)[0];
@@ -326,7 +326,7 @@ describe('LoginPage', () => {
       render(<LoginPage />);
 
       // Switch to register mode
-      const registerToggle = screen.getByRole('button', { name: /register/i });
+      const registerToggle = screen.getByText('Register');
       await user.click(registerToggle);
 
       const passwordField = screen.getAllByLabelText(/password/i)[0];

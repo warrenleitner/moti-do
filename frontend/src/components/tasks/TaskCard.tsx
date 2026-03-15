@@ -313,7 +313,7 @@ export default function TaskCard({
         </Group>
 
         {/* Expanded details */}
-        <Collapse in={expanded}>
+        <Collapse in={expanded} transitionDuration={0}>
           <Box mt="md" pl={40}>
             {/* Mobile-only: show hidden metadata when expanded */}
             {isMobile && (

@@ -167,7 +167,7 @@ describe('GraphPage', () => {
       expect(mockUpdateTask).toHaveBeenCalledWith('1', expect.objectContaining({
         is_complete: true,
       }));
-      expect(screen.getByText('Task completed!')).toBeInTheDocument();
+      expect(screen.getAllByText('Task completed!').length).toBeGreaterThan(0);
     });
   });
 
@@ -197,7 +197,7 @@ describe('GraphPage', () => {
       expect(mockUpdateTask).toHaveBeenCalledWith('1', expect.objectContaining({
         is_complete: false,
       }));
-      expect(screen.getByText('Task marked incomplete')).toBeInTheDocument();
+      expect(screen.getAllByText('Task marked incomplete').length).toBeGreaterThan(0);
     });
   });
 

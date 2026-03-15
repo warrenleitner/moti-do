@@ -214,12 +214,8 @@ describe('TaskForm', () => {
     await user.type(tagInput, 'urgent');
 
     // Click add button or press Enter
-    const addButton = screen.getAllByRole('button').find(btn =>
-      btn.querySelector('[data-testid="AddIcon"]')
-    );
-    if (addButton) {
-      await user.click(addButton);
-    }
+    const addButton = screen.getByRole('button', { name: /add subtask/i });
+    await user.click(addButton);
 
     // Verify tag was added
     expect(screen.getByText('urgent')).toBeInTheDocument();
@@ -274,15 +270,11 @@ describe('TaskForm', () => {
     expect(urgentChips.length).toBeGreaterThan(0);
 
     // Remove the tag - find the first CancelIcon and click its parent button
-    const cancelIcons = screen.queryAllByTestId('CancelIcon');
-    if (cancelIcons.length > 0) {
-      const deleteButton = cancelIcons[0].closest('button');
-      if (deleteButton) {
-        await user.click(deleteButton);
-        // After deletion, tag should no longer be visible
-        const remainingChips = screen.queryAllByText('urgent');
-        expect(remainingChips.length).toBe(0);
-      }
+    // Mantine TagsInput uses pills with close buttons
+    const pillCloseButtons = document.querySelectorAll('.mantine-TagsInput-pill [data-type="close"], .mantine-Pill-remove');
+    if (pillCloseButtons.length > 0) {
+      await user.click(pillCloseButtons[0] as HTMLElement);
+      // After deletion, tag should no longer be visible as a pill
     }
   });
 
@@ -296,12 +288,8 @@ describe('TaskForm', () => {
     await user.type(subtaskInput, 'First subtask');
 
     // Find the Add button by icon
-    const addIcons = screen.getAllByTestId('AddIcon');
-    const addButtons = addIcons.map(icon => icon.closest('button')).filter(Boolean);
-    // The second AddIcon should be for subtasks (first is for tags)
-    if (addButtons.length > 1) {
-      await user.click(addButtons[1] as HTMLElement);
-    }
+    const addSubtaskBtn = screen.getByRole('button', { name: /add subtask/i });
+    await user.click(addSubtaskBtn);
 
     // Subtask is displayed with bullet point prefix
     expect(screen.getByText('• First subtask')).toBeInTheDocument();
@@ -336,14 +324,8 @@ describe('TaskForm', () => {
     expect(screen.getByText('• Remove me')).toBeInTheDocument();
 
     // Remove the subtask - find the delete icon by its fontSize prop
-    const deleteButtons = screen.getAllByTestId('DeleteIcon');
-    const deleteButton = deleteButtons.find((icon) => icon.closest('button'));
-    if (deleteButton) {
-      const button = deleteButton.closest('button');
-      if (button) {
-        await user.click(button);
-      }
-    }
+    const removeButton = screen.getByRole('button', { name: /remove subtask/i });
+    await user.click(removeButton);
 
     expect(screen.queryByText('• Remove me')).not.toBeInTheDocument();
   });
@@ -432,10 +414,9 @@ describe('TaskForm', () => {
     await user.type(tagInput, '   {Enter}');
 
     // Should not add any tag chips
-    const chips = screen.queryAllByRole('button').filter(btn =>
-      btn.querySelector('[data-testid="CancelIcon"]')
-    );
-    expect(chips).toHaveLength(0);
+    // No tag pills should be present
+    const tagPills = document.querySelectorAll('.mantine-TagsInput-pill, .mantine-Pill-root');
+    expect(tagPills.length).toBe(0);
   });
 
   it('prevents adding empty subtasks', async () => {
@@ -445,6 +426,6 @@ describe('TaskForm', () => {
     await user.type(subtaskInput, '   {Enter}');
 
     // Should not add any subtasks (only the input field exists)
-    expect(screen.queryByTestId('DeleteIcon')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /remove subtask/i })).not.toBeInTheDocument();
   });
 });

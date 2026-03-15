@@ -105,7 +105,7 @@ describe('QuickAddBox', () => {
     await user.type(input, 'Test task{Enter}');
 
     await waitFor(() => {
-      expect(screen.getByText(/task "test task" created/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/task "test task" created/i).length).toBeGreaterThan(0);
     });
   });
 

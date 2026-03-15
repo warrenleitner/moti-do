@@ -105,7 +105,8 @@ describe('KanbanBoard', () => {
     expect(screen.getByText(/Backlog/i)).toBeInTheDocument();
     expect(screen.getByText(/In Progress/i)).toBeInTheDocument();
     expect(screen.getByText(/Done/i)).toBeInTheDocument();
-    expect(screen.getByText(/Blocked/i)).toBeInTheDocument();
+    // "Blocked" may appear multiple times (column header), use getAllByText
+    expect(screen.getAllByText(/Blocked/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('displays tasks in correct columns', () => {
