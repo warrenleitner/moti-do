@@ -1,42 +1,35 @@
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Center, Loader, Text, Stack, Box } from '../../ui';
 
 interface LoadingSpinnerProps {
   message?: string;
   size?: number;
-  fullScreen?: boolean;
+  fullscreen?: boolean;
 }
 
 export default function LoadingSpinner({
   message = 'Loading...',
   size = 40,
-  fullScreen = false,
+  fullscreen = false,
 }: LoadingSpinnerProps) {
   const content = (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 2,
-        p: 4,
-      }}
-    >
-      <CircularProgress size={size} />
-      {message && (
-        <Typography variant="body2" color="text.secondary">
-          {message}
-        </Typography>
-      )}
-    </Box>
+    <Center p="xl">
+      <Stack align="center" gap="sm">
+        <Loader size={size} role="progressbar" />
+        {message && (
+          <Text size="sm" c="dimmed">
+            {message}
+          </Text>
+        )}
+      </Stack>
+    </Center>
   );
 
   // Full screen mode tested via integration tests
   /* v8 ignore next 17 */
-  if (fullScreen) {
+  if (fullscreen) {
     return (
       <Box
-        sx={{
+        style={{
           position: 'fixed',
           top: 0,
           left: 0,
