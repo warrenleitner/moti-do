@@ -15,8 +15,8 @@ export default defineConfig({
         manualChunks: {
           // Core React
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // MUI components
-          'vendor-mui': ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
+          // Mantine UI
+          'vendor-mantine': ['@mantine/core', '@mantine/hooks', '@mantine/dates', '@mantine/notifications'],
           // Calendar
           'vendor-calendar': [
             '@fullcalendar/core',
@@ -32,7 +32,7 @@ export default defineConfig({
           // Data fetching & state
           'vendor-data': ['axios', 'zustand', '@tanstack/react-query'],
           // Date utilities
-          'vendor-date': ['date-fns', '@mui/x-date-pickers'],
+          'vendor-date': ['date-fns', 'dayjs'],
         },
       },
     },
@@ -138,6 +138,8 @@ export default defineConfig({
         'src/main.tsx',
         // Re-export barrel files contain no logic - the actual exports are tested in their source files
         'src/**/index.ts',
+        // UI adapter barrel files are pure re-exports with no logic
+        'src/ui/icons.ts',
         // Page components are UI orchestration - tested via integration tests, not unit tests
         'src/pages/**/*.tsx',
         // Component UI files with v8 ignore - excluded to avoid false positives from v8 coverage
