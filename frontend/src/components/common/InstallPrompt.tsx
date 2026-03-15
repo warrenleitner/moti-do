@@ -6,16 +6,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Snackbar,
-  Button,
-  IconButton,
-  Paper,
-  Typography,
-  Box,
-} from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import InstallMobileIcon from '@mui/icons-material/InstallMobile';
+import { Box, Button, CloseButton, Text } from '../../ui';
+import { IconDownload } from '../../ui/icons';
 
 // Extended window interface for beforeinstallprompt event
 interface BeforeInstallPromptEvent extends Event {
@@ -115,44 +107,50 @@ export function InstallPrompt() {
     return null;
   }
 
+  if (!isVisible) {
+    return null;
+  }
+
   return (
-    <Snackbar
-      open={isVisible}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      sx={{ mb: 2 }}
+    <Box
+      style={{
+        position: 'fixed',
+        bottom: 16,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1000,
+      }}
     >
-      <Paper
-        elevation={6}
-        sx={{
-          p: 2,
+      <Box
+        style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 2,
+          gap: 16,
           maxWidth: 400,
-          borderRadius: 2,
+          padding: 16,
+          borderRadius: 'var(--mantine-radius-md)',
+          background: 'var(--mantine-color-body)',
+          boxShadow: 'var(--mantine-shadow-lg)',
         }}
       >
-        <InstallMobileIcon color="primary" fontSize="large" />
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="subtitle1" fontWeight="bold">
+        <IconDownload size={32} color="var(--mantine-color-blue-6)" />
+        <Box style={{ flex: 1 }}>
+          <Text fw={700} size="sm">
             Install Motodo
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
+          </Text>
+          <Text size="xs" c="dimmed">
             Add to your home screen for quick access and offline use
-          </Typography>
+          </Text>
         </Box>
         <Button
-          variant="contained"
-          size="small"
+          size="xs"
           onClick={handleInstall}
-          sx={{ minWidth: 80 }}
+          style={{ minWidth: 80 }}
         >
           Install
         </Button>
-        <IconButton size="small" onClick={handleDismiss} aria-label="dismiss">
-          <CloseIcon fontSize="small" />
-        </IconButton>
-      </Paper>
-    </Snackbar>
+        <CloseButton size="sm" onClick={handleDismiss} aria-label="dismiss" />
+      </Box>
+    </Box>
   );
 }

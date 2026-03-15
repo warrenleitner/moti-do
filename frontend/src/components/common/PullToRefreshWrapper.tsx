@@ -5,7 +5,7 @@
 
 import type { ReactNode } from 'react';
 import PullToRefresh from 'react-simple-pull-to-refresh';
-import { useMediaQuery, useTheme, Box, CircularProgress } from '@mui/material';
+import { Box, Loader, useMediaQuery } from '../../ui';
 import { useRefresh } from '../../hooks';
 
 interface PullToRefreshWrapperProps {
@@ -14,20 +14,20 @@ interface PullToRefreshWrapperProps {
 
 const RefreshIndicator = () => (
   <Box
-    sx={{
+    style={{
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      py: 2,
+      paddingTop: 8,
+      paddingBottom: 8,
     }}
   >
-    <CircularProgress size={24} />
+    <Loader size={24} />
   </Box>
 );
 
 export default function PullToRefreshWrapper({ children }: PullToRefreshWrapperProps) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery('(max-width: 62em)');
   const { refresh } = useRefresh();
 
   // Only enable pull-to-refresh on mobile
