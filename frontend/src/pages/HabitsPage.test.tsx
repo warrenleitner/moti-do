@@ -7,6 +7,7 @@ import type { Task } from '../types';
 
 vi.mock('../store', () => ({
   useTaskStore: vi.fn(),
+  useVisibleTasks: vi.fn((tasks) => tasks),
 }));
 
 describe('HabitsPage', () => {

@@ -4,7 +4,7 @@ import { Add } from '@mui/icons-material';
 import { HabitList } from '../components/habits';
 import { TaskForm } from '../components/tasks';
 import { ConfirmDialog } from '../components/common';
-import { useTaskStore } from '../store';
+import { useTaskStore, useVisibleTasks } from '../store';
 import type { Task } from '../types';
 import { Priority, Difficulty, Duration } from '../types';
 
@@ -12,6 +12,7 @@ import { Priority, Difficulty, Duration } from '../types';
 /* v8 ignore start */
 export default function HabitsPage() {
   const { tasks, updateTask, addTask, removeTask } = useTaskStore();
+  const visibleTasks = useVisibleTasks(tasks);
   const [formOpen, setFormOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -23,7 +24,7 @@ export default function HabitsPage() {
   });
 
   // Filter to only habits
-  const habits = tasks.filter((t) => t.is_habit);
+  const habits = visibleTasks.filter((t) => t.is_habit);
 
   const handleCreateNew = () => {
     setEditingHabit(null);
