@@ -8,6 +8,7 @@ import type { Task } from '../types';
 vi.mock('../store', () => ({
   useTaskStore: vi.fn(),
   useUserStore: vi.fn(),
+  useVisibleTasks: vi.fn((tasks) => tasks),
 }));
 
 describe('CalendarPage', () => {

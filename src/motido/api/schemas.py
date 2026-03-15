@@ -150,6 +150,34 @@ class TaskCompletionResponse(BaseModel):
     next_instance: TaskResponse | None = None
 
 
+class JumpToCurrentInstancePreview(BaseModel):
+    """Preview row for a catch-up jump-to-current-instance operation."""
+
+    task_id: str
+    title: str
+    current_start_date: datetime | None = None
+    current_due_date: datetime | None = None
+    new_start_date: datetime | None = None
+    new_due_date: datetime | None = None
+    can_apply: bool
+    reason: str | None = None
+
+
+class BulkJumpToCurrentInstanceRequest(BaseModel):
+    """Schema for previewing or applying a bulk catch-up recurrence jump."""
+
+    task_ids: list[str] = Field(..., min_length=1)
+    dry_run: bool = False
+
+
+class BulkJumpToCurrentInstanceResponse(BaseModel):
+    """Schema for a bulk catch-up recurrence jump response."""
+
+    previews: list[JumpToCurrentInstancePreview] = Field(default_factory=list)
+    updated_tasks: list[TaskResponse] = Field(default_factory=list)
+    updated_count: int = 0
+
+
 # === Tag Schemas ===
 class TagBase(BaseModel):
     """Base schema for tag data."""

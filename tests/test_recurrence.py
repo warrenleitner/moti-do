@@ -2,13 +2,14 @@
 
 # pylint: disable=too-many-lines
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from motido.core.models import Priority, RecurrenceType, SubtaskRecurrenceMode, Task
 from motido.core.recurrence import (
     _advance_to_future_start,
     _calculate_start_date,
     _normalize_rule,
+    calculate_current_instance_dates,
     calculate_next_occurrence,
     create_next_habit_instance,
 )
@@ -318,6 +319,156 @@ def test_create_next_habit_instance_subtasks_partial_mode() -> None:
     assert len(new_instance.subtasks) == 2
     assert new_instance.subtasks[0] == {"text": "Subtask 1", "complete": False}
     assert new_instance.subtasks[1] == {"text": "Subtask 3", "complete": False}
+
+
+def test_calculate_current_instance_dates_returns_active_window() -> None:
+    """Current-instance catch-up should keep the active weekly window."""
+    due_date = datetime(2024, 1, 5, 9, 0, 0)
+    task = Task(
+        title="Weekly Review",
+        creation_date=datetime(2023, 12, 1, 9, 0, 0),
+        start_date=datetime(2024, 1, 1, 9, 0, 0),
+        due_date=due_date,
+        is_habit=True,
+        recurrence_rule="FREQ=WEEKLY;BYDAY=FR",
+        recurrence_type=RecurrenceType.STRICT,
+        habit_start_delta=4,
+    )
+
+    current_instance = calculate_current_instance_dates(task, date(2024, 1, 3))
+
+    assert current_instance is not None
+    start_date, current_due_date = current_instance
+    assert start_date is not None
+    assert start_date.date() == date(2024, 1, 1)
+    assert current_due_date is not None
+    assert current_due_date.date() == date(2024, 1, 5)
+
+
+def test_calculate_current_instance_dates_skips_past_due_window() -> None:
+    """Catch-up should advance past fully overdue weekly windows."""
+    due_date = datetime(2024, 1, 5, 9, 0, 0)
+    task = Task(
+        title="Weekly Review",
+        creation_date=datetime(2023, 12, 1, 9, 0, 0),
+        start_date=datetime(2024, 1, 1, 9, 0, 0),
+        due_date=due_date,
+        is_habit=True,
+        recurrence_rule="FREQ=WEEKLY;BYDAY=FR",
+        recurrence_type=RecurrenceType.STRICT,
+        habit_start_delta=4,
+    )
+
+    current_instance = calculate_current_instance_dates(task, date(2024, 1, 6))
+
+    assert current_instance is not None
+    start_date, current_due_date = current_instance
+    assert start_date is not None
+    assert start_date.date() == date(2024, 1, 8)
+    assert current_due_date is not None
+    assert current_due_date.date() == date(2024, 1, 12)
+
+
+def test_calculate_current_instance_dates_returns_none_for_non_habit() -> None:
+    """Non-recurring tasks should not produce a catch-up instance."""
+    task = Task(
+        title="One-off task",
+        creation_date=datetime(2024, 1, 1, 9, 0, 0),
+        due_date=datetime(2024, 1, 2, 9, 0, 0),
+        is_habit=False,
+        recurrence_rule="FREQ=DAILY",
+    )
+
+    assert calculate_current_instance_dates(task, date(2024, 1, 3)) is None
+
+
+def test_calculate_current_instance_dates_returns_none_for_invalid_rule() -> None:
+    """Invalid recurrence strings should be rejected cleanly."""
+    task = Task(
+        title="Broken habit",
+        creation_date=datetime(2024, 1, 1, 9, 0, 0),
+        due_date=datetime(2024, 1, 2, 9, 0, 0),
+        is_habit=True,
+        recurrence_rule="bad rule",
+        recurrence_type=RecurrenceType.STRICT,
+    )
+
+    assert calculate_current_instance_dates(task, date(2024, 1, 3)) is None
+
+
+def test_calculate_current_instance_dates_returns_none_without_future_due() -> None:
+    """Finite schedules should return None once they are exhausted."""
+    task = Task(
+        title="Expired habit",
+        creation_date=datetime(2024, 1, 1, 9, 0, 0),
+        due_date=datetime(2024, 1, 1, 9, 0, 0),
+        is_habit=True,
+        recurrence_rule="FREQ=DAILY;COUNT=1",
+        recurrence_type=RecurrenceType.STRICT,
+    )
+
+    assert calculate_current_instance_dates(task, date(2024, 1, 3)) is None
+
+
+def test_calculate_current_instance_dates_uses_start_date_plus_delta() -> None:
+    """Missing due dates should fall back to start date plus the habit delta."""
+    task = Task(
+        title="Delta anchored habit",
+        creation_date=datetime(2024, 1, 1, 9, 0, 0),
+        start_date=datetime(2024, 1, 3, 9, 0, 0),
+        due_date=None,
+        is_habit=True,
+        recurrence_rule="FREQ=DAILY",
+        recurrence_type=RecurrenceType.STRICT,
+        habit_start_delta=2,
+    )
+
+    current_instance = calculate_current_instance_dates(task, date(2024, 1, 8))
+
+    assert current_instance is not None
+    start_date, due_date = current_instance
+    assert start_date is not None
+    assert due_date is not None
+    assert start_date.date() == date(2024, 1, 6)
+    assert due_date.date() == date(2024, 1, 8)
+
+
+def test_calculate_current_instance_dates_uses_start_date_when_no_delta() -> None:
+    """Start dates alone should anchor the recurrence when no delta exists."""
+    task = Task(
+        title="Start anchored habit",
+        creation_date=datetime(2024, 1, 1, 9, 0, 0),
+        start_date=datetime(2024, 1, 3, 9, 0, 0),
+        due_date=None,
+        is_habit=True,
+        recurrence_rule="FREQ=DAILY",
+        recurrence_type=RecurrenceType.STRICT,
+    )
+
+    current_instance = calculate_current_instance_dates(task, date(2024, 1, 8))
+
+    assert current_instance is not None
+    _, due_date = current_instance
+    assert due_date is not None
+    assert due_date.date() == date(2024, 1, 8)
+
+
+def test_calculate_current_instance_dates_uses_creation_date_without_dates() -> None:
+    """Creation date should be the last fallback anchor for catch-up."""
+    task = Task(
+        title="Creation anchored habit",
+        creation_date=datetime(2024, 1, 3, 9, 0, 0),
+        is_habit=True,
+        recurrence_rule="FREQ=DAILY",
+        recurrence_type=RecurrenceType.STRICT,
+    )
+
+    current_instance = calculate_current_instance_dates(task, date(2024, 1, 8))
+
+    assert current_instance is not None
+    _, due_date = current_instance
+    assert due_date is not None
+    assert due_date.date() == date(2024, 1, 8)
 
 
 def test_create_next_habit_instance_subtasks_default_mode() -> None:

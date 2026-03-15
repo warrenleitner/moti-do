@@ -40,6 +40,7 @@ interface UserState {
   fetchProjects: () => Promise<void>;
   advanceDate: (params?: { days?: number; toDate?: string }) => Promise<void>;
   toggleVacation: (enable: boolean) => Promise<void>;
+  resetScoreTracking: () => Promise<void>;
   withdrawXP: (amount: number, description?: string) => Promise<void>;
   initializeUser: () => Promise<void>;
 }
@@ -333,6 +334,18 @@ export const useUserStore = create<UserState>()(
             }));
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to toggle vacation mode';
+            set({ error: message, isLoading: false });
+            throw error;
+          }
+        },
+
+        resetScoreTracking: async () => {
+          set({ isLoading: true, error: null });
+          try {
+            await systemApi.resetScoreTracking();
+            await get().initializeUser();
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to reset score tracking';
             set({ error: message, isLoading: false });
             throw error;
           }

@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Box, Snackbar, Alert } from '@mui/material';
 import { KanbanBoard } from '../components/kanban';
 import { TaskForm } from '../components/tasks';
-import { useTaskStore } from '../store';
+import { useTaskStore, useVisibleTasks } from '../store';
 import { useUserStore, useSystemStatus } from '../store/userStore';
 import type { Task } from '../types';
 import { Priority, Difficulty, Duration } from '../types';
@@ -10,33 +10,53 @@ import { Priority, Difficulty, Duration } from '../types';
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
 export default function KanbanPage() {
-  const { tasks, updateTask, addTask, completeTask, uncompleteTask, fetchTasks, hasCompletedData } = useTaskStore();
+  const {
+    tasks,
+    updateTask,
+    addTask,
+    completeTask,
+    uncompleteTask,
+    fetchTasks,
+    hasCompletedData,
+    crisisModeActive,
+  } = useTaskStore();
+  const visibleTasks = useVisibleTasks(tasks);
   const { fetchStats } = useUserStore();
   const systemStatus = useSystemStatus();
-  const [ready, setReady] = useState(hasCompletedData);
+  const [hasLoadedFullBoardData, setHasLoadedFullBoardData] = useState(hasCompletedData);
+  const ready = hasCompletedData || hasLoadedFullBoardData;
 
   useEffect(() => {
-    if (!hasCompletedData) {
-      fetchTasks({ includeCompleted: true })
-        .catch(() => {})
-        .finally(() => setReady(true));
-    } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setReady(true);
+    if (hasCompletedData || hasLoadedFullBoardData) {
+      return;
     }
-  }, [fetchTasks, hasCompletedData]);
+
+    let isMounted = true;
+
+    fetchTasks({ includeCompleted: true })
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) {
+          setHasLoadedFullBoardData(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchTasks, hasCompletedData, hasLoadedFullBoardData]);
 
   // Filter out future tasks (start_date > current_processing_date)
   // Kanban shows all statuses (active/completed) in columns, so we don't use useFilteredTasks
   const lastProcessedDate = systemStatus?.last_processed_date;
   const kanbanTasks = useMemo(() => {
-    if (!lastProcessedDate) return tasks;
+    if (!lastProcessedDate) return visibleTasks;
 
     // Parse last_processed_date and add 1 day to get current processing date
     const [year, month, day] = lastProcessedDate.split('-').map(Number);
     const currentProcessingDate = new Date(year, month - 1, day + 1);
 
-    return tasks.filter((task) => {
+    return visibleTasks.filter((task) => {
       // Skip future tasks
       if (task.start_date) {
         const startDateStr = task.start_date.includes('T') ? task.start_date.split('T')[0] : task.start_date;
@@ -46,7 +66,7 @@ export default function KanbanPage() {
       }
       return true;
     });
-  }, [tasks, lastProcessedDate]);
+  }, [visibleTasks, lastProcessedDate]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -110,7 +130,9 @@ export default function KanbanPage() {
       if (response.next_instance) {
         setSnackbar({
           open: true,
-          message: `Task completed! +${response.xp_earned} XP. Next instance created.`,
+          message: crisisModeActive
+            ? `Task completed! +${response.xp_earned} XP. The next instance was created and hidden until crisis mode ends.`
+            : `Task completed! +${response.xp_earned} XP. Next instance created.`,
           severity: 'success',
         });
       } else {

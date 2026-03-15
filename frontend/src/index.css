@@ -18,6 +18,12 @@ body {
   min-height: 100vh;
 }
 
+body.crisis-mode {
+  background:
+    radial-gradient(circle at top, rgba(255, 204, 188, 0.45), transparent 55%),
+    linear-gradient(180deg, #fff8f1 0%, #fff3e0 100%);
+}
+
 #root {
   min-height: 100vh;
 }

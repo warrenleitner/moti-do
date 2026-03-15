@@ -3,17 +3,21 @@
 Tests for the system API endpoints (health, status, advance, vacation).
 """
 
+import asyncio
 from datetime import date, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
+from motido.api.main import reset_score_tracking
 from motido.core.models import (
+    Badge,
     RecurrenceType,
     SubtaskRecurrenceMode,
     Task,
     User,
+    XPTransaction,
 )
 
 
@@ -269,6 +273,55 @@ class TestVacationModeEndpoint:
         # Check status endpoint reflects the change
         status_response = client.get("/api/system/status")
         assert status_response.json()["vacation_mode"] is True
+
+
+class TestResetScoreTrackingEndpoint:  # pylint: disable=too-few-public-methods
+    """Tests for POST /api/system/reset-score-tracking endpoint."""
+
+    def test_reset_score_tracking(self, client: TestClient, test_user: User) -> None:
+        """Reset should clear XP, badge history, and set processing to today."""
+        test_user.total_xp = 275
+        test_user.last_processed_date = date.today() - timedelta(days=4)
+        test_user.xp_transactions.append(
+            XPTransaction(
+                id="txn-1",
+                amount=25,
+                source="task_completion",
+                timestamp=datetime.now(),
+                description="Completed something",
+            )
+        )
+        test_user.badges.append(
+            Badge(
+                id="badge-1",
+                name="Starter",
+                description="Did the thing",
+                glyph="⭐",
+                earned_date=datetime.now(),
+            )
+        )
+
+        response = client.post("/api/system/reset-score-tracking")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["last_processed_date"] == str(date.today())
+        assert data["current_date"] == str(date.today())
+        assert data["pending_days"] == 0
+        assert test_user.total_xp == 0
+        assert test_user.xp_transactions == []
+        assert test_user.badges == []
+
+    def test_reset_score_tracking_uses_progress_saver(self, test_user: User) -> None:
+        """Direct calls should prefer save_user_progress when it exists."""
+        manager = MagicMock()
+        manager.save_user_progress = MagicMock()
+        manager.save_user = MagicMock()
+
+        asyncio.run(reset_score_tracking(test_user, manager))
+
+        manager.save_user_progress.assert_called_once_with(test_user)
+        manager.save_user.assert_not_called()
 
 
 class TestOpenAPIEndpoint:

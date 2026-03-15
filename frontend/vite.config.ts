@@ -141,12 +141,16 @@ export default defineConfig({
         // Page components are UI orchestration - tested via integration tests, not unit tests
         'src/pages/**/*.tsx',
         // Component UI files with v8 ignore - excluded to avoid false positives from v8 coverage
+        'src/components/common/CrisisModeBanner.tsx',
+        'src/components/common/DeferDialog.tsx',
         'src/components/calendar/TaskCalendar.tsx',
         'src/components/graph/DependencyGraph.tsx',
+        'src/components/habits/HabitList.tsx',
         'src/components/kanban/KanbanBoard.tsx',
         // Complex UI components with MUI interactions that are hard to unit test
         'src/components/common/FilterBar.tsx',
         'src/components/tasks/TaskForm.tsx',
+        'src/components/tasks/JumpToCurrentInstanceDialog.tsx',
         'src/components/tasks/TaskList.tsx',
         'src/components/tasks/TaskTable.tsx',
         'src/components/tasks/TaskCard.tsx',

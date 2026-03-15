@@ -11,6 +11,7 @@ import {
 import { AxiosError } from 'axios';
 import { TaskList, TaskForm } from '../components/tasks';
 import TaskTable from '../components/tasks/TaskTable';
+import JumpToCurrentInstanceDialog from '../components/tasks/JumpToCurrentInstanceDialog';
 import QuickAddBox from '../components/tasks/QuickAddBox';
 import { ConfirmDialog, FilterBar } from '../components/common';
 import DeferDialog from '../components/common/DeferDialog';
@@ -19,6 +20,7 @@ import { useFilteredTasks } from '../store/taskStore';
 import { useUserStore, useSystemStatus, useDefinedProjects } from '../store/userStore';
 import type { Task } from '../types';
 import { getCombinedTags } from '../utils/tags';
+import type { JumpToCurrentInstancePreview } from '../services/api';
 
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
@@ -64,6 +66,10 @@ export default function TasksPage() {
     resetFilters,
     fetchTasks,
     hasCompletedData,
+    previewJumpToCurrentInstance,
+    jumpToCurrentInstance,
+    activateCrisisMode,
+    crisisModeActive,
   } = useTaskStore();
   const { fetchStats } = useUserStore();
   const systemStatus = useSystemStatus();
@@ -107,6 +113,12 @@ export default function TasksPage() {
   const [tasksToDuplicate, setTasksToDuplicate] = useState<string[]>([]);
   const [bulkDeferDialogOpen, setBulkDeferDialogOpen] = useState(false);
   const [tasksToDefer, setTasksToDefer] = useState<string[]>([]);
+  const [bulkJumpDialogOpen, setBulkJumpDialogOpen] = useState(false);
+  const [tasksToJump, setTasksToJump] = useState<string[]>([]);
+  const [jumpPreviews, setJumpPreviews] = useState<JumpToCurrentInstancePreview[]>([]);
+  const [jumpApplying, setJumpApplying] = useState(false);
+  const [bulkCrisisDialogOpen, setBulkCrisisDialogOpen] = useState(false);
+  const [tasksForCrisisMode, setTasksForCrisisMode] = useState<string[]>([]);
   const visibleTasks = useMemo(
     () => filteredTasks.slice(0, Math.min(filteredTasks.length, visibleRowCount)),
     [filteredTasks, visibleRowCount]
@@ -129,7 +141,6 @@ export default function TasksPage() {
 
   // Update visible row count when filtered tasks change
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisibleRowCount((prev) => (filteredTasks.length > prev ? filteredTasks.length : prev));
     // Intentionally updating state in effect based on external data
   }, [filteredTasks.length]);
@@ -206,13 +217,21 @@ export default function TasksPage() {
 
         // Show next instance info for recurring tasks
         if (response.next_instance && response.next_instance.due_date) {
-          setSnackbar({
-            open: true,
-            message: 'Task completed! XP earned.',
-            severity: 'success',
-            nextInstanceId: response.next_instance.id,
-            nextDueDate: response.next_instance.due_date,
-          });
+          if (crisisModeActive) {
+            setSnackbar({
+              open: true,
+              message: 'Task completed! XP earned. The next recurring instance was created and hidden until you exit crisis mode.',
+              severity: 'success',
+            });
+          } else {
+            setSnackbar({
+              open: true,
+              message: 'Task completed! XP earned.',
+              severity: 'success',
+              nextInstanceId: response.next_instance.id,
+              nextDueDate: response.next_instance.due_date,
+            });
+          }
         } else {
           setSnackbar({ open: true, message: 'Task completed! XP earned.', severity: 'success' });
         }
@@ -398,6 +417,21 @@ export default function TasksPage() {
     setBulkDeferDialogOpen(true);
   };
 
+  const handleBulkJumpClick = async (taskIds: string[]) => {
+    try {
+      const response = await previewJumpToCurrentInstance(taskIds);
+      setTasksToJump(taskIds);
+      setJumpPreviews(response.previews);
+      setBulkJumpDialogOpen(true);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: getErrorMessage(error, 'Failed to preview jump to current instance'),
+        severity: 'error',
+      });
+    }
+  };
+
   const handleBulkDeferConfirm = async (params: {
     defer_until?: string;
     defer_to_next_recurrence?: boolean;
@@ -421,6 +455,50 @@ export default function TasksPage() {
     setSelectedTasks([]);
     setBulkDeferDialogOpen(false);
     setTasksToDefer([]);
+  };
+
+  const handleBulkJumpConfirm = async () => {
+    setJumpApplying(true);
+    try {
+      const response = await jumpToCurrentInstance(tasksToJump);
+      setSnackbar({
+        open: true,
+        message:
+          response.updated_count > 0
+            ? `Moved ${response.updated_count} recurring task${response.updated_count === 1 ? '' : 's'} to the current instance`
+            : 'No selected tasks needed to move',
+        severity: 'success',
+      });
+      setSelectedTasks([]);
+      setBulkJumpDialogOpen(false);
+      setTasksToJump([]);
+      setJumpPreviews([]);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: getErrorMessage(error, 'Failed to jump tasks to the current instance'),
+        severity: 'error',
+      });
+    } finally {
+      setJumpApplying(false);
+    }
+  };
+
+  const handleActivateCrisisModeClick = (taskIds: string[]) => {
+    setTasksForCrisisMode(taskIds);
+    setBulkCrisisDialogOpen(true);
+  };
+
+  const handleCrisisModeConfirm = () => {
+    activateCrisisMode(tasksForCrisisMode);
+    setSelectedTasks([]);
+    setBulkCrisisDialogOpen(false);
+    setTasksForCrisisMode([]);
+    setSnackbar({
+      open: true,
+      message: `Crisis mode activated for ${tasksForCrisisMode.length} task${tasksForCrisisMode.length === 1 ? '' : 's'}`,
+      severity: 'success',
+    });
   };
 
   // Calculate current processing date (last_processed_date + 1 day)
@@ -549,6 +627,8 @@ export default function TasksPage() {
             onDuplicate={handleDuplicate}
             onBulkDuplicate={handleBulkDuplicateClick}
             onBulkDefer={handleBulkDeferClick}
+            onBulkJumpToCurrent={handleBulkJumpClick}
+            onActivateCrisisMode={handleActivateCrisisModeClick}
           />
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
             <Typography variant="caption" color="text.secondary">
@@ -638,6 +718,34 @@ export default function TasksPage() {
         onCancel={() => {
           setBulkDeferDialogOpen(false);
           setTasksToDefer([]);
+        }}
+      />
+
+      <JumpToCurrentInstanceDialog
+        open={bulkJumpDialogOpen}
+        previews={jumpPreviews}
+        isApplying={jumpApplying}
+        onConfirm={handleBulkJumpConfirm}
+        onCancel={() => {
+          if (jumpApplying) {
+            return;
+          }
+          setBulkJumpDialogOpen(false);
+          setTasksToJump([]);
+          setJumpPreviews([]);
+        }}
+      />
+
+      <ConfirmDialog
+        open={bulkCrisisDialogOpen}
+        title={crisisModeActive ? 'Replace Crisis Mode Focus' : 'Activate Crisis Mode'}
+        message={`Show only ${tasksForCrisisMode.length} selected task${tasksForCrisisMode.length === 1 ? '' : 's'} across task views until you exit crisis mode?`}
+        confirmLabel={crisisModeActive ? 'Replace Focus' : 'Activate'}
+        confirmColor="warning"
+        onConfirm={handleCrisisModeConfirm}
+        onCancel={() => {
+          setBulkCrisisDialogOpen(false);
+          setTasksForCrisisMode([]);
         }}
       />
 

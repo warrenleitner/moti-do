@@ -1,4 +1,18 @@
-import { Box, Card, CardContent, Typography, LinearProgress, Chip, Stack, Grid, Alert, Divider } from '@mui/material';
+import { useState } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  LinearProgress,
+  Chip,
+  Stack,
+  Grid,
+  Alert,
+  Divider,
+  Button,
+  Snackbar,
+} from '@mui/material';
 import {
   EmojiEvents as XPIcon,
   CheckCircle as CompletedIcon,
@@ -6,17 +20,25 @@ import {
   Star as BadgeIcon,
   Warning as WarningIcon,
   CalendarMonth as CalendarIcon,
+  RestartAlt as ResetIcon,
 } from '@mui/icons-material';
 import { useUserStore, useTaskStore } from '../store';
 import { useUserStats, useSystemStatus } from '../store/userStore';
+import { ConfirmDialog } from '../components/common';
 
 // UI component - tested via integration tests
 /* v8 ignore start */
 export default function Dashboard() {
-  const { user } = useUserStore();
+  const { user, isLoading, resetScoreTracking } = useUserStore();
   const { tasks } = useTaskStore();
   const stats = useUserStats();
   const systemStatus = useSystemStatus();
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [message, setMessage] = useState<{ open: boolean; text: string; severity: 'success' | 'error' }>({
+    open: false,
+    text: '',
+    severity: 'success',
+  });
 
   // Calculate stats from tasks (fallback if API stats not available)
   const completedToday = tasks.filter(
@@ -38,6 +60,25 @@ export default function Dashboard() {
   const currentLevel = stats?.level ?? user?.level ?? 1;
   const xpProgress = totalXP % 100;
   const badgesEarned = stats?.badges_earned ?? user?.badges.length ?? 0;
+
+  const handleResetScoreTracking = async () => {
+    try {
+      await resetScoreTracking();
+      setMessage({
+        open: true,
+        text: 'Score tracking reset. XP, badges, and processing date were reset.',
+        severity: 'success',
+      });
+    } catch (error) {
+      setMessage({
+        open: true,
+        text: error instanceof Error ? error.message : 'Failed to reset score tracking',
+        severity: 'error',
+      });
+    } finally {
+      setResetDialogOpen(false);
+    }
+  };
 
   return (
     <Box>
@@ -121,6 +162,17 @@ export default function Dashboard() {
                   {xpProgress}/100 to Level {currentLevel + 1}
                 </Typography>
               </Box>
+              <Button
+                variant="outlined"
+                color="warning"
+                size="small"
+                startIcon={<ResetIcon />}
+                sx={{ mt: 2 }}
+                onClick={() => setResetDialogOpen(true)}
+                disabled={isLoading}
+              >
+                Reset Score Tracking
+              </Button>
             </CardContent>
           </Card>
         </Grid>
@@ -220,6 +272,29 @@ export default function Dashboard() {
           </Typography>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={resetDialogOpen}
+        title="Reset Score Tracking"
+        message="Reset XP, earned badges, and the processing date back to today? Your tasks will stay in place, but score tracking will start over from zero."
+        confirmLabel="Reset Tracking"
+        confirmColor="warning"
+        onConfirm={handleResetScoreTracking}
+        onCancel={() => setResetDialogOpen(false)}
+      />
+
+      <Snackbar
+        open={message.open}
+        autoHideDuration={4000}
+        onClose={() => setMessage((prev) => ({ ...prev, open: false }))}
+      >
+        <Alert
+          severity={message.severity}
+          onClose={() => setMessage((prev) => ({ ...prev, open: false }))}
+        >
+          {message.text}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

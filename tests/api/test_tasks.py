@@ -1,12 +1,21 @@
 # tests/api/test_tasks.py
+# pylint: disable=too-many-lines
 """
 Tests for the task API endpoints.
 """
 
+import asyncio
+from datetime import date, datetime, timedelta
+from unittest.mock import MagicMock
+
 from fastapi.testclient import TestClient
 
-from motido.api.routers.tasks import parse_subtask_recurrence_mode
-from motido.core.models import SubtaskRecurrenceMode, User
+from motido.api.routers.tasks import (  # pylint: disable=protected-access
+    jump_tasks_to_current_instance,
+    parse_subtask_recurrence_mode,
+)
+from motido.api.schemas import BulkJumpToCurrentInstanceRequest
+from motido.core.models import RecurrenceType, SubtaskRecurrenceMode, Task, User
 
 
 class TestTaskList:
@@ -238,6 +247,241 @@ class TestTaskComplete:
         """Test completing a non-existent task."""
         response = client.post("/api/tasks/nonexistent-id/complete")
         assert response.status_code == 404
+
+
+class TestTaskJumpToCurrentInstance:
+    """Tests for the bulk jump-to-current-instance endpoint."""
+
+    def test_preview_jump_to_current_instance(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Preview should show the updated recurring dates without saving."""
+        start_date = datetime.combine(
+            date.today() - timedelta(days=7), datetime.min.time()
+        )
+        due_date = start_date + timedelta(days=2)
+        habit = Task(
+            title="Catch Up Habit",
+            creation_date=start_date - timedelta(days=7),
+            start_date=start_date,
+            due_date=due_date,
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            recurrence_type=RecurrenceType.STRICT,
+            habit_start_delta=2,
+        )
+        test_user.add_task(habit)
+
+        response = client.post(
+            "/api/tasks/bulk/jump-to-current-instance",
+            json={"task_ids": [habit.id], "dry_run": True},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["updated_count"] == 0
+        assert data["updated_tasks"] == []
+        assert len(data["previews"]) == 1
+        preview = data["previews"][0]
+        assert preview["task_id"] == habit.id
+        assert preview["can_apply"] is True
+        assert preview["current_start_date"].startswith(start_date.date().isoformat())
+        assert preview["current_due_date"].startswith(due_date.date().isoformat())
+        assert preview["new_due_date"].startswith(date.today().isoformat())
+        assert preview["new_start_date"].startswith(
+            (date.today() - timedelta(days=2)).isoformat()
+        )
+
+        refreshed_task = test_user.find_task_by_id(habit.id)
+        assert refreshed_task is not None
+        assert refreshed_task.due_date == due_date
+        assert refreshed_task.start_date == start_date
+
+    def test_apply_jump_to_current_instance(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Applying the jump should persist the updated recurring dates."""
+        start_date = datetime.combine(
+            date.today() - timedelta(days=7), datetime.min.time()
+        )
+        due_date = start_date + timedelta(days=2)
+        habit = Task(
+            title="Catch Up Habit",
+            creation_date=start_date - timedelta(days=7),
+            start_date=start_date,
+            due_date=due_date,
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            recurrence_type=RecurrenceType.STRICT,
+            habit_start_delta=2,
+        )
+        test_user.add_task(habit)
+
+        response = client.post(
+            "/api/tasks/bulk/jump-to-current-instance",
+            json={"task_ids": [habit.id]},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["updated_count"] == 1
+        assert len(data["updated_tasks"]) == 1
+        updated_task = data["updated_tasks"][0]
+        assert updated_task["id"] == habit.id
+        assert updated_task["due_date"].startswith(date.today().isoformat())
+        assert updated_task["start_date"].startswith(
+            (date.today() - timedelta(days=2)).isoformat()
+        )
+
+        refreshed_task = test_user.find_task_by_id(habit.id)
+        assert refreshed_task is not None
+        assert refreshed_task.due_date is not None
+        assert refreshed_task.due_date.date() == date.today()
+        assert refreshed_task.start_date is not None
+        assert refreshed_task.start_date.date() == date.today() - timedelta(days=2)
+        assert refreshed_task.history[-2]["field"] == "start_date"
+        assert refreshed_task.history[-1]["field"] == "due_date"
+
+    def test_jump_to_current_instance_skips_non_recurring_task(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Non-recurring tasks should be reported as skipped in the preview."""
+        task_id = test_user.tasks[0].id
+        response = client.post(
+            "/api/tasks/bulk/jump-to-current-instance",
+            json={"task_ids": [task_id], "dry_run": True},
+        )
+
+        assert response.status_code == 200
+        preview = response.json()["previews"][0]
+        assert preview["can_apply"] is False
+        assert preview["reason"] == "Task is not a recurring task"
+
+    def test_jump_to_current_instance_reports_missing_task(
+        self, client: TestClient
+    ) -> None:
+        """Missing task IDs should be reported and skipped during apply."""
+        response = client.post(
+            "/api/tasks/bulk/jump-to-current-instance",
+            json={"task_ids": ["missing-task-id"]},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["updated_count"] == 0
+        preview = data["previews"][0]
+        assert preview["can_apply"] is False
+        assert preview["reason"] == "Task not found"
+
+    def test_jump_to_current_instance_reports_completed_habit(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Completed recurring tasks should be previewed as non-applicable."""
+        due_date = datetime.combine(date.today(), datetime.min.time())
+        completed_habit = Task(
+            title="Completed Habit",
+            creation_date=due_date - timedelta(days=2),
+            start_date=due_date - timedelta(days=1),
+            due_date=due_date,
+            is_complete=True,
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            recurrence_type=RecurrenceType.STRICT,
+            habit_start_delta=1,
+        )
+        test_user.add_task(completed_habit)
+
+        response = client.post(
+            "/api/tasks/bulk/jump-to-current-instance",
+            json={"task_ids": [completed_habit.id], "dry_run": True},
+        )
+
+        assert response.status_code == 200
+        preview = response.json()["previews"][0]
+        assert preview["can_apply"] is False
+        assert preview["reason"] == "Task is already complete"
+
+    def test_jump_to_current_instance_reports_invalid_schedule(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Invalid recurrence rules should surface a calculation failure."""
+        habit = Task(
+            title="Broken Habit",
+            creation_date=datetime.now() - timedelta(days=2),
+            due_date=datetime.now() - timedelta(days=1),
+            is_habit=True,
+            recurrence_rule="not-a-real-rule",
+            recurrence_type=RecurrenceType.STRICT,
+        )
+        test_user.add_task(habit)
+
+        response = client.post(
+            "/api/tasks/bulk/jump-to-current-instance",
+            json={"task_ids": [habit.id], "dry_run": True},
+        )
+
+        assert response.status_code == 200
+        preview = response.json()["previews"][0]
+        assert preview["can_apply"] is False
+        assert preview["reason"] == "Could not calculate the current recurring instance"
+
+    def test_jump_to_current_instance_reports_already_current(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Tasks already aligned to today should not be changed."""
+        due_date = datetime.combine(date.today(), datetime.min.time())
+        current_habit = Task(
+            title="Current Habit",
+            creation_date=due_date - timedelta(days=7),
+            start_date=due_date - timedelta(days=2),
+            due_date=due_date,
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            recurrence_type=RecurrenceType.STRICT,
+            habit_start_delta=2,
+        )
+        test_user.add_task(current_habit)
+
+        response = client.post(
+            "/api/tasks/bulk/jump-to-current-instance",
+            json={"task_ids": [current_habit.id], "dry_run": True},
+        )
+
+        assert response.status_code == 200
+        preview = response.json()["previews"][0]
+        assert preview["can_apply"] is False
+        assert preview["reason"] == "Task is already on the current instance"
+
+    def test_apply_jump_to_current_instance_skips_task_missing_after_preview(
+        self,
+    ) -> None:
+        """Apply should skip a task that disappears after previewing."""
+        due_date = datetime.combine(
+            date.today() - timedelta(days=1), datetime.min.time()
+        )
+        task = Task(
+            id="habit-1",
+            title="Disappearing Habit",
+            creation_date=due_date - timedelta(days=3),
+            start_date=due_date - timedelta(days=1),
+            due_date=due_date,
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            recurrence_type=RecurrenceType.STRICT,
+            habit_start_delta=1,
+        )
+        user = MagicMock()
+        user.find_task_by_id.side_effect = [task, None]
+        manager = MagicMock()
+        request = BulkJumpToCurrentInstanceRequest(task_ids=[task.id], dry_run=False)
+
+        response = asyncio.run(
+            jump_tasks_to_current_instance(request=request, user=user, manager=manager)
+        )
+
+        assert response.updated_count == 0
+        assert response.updated_tasks == []
+        manager.save_user.assert_not_called()
 
 
 class TestTaskUncomplete:

@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { Box, Container, CircularProgress, Typography, Button, Alert } from '@mui/material';
 import MainLayout from './components/layout/MainLayout';
 import { InstallPrompt } from './components/common/InstallPrompt';
+import CrisisModeBanner from './components/common/CrisisModeBanner';
 import { ProtectedRoute } from './components/auth';
 import {
   Dashboard,
@@ -82,6 +83,7 @@ function App() {
             <Box sx={{ display: 'flex', minHeight: '100vh' }}>
               <MainLayout>
                 <Container maxWidth="xl" sx={{ py: 3, px: { xs: 0, sm: 2 } }}>
+                  <CrisisModeBanner />
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/tasks" element={<TasksPage />} />

@@ -133,6 +133,23 @@ export interface SystemStatus {
   pending_days: number;
 }
 
+export interface JumpToCurrentInstancePreview {
+  task_id: string;
+  title: string;
+  current_start_date: string | null;
+  current_due_date: string | null;
+  new_start_date: string | null;
+  new_due_date: string | null;
+  can_apply: boolean;
+  reason: string | null;
+}
+
+export interface BulkJumpToCurrentInstanceResponse {
+  previews: JumpToCurrentInstancePreview[];
+  updated_tasks: Task[];
+  updated_count: number;
+}
+
 // Scoring configuration types
 export interface AgeFactorConfig {
   enabled: boolean;
@@ -356,6 +373,33 @@ export const taskApi = {
     return response.data;
   },
 
+  // Preview a catch-up jump for recurring tasks
+  previewJumpToCurrentInstance: async (
+    taskIds: string[],
+  ): Promise<BulkJumpToCurrentInstanceResponse> => {
+    const response = await apiClient.post<BulkJumpToCurrentInstanceResponse>(
+      '/tasks/bulk/jump-to-current-instance',
+      {
+        task_ids: taskIds,
+        dry_run: true,
+      },
+    );
+    return response.data;
+  },
+
+  // Apply a catch-up jump for recurring tasks
+  jumpToCurrentInstance: async (
+    taskIds: string[],
+  ): Promise<BulkJumpToCurrentInstanceResponse> => {
+    const response = await apiClient.post<BulkJumpToCurrentInstanceResponse>(
+      '/tasks/bulk/jump-to-current-instance',
+      {
+        task_ids: taskIds,
+      },
+    );
+    return response.data;
+  },
+
   // Subtask operations
   addSubtask: async (taskId: string, text: string): Promise<Task> => {
     const response = await apiClient.post<Task>(`/tasks/${taskId}/subtasks`, { text });
@@ -557,6 +601,12 @@ export const systemApi = {
   // Toggle vacation mode
   toggleVacation: async (enable: boolean): Promise<{ vacation_mode: boolean }> => {
     const response = await apiClient.post('/system/vacation', null, { params: { enable } });
+    return response.data;
+  },
+
+  // Reset score tracking and align the processing date with today
+  resetScoreTracking: async (): Promise<SystemStatus> => {
+    const response = await apiClient.post<SystemStatus>('/system/reset-score-tracking');
     return response.data;
   },
 };

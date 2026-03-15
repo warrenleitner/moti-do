@@ -23,6 +23,7 @@ vi.mock('../services/api', () => ({
     getStatus: vi.fn(),
     advanceDate: vi.fn(),
     toggleVacation: vi.fn(),
+    resetScoreTracking: vi.fn(),
   },
 }));
 
@@ -861,6 +862,72 @@ describe('userStore', () => {
 
       const state = useUserStore.getState();
       expect(state.error).toBe('Vacation error');
+      expect(state.isLoading).toBe(false);
+    });
+  });
+
+  describe('API Actions - resetScoreTracking', () => {
+    it('should reset score tracking and reload user data', async () => {
+      const profile: UserProfile = {
+        username: 'testuser',
+        total_xp: 0,
+        level: 1,
+        last_processed_date: '2024-01-09',
+        vacation_mode: false,
+      };
+      const stats: UserStats = {
+        total_tasks: 3,
+        completed_tasks: 1,
+        pending_tasks: 2,
+        habits_count: 1,
+        total_xp: 0,
+        level: 1,
+        badges_earned: 0,
+        current_streak: 0,
+        best_streak: 0,
+      };
+      const status: SystemStatus = {
+        last_processed_date: '2024-01-09',
+        current_date: '2024-01-09',
+        vacation_mode: false,
+        pending_days: 0,
+      };
+
+      vi.mocked(systemApi.resetScoreTracking).mockResolvedValue(status);
+      vi.mocked(userApi.getProfile).mockResolvedValue(profile);
+      vi.mocked(userApi.getStats).mockResolvedValue(stats);
+      vi.mocked(userApi.getBadges).mockResolvedValue([]);
+      vi.mocked(userApi.getTags).mockResolvedValue([]);
+      vi.mocked(userApi.getProjects).mockResolvedValue([]);
+      vi.mocked(systemApi.getStatus).mockResolvedValue(status);
+
+      await act(async () => {
+        await useUserStore.getState().resetScoreTracking();
+      });
+
+      const state = useUserStore.getState();
+      expect(systemApi.resetScoreTracking).toHaveBeenCalled();
+      expect(state.user?.xp).toBe(0);
+      expect(state.user?.badges).toEqual([]);
+      expect(state.systemStatus).toEqual(status);
+      expect(state.stats).toEqual(stats);
+      expect(state.isLoading).toBe(false);
+      expect(state.error).toBeNull();
+    });
+
+    it('should handle reset score tracking error', async () => {
+      vi.mocked(systemApi.resetScoreTracking).mockRejectedValue(
+        new Error('Reset error'),
+      );
+
+      await expect(async () => {
+        await act(async () => {
+          await useUserStore.getState().resetScoreTracking();
+        });
+      }).rejects.toThrow('Reset error');
+
+      const state = useUserStore.getState();
+      expect(state.error).toBe('Reset error');
       expect(state.isLoading).toBe(false);
     });
   });

@@ -1,5 +1,5 @@
 # motido/api/routers/tasks.py
-# pylint: disable=import-outside-toplevel,too-many-arguments,too-many-positional-arguments,too-many-branches
+# pylint: disable=import-outside-toplevel,too-many-arguments,too-many-positional-arguments,too-many-branches,too-many-lines
 """
 Task management API endpoints.
 """
@@ -12,7 +12,10 @@ from fastapi import APIRouter, HTTPException, status
 
 from motido.api.deps import CurrentUser, ManagerDep
 from motido.api.schemas import (
+    BulkJumpToCurrentInstanceRequest,
+    BulkJumpToCurrentInstanceResponse,
     HistoryEntrySchema,
+    JumpToCurrentInstancePreview,
     SubtaskCreate,
     SubtaskSchema,
     TaskCompletionResponse,
@@ -401,6 +404,80 @@ def apply_task_updates(  # pylint: disable=too-many-branches,too-many-statements
         task.defer_until = task_data.defer_until
 
 
+def _build_jump_to_current_instance_preview(
+    task_id: str,
+    user: User,
+    current_date: date_type,
+) -> JumpToCurrentInstancePreview:
+    """
+    Build preview data for the jump-to-current-instance bulk action.
+    """
+    from motido.core.recurrence import calculate_current_instance_dates
+
+    task = user.find_task_by_id(task_id)
+    if not task:
+        return JumpToCurrentInstancePreview(
+            task_id=task_id,
+            title="Unknown task",
+            can_apply=False,
+            reason="Task not found",
+        )
+
+    if not task.is_habit or not task.recurrence_rule:
+        return JumpToCurrentInstancePreview(
+            task_id=task.id,
+            title=task.title,
+            current_start_date=task.start_date,
+            current_due_date=task.due_date,
+            can_apply=False,
+            reason="Task is not a recurring task",
+        )
+
+    if task.is_complete:
+        return JumpToCurrentInstancePreview(
+            task_id=task.id,
+            title=task.title,
+            current_start_date=task.start_date,
+            current_due_date=task.due_date,
+            can_apply=False,
+            reason="Task is already complete",
+        )
+
+    updated_dates = calculate_current_instance_dates(task, current_date)
+    if updated_dates is None:
+        return JumpToCurrentInstancePreview(
+            task_id=task.id,
+            title=task.title,
+            current_start_date=task.start_date,
+            current_due_date=task.due_date,
+            can_apply=False,
+            reason="Could not calculate the current recurring instance",
+        )
+
+    new_start_date, new_due_date = updated_dates
+    if task.start_date == new_start_date and task.due_date == new_due_date:
+        return JumpToCurrentInstancePreview(
+            task_id=task.id,
+            title=task.title,
+            current_start_date=task.start_date,
+            current_due_date=task.due_date,
+            new_start_date=new_start_date,
+            new_due_date=new_due_date,
+            can_apply=False,
+            reason="Task is already on the current instance",
+        )
+
+    return JumpToCurrentInstancePreview(
+        task_id=task.id,
+        title=task.title,
+        current_start_date=task.start_date,
+        current_due_date=task.due_date,
+        new_start_date=new_start_date,
+        new_due_date=new_due_date,
+        can_apply=True,
+    )
+
+
 @router.put("/{task_id}", response_model=TaskResponse)
 async def update_task(
     task_id: str,
@@ -579,6 +656,70 @@ async def defer_task(
     return TaskDeferResponse(
         task=task_to_response(task, all_tasks, config, effective_date),
         deferred_until=defer_date,
+    )
+
+
+@router.post(
+    "/bulk/jump-to-current-instance",
+    response_model=BulkJumpToCurrentInstanceResponse,
+)
+async def jump_tasks_to_current_instance(
+    request: BulkJumpToCurrentInstanceRequest,
+    user: CurrentUser,
+    manager: ManagerDep,
+) -> BulkJumpToCurrentInstanceResponse:
+    """
+    Preview or apply a catch-up jump for selected recurring tasks.
+
+    The jump realigns each selected recurring task to the first scheduled
+    occurrence whose due date is today or later, while preserving the
+    original start-date offset for tasks that become visible before they are
+    due.
+    """
+    current_date = date_type.today()
+    previews = [
+        _build_jump_to_current_instance_preview(task_id, user, current_date)
+        for task_id in request.task_ids
+    ]
+
+    if request.dry_run:
+        return BulkJumpToCurrentInstanceResponse(previews=previews)
+
+    updated_tasks: list[Task] = []
+    preview_by_id = {
+        preview.task_id: preview for preview in previews if preview.can_apply
+    }
+
+    for task_id in request.task_ids:
+        preview = preview_by_id.get(task_id)
+        if preview is None:
+            continue
+
+        task = user.find_task_by_id(task_id)
+        if task is None:
+            continue
+
+        record_history(task, "start_date", task.start_date, preview.new_start_date)
+        record_history(task, "due_date", task.due_date, preview.new_due_date)
+        task.start_date = preview.new_start_date
+        task.due_date = preview.new_due_date
+        updated_tasks.append(task)
+
+    if updated_tasks:
+        manager.save_user(user)
+
+    config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
+    all_tasks = {task.id: task for task in user.tasks}
+    effective_date = date_type.today()
+
+    return BulkJumpToCurrentInstanceResponse(
+        previews=previews,
+        updated_tasks=[
+            task_to_response(task, all_tasks, config, effective_date)
+            for task in updated_tasks
+        ],
+        updated_count=len(updated_tasks),
     )
 
 

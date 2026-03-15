@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Box, Typography, Snackbar, Alert } from '@mui/material';
 import { TaskCalendar } from '../components/calendar';
 import { TaskForm } from '../components/tasks';
-import { useTaskStore } from '../store';
+import { useTaskStore, useVisibleTasks } from '../store';
 import type { Task } from '../types';
 import { Priority, Difficulty, Duration } from '../types';
 
@@ -10,6 +10,7 @@ import { Priority, Difficulty, Duration } from '../types';
 /* v8 ignore start */
 export default function CalendarPage() {
   const { tasks, updateTask, addTask, saveTask, fetchTasks, hasCompletedData } = useTaskStore();
+  const visibleTasks = useVisibleTasks(tasks);
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTaskDate, setNewTaskDate] = useState<Date | null>(null);
@@ -119,7 +120,7 @@ export default function CalendarPage() {
       </Typography>
 
       <TaskCalendar
-        tasks={tasks}
+        tasks={visibleTasks}
         onUpdateTask={handleUpdateTask}
         onSelectTask={handleSelectTask}
         onCreateTask={handleCreateTask}
