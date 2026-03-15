@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Box, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton, Link as MuiLink, Typography, Chip } from '@mui/material';
 import {
-  Add,
-  ViewList,
-  TableChart,
-  CalendarMonth as CalendarIcon,
-  FilterList,
-  FilterListOff,
-} from '@mui/icons-material';
+  Box,
+  Button,
+  Group,
+  Text,
+  Badge,
+  ActionIcon,
+  notifications,
+} from '../ui';
+import {
+  IconPlus,
+  IconList,
+  IconTable,
+  IconCalendar,
+  IconFilter,
+} from '../ui/icons';
 import { AxiosError } from 'axios';
 import { TaskList, TaskForm } from '../components/tasks';
 import TaskTable from '../components/tasks/TaskTable';
@@ -93,17 +100,6 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error';
-    nextInstanceId?: string;
-    nextDueDate?: string;
-  }>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [tasksToDelete, setTasksToDelete] = useState<string[]>([]);
@@ -145,11 +141,13 @@ export default function TasksPage() {
     // Intentionally updating state in effect based on external data
   }, [filteredTasks.length]);
 
-  const handleViewModeChange = (_: React.MouseEvent<HTMLElement>, newMode: 'list' | 'table' | null) => {
-    if (newMode !== null) {
-      setViewMode(newMode);
-      localStorage.setItem('taskViewMode', newMode);
-    }
+  const showNotification = (message: string, color: 'green' | 'red', autoClose = 3000) => {
+    notifications.show({ message, color, autoClose });
+  };
+
+  const handleViewModeChange = (newMode: string) => {
+    setViewMode(newMode as 'list' | 'table');
+    localStorage.setItem('taskViewMode', newMode);
   };
 
   const handleToggleFilters = () => {
@@ -179,16 +177,16 @@ export default function TasksPage() {
       if (editingTask) {
         // Update existing task via API
         await saveTask(editingTask.id, taskData);
-        setSnackbar({ open: true, message: 'Task updated successfully', severity: 'success' });
+        showNotification('Task updated successfully', 'green');
       } else {
         // Create new task via API
         await createTask(taskData);
-        setSnackbar({ open: true, message: 'Task created successfully', severity: 'success' });
+        showNotification('Task created successfully', 'green');
       }
       setFormOpen(false);
       setEditingTask(null);
     } catch (error) {
-      setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to save task'), severity: 'error' });
+      showNotification(getErrorMessage(error, 'Failed to save task'), 'red');
     }
   };
 
@@ -196,7 +194,7 @@ export default function TasksPage() {
     try {
       await saveTask(taskId, updates);
     } catch (error) {
-      setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to update task'), severity: 'error' });
+      showNotification(getErrorMessage(error, 'Failed to update task'), 'red');
       throw error; // Re-throw to let EditableCell handle rollback
     }
   };
@@ -209,7 +207,7 @@ export default function TasksPage() {
     try {
       if (task.is_complete) {
         await uncompleteTask(taskId);
-        setSnackbar({ open: true, message: 'Task marked as incomplete', severity: 'success' });
+        showNotification('Task marked as incomplete', 'green');
       } else {
         const response = await completeTask(taskId);
         // Refresh user stats to update XP display
@@ -218,26 +216,46 @@ export default function TasksPage() {
         // Show next instance info for recurring tasks
         if (response.next_instance && response.next_instance.due_date) {
           if (crisisModeActive) {
-            setSnackbar({
-              open: true,
-              message: 'Task completed! XP earned. The next recurring instance was created and hidden until you exit crisis mode.',
-              severity: 'success',
-            });
+            showNotification(
+              'Task completed! XP earned. The next recurring instance was created and hidden until you exit crisis mode.',
+              'green',
+            );
           } else {
-            setSnackbar({
-              open: true,
-              message: 'Task completed! XP earned.',
-              severity: 'success',
-              nextInstanceId: response.next_instance.id,
-              nextDueDate: response.next_instance.due_date,
+            const nextId = response.next_instance.id;
+            const nextDue = response.next_instance.due_date;
+            notifications.show({
+              message: (
+                <>
+                  Task completed! XP earned. Next due:{' '}
+                  <Text
+                    component="button"
+                    size="sm"
+                    fw={700}
+                    td="underline"
+                    style={{ cursor: 'pointer', border: 'none', background: 'none', padding: 0 }}
+                    onClick={() => {
+                      const { tasks: storeTasks } = useTaskStore.getState();
+                      const nextTask = storeTasks.find((t) => t.id === nextId);
+                      if (nextTask) {
+                        setEditingTask(nextTask);
+                        setFormOpen(true);
+                      }
+                    }}
+                  >
+                    {formatNextDueDate(nextDue)}
+                  </Text>
+                </>
+              ),
+              color: 'green',
+              autoClose: 6000,
             });
           }
         } else {
-          setSnackbar({ open: true, message: 'Task completed! XP earned.', severity: 'success' });
+          showNotification('Task completed! XP earned.', 'green');
         }
       }
     } catch (error) {
-      setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to update task'), severity: 'error' });
+      showNotification(getErrorMessage(error, 'Failed to update task'), 'red');
     }
   };
 
@@ -250,9 +268,9 @@ export default function TasksPage() {
     if (taskToDelete) {
       try {
         await deleteTask(taskToDelete);
-        setSnackbar({ open: true, message: 'Task deleted', severity: 'success' });
+        showNotification('Task deleted', 'green');
       } catch (error) {
-        setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to delete task'), severity: 'error' });
+        showNotification(getErrorMessage(error, 'Failed to delete task'), 'red');
       }
     }
     setDeleteDialogOpen(false);
@@ -273,37 +291,25 @@ export default function TasksPage() {
     try {
       await saveTask(taskId, { subtasks: updatedSubtasks });
     } catch (error) {
-      setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to update subtask'), severity: 'error' });
+      showNotification(getErrorMessage(error, 'Failed to update subtask'), 'red');
     }
   };
 
   const handleUndo = async (taskId: string) => {
     try {
       await undoTask(taskId);
-      setSnackbar({ open: true, message: 'Change undone', severity: 'success' });
+      showNotification('Change undone', 'green');
     } catch (error) {
-      setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to undo change'), severity: 'error' });
+      showNotification(getErrorMessage(error, 'Failed to undo change'), 'red');
     }
   };
 
   const handleDuplicate = async (taskId: string) => {
     try {
       await duplicateTask(taskId);
-      setSnackbar({ open: true, message: 'Task duplicated successfully', severity: 'success' });
+      showNotification('Task duplicated successfully', 'green');
     } catch (error) {
-      setSnackbar({ open: true, message: getErrorMessage(error, 'Failed to duplicate task'), severity: 'error' });
-    }
-  };
-
-  const handleOpenNextInstance = () => {
-    if (snackbar.nextInstanceId) {
-      const { tasks } = useTaskStore.getState();
-      const nextTask = tasks.find((t) => t.id === snackbar.nextInstanceId);
-      if (nextTask) {
-        setEditingTask(nextTask);
-        setFormOpen(true);
-        setSnackbar((prev) => ({ ...prev, open: false }));
-      }
+      showNotification(getErrorMessage(error, 'Failed to duplicate task'), 'red');
     }
   };
 
@@ -347,11 +353,7 @@ export default function TasksPage() {
     }
     if (successCount > 0) {
       await fetchStats();
-      setSnackbar({
-        open: true,
-        message: `Completed ${successCount} task${successCount > 1 ? 's' : ''}!`,
-        severity: 'success',
-      });
+      showNotification(`Completed ${successCount} task${successCount > 1 ? 's' : ''}!`, 'green');
     }
     setSelectedTasks([]);
     setBulkCompleteDialogOpen(false);
@@ -374,11 +376,7 @@ export default function TasksPage() {
       }
     }
     if (successCount > 0) {
-      setSnackbar({
-        open: true,
-        message: `Deleted ${successCount} task${successCount > 1 ? 's' : ''}`,
-        severity: 'success',
-      });
+      showNotification(`Deleted ${successCount} task${successCount > 1 ? 's' : ''}`, 'green');
     }
     setSelectedTasks([]);
     setBulkDeleteDialogOpen(false);
@@ -401,11 +399,7 @@ export default function TasksPage() {
       }
     }
     if (successCount > 0) {
-      setSnackbar({
-        open: true,
-        message: `Duplicated ${successCount} task${successCount > 1 ? 's' : ''}`,
-        severity: 'success',
-      });
+      showNotification(`Duplicated ${successCount} task${successCount > 1 ? 's' : ''}`, 'green');
     }
     setSelectedTasks([]);
     setBulkDuplicateDialogOpen(false);
@@ -424,11 +418,7 @@ export default function TasksPage() {
       setJumpPreviews(response.previews);
       setBulkJumpDialogOpen(true);
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: getErrorMessage(error, 'Failed to preview jump to current instance'),
-        severity: 'error',
-      });
+      showNotification(getErrorMessage(error, 'Failed to preview jump to current instance'), 'red');
     }
   };
 
@@ -446,11 +436,7 @@ export default function TasksPage() {
       }
     }
     if (successCount > 0) {
-      setSnackbar({
-        open: true,
-        message: `Deferred ${successCount} task${successCount > 1 ? 's' : ''}`,
-        severity: 'success',
-      });
+      showNotification(`Deferred ${successCount} task${successCount > 1 ? 's' : ''}`, 'green');
     }
     setSelectedTasks([]);
     setBulkDeferDialogOpen(false);
@@ -461,24 +447,18 @@ export default function TasksPage() {
     setJumpApplying(true);
     try {
       const response = await jumpToCurrentInstance(tasksToJump);
-      setSnackbar({
-        open: true,
-        message:
-          response.updated_count > 0
-            ? `Moved ${response.updated_count} recurring task${response.updated_count === 1 ? '' : 's'} to the current instance`
-            : 'No selected tasks needed to move',
-        severity: 'success',
-      });
+      showNotification(
+        response.updated_count > 0
+          ? `Moved ${response.updated_count} recurring task${response.updated_count === 1 ? '' : 's'} to the current instance`
+          : 'No selected tasks needed to move',
+        'green',
+      );
       setSelectedTasks([]);
       setBulkJumpDialogOpen(false);
       setTasksToJump([]);
       setJumpPreviews([]);
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: getErrorMessage(error, 'Failed to jump tasks to the current instance'),
-        severity: 'error',
-      });
+      showNotification(getErrorMessage(error, 'Failed to jump tasks to the current instance'), 'red');
     } finally {
       setJumpApplying(false);
     }
@@ -494,11 +474,10 @@ export default function TasksPage() {
     setSelectedTasks([]);
     setBulkCrisisDialogOpen(false);
     setTasksForCrisisMode([]);
-    setSnackbar({
-      open: true,
-      message: `Crisis mode activated for ${tasksForCrisisMode.length} task${tasksForCrisisMode.length === 1 ? '' : 's'}`,
-      severity: 'success',
-    });
+    showNotification(
+      `Crisis mode activated for ${tasksForCrisisMode.length} task${tasksForCrisisMode.length === 1 ? '' : 's'}`,
+      'green',
+    );
   };
 
   // Calculate current processing date (last_processed_date + 1 day)
@@ -514,57 +493,56 @@ export default function TasksPage() {
   return (
     <Box>
       {/* Processing date indicator */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-        <CalendarIcon fontSize="small" color="primary" />
-        <Typography variant="body2" color="text.secondary">
+      <Group gap="xs" mb="sm" wrap="wrap">
+        <IconCalendar size={16} color="var(--mantine-color-blue-6)" />
+        <Text size="sm" c="dimmed">
           Processing:
-        </Typography>
-        <Chip
-          label={currentProcessingDate || 'Not started'}
-          size="small"
-          color="primary"
-          variant="outlined"
-        />
+        </Text>
+        <Badge size="sm" variant="outline" color="blue">
+          {currentProcessingDate || 'Not started'}
+        </Badge>
         {systemStatus && systemStatus.pending_days > 0 && (
-          <Chip
-            label={`${systemStatus.pending_days} day${systemStatus.pending_days > 1 ? 's' : ''} behind`}
-            size="small"
-            color="error"
-            variant="filled"
-          />
+          <Badge size="sm" color="red">
+            {systemStatus.pending_days} day{systemStatus.pending_days > 1 ? 's' : ''} behind
+          </Badge>
         )}
-      </Box>
+      </Group>
 
       {/* Header actions with quick-add on the same line */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2, flexWrap: 'wrap' }}>
-        {/* Quick-add box takes available space; full width on mobile to avoid overflow */}
-        <Box sx={{ flex: 1, minWidth: { xs: '100%', sm: 200 } }}>
+      <Group mb="lg" gap="md" wrap="wrap">
+        {/* Quick-add box takes available space */}
+        <Box style={{ flex: 1, minWidth: 200 }}>
           <QuickAddBox />
         </Box>
-        <ToggleButtonGroup
-          value={viewMode}
-          exclusive
-          onChange={handleViewModeChange}
-          size="small"
-          aria-label="view mode"
-        >
-          <ToggleButton value="list" aria-label="list view">
-            <ViewList />
-          </ToggleButton>
-          <ToggleButton value="table" aria-label="table view">
-            <TableChart />
-          </ToggleButton>
-        </ToggleButtonGroup>
+        <Group gap={4}>
+          <ActionIcon
+            variant={viewMode === 'list' ? 'filled' : 'default'}
+            size="md"
+            onClick={() => handleViewModeChange('list')}
+            aria-label="list view"
+            aria-pressed={viewMode === 'list'}
+          >
+            <IconList size={16} />
+          </ActionIcon>
+          <ActionIcon
+            variant={viewMode === 'table' ? 'filled' : 'default'}
+            size="md"
+            onClick={() => handleViewModeChange('table')}
+            aria-label="table view"
+            aria-pressed={viewMode === 'table'}
+          >
+            <IconTable size={16} />
+          </ActionIcon>
+        </Group>
         <Button
-          variant="contained"
-          startIcon={<Add />}
+          leftSection={<IconPlus size={16} />}
           onClick={handleCreateNew}
           disabled={isLoading}
           data-testid="add-task-fab"
         >
           New Task
         </Button>
-      </Box>
+      </Group>
 
       {/* Task list or table based on view mode */}
       {viewMode === 'list' ? (
@@ -579,16 +557,16 @@ export default function TasksPage() {
         />
       ) : (
         <>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: filtersVisible ? 0 : 2 }}>
+          <Group justify="flex-end" mb={filtersVisible ? 0 : 'sm'}>
             <Button
-              variant="text"
-              size="small"
-              startIcon={filtersVisible ? <FilterListOff /> : <FilterList />}
+              variant="subtle"
+              size="xs"
+              leftSection={<IconFilter size={16} />}
               onClick={handleToggleFilters}
             >
               {filtersVisible ? 'Hide Filters' : 'Show Filters'}
             </Button>
-          </Box>
+          </Group>
           {filtersVisible && (
             <FilterBar
               search={filters.search || ''}
@@ -630,14 +608,14 @@ export default function TasksPage() {
             onBulkJumpToCurrent={handleBulkJumpClick}
             onActivateCrisisMode={handleActivateCrisisModeClick}
           />
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
-            <Typography variant="caption" color="text.secondary">
+          <Group justify="space-between" mt="sm">
+            <Text size="xs" c="dimmed">
               Showing {visibleTasks.length} of {filteredTasks.length} tasks
-            </Typography>
-            <Button variant="outlined" size="small" onClick={handleLoadMore} disabled={!hasMoreTasks}>
+            </Text>
+            <Button variant="outline" size="xs" onClick={handleLoadMore} disabled={!hasMoreTasks}>
               Load more
             </Button>
-          </Box>
+          </Group>
         </>
       )}
 
@@ -748,30 +726,6 @@ export default function TasksPage() {
           setTasksForCrisisMode([]);
         }}
       />
-
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={snackbar.nextDueDate ? 6000 : 3000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}>
-          {snackbar.message}
-          {snackbar.nextDueDate && (
-            <>
-              {' Next due: '}
-              <MuiLink
-                component="button"
-                variant="body2"
-                onClick={handleOpenNextInstance}
-                sx={{ verticalAlign: 'baseline', fontWeight: 'bold' }}
-              >
-                {formatNextDueDate(snackbar.nextDueDate)}
-              </MuiLink>
-            </>
-          )}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

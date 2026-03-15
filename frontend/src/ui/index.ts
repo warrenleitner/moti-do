@@ -27,6 +27,7 @@ export {
   Button,
   Checkbox,
   CloseButton,
+  ColorInput,
   NumberInput,
   PasswordInput,
   Radio,
@@ -61,7 +62,7 @@ export { Drawer, Menu, Modal, Popover, Tooltip } from '@mantine/core';
 export { Burger, NavLink, Tabs } from '@mantine/core';
 
 // Miscellaneous
-export { Collapse, Divider, Paper, ScrollArea, Transition } from '@mantine/core';
+export { Collapse, Divider, Paper, ScrollArea, Transition, VisuallyHidden } from '@mantine/core';
 
 // Dates
 export { DatePickerInput, DateTimePicker } from '@mantine/dates';

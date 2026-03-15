@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Box, Button, Snackbar, Alert } from '@mui/material';
-import { Add } from '@mui/icons-material';
+import { Box, Button, Group, notifications } from '../ui';
+import { IconPlus } from '../ui/icons';
 import { HabitList } from '../components/habits';
 import { TaskForm } from '../components/tasks';
 import { ConfirmDialog } from '../components/common';
@@ -17,11 +17,10 @@ export default function HabitsPage() {
   const [editingHabit, setEditingHabit] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+
+  const showNotification = (message: string, color: 'green' | 'red') => {
+    notifications.show({ message, color, autoClose: 3000 });
+  };
 
   // Filter to only habits
   const habits = visibleTasks.filter((t) => t.is_habit);
@@ -39,7 +38,7 @@ export default function HabitsPage() {
   const handleSave = (taskData: Partial<Task>) => {
     if (editingHabit) {
       updateTask(editingHabit.id, taskData);
-      setSnackbar({ open: true, message: 'Habit updated successfully', severity: 'success' });
+      showNotification('Habit updated successfully', 'green');
     } else {
       const newHabit: Task = {
         id: crypto.randomUUID(),
@@ -64,7 +63,7 @@ export default function HabitsPage() {
         ...taskData,
       };
       addTask(newHabit);
-      setSnackbar({ open: true, message: 'Habit created successfully', severity: 'success' });
+      showNotification('Habit created successfully', 'green');
     }
     setFormOpen(false);
     setEditingHabit(null);
@@ -85,13 +84,10 @@ export default function HabitsPage() {
         streak_best: Math.max(habit.streak_best, newStreak),
       });
 
-      setSnackbar({
-        open: true,
-        message: wasComplete
-          ? 'Habit marked as incomplete'
-          : `Habit completed! Streak: ${newStreak} days`,
-        severity: 'success',
-      });
+      showNotification(
+        wasComplete ? 'Habit marked as incomplete' : `Habit completed! Streak: ${newStreak} days`,
+        'green',
+      );
     }
   };
 
@@ -103,7 +99,7 @@ export default function HabitsPage() {
   const handleConfirmDelete = () => {
     if (habitToDelete) {
       removeTask(habitToDelete);
-      setSnackbar({ open: true, message: 'Habit deleted successfully', severity: 'success' });
+      showNotification('Habit deleted successfully', 'green');
     }
     setDeleteDialogOpen(false);
     setHabitToDelete(null);
@@ -118,11 +114,11 @@ export default function HabitsPage() {
   return (
     <Box>
       {/* Header actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-        <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew}>
+      <Group justify="flex-end" mb="lg">
+        <Button leftSection={<IconPlus size={16} />} onClick={handleCreateNew}>
           New Habit
         </Button>
-      </Box>
+      </Group>
 
       {/* Habit list */}
       <HabitList
@@ -158,17 +154,6 @@ export default function HabitsPage() {
           setHabitToDelete(null);
         }}
       />
-
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

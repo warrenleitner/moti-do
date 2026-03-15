@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Snackbar, Alert } from '@mui/material';
+import { Box, Text, notifications } from '../ui';
 import { TaskCalendar } from '../components/calendar';
 import { TaskForm } from '../components/tasks';
 import { useTaskStore, useVisibleTasks } from '../store';
@@ -14,11 +14,10 @@ export default function CalendarPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTaskDate, setNewTaskDate] = useState<Date | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+
+  const showNotification = (message: string, color: 'green' | 'red') => {
+    notifications.show({ message, color, autoClose: 3000 });
+  };
 
   // Fetch tasks on mount (including completed for full calendar view)
   useEffect(() => {
@@ -45,9 +44,9 @@ export default function CalendarPage() {
       // Update existing task
       try {
         await saveTask(editingTask.id, taskData);
-        setSnackbar({ open: true, message: 'Task updated successfully', severity: 'success' });
+        showNotification('Task updated successfully', 'green');
       } catch {
-        setSnackbar({ open: true, message: 'Failed to update task', severity: 'error' });
+        showNotification('Failed to update task', 'red');
       }
     } else {
       // Create new task
@@ -74,7 +73,7 @@ export default function CalendarPage() {
         ...taskData,
       };
       addTask(newTask);
-      setSnackbar({ open: true, message: 'Task created successfully', severity: 'success' });
+      showNotification('Task created successfully', 'green');
     }
     setFormOpen(false);
     setEditingTask(null);
@@ -83,11 +82,7 @@ export default function CalendarPage() {
 
   const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
     updateTask(taskId, updates);
-    setSnackbar({
-      open: true,
-      message: updates.is_complete ? 'Task completed!' : 'Task updated',
-      severity: 'success',
-    });
+    showNotification(updates.is_complete ? 'Task completed!' : 'Task updated', 'green');
   };
 
   // Create a default task with the selected date pre-filled (for new tasks only)
@@ -115,9 +110,9 @@ export default function CalendarPage() {
 
   return (
     <Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Text size="sm" c="dimmed" mb="md">
         View and manage tasks by their due dates. Click on a task to edit it, or click on a date to create a new task. Drag tasks to reschedule.
-      </Typography>
+      </Text>
 
       <TaskCalendar
         tasks={visibleTasks}
@@ -139,17 +134,6 @@ export default function CalendarPage() {
         }}
         allTasks={tasks}
       />
-
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }
