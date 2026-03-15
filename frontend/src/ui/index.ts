@@ -23,6 +23,7 @@ export { Text, Title } from '@mantine/core';
 // Inputs
 export {
   ActionIcon,
+  Autocomplete,
   Button,
   Checkbox,
   CloseButton,
@@ -69,7 +70,7 @@ export { DatePickerInput, DateTimePicker } from '@mantine/dates';
 export { notifications } from '@mantine/notifications';
 
 // Hooks (re-export commonly used ones)
-export { useDisclosure, useMediaQuery } from '@mantine/hooks';
+export { useClickOutside, useDisclosure, useMediaQuery } from '@mantine/hooks';
 
 // App shell (used by MainLayout)
 export { AppShell } from '@mantine/core';

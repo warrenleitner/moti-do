@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Box, ClickAwayListener, CircularProgress } from '@mui/material';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Box, Loader, useClickOutside } from '../../ui';
 import type { Task } from '../../types/models';
 
 export interface EditorProps<T> {
@@ -31,7 +31,7 @@ export function EditableCell<T>({
   const [isEditing, setIsEditing] = useState(false);
   const [pendingValue, setPendingValue] = useState<T>(value);
   const [isSaving, setIsSaving] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Sync pendingValue when value changes externally
   useEffect(() => {
@@ -79,13 +79,15 @@ export function EditableCell<T>({
     setPendingValue(newValue);
   }, []);
 
-  const handleClickAway = useCallback(() => {
+  const handleClickOutside = useCallback(() => {
     // isSaving branch is a race condition guard - tested via integration tests
     /* v8 ignore next 3 */
     if (isEditing && !isSaving) {
       handleSave();
     }
   }, [isEditing, isSaving, handleSave]);
+
+  const clickOutsideRef = useClickOutside<HTMLDivElement>(handleClickOutside);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -100,51 +102,46 @@ export function EditableCell<T>({
 
   if (isEditing) {
     return (
-      <ClickAwayListener onClickAway={handleClickAway}>
-        <Box
-          ref={containerRef}
-          onKeyDown={handleKeyDown}
-          sx={{ position: 'relative', minWidth: 120 }}
-          data-testid="editable-cell-editor"
-        >
-          {renderEditor({
-            value: pendingValue,
-            onChange: handleChange,
-            onClose: handleClose,
-            onSave: handleSave,
-          })}
-          {isSaving && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: '50%',
-                right: 8,
-                transform: 'translateY(-50%)',
-              }}
-            >
-              <CircularProgress size={16} />
-            </Box>
-          )}
-        </Box>
-      </ClickAwayListener>
+      <Box
+        ref={clickOutsideRef}
+        onKeyDown={handleKeyDown}
+        style={{ position: 'relative', minWidth: 120 }}
+        data-testid="editable-cell-editor"
+      >
+        {renderEditor({
+          value: pendingValue,
+          onChange: handleChange,
+          onClose: handleClose,
+          onSave: handleSave,
+        })}
+        {isSaving && (
+          <Box
+            style={{
+              position: 'absolute',
+              top: '50%',
+              right: 8,
+              transform: 'translateY(-50%)',
+            }}
+          >
+            <Loader size={16} />
+          </Box>
+        )}
+      </Box>
     );
   }
 
   return (
     <Box
       onClick={handleClick}
-      sx={{
+      onMouseEnter={() => !disabled && setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
         cursor: disabled ? 'default' : 'pointer',
-        '&:hover': disabled
-          ? {}
-          : {
-              backgroundColor: 'action.hover',
-              borderRadius: 1,
-            },
         padding: '2px 4px',
         margin: '-2px -4px',
-        borderRadius: 1,
+        borderRadius: 4,
         transition: 'background-color 0.15s ease',
+        backgroundColor: isHovered && !disabled ? 'var(--mantine-color-gray-1)' : undefined,
       }}
       data-testid="editable-cell-display"
     >

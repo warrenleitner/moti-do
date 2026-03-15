@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Box } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { Box, DatePickerInput } from '../../../ui';
 
 export interface DateEditorProps {
   value: string | undefined;
@@ -13,7 +10,7 @@ export interface DateEditorProps {
 }
 
 /**
- * Inline date editor using MUI DatePicker.
+ * Inline date editor using Mantine DatePickerInput.
  * Opens immediately and auto-saves on date selection.
  */
 export function DateEditor({
@@ -57,30 +54,17 @@ export function DateEditor({
     [onChange, onSave]
   );
 
-  const handleClose = useCallback(() => {
-    onClose();
-  }, [onClose]);
-
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box ref={containerRef} sx={{ minWidth: 140 }} data-testid="date-editor">
-        <DatePicker
-          label={label}
-          value={dateValue}
-          onChange={handleChange}
-          onClose={handleClose}
-          slotProps={{
-            textField: {
-              size: 'small',
-              fullWidth: true,
-            },
-            actionBar: {
-              actions: ['clear', 'today', 'accept'],
-            },
-          }}
-        />
-      </Box>
-    </LocalizationProvider>
+    <Box ref={containerRef} style={{ minWidth: 140 }} data-testid="date-editor">
+      <DatePickerInput
+        label={label}
+        value={dateValue}
+        onChange={handleChange}
+        clearable
+        size="sm"
+        popoverProps={{ withinPortal: false }}
+      />
+    </Box>
   );
 }
 

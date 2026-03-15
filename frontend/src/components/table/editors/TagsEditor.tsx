@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Autocomplete, TextField, Box, Chip } from '@mui/material';
+import { Box, TagsInput } from '../../../ui';
 import { useDefinedTags } from '../../../store/userStore';
 
 export interface TagsEditorProps {
@@ -10,7 +10,7 @@ export interface TagsEditorProps {
 }
 
 /**
- * Inline tags editor using MUI Autocomplete with multiple selection.
+ * Inline tags editor using Mantine TagsInput.
  * Allows selecting existing tags or entering new ones.
  * Auto-saves on selection change or blur.
  */
@@ -38,7 +38,7 @@ export function TagsEditor({
   }, []);
 
   const handleChange = useCallback(
-    (_event: React.SyntheticEvent, newValue: string[]) => {
+    (newValue: string[]) => {
       onChange(newValue);
       // Auto-save on selection
       onSave(newValue);
@@ -65,41 +65,16 @@ export function TagsEditor({
   );
 
   return (
-    <Box ref={containerRef} sx={{ minWidth: 200 }} data-testid="tags-editor">
-      <Autocomplete
-        multiple
-        freeSolo
-        options={tagNames}
+    <Box ref={containerRef} style={{ minWidth: 200 }} data-testid="tags-editor">
+      <TagsInput
+        data={tagNames}
         value={value}
         onChange={handleChange}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        size="small"
-        renderTags={(tagValue, getTagProps) =>
-          tagValue.map((option, index) => {
-            const { key, ...tagProps } = getTagProps({ index });
-            return (
-              <Chip
-                key={key}
-                label={option}
-                size="small"
-                {...tagProps}
-              />
-            );
-          })
-        }
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            placeholder={value.length === 0 ? 'Add tags...' : ''}
-            size="small"
-          />
-        )}
-        slotProps={{
-          popper: {
-            placement: 'bottom-start',
-          },
-        }}
+        placeholder={value.length === 0 ? 'Add tags...' : ''}
+        size="sm"
+        comboboxProps={{ withinPortal: false }}
       />
     </Box>
   );

@@ -1,32 +1,29 @@
 import {
   Card,
-  CardContent,
-  CardActions,
-  Typography,
+  Text,
   Box,
-  IconButton,
+  ActionIcon,
   Collapse,
-  Stack,
+  Group,
   Tooltip,
-  Chip,
+  Badge,
   useMediaQuery,
-  useTheme,
-} from '@mui/material';
+} from '../../ui';
 import {
-  ExpandMore,
-  ExpandLess,
-  Edit,
-  Delete,
-  Loop,
-  ContentCopy,
-  Link as LinkIcon,
-  Star,
-  Undo,
-  CheckCircle,
-  RadioButtonUnchecked,
-  Add,
-  Remove,
-} from '@mui/icons-material';
+  IconChevronDown,
+  IconChevronUp,
+  IconEdit,
+  IconTrash,
+  IconRepeat,
+  IconCopy,
+  IconLink,
+  IconStar,
+  IconArrowBackUp,
+  IconCircleCheck,
+  IconCircle,
+  IconPlus,
+  IconMinus,
+} from '../../ui/icons';
 import { useState, useCallback } from 'react';
 import { useSwipeable } from 'react-swipeable';
 import type { Task } from '../../types';
@@ -75,8 +72,7 @@ export default function TaskCard({
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery('(max-width: 48em)');
   const systemStatus = useSystemStatus();
 
   // Calculate current processing date (last_processed_date + 1 day) for relative date display
@@ -132,36 +128,46 @@ export default function TaskCard({
   // On mobile, always show expand button since we hide some metadata when collapsed
   const hasDetails = isMobile || task.text_description || showSubtasksInline || task.tags.length > 0;
 
+  const borderColor = task.is_complete
+    ? 'var(--mantine-color-green-6)'
+    : isBlocked
+    ? 'var(--mantine-color-gray-5)'
+    : 'var(--mantine-color-blue-6)';
+
   return (
     <Box
       {...swipeHandlers}
-      sx={{
+      style={{
         position: 'relative',
         overflow: 'hidden',
-        mb: 1,
-        borderRadius: 1,
+        marginBottom: 8,
+        borderRadius: 4,
       }}
     >
       {/* Swipe indicator background - only show on mobile when swiping incomplete tasks */}
       {isMobile && !task.is_complete && !isBlocked && swipeOffset > 0 && (
         <Box
-          sx={{
+          style={{
             position: 'absolute',
             left: 0,
             top: 0,
             bottom: 0,
             width: swipeOffset,
-            bgcolor: swipeProgress >= 1 ? 'success.main' : 'success.light',
+            backgroundColor:
+              swipeProgress >= 1
+                ? 'var(--mantine-color-green-6)'
+                : 'var(--mantine-color-green-3)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-start',
-            pl: 2,
+            paddingLeft: 16,
             transition: swipeProgress >= 1 ? 'background-color 0.2s' : 'none',
           }}
         >
-          <CheckCircle
-            sx={{
-              color: 'white',
+          <IconCircleCheck
+            size={24}
+            color="white"
+            style={{
               opacity: swipeProgress,
               transform: `scale(${0.5 + swipeProgress * 0.5})`,
               transition: 'transform 0.1s',
@@ -170,105 +176,104 @@ export default function TaskCard({
         </Box>
       )}
       <Card
-        sx={{
+        shadow="sm"
+        padding="md"
+        radius="md"
+        withBorder
+        style={{
           opacity: task.is_complete ? 0.7 : isBlocked ? 0.6 : 1,
-          borderLeft: 4,
-          borderColor: task.is_complete
-            ? 'success.main'
-            : isBlocked
-            ? 'grey.400'
-            : 'primary.main',
+          borderLeft: `4px solid ${borderColor}`,
           transition: swipeOffset > 0 ? 'none' : 'all 0.2s ease',
           transform: isMobile ? `translateX(${swipeOffset}px)` : 'none',
-          '&:hover': {
-            boxShadow: 3,
-          },
         }}
       >
-      <CardContent sx={{ pb: 1 }}>
         {/* Main row */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Group align="flex-start" gap="sm" wrap="nowrap">
+          <Box style={{ flex: 1, minWidth: 0 }}>
             {/* Title row */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Group gap="xs" wrap="wrap" align="center">
               {task.icon && <span>{task.icon}</span>}
-              <Typography
-                variant="body1"
-                sx={{
+              <Text
+                fw={500}
+                style={{
                   textDecoration: task.is_complete ? 'line-through' : 'none',
-                  fontWeight: 500,
                 }}
               >
                 {task.title}
-              </Typography>
+              </Text>
               {task.is_habit && (
-                <Tooltip title="Recurring habit">
-                  <Loop fontSize="small" color="primary" />
+                <Tooltip label="Recurring habit">
+                  <IconRepeat size={16} color="var(--mantine-color-blue-6)" />
                 </Tooltip>
               )}
               {task.dependencies.length > 0 && (
-                <Tooltip title={`${task.dependencies.length} dependencies`}>
-                  <LinkIcon fontSize="small" color="action" />
+                <Tooltip label={`${task.dependencies.length} dependencies`}>
+                  <IconLink size={16} color="var(--mantine-color-gray-6)" />
                 </Tooltip>
               )}
               {isBlocked && (
-                <Chip label="Blocked" size="small" color="warning" variant="outlined" />
+                <Badge size="sm" variant="outline" color="yellow">
+                  Blocked
+                </Badge>
               )}
-            </Box>
+            </Group>
 
             {/* Metadata row - on mobile, show only XP and due date when collapsed */}
-            <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
-              <Tooltip title="XP reward for completing this task">
-                <Chip
-                  icon={<Star sx={{ fontSize: 16 }} />}
-                  label={`${task.score} XP`}
-                  size="small"
-                  color="secondary"
-                  variant="outlined"
-                  sx={{ fontWeight: 600 }}
-                />
+            <Group gap="xs" mt="xs" wrap="wrap">
+              <Tooltip label="XP reward for completing this task">
+                <Badge
+                  leftSection={<IconStar size={12} />}
+                  size="sm"
+                  variant="outline"
+                  color="grape"
+                  fw={600}
+                >
+                  {task.score} XP
+                </Badge>
               </Tooltip>
               {/* Counter controls for counter tasks */}
               {task.target_count !== undefined && task.target_count > 0 && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Tooltip title="Decrease count">
+                <Group gap={4} align="center" wrap="nowrap">
+                  <Tooltip label="Decrease count">
                     <span>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
+                      <ActionIcon
+                        size="xs"
+                        variant="subtle"
+                        onClick={(e: React.MouseEvent) => {
                           e.stopPropagation();
                           onDecrement?.(task.id);
                         }}
                         disabled={task.current_count <= 0 || task.is_complete}
-                        sx={{ p: 0.25 }}
                       >
-                        <Remove fontSize="small" />
-                      </IconButton>
+                        <IconMinus size={14} />
+                      </ActionIcon>
                     </span>
                   </Tooltip>
-                  <Chip
-                    label={`${task.current_count}/${task.target_count}`}
-                    size="small"
-                    color={task.current_count >= task.target_count ? 'success' : 'default'}
-                    variant="outlined"
-                    sx={{ minWidth: 50, fontWeight: 600 }}
-                  />
-                  <Tooltip title="Increase count">
+                  <Badge
+                    size="sm"
+                    variant="outline"
+                    color={task.current_count >= task.target_count ? 'green' : 'gray'}
+                    fw={600}
+                    style={{ minWidth: 50 }}
+                  >
+                    {task.current_count}/{task.target_count}
+                  </Badge>
+                  <Tooltip label="Increase count">
                     <span>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
+                      <ActionIcon
+                        size="xs"
+                        variant="subtle"
+                        onClick={(e: React.MouseEvent) => {
                           e.stopPropagation();
                           onIncrement?.(task.id);
                         }}
                         disabled={task.is_complete}
-                        sx={{ p: 0.25 }}
                       >
-                        <Add fontSize="small" />
-                      </IconButton>
+                        <IconPlus size={14} />
+                      </ActionIcon>
                     </span>
                   </Tooltip>
-                </Box>
+                </Group>
               )}
               {/* Show full metadata on desktop, minimal on mobile */}
               {!isMobile && (
@@ -284,30 +289,35 @@ export default function TaskCard({
               )}
               {/* Project badge - inline with other metadata (desktop only) */}
               {!isMobile && task.project && <ProjectChip project={task.project} />}
-            </Stack>
+            </Group>
 
             {/* Subtask progress - show in inline and top-level modes (desktop only when collapsed) */}
             {!isMobile && hasSubtasks && subtaskViewMode !== 'hidden' && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              <Text size="xs" c="dimmed" mt="xs">
                 Subtasks: {completedSubtasks}/{task.subtasks.length}
-              </Typography>
+              </Text>
             )}
           </Box>
 
           {/* Expand button */}
           {hasDetails && (
-            <IconButton size="small" onClick={() => setExpanded(!expanded)}>
-              {expanded ? <ExpandLess /> : <ExpandMore />}
-            </IconButton>
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              onClick={() => setExpanded(!expanded)}
+              aria-label={expanded ? 'Collapse details' : 'Expand details'}
+            >
+              {expanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+            </ActionIcon>
           )}
-        </Box>
+        </Group>
 
         {/* Expanded details */}
         <Collapse in={expanded}>
-          <Box sx={{ mt: 2, pl: 4 }}>
+          <Box mt="md" pl={40}>
             {/* Mobile-only: show hidden metadata when expanded */}
             {isMobile && (
-              <Stack direction="row" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
+              <Group gap="xs" mb="sm" wrap="wrap">
                 <PriorityChip priority={task.priority} />
                 <DifficultyChip difficulty={task.difficulty} />
                 <DurationChip duration={task.duration} />
@@ -315,28 +325,28 @@ export default function TaskCard({
                   <StreakBadge current={task.streak_current} best={task.streak_best} />
                 )}
                 {task.project && <ProjectChip project={task.project} />}
-              </Stack>
+              </Group>
             )}
 
             {/* Mobile: show subtask progress in expanded section */}
             {isMobile && hasSubtasks && subtaskViewMode !== 'hidden' && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+              <Text size="xs" c="dimmed" mb="sm">
                 Subtasks: {completedSubtasks}/{task.subtasks.length}
-              </Typography>
+              </Text>
             )}
 
             {task.text_description && (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              <Text size="sm" c="dimmed" mb="sm">
                 {task.text_description}
-              </Typography>
+              </Text>
             )}
 
             {task.tags.length > 0 && (
-              <Stack direction="row" spacing={0.5} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
+              <Group gap={4} mb="sm" wrap="wrap">
                 {task.tags.map((tag) => (
                   <TagChip key={tag} tag={tag} />
                 ))}
-              </Stack>
+              </Group>
             )}
 
             {showSubtasksInline && (
@@ -351,56 +361,72 @@ export default function TaskCard({
             )}
           </Box>
         </Collapse>
-      </CardContent>
 
-      <CardActions sx={{ px: 2, pt: 0 }}>
-        <Box sx={{ flex: 1 }} />
-        <Tooltip title={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}>
-          <span>
-            <IconButton
-              size="small"
-              onClick={() => onComplete(task.id)}
-              disabled={isBlocked}
-              color={task.is_complete ? 'success' : 'default'}
-              aria-label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
-            >
-              {task.is_complete ? (
-                <CheckCircle fontSize="small" />
-              ) : (
-                <RadioButtonUnchecked fontSize="small" />
-              )}
-            </IconButton>
-          </span>
-        </Tooltip>
-        {onUndo && task.history.length > 0 && (
-          <Tooltip title="Undo last change">
-            <IconButton size="small" onClick={() => onUndo(task.id)} color="info">
-              <Undo fontSize="small" />
-            </IconButton>
+        {/* Actions */}
+        <Group justify="flex-end" gap="xs" mt="xs">
+          <Tooltip label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}>
+            <span>
+              <ActionIcon
+                size="sm"
+                variant="subtle"
+                onClick={() => onComplete(task.id)}
+                disabled={isBlocked}
+                color={task.is_complete ? 'green' : 'gray'}
+                aria-label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
+              >
+                {task.is_complete ? (
+                  <IconCircleCheck size={16} />
+                ) : (
+                  <IconCircle size={16} />
+                )}
+              </ActionIcon>
+            </span>
           </Tooltip>
-        )}
-        <IconButton size="small" onClick={() => onEdit(task)} title="Edit task">
-          <Edit fontSize="small" />
-        </IconButton>
-        {onDuplicate && (
-          <IconButton
-            size="small"
-            onClick={() => onDuplicate(task.id)}
-            title="Duplicate task"
+          {onUndo && task.history.length > 0 && (
+            <Tooltip label="Undo last change">
+              <ActionIcon
+                size="sm"
+                variant="subtle"
+                color="blue"
+                onClick={() => onUndo(task.id)}
+                aria-label="Undo last change"
+              >
+                <IconArrowBackUp size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+          <ActionIcon
+            size="sm"
+            variant="subtle"
+            onClick={() => onEdit(task)}
+            title="Edit task"
+            aria-label="Edit task"
           >
-            <ContentCopy fontSize="small" />
-          </IconButton>
-        )}
-        <IconButton
-          size="small"
-          onClick={() => onDelete(task.id)}
-          color="error"
-          title="Delete task"
-        >
-          <Delete fontSize="small" />
-        </IconButton>
-      </CardActions>
-    </Card>
+            <IconEdit size={16} />
+          </ActionIcon>
+          {onDuplicate && (
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              onClick={() => onDuplicate(task.id)}
+              title="Duplicate task"
+              aria-label="Duplicate task"
+            >
+              <IconCopy size={16} />
+            </ActionIcon>
+          )}
+          <ActionIcon
+            size="sm"
+            variant="subtle"
+            color="red"
+            onClick={() => onDelete(task.id)}
+            title="Delete task"
+            aria-label="Delete task"
+          >
+            <IconTrash size={16} />
+          </ActionIcon>
+        </Group>
+      </Card>
     </Box>
   );
 }

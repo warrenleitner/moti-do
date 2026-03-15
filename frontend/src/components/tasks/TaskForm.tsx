@@ -1,30 +1,24 @@
 import { useState } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Modal,
   Button,
-  TextField,
-  FormControl,
-  InputLabel,
+  TextInput,
+  Textarea,
   Select,
-  MenuItem,
-  FormControlLabel,
   Switch,
   Box,
   Stack,
-  Chip,
-  IconButton,
-  Typography,
+  Group,
+  Badge,
+  ActionIcon,
+  Text,
   Divider,
-  Autocomplete,
+  CloseButton,
   Tooltip,
-} from '@mui/material';
-import { Add, Delete, InfoOutlined } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+  TagsInput,
+  DateTimePicker,
+} from '../../ui';
+import { IconPlus, IconTrash, IconInfoCircle } from '../../ui/icons';
 import type { Task, Subtask } from '../../types';
 import {
   Priority,
@@ -60,15 +54,15 @@ function FieldInfoTooltip<T extends string>({
   descriptions,
 }: FieldInfoTooltipProps<T>) {
   return (
-    <Box sx={{ p: 0.5 }}>
+    <Box p={4}>
       {values.map((value) => (
-        <Box key={value} sx={{ mb: 1, '&:last-child': { mb: 0 } }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+        <Box key={value} mb={4}>
+          <Text size="sm" fw={700}>
             {emojis[value]} {labels[value]}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
+          </Text>
+          <Text size="xs" c="dimmed">
             {descriptions[value]}
-          </Typography>
+          </Text>
         </Box>
       ))}
     </Box>
@@ -102,7 +96,6 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
   // Note: Parent must use key={task?.id ?? 'new'} to reset state when task changes
   const getInitialFormData = () => (task ? { ...task } : { ...defaultTask });
   const [formData, setFormData] = useState<Partial<Task>>(getInitialFormData);
-  const [newTag, setNewTag] = useState('');
   const [newSubtask, setNewSubtask] = useState('');
 
   // Get defined tags and projects for autocomplete
@@ -113,23 +106,6 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
 
   const handleChange = (field: keyof Task, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleAddTag = () => {
-    if (newTag.trim() && !formData.tags?.includes(newTag.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        tags: [...(prev.tags || []), newTag.trim()],
-      }));
-      setNewTag('');
-    }
-  };
-
-  const handleRemoveTag = (tag: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: prev.tags?.filter((t) => t !== tag) || [],
-    }));
   };
 
   const handleAddSubtask = () => {
@@ -159,404 +135,404 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
   const isEditing = !!task;
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Dialog
-        open={open}
-        onClose={onClose}
-        maxWidth="sm"
-        fullWidth
-        key={task?.id || 'new'}
-      >
-        <DialogTitle>{isEditing ? 'Edit Task' : 'Create New Task'}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={3} sx={{ mt: 1 }}>
-            {/* Title & Icon (Emoji) */}
-            <Stack direction="row" spacing={2}>
-              <TextField
-                label="Icon"
-                placeholder="Emoji"
-                value={formData.icon || ''}
-                onChange={(e) => handleChange('icon', e.target.value)}
-                sx={{ width: 80 }}
-                inputProps={{ maxLength: 5 }}
-                autoComplete="off"
-              />
-              <TextField
-                label="Title"
-                value={formData.title || ''}
-                onChange={(e) => handleChange('title', e.target.value)}
-                fullWidth
-                required
-                autoFocus
-              />
-            </Stack>
+    <Modal
+      opened={open}
+      onClose={onClose}
+      title={isEditing ? 'Edit Task' : 'Create New Task'}
+      size="lg"
+      key={task?.id || 'new'}
+    >
+      <Stack gap="md">
+        {/* Title & Icon (Emoji) */}
+        <Group wrap="nowrap" align="flex-end">
+          <TextInput
+            label="Icon"
+            placeholder="Emoji"
+            value={formData.icon || ''}
+            onChange={(e) => handleChange('icon', e.currentTarget.value)}
+            maxLength={5}
+            autoComplete="off"
+            style={{ width: 80, flex: 'none' }}
+          />
+          <TextInput
+            label="Title"
+            value={formData.title || ''}
+            onChange={(e) => handleChange('title', e.currentTarget.value)}
+            required
+            autoFocus
+            style={{ flex: 1 }}
+          />
+        </Group>
 
-            {/* Description */}
-            <TextField
-              label="Description"
-              value={formData.text_description || ''}
-              onChange={(e) => handleChange('text_description', e.target.value)}
-              fullWidth
-              multiline
-              rows={3}
-            />
+        {/* Description */}
+        <Textarea
+          label="Description"
+          value={formData.text_description || ''}
+          onChange={(e) => handleChange('text_description', e.currentTarget.value)}
+          rows={3}
+        />
 
-            {/* Priority, Difficulty, Duration row */}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <Box sx={{ flex: 1, position: 'relative' }}>
-                <Tooltip
-                  title={
-                    <FieldInfoTooltip
-                      values={Object.values(Priority)}
-                      emojis={PriorityEmoji}
-                      labels={{ [Priority.TRIVIAL]: 'Trivial', [Priority.LOW]: 'Low', [Priority.MEDIUM]: 'Medium', [Priority.HIGH]: 'High', [Priority.DEFCON_ONE]: 'Defcon One' }}
-                      descriptions={PriorityDescription}
-                    />
-                  }
-                  placement="top"
-                  arrow
-                >
-                  <InfoOutlined sx={{ position: 'absolute', right: 8, top: -8, fontSize: 16, color: 'text.secondary', cursor: 'help', zIndex: 1 }} />
-                </Tooltip>
-                <FormControl fullWidth>
-                  <InputLabel>Priority</InputLabel>
-                  <Select
-                    value={formData.priority || Priority.MEDIUM}
-                    label="Priority"
-                    onChange={(e) => handleChange('priority', e.target.value as typeof Priority[keyof typeof Priority])}
-                  >
-                    <MenuItem value={Priority.TRIVIAL}>{PriorityEmoji[Priority.TRIVIAL]} Trivial</MenuItem>
-                    <MenuItem value={Priority.LOW}>{PriorityEmoji[Priority.LOW]} Low</MenuItem>
-                    <MenuItem value={Priority.MEDIUM}>{PriorityEmoji[Priority.MEDIUM]} Medium</MenuItem>
-                    <MenuItem value={Priority.HIGH}>{PriorityEmoji[Priority.HIGH]} High</MenuItem>
-                    <MenuItem value={Priority.DEFCON_ONE}>{PriorityEmoji[Priority.DEFCON_ONE]} Defcon One</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-
-              <Box sx={{ flex: 1, position: 'relative' }}>
-                <Tooltip
-                  title={
-                    <FieldInfoTooltip
-                      values={Object.values(Difficulty)}
-                      emojis={DifficultyEmoji}
-                      labels={DifficultyLabel}
-                      descriptions={DifficultyDescription}
-                    />
-                  }
-                  placement="top"
-                  arrow
-                >
-                  <InfoOutlined sx={{ position: 'absolute', right: 8, top: -8, fontSize: 16, color: 'text.secondary', cursor: 'help', zIndex: 1 }} />
-                </Tooltip>
-                <FormControl fullWidth>
-                  <InputLabel>Difficulty</InputLabel>
-                  <Select
-                    value={formData.difficulty || Difficulty.MEDIUM}
-                    label="Difficulty"
-                    onChange={(e) => handleChange('difficulty', e.target.value as typeof Difficulty[keyof typeof Difficulty])}
-                  >
-                    <MenuItem value={Difficulty.TRIVIAL}>{DifficultyEmoji[Difficulty.TRIVIAL]} {DifficultyLabel[Difficulty.TRIVIAL]}</MenuItem>
-                    <MenuItem value={Difficulty.LOW}>{DifficultyEmoji[Difficulty.LOW]} {DifficultyLabel[Difficulty.LOW]}</MenuItem>
-                    <MenuItem value={Difficulty.MEDIUM}>{DifficultyEmoji[Difficulty.MEDIUM]} {DifficultyLabel[Difficulty.MEDIUM]}</MenuItem>
-                    <MenuItem value={Difficulty.HIGH}>{DifficultyEmoji[Difficulty.HIGH]} {DifficultyLabel[Difficulty.HIGH]}</MenuItem>
-                    <MenuItem value={Difficulty.HERCULEAN}>{DifficultyEmoji[Difficulty.HERCULEAN]} {DifficultyLabel[Difficulty.HERCULEAN]}</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-
-              <Box sx={{ flex: 1, position: 'relative' }}>
-                <Tooltip
-                  title={
-                    <FieldInfoTooltip
-                      values={Object.values(Duration)}
-                      emojis={DurationEmoji}
-                      labels={DurationLabel}
-                      descriptions={DurationDescription}
-                    />
-                  }
-                  placement="top"
-                  arrow
-                >
-                  <InfoOutlined sx={{ position: 'absolute', right: 8, top: -8, fontSize: 16, color: 'text.secondary', cursor: 'help', zIndex: 1 }} />
-                </Tooltip>
-                <FormControl fullWidth>
-                  <InputLabel>Duration</InputLabel>
-                  <Select
-                    value={formData.duration || Duration.MEDIUM}
-                    label="Duration"
-                    onChange={(e) => handleChange('duration', e.target.value as typeof Duration[keyof typeof Duration])}
-                  >
-                    <MenuItem value={Duration.MINUSCULE}>{DurationEmoji[Duration.MINUSCULE]} {DurationLabel[Duration.MINUSCULE]}</MenuItem>
-                    <MenuItem value={Duration.SHORT}>{DurationEmoji[Duration.SHORT]} {DurationLabel[Duration.SHORT]}</MenuItem>
-                    <MenuItem value={Duration.MEDIUM}>{DurationEmoji[Duration.MEDIUM]} {DurationLabel[Duration.MEDIUM]}</MenuItem>
-                    <MenuItem value={Duration.LONG}>{DurationEmoji[Duration.LONG]} {DurationLabel[Duration.LONG]}</MenuItem>
-                    <MenuItem value={Duration.ODYSSEYAN}>{DurationEmoji[Duration.ODYSSEYAN]} {DurationLabel[Duration.ODYSSEYAN]}</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-            </Stack>
-
-            {/* Dates row */}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <DatePicker
-                label="Start Date"
-                value={formData.start_date ? new Date(formData.start_date.includes('T') ? formData.start_date : formData.start_date + 'T00:00:00') : null}
-                onChange={(date) =>
-                  handleChange('start_date', date ? date.toISOString().split('T')[0] : undefined)
-                }
-                slotProps={{ textField: { fullWidth: true } }}
-              />
-              <DatePicker
-                label="Due Date"
-                value={formData.due_date ? new Date(formData.due_date.includes('T') ? formData.due_date : formData.due_date + 'T00:00:00') : null}
-                onChange={(date) =>
-                  handleChange('due_date', date ? date.toISOString().split('T')[0] : undefined)
-                }
-                slotProps={{ textField: { fullWidth: true } }}
-              />
-            </Stack>
-
-            {/* Project */}
-            <Autocomplete
-              freeSolo
-              options={projectNames}
-              value={formData.project || ''}
-              onChange={(_e, newValue) => handleChange('project', newValue || undefined)}
-              onInputChange={(_e, newValue) => handleChange('project', newValue || undefined)}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Project"
-                  placeholder="e.g., Work, Personal, Side Project"
-                />
-              )}
-            />
-
-            {/* Dependencies */}
-            {allTasks.length > 0 && (
-              <Autocomplete
-                multiple
-                options={allTasks.filter(t => t.id !== task?.id && !t.is_complete)}
-                getOptionLabel={(option) => `${option.icon || ''} ${option.title}`.trim()}
-                value={allTasks.filter(t => formData.dependencies?.includes(t.id))}
-                onChange={(_e, newValue) => handleChange('dependencies', newValue.map(t => t.id))}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Dependencies (blocked by)"
-                    placeholder="Select tasks that must be completed first"
-                    helperText="This task will be blocked until all dependencies are complete"
-                  />
-                )}
-                renderTags={(value, getTagProps) =>
-                  value.map((option, index) => (
-                    <Chip
-                      {...getTagProps({ index })}
-                      key={option.id}
-                      label={`${option.icon || ''} ${option.title}`.trim()}
-                      size="small"
-                    />
-                  ))
-                }
-              />
-            )}
-
-            {/* Recurring toggle - enables recurrence for any task */}
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={!!formData.recurrence_rule}
-                  onChange={(e) => {
-                    const isRecurring = e.target.checked;
-                    setFormData((prev) => ({
-                      ...prev,
-                      recurrence_rule: isRecurring ? (prev.recurrence_rule || 'FREQ=DAILY') : undefined,
-                    }));
-                  }}
+        {/* Priority, Difficulty, Duration row */}
+        <Group grow>
+          <Box pos="relative">
+            <Tooltip
+              label={
+                <FieldInfoTooltip
+                  values={Object.values(Priority)}
+                  emojis={PriorityEmoji}
+                  labels={{ [Priority.TRIVIAL]: 'Trivial', [Priority.LOW]: 'Low', [Priority.MEDIUM]: 'Medium', [Priority.HIGH]: 'High', [Priority.DEFCON_ONE]: 'Defcon One' }}
+                  descriptions={PriorityDescription}
                 />
               }
-              label="Recurring Task"
+              position="top"
+              withArrow
+              multiline
+              w={250}
+            >
+              <ActionIcon
+                variant="subtle"
+                size="xs"
+                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1 }}
+                aria-label="Priority info"
+              >
+                <IconInfoCircle size={14} />
+              </ActionIcon>
+            </Tooltip>
+            <Select
+              label="Priority"
+              value={formData.priority || Priority.MEDIUM}
+              onChange={(val) => handleChange('priority', val as typeof Priority[keyof typeof Priority])}
+              data={[
+                { value: Priority.TRIVIAL, label: `${PriorityEmoji[Priority.TRIVIAL]} Trivial` },
+                { value: Priority.LOW, label: `${PriorityEmoji[Priority.LOW]} Low` },
+                { value: Priority.MEDIUM, label: `${PriorityEmoji[Priority.MEDIUM]} Medium` },
+                { value: Priority.HIGH, label: `${PriorityEmoji[Priority.HIGH]} High` },
+                { value: Priority.DEFCON_ONE, label: `${PriorityEmoji[Priority.DEFCON_ONE]} Defcon One` },
+              ]}
             />
+          </Box>
 
-            {/* Recurrence options (when recurring is enabled) */}
-            {formData.recurrence_rule && (
-              <>
-                <Box>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Recurrence Pattern
-                  </Typography>
-                  <RecurrenceRuleBuilder
-                    value={formData.recurrence_rule || 'FREQ=DAILY'}
-                    onChange={(rrule) => handleChange('recurrence_rule', rrule)}
-                  />
-
-                  {/* Next occurrence preview */}
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                    {getNextOccurrenceText(
-                      formData.recurrence_rule,
-                      formData.due_date ? new Date(formData.due_date) : undefined
-                    )}
-                  </Typography>
-                </Box>
-
-                <FormControl fullWidth>
-                  <InputLabel>Recurrence Style</InputLabel>
-                  <Select
-                    value={formData.recurrence_type || RecurrenceType.FROM_DUE_DATE}
-                    label="Recurrence Style"
-                    onChange={(e) => handleChange('recurrence_type', e.target.value)}
-                  >
-                    <MenuItem value={RecurrenceType.FROM_DUE_DATE}>
-                      From Due Date - Next due = previous due + pattern
-                    </MenuItem>
-                    <MenuItem value={RecurrenceType.FROM_COMPLETION}>
-                      From Completion - Next due = completion date + pattern
-                    </MenuItem>
-                    <MenuItem value={RecurrenceType.STRICT}>
-                      Strict - Always recur on schedule regardless of completion
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-
-                {/* Habit toggle - adds streak tracking for recurring tasks */}
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={formData.is_habit || false}
-                      onChange={(e) => handleChange('is_habit', e.target.checked)}
-                    />
-                  }
-                  label="Track as Habit (enables streak tracking)"
+          <Box pos="relative">
+            <Tooltip
+              label={
+                <FieldInfoTooltip
+                  values={Object.values(Difficulty)}
+                  emojis={DifficultyEmoji}
+                  labels={DifficultyLabel}
+                  descriptions={DifficultyDescription}
                 />
+              }
+              position="top"
+              withArrow
+              multiline
+              w={250}
+            >
+              <ActionIcon
+                variant="subtle"
+                size="xs"
+                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1 }}
+                aria-label="Difficulty info"
+              >
+                <IconInfoCircle size={14} />
+              </ActionIcon>
+            </Tooltip>
+            <Select
+              label="Difficulty"
+              value={formData.difficulty || Difficulty.MEDIUM}
+              onChange={(val) => handleChange('difficulty', val as typeof Difficulty[keyof typeof Difficulty])}
+              data={[
+                { value: Difficulty.TRIVIAL, label: `${DifficultyEmoji[Difficulty.TRIVIAL]} ${DifficultyLabel[Difficulty.TRIVIAL]}` },
+                { value: Difficulty.LOW, label: `${DifficultyEmoji[Difficulty.LOW]} ${DifficultyLabel[Difficulty.LOW]}` },
+                { value: Difficulty.MEDIUM, label: `${DifficultyEmoji[Difficulty.MEDIUM]} ${DifficultyLabel[Difficulty.MEDIUM]}` },
+                { value: Difficulty.HIGH, label: `${DifficultyEmoji[Difficulty.HIGH]} ${DifficultyLabel[Difficulty.HIGH]}` },
+                { value: Difficulty.HERCULEAN, label: `${DifficultyEmoji[Difficulty.HERCULEAN]} ${DifficultyLabel[Difficulty.HERCULEAN]}` },
+              ]}
+            />
+          </Box>
 
-                {/* Subtask recurrence mode (when recurring AND has subtasks) */}
-                {(formData.subtasks?.length ?? 0) > 0 && (
-                  <FormControl fullWidth>
-                    <InputLabel>Subtask Recurrence</InputLabel>
-                    <Select
-                      value={formData.subtask_recurrence_mode || SubtaskRecurrenceMode.DEFAULT}
-                      label="Subtask Recurrence"
-                      onChange={(e) =>
-                        handleChange('subtask_recurrence_mode', e.target.value)
+          <Box pos="relative">
+            <Tooltip
+              label={
+                <FieldInfoTooltip
+                  values={Object.values(Duration)}
+                  emojis={DurationEmoji}
+                  labels={DurationLabel}
+                  descriptions={DurationDescription}
+                />
+              }
+              position="top"
+              withArrow
+              multiline
+              w={250}
+            >
+              <ActionIcon
+                variant="subtle"
+                size="xs"
+                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1 }}
+                aria-label="Duration info"
+              >
+                <IconInfoCircle size={14} />
+              </ActionIcon>
+            </Tooltip>
+            <Select
+              label="Duration"
+              value={formData.duration || Duration.MEDIUM}
+              onChange={(val) => handleChange('duration', val as typeof Duration[keyof typeof Duration])}
+              data={[
+                { value: Duration.MINUSCULE, label: `${DurationEmoji[Duration.MINUSCULE]} ${DurationLabel[Duration.MINUSCULE]}` },
+                { value: Duration.SHORT, label: `${DurationEmoji[Duration.SHORT]} ${DurationLabel[Duration.SHORT]}` },
+                { value: Duration.MEDIUM, label: `${DurationEmoji[Duration.MEDIUM]} ${DurationLabel[Duration.MEDIUM]}` },
+                { value: Duration.LONG, label: `${DurationEmoji[Duration.LONG]} ${DurationLabel[Duration.LONG]}` },
+                { value: Duration.ODYSSEYAN, label: `${DurationEmoji[Duration.ODYSSEYAN]} ${DurationLabel[Duration.ODYSSEYAN]}` },
+              ]}
+            />
+          </Box>
+        </Group>
+
+        {/* Dates row */}
+        <Group grow>
+          <DateTimePicker
+            label="Start Date"
+            value={formData.start_date ? new Date(formData.start_date.includes('T') ? formData.start_date : formData.start_date + 'T00:00:00') : null}
+            onChange={(value) =>
+              handleChange('start_date', value ? value.toISOString().split('T')[0] : undefined)
+            }
+            clearable
+          />
+          <DateTimePicker
+            label="Due Date"
+            value={formData.due_date ? new Date(formData.due_date.includes('T') ? formData.due_date : formData.due_date + 'T00:00:00') : null}
+            onChange={(value) =>
+              handleChange('due_date', value ? value.toISOString().split('T')[0] : undefined)
+            }
+            clearable
+          />
+        </Group>
+
+        {/* Project */}
+        <TextInput
+          label="Project"
+          value={formData.project || ''}
+          onChange={(e) => handleChange('project', e.currentTarget.value || undefined)}
+          placeholder="e.g., Work, Personal, Side Project"
+          list="project-suggestions"
+        />
+        {/* Native datalist provides lightweight autocomplete for project names */}
+        <datalist id="project-suggestions">
+          {projectNames.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
+
+        {/* Dependencies */}
+        {allTasks.length > 0 && (
+          <Box>
+            <Text size="sm" fw={500} mb="xs">
+              Dependencies (blocked by)
+            </Text>
+            {(formData.dependencies?.length ?? 0) > 0 && (
+              <Group gap="xs" mb="xs" wrap="wrap">
+                {allTasks
+                  .filter((t) => formData.dependencies?.includes(t.id))
+                  .map((t) => (
+                    <Badge
+                      key={t.id}
+                      variant="light"
+                      size="sm"
+                      rightSection={
+                        <CloseButton
+                          size="xs"
+                          onClick={() =>
+                            handleChange(
+                              'dependencies',
+                              formData.dependencies?.filter((id) => id !== t.id) || []
+                            )
+                          }
+                          aria-label={`Remove ${t.title} dependency`}
+                        />
                       }
                     >
-                      <MenuItem value={SubtaskRecurrenceMode.DEFAULT}>
-                        All Complete First - New recurrence only after all subtasks complete
-                      </MenuItem>
-                      <MenuItem value={SubtaskRecurrenceMode.PARTIAL}>
-                        Carry Over Completed - Copy only completed subtasks to next
-                      </MenuItem>
-                      <MenuItem value={SubtaskRecurrenceMode.ALWAYS}>
-                        Always Copy All - Full subtask list regardless of completion
-                      </MenuItem>
-                    </Select>
-                  </FormControl>
-                )}
-              </>
+                      {`${t.icon || ''} ${t.title}`.trim()}
+                    </Badge>
+                  ))}
+              </Group>
             )}
+            <Select
+              searchable
+              placeholder="Select tasks that must be completed first"
+              data={allTasks
+                .filter(
+                  (t) =>
+                    t.id !== task?.id &&
+                    !t.is_complete &&
+                    !formData.dependencies?.includes(t.id)
+                )
+                .map((t) => ({
+                  value: t.id,
+                  label: `${t.icon || ''} ${t.title}`.trim(),
+                }))}
+              value={null}
+              onChange={(val) => {
+                if (val) {
+                  handleChange('dependencies', [...(formData.dependencies || []), val]);
+                }
+              }}
+            />
+            <Text size="xs" c="dimmed" mt={4}>
+              This task will be blocked until all dependencies are complete
+            </Text>
+          </Box>
+        )}
 
-            <Divider />
+        {/* Recurring toggle - enables recurrence for any task */}
+        <Switch
+          label="Recurring Task"
+          checked={!!formData.recurrence_rule}
+          onChange={(e) => {
+            const isRecurring = e.currentTarget.checked;
+            setFormData((prev) => ({
+              ...prev,
+              recurrence_rule: isRecurring ? (prev.recurrence_rule || 'FREQ=DAILY') : undefined,
+            }));
+          }}
+        />
 
-            {/* Tags */}
+        {/* Recurrence options (when recurring is enabled) */}
+        {formData.recurrence_rule && (
+          <>
             <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Tags
-              </Typography>
-              <Stack direction="row" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-                {formData.tags?.map((tag) => (
-                  <Chip
-                    key={tag}
-                    label={tag}
-                    onDelete={() => handleRemoveTag(tag)}
-                    size="small"
-                  />
-                ))}
-              </Stack>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Autocomplete
-                  freeSolo
-                  options={tagNames.filter((t) => !formData.tags?.includes(t))}
-                  value={newTag}
-                  onChange={(_e, newValue) => {
-                    if (newValue && !formData.tags?.includes(newValue)) {
-                      setFormData((prev) => ({
-                        ...prev,
-                        tags: [...(prev.tags || []), newValue],
-                      }));
-                    }
-                    setNewTag('');
-                  }}
-                  onInputChange={(_e, newValue) => setNewTag(newValue)}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      size="small"
-                      placeholder="Add tag..."
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && newTag.trim() && !formData.tags?.includes(newTag.trim())) {
-                          e.preventDefault();
-                          setFormData((prev) => ({
-                            ...prev,
-                            tags: [...(prev.tags || []), newTag.trim()],
-                          }));
-                          setNewTag('');
-                        }
-                      }}
-                    />
-                  )}
-                  sx={{ flex: 1 }}
-                />
-                <IconButton onClick={handleAddTag} size="small">
-                  <Add />
-                </IconButton>
-              </Stack>
+              <Text size="sm" fw={500} mb="xs">
+                Recurrence Pattern
+              </Text>
+              <RecurrenceRuleBuilder
+                value={formData.recurrence_rule || 'FREQ=DAILY'}
+                onChange={(rrule) => handleChange('recurrence_rule', rrule)}
+              />
+
+              {/* Next occurrence preview */}
+              <Text size="xs" c="dimmed" mt="xs">
+                {getNextOccurrenceText(
+                  formData.recurrence_rule,
+                  formData.due_date ? new Date(formData.due_date) : undefined
+                )}
+              </Text>
             </Box>
 
-            {/* Subtasks */}
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Subtasks
-              </Typography>
-              {formData.subtasks?.map((subtask, index) => (
-                <Stack key={index} direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-                  <Typography variant="body2" sx={{ flex: 1 }}>
-                    • {subtask.text}
-                  </Typography>
-                  <IconButton size="small" onClick={() => handleRemoveSubtask(index)}>
-                    <Delete fontSize="small" />
-                  </IconButton>
-                </Stack>
-              ))}
-              <Stack direction="row" spacing={1}>
-                <TextField
-                  size="small"
-                  value={newSubtask}
-                  onChange={(e) => setNewSubtask(e.target.value)}
-                  placeholder="Add subtask..."
-                  fullWidth
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddSubtask()}
-                />
-                <IconButton onClick={handleAddSubtask} size="small">
-                  <Add />
-                </IconButton>
-              </Stack>
-            </Box>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={!formData.title?.trim()}
-          >
+            <Select
+              label="Recurrence Style"
+              value={formData.recurrence_type || RecurrenceType.FROM_DUE_DATE}
+              onChange={(val) => handleChange('recurrence_type', val)}
+              data={[
+                {
+                  value: RecurrenceType.FROM_DUE_DATE,
+                  label: 'From Due Date - Next due = previous due + pattern',
+                },
+                {
+                  value: RecurrenceType.FROM_COMPLETION,
+                  label: 'From Completion - Next due = completion date + pattern',
+                },
+                {
+                  value: RecurrenceType.STRICT,
+                  label: 'Strict - Always recur on schedule regardless of completion',
+                },
+              ]}
+            />
+
+            {/* Habit toggle - adds streak tracking for recurring tasks */}
+            <Switch
+              label="Track as Habit (enables streak tracking)"
+              checked={formData.is_habit || false}
+              onChange={(e) => handleChange('is_habit', e.currentTarget.checked)}
+            />
+
+            {/* Subtask recurrence mode (when recurring AND has subtasks) */}
+            {(formData.subtasks?.length ?? 0) > 0 && (
+              <Select
+                label="Subtask Recurrence"
+                value={formData.subtask_recurrence_mode || SubtaskRecurrenceMode.DEFAULT}
+                onChange={(val) => handleChange('subtask_recurrence_mode', val)}
+                data={[
+                  {
+                    value: SubtaskRecurrenceMode.DEFAULT,
+                    label: 'All Complete First - New recurrence only after all subtasks complete',
+                  },
+                  {
+                    value: SubtaskRecurrenceMode.PARTIAL,
+                    label: 'Carry Over Completed - Copy only completed subtasks to next',
+                  },
+                  {
+                    value: SubtaskRecurrenceMode.ALWAYS,
+                    label: 'Always Copy All - Full subtask list regardless of completion',
+                  },
+                ]}
+              />
+            )}
+          </>
+        )}
+
+        <Divider />
+
+        {/* Tags */}
+        <TagsInput
+          label="Tags"
+          value={formData.tags || []}
+          onChange={(tags) => handleChange('tags', tags)}
+          data={tagNames.filter((t) => !formData.tags?.includes(t))}
+          placeholder="Add tags..."
+        />
+
+        {/* Subtasks */}
+        <Box>
+          <Text size="sm" fw={500} mb="xs">
+            Subtasks
+          </Text>
+          {formData.subtasks?.map((subtask, index) => (
+            <Group key={index} gap="xs" mb={4}>
+              <Text size="sm" style={{ flex: 1 }}>
+                • {subtask.text}
+              </Text>
+              <ActionIcon
+                size="sm"
+                variant="subtle"
+                color="red"
+                onClick={() => handleRemoveSubtask(index)}
+                aria-label="Remove subtask"
+              >
+                <IconTrash size={14} />
+              </ActionIcon>
+            </Group>
+          ))}
+          <Group gap="xs">
+            <TextInput
+              size="sm"
+              value={newSubtask}
+              onChange={(e) => setNewSubtask(e.currentTarget.value)}
+              placeholder="Add subtask..."
+              onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+              style={{ flex: 1 }}
+            />
+            <ActionIcon
+              onClick={handleAddSubtask}
+              size="sm"
+              variant="light"
+              aria-label="Add subtask"
+            >
+              <IconPlus size={16} />
+            </ActionIcon>
+          </Group>
+        </Box>
+
+        {/* Actions */}
+        <Group justify="flex-end" mt="md">
+          <Button variant="subtle" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={!formData.title?.trim()}>
             {isEditing ? 'Save Changes' : 'Create Task'}
           </Button>
-        </DialogActions>
-      </Dialog>
-    </LocalizationProvider>
+        </Group>
+      </Stack>
+    </Modal>
   );
 }
 /* v8 ignore stop */

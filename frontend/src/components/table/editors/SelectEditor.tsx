@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Select, MenuItem, FormControl } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material';
+import { Box, Select } from '../../../ui';
 
 export interface SelectEditorProps<T extends string> {
   value: T;
@@ -23,32 +22,28 @@ export function SelectEditor<T extends string>({
 }: SelectEditorProps<T>) {
   const selectRef = useRef<HTMLDivElement>(null);
 
-  // Focus the select when mounted
+  // Focus the select when mounted to open dropdown
   useEffect(() => {
-    // Small delay to ensure the select is rendered
     const timer = setTimeout(() => {
-      const selectElement = selectRef.current?.querySelector('[role="combobox"]');
+      const input = selectRef.current?.querySelector('input');
       // DOM element check is a safety guard - covered via E2E tests
       /* v8 ignore next 3 */
-      if (selectElement instanceof HTMLElement) {
-        selectElement.focus();
+      if (input instanceof HTMLElement) {
+        input.focus();
       }
     }, 50);
     return () => clearTimeout(timer);
   }, []);
 
-  const handleChange = useCallback(
-    (event: SelectChangeEvent<T>) => {
-      const newValue = event.target.value as T;
-      onChange(newValue);
-      // Auto-save on selection, passing value directly to avoid async state issues
-      onSave(newValue);
-    },
-    [onChange, onSave]
-  );
-
-  const handleClose = useCallback(() => {
-    onClose();
+  // Handle Escape key at document level to ensure it works regardless of focus state
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
 
   const getLabel = (option: T): string => {
@@ -57,34 +52,42 @@ export function SelectEditor<T extends string>({
     return emoji ? `${emoji} ${label}` : label;
   };
 
+  const data = options.map((option) => ({
+    value: option,
+    label: getLabel(option),
+  }));
+
+  const handleChange = useCallback(
+    (val: string | null) => {
+      if (val !== null) {
+        onChange(val as T);
+        // Auto-save on selection, passing value directly to avoid async state issues
+        onSave(val as T);
+      }
+    },
+    [onChange, onSave]
+  );
+
   return (
-    <FormControl size="small" fullWidth ref={selectRef}>
-      <Select<T>
+    <Box
+      ref={selectRef}
+      style={{ minWidth: 120 }}
+      data-testid="select-editor"
+    >
+      <Select
+        data={data}
         value={value}
-        open
         onChange={handleChange}
-        onClose={handleClose}
-        MenuProps={{
-          // Prevent the menu from being positioned outside viewport
-          anchorOrigin: {
-            vertical: 'bottom',
-            horizontal: 'left',
-          },
-          transformOrigin: {
-            vertical: 'top',
-            horizontal: 'left',
-          },
-        }}
-        sx={{ minWidth: 120 }}
-        data-testid="select-editor"
-      >
-        {options.map((option) => (
-          <MenuItem key={option} value={option} data-testid={`option-${option}`}>
-            {getLabel(option)}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
+        onDropdownClose={onClose}
+        allowDeselect={false}
+        searchable
+        size="sm"
+        comboboxProps={{ withinPortal: false, transitionProps: { duration: 0 } }}
+        renderOption={({ option }) => (
+          <span data-testid={`option-${option.value}`}>{option.label}</span>
+        )}
+      />
+    </Box>
   );
 }
 

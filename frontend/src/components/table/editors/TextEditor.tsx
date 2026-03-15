@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { TextField } from '@mui/material';
-import type { SxProps, Theme } from '@mui/material';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { TextInput } from '../../../ui';
 
 export interface TextEditorProps {
   value: string;
@@ -11,11 +10,11 @@ export interface TextEditorProps {
   required?: boolean;
   minLength?: number;
   maxLength?: number;
-  sx?: SxProps<Theme>;
+  style?: React.CSSProperties;
 }
 
 /**
- * Inline text editor using MUI TextField.
+ * Inline text editor using Mantine TextInput.
  * Auto-focuses and selects text on mount.
  * Saves on Enter or blur, cancels on Escape.
  */
@@ -28,7 +27,7 @@ export function TextEditor({
   required = false,
   minLength = 0,
   maxLength,
-  sx,
+  style,
 }: TextEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const initialValue = useRef(value);
@@ -64,7 +63,7 @@ export function TextEditor({
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value;
+      const newValue = e.currentTarget.value;
       setLocalValue(newValue);
       onChange(newValue);
       // Clear error as user types
@@ -113,21 +112,19 @@ export function TextEditor({
   }, [handleSave]);
 
   return (
-    <TextField
-      inputRef={inputRef}
+    <TextInput
+      ref={inputRef}
       value={localValue}
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       onBlur={handleBlur}
       placeholder={placeholder}
-      error={!!error}
-      helperText={error}
-      size="small"
-      fullWidth
+      error={error || undefined}
+      size="sm"
       autoComplete="off"
       data-testid="text-editor"
-      inputProps={{ maxLength }}
-      sx={sx}
+      maxLength={maxLength}
+      style={style}
     />
   );
 }
