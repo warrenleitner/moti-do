@@ -63,7 +63,7 @@ test.describe('Refresh Functionality', () => {
       await expect(refreshButton).toBeEnabled({ timeout: 5000 });
     });
 
-    test('should not show refresh button on desktop viewport', async ({ page }) => {
+    test('should show header with refresh button on desktop viewport', async ({ page }) => {
       // Set desktop viewport
       await page.setViewportSize({ width: 1280, height: 800 });
       await page.goto('/tasks');
@@ -71,10 +71,12 @@ test.describe('Refresh Functionality', () => {
       // Wait for the page to load
       await expect(page.getByRole('button', { name: 'New Task' })).toBeVisible();
 
-      // The mobile app bar (and refresh button) should not be visible on desktop
-      // The refresh button is only in the mobile AppBar
-      const mobileAppBar = page.locator('header.MuiAppBar-root');
-      await expect(mobileAppBar).toBeHidden();
+      // Mantine AppShell header is always visible (not mobile-only)
+      const appHeader = page.locator('[data-testid="app-header"]');
+      await expect(appHeader).toBeVisible();
+
+      // Refresh button is available on all viewports
+      await expect(page.getByRole('button', { name: /refresh data/i })).toBeVisible();
     });
   });
 

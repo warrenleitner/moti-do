@@ -213,7 +213,7 @@ test.describe('Task CRUD Operations', () => {
       await expect(task).toBeVisible();
 
       // The undo button should now be visible (if history exists)
-      const undoButton = task.getByRole('button').filter({ has: page.locator('svg[data-testid="UndoIcon"]') });
+      const undoButton = task.getByRole('button', { name: /undo/i });
       const isUndoVisible = await undoButton.isVisible().catch(() => false);
 
       // If the backend supports history tracking, undo should be visible
@@ -242,7 +242,7 @@ test.describe('Task CRUD Operations', () => {
       await expect(task).toBeVisible();
 
       // Try to click undo if visible
-      const undoButton = task.getByRole('button').filter({ has: page.locator('svg[data-testid="UndoIcon"]') });
+      const undoButton = task.getByRole('button', { name: /undo/i });
       if (await undoButton.isVisible().catch(() => false)) {
         await undoButton.click();
 
@@ -277,8 +277,8 @@ test.describe('Task CRUD Operations', () => {
       // Switch to hidden mode
       await tasksPage.setSubtaskViewHidden();
 
-      // The button should be in pressed state (verify by aria-pressed or selected class)
-      await expect(tasksPage.subtaskHiddenButton).toHaveAttribute('aria-pressed', 'true');
+      // The button should be in active state (Mantine SegmentedControl uses data-active attribute)
+      await expect(tasksPage.subtaskHiddenButton).toHaveAttribute('data-active', 'true');
     });
 
     test('should switch to inline subtask view', async ({ page }) => {
@@ -289,8 +289,8 @@ test.describe('Task CRUD Operations', () => {
       await tasksPage.setSubtaskViewHidden();
       await tasksPage.setSubtaskViewInline();
 
-      // The inline button should be pressed
-      await expect(tasksPage.subtaskInlineButton).toHaveAttribute('aria-pressed', 'true');
+      // The inline button should be active (Mantine SegmentedControl uses data-active attribute)
+      await expect(tasksPage.subtaskInlineButton).toHaveAttribute('data-active', 'true');
     });
 
     test('should switch to top-level subtask view', async ({ page }) => {
@@ -300,8 +300,8 @@ test.describe('Task CRUD Operations', () => {
       // Switch to top-level mode
       await tasksPage.setSubtaskViewTopLevel();
 
-      // The top-level button should be pressed
-      await expect(tasksPage.subtaskTopLevelButton).toHaveAttribute('aria-pressed', 'true');
+      // The top-level button should be active (Mantine SegmentedControl uses data-active attribute)
+      await expect(tasksPage.subtaskTopLevelButton).toHaveAttribute('data-active', 'true');
     });
   });
 
@@ -452,14 +452,13 @@ test.describe('Task CRUD Operations', () => {
       const dateEditor = taskRow.getByTestId('date-editor');
       await expect(dateEditor).toBeVisible({ timeout: 5000 });
 
-      // Click the calendar button within the row to open the date picker dialog
-      await taskRow.getByRole('button', { name: /choose date/i }).click();
+      // Click the DatePickerInput button to open the calendar popover
+      const dateButton = dateEditor.locator('button[data-dates-input]');
+      await dateButton.click();
+      await dateEditor.locator('[data-calendar]').waitFor({ timeout: 5000 });
 
-      // Wait for the date picker dialog to open
-      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
-
-      // Click on day 15 of the current month
-      await page.getByRole('gridcell', { name: '15' }).click();
+      // Click on day 15 — Mantine renders day buttons as plain buttons inside the calendar
+      await dateEditor.locator('.mantine-Popover-dropdown button').filter({ hasText: /^15$/ }).first().click();
 
       // Wait for the dialog to close and the date to be saved
       await page.waitForTimeout(500);
@@ -492,14 +491,10 @@ test.describe('Task CRUD Operations', () => {
       const dateEditor = taskRow.getByTestId('date-editor');
       await expect(dateEditor).toBeVisible({ timeout: 5000 });
 
-      // Click the calendar button within the row to open the date picker dialog
-      await taskRow.getByRole('button', { name: /choose date/i }).click();
-
-      // Wait for the date picker dialog to open
-      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
-
-      // Click the clear button
-      await page.getByRole('button', { name: /clear/i }).click();
+      // Mantine DatePickerInput with clearable shows a clear button in the input right section
+      // Use the CloseButton which has aria-label for clearing
+      const clearButton = dateEditor.locator('button').filter({ has: page.locator('svg') }).last();
+      await clearButton.click();
 
       // Wait for the dialog to close
       await page.waitForTimeout(500);
@@ -538,7 +533,7 @@ test.describe('Task CRUD Operations', () => {
 
       // Fill the new title (fill() clears existing text and types new value)
       const newTitle = `Renamed Task ${Date.now()}`;
-      const input = page.getByTestId('text-editor').getByRole('textbox');
+      const input = page.getByTestId('text-editor');
       await input.fill(newTitle);
 
       // Small wait to ensure React state is updated
@@ -584,7 +579,7 @@ test.describe('Task CRUD Operations', () => {
 
       // Fill a new icon
       const taskIcon = '🍕';
-      const input = page.getByTestId('text-editor').getByRole('textbox');
+      const input = page.getByTestId('text-editor');
       await input.fill(taskIcon);
 
       // Click outside to blur and save
@@ -624,7 +619,7 @@ test.describe('Task CRUD Operations', () => {
       await page.waitForTimeout(150);
 
       // Fill a different title but don't save
-      const input = page.getByTestId('text-editor').getByRole('textbox');
+      const input = page.getByTestId('text-editor');
       await input.fill('This should not be saved');
 
       // Press Escape to cancel
@@ -661,7 +656,8 @@ test.describe('Task CRUD Operations', () => {
       await expect(page.getByTestId('project-editor')).toBeVisible({ timeout: 5000 });
 
       // Type a new project name
-      const projectInput = page.getByTestId('project-editor').getByRole('combobox');
+      // Mantine Autocomplete renders as <input> (not role="combobox")
+      const projectInput = page.getByTestId('project-editor').locator('input');
       await projectInput.fill('New Project');
 
       // Click outside to blur and save
@@ -698,7 +694,8 @@ test.describe('Task CRUD Operations', () => {
       await expect(page.getByTestId('project-editor')).toBeVisible({ timeout: 5000 });
 
       // Clear the project name
-      const projectInput = page.getByTestId('project-editor').getByRole('combobox');
+      // Mantine Autocomplete renders as <input> (not role="combobox")
+      const projectInput = page.getByTestId('project-editor').locator('input');
       await projectInput.clear();
 
       // Click outside to blur and save
@@ -729,10 +726,11 @@ test.describe('Task CRUD Operations', () => {
       await page.getByRole('button', { name: /configure columns/i }).click();
       await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
 
-      // Find the Tags row in the column list and click its checkbox
-      // The dialog shows columns as ListItems with the column label as primary text
-      const tagsListItem = page.getByRole('listitem').filter({ hasText: 'Tags' });
-      const tagsCheckbox = tagsListItem.getByRole('checkbox');
+      // Find the Tags row in the column config dialog and click its checkbox
+      // Column config uses Paper elements (with border), not list items
+      const configDialog = page.getByRole('dialog');
+      const tagsRow = configDialog.locator('[data-with-border]').filter({ hasText: 'Tags' });
+      const tagsCheckbox = tagsRow.getByRole('checkbox');
       await tagsCheckbox.check();
 
       // Save the column config
@@ -754,7 +752,8 @@ test.describe('Task CRUD Operations', () => {
       await expect(page.getByTestId('tags-editor')).toBeVisible({ timeout: 5000 });
 
       // Type a new tag and press Enter to add it
-      const tagsInput = page.getByTestId('tags-editor').getByRole('combobox');
+      // Mantine TagsInput renders visible input + hidden input; use first() to target the visible one
+      const tagsInput = page.getByTestId('tags-editor').locator('input').first();
       await tagsInput.fill('urgent');
       await tagsInput.press('Enter');
 

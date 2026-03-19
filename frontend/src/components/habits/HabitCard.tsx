@@ -58,6 +58,7 @@ export default function HabitCard({ habit, onComplete, onEdit, onDelete }: Habit
       padding="md"
       radius="md"
       mb="xs"
+      data-testid="habit-card"
       style={{
         opacity: habit.is_complete ? 0.7 : 1,
         borderLeft: `4px solid ${borderColor}`,

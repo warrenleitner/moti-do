@@ -33,9 +33,16 @@ const columns: Column[] = [
 ];
 
 // Map task properties to kanban status
-function getTaskStatus(task: Task): KanbanStatus {
+function getTaskStatus(task: Task, allTaskMap: Map<string, Task>): KanbanStatus {
   if (task.is_complete) return 'done';
-  if (task.status === 'blocked') return 'blocked';
+  // Compute blocked from dependencies (backend doesn't set status field)
+  if (task.dependencies?.length > 0) {
+    const hasIncompleteDep = task.dependencies.some((depId) => {
+      const dep = allTaskMap.get(depId);
+      return dep && !dep.is_complete;
+    });
+    if (hasIncompleteDep) return 'blocked';
+  }
   if (task.status === 'in_progress') return 'in_progress';
   if (task.status === 'todo') return 'todo';
   return 'backlog';
@@ -110,6 +117,7 @@ export default function KanbanBoard({
 
   // Group tasks by status
   const tasksByStatus = useMemo(() => {
+    const allTaskMap = new Map(tasks.map((t) => [t.id, t]));
     const grouped: Record<KanbanStatus, Task[]> = {
       backlog: [],
       todo: [],
@@ -119,7 +127,7 @@ export default function KanbanBoard({
     };
 
     filteredTasks.forEach((task) => {
-      const status = getTaskStatus(task);
+      const status = getTaskStatus(task, allTaskMap);
       grouped[status].push(task);
     });
 
@@ -164,7 +172,7 @@ export default function KanbanBoard({
     });
 
     return grouped;
-  }, [filteredTasks, sort]);
+  }, [tasks, filteredTasks, sort]);
 
   // Handle drag end
   const handleDragEnd = (result: DropResult) => {
@@ -270,7 +278,6 @@ export default function KanbanBoard({
           data={sortFieldData}
           size="sm"
           w={150}
-          role="combobox"
         />
         <Select
           label="Order"
@@ -281,7 +288,6 @@ export default function KanbanBoard({
           data={sortOrderData}
           size="sm"
           w={120}
-          role="combobox"
         />
         <Box style={{ flex: 1 }} />
         <Text size="sm" c="dimmed">

@@ -34,6 +34,7 @@ export default function KanbanCard({ task, index, onEdit }: KanbanCardProps) {
           padding="sm"
           radius="sm"
           mb="xs"
+          data-testid="kanban-card"
           style={{
             borderLeft: `4px solid ${priorityColors[task.priority] || '#1976d2'}`,
             backgroundColor: snapshot.isDragging

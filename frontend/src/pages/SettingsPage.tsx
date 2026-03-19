@@ -564,7 +564,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Tags Management */}
-      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
+      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder data-testid="tags-section">
         <Group justify="space-between" mb="md">
           <Group gap="xs">
             <IconTag size={20} color="var(--mantine-color-blue-6)" />
@@ -643,7 +643,7 @@ export default function SettingsPage() {
                       </Group>
                     </Table.Td>
                     <Table.Td style={{ textAlign: 'right' }}>
-                      <ActionIcon size="sm" color="blue" onClick={handleSaveTag} mr={4}>
+                      <ActionIcon size="sm" color="blue" onClick={handleSaveTag} mr={4} aria-label="Save">
                         <IconCheck size={16} />
                       </ActionIcon>
                       <ActionIcon size="sm" onClick={handleCancelEditTag}>
@@ -719,7 +719,7 @@ export default function SettingsPage() {
                     <Table.Td style={{ textAlign: 'right' }}>
                       {editingTagId === tag.id ? (
                         <>
-                          <ActionIcon size="sm" color="blue" onClick={handleSaveTag} mr={4}>
+                          <ActionIcon size="sm" color="blue" onClick={handleSaveTag} mr={4} aria-label="Save">
                             <IconCheck size={16} />
                           </ActionIcon>
                           <ActionIcon size="sm" onClick={handleCancelEditTag}>
@@ -755,7 +755,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Projects Management */}
-      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
+      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder data-testid="projects-section">
         <Group justify="space-between" mb="md">
           <Group gap="xs">
             <IconFolder size={20} color="var(--mantine-color-violet-6)" />
@@ -834,7 +834,7 @@ export default function SettingsPage() {
                       </Group>
                     </Table.Td>
                     <Table.Td style={{ textAlign: 'right' }}>
-                      <ActionIcon size="sm" color="blue" onClick={handleSaveProject} mr={4}>
+                      <ActionIcon size="sm" color="blue" onClick={handleSaveProject} mr={4} aria-label="Save">
                         <IconCheck size={16} />
                       </ActionIcon>
                       <ActionIcon size="sm" onClick={handleCancelEditProject}>
@@ -910,7 +910,7 @@ export default function SettingsPage() {
                     <Table.Td style={{ textAlign: 'right' }}>
                       {editingProjectId === project.id ? (
                         <>
-                          <ActionIcon size="sm" color="blue" onClick={handleSaveProject} mr={4}>
+                          <ActionIcon size="sm" color="blue" onClick={handleSaveProject} mr={4} aria-label="Save">
                             <IconCheck size={16} />
                           </ActionIcon>
                           <ActionIcon size="sm" onClick={handleCancelEditProject}>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { Box, DatePickerInput } from '../../../ui';
 
 export interface DateEditorProps {
@@ -11,7 +11,7 @@ export interface DateEditorProps {
 
 /**
  * Inline date editor using Mantine DatePickerInput.
- * Opens immediately and auto-saves on date selection.
+ * Auto-saves on date selection.
  */
 export function DateEditor({
   value,
@@ -19,28 +19,10 @@ export function DateEditor({
   onSave,
   label = 'Date',
 }: DateEditorProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const hasOpenedRef = useRef(false);
-
   // Parse string date to Date object
   const dateValue = value
     ? new Date(value.includes('T') ? value : value + 'T00:00:00')
     : null;
-
-  // Focus the date picker input when mounted
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const input = containerRef.current?.querySelector('input');
-      // DOM element check is a safety guard - covered via E2E tests
-      /* v8 ignore next 5 */
-      if (input && !hasOpenedRef.current) {
-        input.focus();
-        input.click(); // Open the date picker
-        hasOpenedRef.current = true;
-      }
-    }, 50);
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleChange = useCallback(
     (newDate: string | Date | null) => {
@@ -55,7 +37,7 @@ export function DateEditor({
   );
 
   return (
-    <Box ref={containerRef} style={{ minWidth: 140 }} data-testid="date-editor">
+    <Box style={{ minWidth: 140 }} data-testid="date-editor">
       <DatePickerInput
         label={label}
         value={dateValue}

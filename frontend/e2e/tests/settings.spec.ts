@@ -65,7 +65,7 @@ test.describe('Settings Page', () => {
     test('should toggle vacation mode on', async ({ page }) => {
       await page.goto('/settings');
 
-      // Find vacation mode toggle - MUI Switch gets name from FormControlLabel
+      // Find vacation mode toggle - Mantine Switch component
       // The label starts with "Enable vacation mode" or "Vacation mode is active"
       const vacationToggle = page.getByRole('switch');
       await expect(vacationToggle).toBeVisible();
@@ -128,7 +128,7 @@ test.describe('Settings Page', () => {
 
         // Should show form with current and new password fields
         await expect(page.getByLabel(/current password/i)).toBeVisible();
-        await expect(page.getByLabel('New Password', { exact: true })).toBeVisible();
+        await expect(page.getByLabel('New Password')).toBeVisible();
       }
     });
 
@@ -142,7 +142,7 @@ test.describe('Settings Page', () => {
 
         // Try to submit with short password
         const currentPasswordInput = page.getByLabel(/current password/i);
-        const newPasswordInput = page.getByLabel('New Password', { exact: true });
+        const newPasswordInput = page.getByLabel('New Password');
         const confirmPasswordInput = page.getByLabel(/confirm new password/i);
 
         await currentPasswordInput.fill('testpassword123');
@@ -154,7 +154,7 @@ test.describe('Settings Page', () => {
         await submitBtn.click();
 
         // Should show validation error
-        const error = page.getByRole('alert');
+        const error = page.getByRole('alert').first();
         if (await error.isVisible()) {
           const errorText = await error.textContent();
           expect(errorText?.toLowerCase()).toContain('8 characters');
@@ -179,12 +179,12 @@ test.describe('Settings Page', () => {
       await expect(xpHistoryHeading).toBeVisible();
 
       // Wait for loading to complete - check for either transactions or empty message
-      // The page should show either list items (transactions) or the empty state message
-      const transactionsList = page.locator('li').filter({ hasText: /XP$/ });
+      // XP transactions are rendered as Paper elements (divs with border), not list items
+      const transactionItem = page.getByText(/[+-]?\d+ XP/).first();
       const emptyMessage = page.getByText('No XP transactions yet');
 
       // Wait for one of the states to appear
-      await expect(transactionsList.first().or(emptyMessage)).toBeVisible({ timeout: 5000 });
+      await expect(transactionItem.or(emptyMessage)).toBeVisible({ timeout: 5000 });
     });
   });
 
@@ -255,15 +255,15 @@ test.describe('Settings Page', () => {
 
       // Fill in tag name (first textbox in the form row - Tags section)
       const tagName = `TestTag${Date.now()}`;
-      const tagsSection = page.locator('.MuiCard-root').filter({ hasText: 'Tags' });
+      const tagsSection = page.locator('[data-testid="tags-section"]');
       const nameInput = tagsSection.getByRole('textbox').first();
       await nameInput.fill(tagName);
 
       // Click a quick multiplier button instead of typing
       await page.getByRole('button', { name: '1.5x' }).click();
 
-      // Submit form by clicking the check icon button
-      await tagsSection.getByRole('button').filter({ has: page.locator('svg[data-testid="CheckIcon"]') }).click();
+      // Submit form by clicking the save button
+      await tagsSection.getByRole('button', { name: 'Save' }).click();
 
       // Verify tag appears in list
       await expect(page.getByText(tagName)).toBeVisible({ timeout: 5000 });
@@ -315,15 +315,15 @@ test.describe('Settings Page', () => {
 
       // Fill in project name (first textbox in the form row - Projects section)
       const projectName = `TestProject${Date.now()}`;
-      const projectsSection = page.locator('.MuiCard-root').filter({ hasText: 'Projects' });
+      const projectsSection = page.locator('[data-testid="projects-section"]');
       const nameInput = projectsSection.getByRole('textbox').first();
       await nameInput.fill(projectName);
 
       // Click a quick multiplier button (the Projects section should have its own buttons)
       await projectsSection.getByRole('button', { name: '2x' }).click();
 
-      // Submit form by clicking the check icon button
-      await projectsSection.getByRole('button').filter({ has: page.locator('svg[data-testid="CheckIcon"]') }).click();
+      // Submit form by clicking the save button
+      await projectsSection.getByRole('button', { name: 'Save' }).click();
 
       // Verify project appears in list
       await expect(page.getByText(projectName)).toBeVisible({ timeout: 5000 });

@@ -21,14 +21,15 @@ export class LoginPage {
     // Logo image with alt text "Motodo"
     this.heading = page.getByRole('img', { name: 'Motodo' });
     this.subtitle = page.getByText('Task and Habit Tracker');
-    // ToggleButton elements in the ToggleButtonGroup - use group to scope
-    this.loginTab = page.getByRole('group').getByRole('button', { name: 'Login' });
-    this.registerTab = page.getByRole('group').getByRole('button', { name: 'Register' });
-    // Form fields - use getByRole textbox for MUI TextField components
-    // Note: Password needs exact: true to avoid matching "Confirm Password"
+    // Mantine SegmentedControl renders as div[role="radiogroup"] with <label> elements
+    this.loginTab = page.getByRole('radiogroup').getByText('Login');
+    this.registerTab = page.getByRole('radiogroup').getByText('Register');
+    // Form fields - Mantine TextInput uses standard <input> with <label>
     this.usernameInput = page.getByRole('textbox', { name: 'Username' });
-    this.passwordInput = page.getByRole('textbox', { name: 'Password', exact: true });
-    this.confirmPasswordInput = page.getByRole('textbox', { name: 'Confirm Password' });
+    // Mantine PasswordInput renders <input type="password">; required adds "*" to label
+    // Use .first() to get "Password *" and not "Confirm Password *"
+    this.passwordInput = page.getByLabel('Password').first();
+    this.confirmPasswordInput = page.getByLabel('Confirm Password');
     // Submit button - the form submit button (type="submit")
     this.submitButton = page.locator('button[type="submit"]');
     this.errorAlert = page.getByRole('alert');

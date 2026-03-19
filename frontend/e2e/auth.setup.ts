@@ -13,7 +13,8 @@ setup('authenticate', async ({ page }) => {
 
   // Login with test credentials
   await page.getByRole('textbox', { name: 'Username' }).fill('default_user');
-  await page.getByRole('textbox', { name: 'Password', exact: true }).fill('testpassword123');
+  // Mantine PasswordInput renders <input type="password">; required adds "*" to label
+  await page.getByLabel('Password').first().fill('testpassword123');
   await page.locator('button[type="submit"]').click();
 
   // Wait for successful login (redirect away from login page)

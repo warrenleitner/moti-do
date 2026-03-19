@@ -29,6 +29,7 @@ export default function KanbanColumn({
   return (
     <Paper
       radius="sm"
+      data-testid="kanban-column"
       style={{
         width: 280,
         minWidth: 280,
@@ -47,7 +48,7 @@ export default function KanbanColumn({
         }}
       >
         <Group justify="space-between" align="center">
-          <Text fw={700}>{title}</Text>
+          <Text fw={700} data-column-title={title}>{title}</Text>
           <Badge
             color={isOverWipLimit ? 'red' : 'blue'}
             variant="filled"

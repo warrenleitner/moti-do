@@ -153,9 +153,9 @@ describe('KanbanBoard', () => {
     // This component is wrapped in v8 ignore, testing that filter controls render
     render(<KanbanBoard tasks={mockTasks} onUpdateTask={vi.fn()} />);
 
-    // Verify filter controls are present (there are multiple comboboxes for project/tag)
-    const comboboxes = screen.getAllByRole('combobox');
-    expect(comboboxes.length).toBeGreaterThan(0);
+    // Verify filter controls are present (Mantine Select renders as textbox)
+    const textboxes = screen.getAllByRole('textbox');
+    expect(textboxes.length).toBeGreaterThan(0);
     expect(screen.getAllByText('Project').length).toBeGreaterThan(0);
   });
 
@@ -163,9 +163,9 @@ describe('KanbanBoard', () => {
     // This component is wrapped in v8 ignore, testing basic render
     render(<KanbanBoard tasks={mockTasks} onUpdateTask={vi.fn()} />);
 
-    // Verify filter controls render (there are multiple comboboxes)
-    const comboboxes = screen.getAllByRole('combobox');
-    expect(comboboxes.length).toBeGreaterThan(0);
+    // Verify filter controls render (Mantine Select renders as textbox)
+    const textboxes = screen.getAllByRole('textbox');
+    expect(textboxes.length).toBeGreaterThan(0);
     expect(screen.getAllByText('Project').length).toBeGreaterThan(0);
   });
 

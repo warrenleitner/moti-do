@@ -25,6 +25,7 @@ export default function SubtaskCard({
       mb="xs"
       ml="xl"
       withBorder
+      data-testid="subtask-card"
       style={{
         opacity: subtask.complete ? 0.7 : 1,
         borderLeft: `3px solid ${subtask.complete ? 'var(--mantine-color-green-4)' : 'var(--mantine-color-gray-4)'}`,
@@ -33,7 +34,7 @@ export default function SubtaskCard({
       }}
     >
       <Group gap="sm" wrap="nowrap">
-        <IconCornerDownRight size={16} color="var(--mantine-color-gray-5)" style={{ marginLeft: -4 }} />
+        <IconCornerDownRight size={16} color="var(--mantine-color-gray-5)" style={{ marginLeft: -4 }} data-testid="subtask-icon" />
         <Checkbox
           checked={subtask.complete}
           onChange={() => onToggle?.(parentTask.id, subtaskIndex)}

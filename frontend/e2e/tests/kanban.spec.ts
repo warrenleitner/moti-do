@@ -17,7 +17,8 @@ test.describe('Kanban Board', () => {
       const kanbanPage = new KanbanPage(page);
       await kanbanPage.goto();
 
-      await expect(kanbanPage.page.getByText('Backlog', { exact: true })).toBeVisible();
+      // Verify Backlog column is visible using column locator
+      await expect(kanbanPage.getColumn('Backlog')).toBeVisible();
 
       // Verify all columns are present using the helper method
       const allColumnsVisible = await kanbanPage.allColumnsVisible();
@@ -53,7 +54,12 @@ test.describe('Kanban Board', () => {
       await tasksPage.createTask(taskTitle);
 
       // Complete via UI (simpler than extracting ID)
+      // Wait for the completion API response to ensure persistence before navigating
+      const completeResponsePromise = page.waitForResponse(
+        (resp) => resp.url().includes('/complete') && resp.status() === 200,
+      );
       await tasksPage.toggleTaskComplete(taskTitle);
+      await completeResponsePromise;
 
       // Navigate to kanban
       const kanbanPage = new KanbanPage(page);
@@ -143,10 +149,9 @@ test.describe('Kanban Board', () => {
       const kanbanPage = new KanbanPage(page);
       await kanbanPage.goto();
 
-      // Verify the page loads and has multiple comboboxes (for filters and sort)
+      // Verify the page loads and has sort controls (Mantine Select renders as textbox)
       // This is a basic smoke test - unit tests verify sorting functionality
-      const comboboxes = page.getByRole('combobox');
-      await expect(await comboboxes.count()).toBeGreaterThan(0);
+      await expect(kanbanPage.sortBySelect).toBeVisible();
     });
   });
 

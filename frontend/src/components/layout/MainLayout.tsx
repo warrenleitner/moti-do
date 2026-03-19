@@ -87,7 +87,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       padding="md"
     >
       {/* Header */}
-      <AppShell.Header>
+      <AppShell.Header data-testid="app-header">
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="md" size="sm" />

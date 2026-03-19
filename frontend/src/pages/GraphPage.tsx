@@ -59,6 +59,7 @@ export default function GraphPage() {
         onClose={() => setDrawerOpen(false)}
         size={400}
         withCloseButton={false}
+        data-testid="task-drawer"
         title={
           <Group justify="space-between" w="100%">
             <Title order={4}>Task Details</Title>

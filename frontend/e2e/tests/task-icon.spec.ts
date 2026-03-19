@@ -25,7 +25,7 @@ test.describe('Task Icon Feature', () => {
     // Verify task is in the list (Card View) with the icon
     // We look for the title text, then find the parent container or just check if icon is visible near it.
     // In Card view, the icon is a span sibling to the title.
-    const taskCard = page.locator('.MuiCard-root').filter({ hasText: taskTitle });
+    const taskCard = page.locator('[data-testid="task-card"]').filter({ hasText: taskTitle });
     await expect(taskCard).toBeVisible();
     await expect(taskCard.getByText(initialIcon)).toBeVisible();
 

@@ -14,7 +14,7 @@ export class HabitsPage {
     this.page = page;
     this.newHabitButton = page.getByRole('button', { name: 'New Habit' });
     this.habitFormDialog = page.getByRole('dialog');
-    this.snackbar = page.getByRole('alert');
+    this.snackbar = page.getByRole('alert').first();
   }
 
   /**
@@ -61,12 +61,11 @@ export class HabitsPage {
 
     // Set frequency if specified (using the RecurrenceRuleBuilder visual UI)
     if (options?.frequency && options.frequency !== 'DAILY') {
-      // Click the frequency dropdown and select the desired frequency
+      // Click the frequency dropdown (Mantine Select with aria-label="Frequency")
       const frequencyLabel = options.frequency === 'WEEKLY' ? 'Week' :
                              options.frequency === 'MONTHLY' ? 'Month' :
                              options.frequency === 'YEARLY' ? 'Year' : 'Day';
-      const frequencyDropdown = dialog.getByRole('combobox').filter({ hasText: /Day|Week|Month|Year/ });
-      await frequencyDropdown.click();
+      await dialog.getByLabel('Frequency').click();
       await this.page.getByRole('option', { name: new RegExp(`^${frequencyLabel}s?$`) }).click();
     }
 
@@ -86,9 +85,9 @@ export class HabitsPage {
       await dialog.getByLabel('Description').fill(options.description);
     }
 
-    // Set priority if specified (MUI Select - find by emoji prefix)
+    // Set priority if specified (Mantine Select - click label to open dropdown)
     if (options?.priority) {
-      await dialog.getByRole('combobox').filter({ hasText: '🟡' }).click();
+      await dialog.getByLabel('Priority', { exact: true }).click();
       await this.page.getByRole('option', { name: new RegExp(options.priority, 'i') }).click();
     }
 
@@ -109,8 +108,8 @@ export class HabitsPage {
           always: 'Always Copy All',
         }[options.subtaskRecurrenceMode];
 
-        // Click the subtask recurrence dropdown
-        const recurrenceDropdown = dialog.locator('.MuiFormControl-root').filter({ hasText: 'Subtask Recurrence' }).getByRole('combobox');
+        // Click the subtask recurrence dropdown (Mantine Select with label)
+        const recurrenceDropdown = dialog.getByLabel('Subtask Recurrence');
         await recurrenceDropdown.click();
         await this.page.getByRole('option', { name: new RegExp(modeLabel) }).click();
       }
@@ -128,8 +127,8 @@ export class HabitsPage {
    * Get a habit card by its title.
    */
   getHabitByTitle(title: string): Locator {
-    // Habits are displayed as MuiCard elements
-    return this.page.locator('.MuiCard-root').filter({ hasText: title });
+    // Habits are displayed as Card elements with data-testid
+    return this.page.locator('[data-testid="habit-card"]').filter({ hasText: title });
   }
 
   /**
@@ -200,8 +199,7 @@ export class HabitsPage {
       const frequencyLabel = updates.frequency === 'WEEKLY' ? 'Week' :
                              updates.frequency === 'MONTHLY' ? 'Month' :
                              updates.frequency === 'YEARLY' ? 'Year' : 'Day';
-      const frequencyDropdown = this.page.getByRole('combobox').filter({ hasText: /Day|Week|Month|Year/ });
-      await frequencyDropdown.click();
+      await this.page.getByLabel('Frequency').click();
       await this.page.getByRole('option', { name: new RegExp(`^${frequencyLabel}s?$`) }).click();
     }
 
@@ -216,9 +214,10 @@ export class HabitsPage {
     const habitCard = this.getHabitByTitle(title);
     await habitCard.getByRole('button', { name: 'Delete habit' }).click();
 
-    // Confirm deletion in dialog
-    await this.page.getByRole('dialog').filter({ hasText: 'Delete Habit' }).waitFor();
-    await this.page.getByRole('button', { name: 'Delete' }).click();
+    // Confirm deletion in dialog — scope button to dialog to avoid matching card's delete button
+    const confirmDialog = this.page.getByRole('dialog').filter({ hasText: 'Delete Habit' });
+    await confirmDialog.waitFor();
+    await confirmDialog.getByRole('button', { name: 'Delete' }).click();
 
     await expect(this.page.getByText('Habit deleted successfully')).toBeVisible({ timeout: 5000 });
   }
@@ -227,8 +226,8 @@ export class HabitsPage {
    * Get count of visible habits.
    */
   async getHabitCount(): Promise<number> {
-    // Count cards that have the Loop icon (habit indicator)
-    return await this.page.locator('.MuiCard-root').count();
+    // Count habit cards
+    return await this.page.locator('[data-testid="habit-card"]').count();
   }
 
   /**

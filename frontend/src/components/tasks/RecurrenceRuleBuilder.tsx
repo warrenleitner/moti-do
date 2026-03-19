@@ -243,6 +243,7 @@ export default function RecurrenceRuleBuilder({
           data={frequencyData}
           size="xs"
           w={100}
+          aria-label="Frequency"
         />
       </Group>
 

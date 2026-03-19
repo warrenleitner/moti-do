@@ -180,6 +180,7 @@ export default function TaskCard({
         padding="md"
         radius="md"
         withBorder
+        data-testid="task-card"
         style={{
           opacity: task.is_complete ? 0.7 : isBlocked ? 0.6 : 1,
           borderLeft: `4px solid ${borderColor}`,

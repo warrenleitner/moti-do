@@ -26,15 +26,17 @@ export class GraphPage {
     this.graphContainer = page.locator('.react-flow');
     // Empty state when no dependencies exist
     this.emptyStateMessage = page.getByText('No Dependencies');
-    // MUI Drawer for task details (anchor="right", not hidden)
-    this.taskDrawer = page.locator('.MuiDrawer-root.MuiDrawer-anchorRight:not([aria-hidden="true"])');
-    this.snackbar = page.getByRole('alert');
+    // Mantine Drawer content panel (root overlay has height:0, so target the visible content)
+    this.taskDrawer = page.locator('[data-testid="task-drawer"] .mantine-Drawer-content');
+    this.snackbar = page.getByRole('alert').first();
 
-    // Direction toggle buttons - use text locators as MUI ToggleButton accessible names can be tricky with icons
-    this.allDirectionButton = page.getByRole('button', { name: 'All', exact: true });
-    this.upstreamButton = page.locator('button').filter({ hasText: 'Upstream' });
-    this.downstreamButton = page.locator('button').filter({ hasText: 'Downstream' });
-    this.isolatedButton = page.locator('button').filter({ hasText: 'Isolated' });
+    // Direction toggle - Mantine SegmentedControl renders labels inside a radiogroup
+    // Use label text within radiogroup (CSS '+' sibling selectors don't work in Playwright)
+    const directionToggle = page.locator('[role="radiogroup"]');
+    this.allDirectionButton = directionToggle.locator('label').filter({ hasText: 'All' });
+    this.upstreamButton = directionToggle.locator('label').filter({ hasText: 'Upstream' });
+    this.downstreamButton = directionToggle.locator('label').filter({ hasText: 'Downstream' });
+    this.isolatedButton = directionToggle.locator('label').filter({ hasText: 'Isolated' });
   }
 
   /**
@@ -50,6 +52,10 @@ export class GraphPage {
    */
   async waitForGraph(): Promise<void> {
     await this.graphContainer.waitFor({ timeout: 10000 });
+    // Wait for ReactFlow controls to be attached (may have animation delay)
+    await this.page.locator('.react-flow__controls').waitFor({ state: 'attached', timeout: 10000 });
+    // Allow controls to stabilize after render
+    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -95,59 +101,62 @@ export class GraphPage {
 
   /**
    * Click on a node to select it and open the drawer.
+   * ReactFlow positions nodes via CSS transforms that place them outside the browser viewport,
+   * so we dispatch the full pointer event sequence directly in the browser context.
    */
   async clickNode(title: string): Promise<void> {
-    // Use first() to ensure we click only one node if multiple match
     const node = this.getNodeByTitle(title).first();
 
-    // Wait for React Flow to stabilize (animations, layout)
+    // Wait for React Flow to stabilize
     await this.page.waitForTimeout(500);
-
-    // Ensure the node exists
     await node.waitFor({ state: 'attached', timeout: 5000 });
 
-    // Use ReactFlow's fit view to ensure all nodes are visible in the canvas
+    // Fit view to ensure all nodes are visible
     const fitViewButton = this.page.locator('.react-flow__controls-fitview');
-    await fitViewButton.waitFor({ state: 'visible', timeout: 5000 });
-    await fitViewButton.click();
-
-    // Wait for fitView animation to complete
+    await fitViewButton.waitFor({ state: 'attached', timeout: 10000 });
+    await fitViewButton.click({ force: true });
     await this.page.waitForTimeout(800);
 
-    // Retry clicking up to 3 times if drawer doesn't open
+    // Retry clicking up to 3 times
     for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        // Try clicking with force to bypass actionability checks
-        await node.click({ force: true, timeout: 2000 });
-      } catch {
-        // If click fails, try scrolling the node into view and clicking again
-        await node.scrollIntoViewIfNeeded();
-        await this.page.waitForTimeout(200);
-        try {
-          await node.click({ force: true, timeout: 2000 });
-        } catch {
-          // Last resort: click via dispatchEvent
-          await node.dispatchEvent('click');
+      await this.page.evaluate((nodeTitle) => {
+        const nodes = document.querySelectorAll('.react-flow__node');
+        let target: HTMLElement | null = null;
+        for (const n of nodes) {
+          if (n.textContent?.includes(nodeTitle)) {
+            target = n as HTMLElement;
+            break;
+          }
         }
-      }
+        if (!target) return;
+        const rect = target.getBoundingClientRect();
+        const opts = {
+          bubbles: true, cancelable: true, view: window,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+          button: 0,
+        };
+        target.dispatchEvent(new PointerEvent('pointerdown', { ...opts, pointerId: 1, pointerType: 'mouse', buttons: 1 }));
+        target.dispatchEvent(new MouseEvent('mousedown', { ...opts, buttons: 1 }));
+        target.dispatchEvent(new PointerEvent('pointerup', { ...opts, pointerId: 1, pointerType: 'mouse', buttons: 0 }));
+        target.dispatchEvent(new MouseEvent('mouseup', { ...opts, buttons: 0 }));
+        target.dispatchEvent(new MouseEvent('click', { ...opts, buttons: 0, detail: 1 }));
+      }, title);
 
-      // Wait for drawer to open with a shorter timeout for retries
       try {
-        await this.taskDrawer.waitFor({ timeout: 3000 });
-        return; // Success - drawer opened
+        await this.taskDrawer.waitFor({ state: 'visible', timeout: 3000 });
+        return;
       } catch {
-        // Drawer didn't open, wait and retry
         if (attempt < 2) {
           await this.page.waitForTimeout(300);
-          // Try fitView again before next attempt
-          await fitViewButton.click();
+          await fitViewButton.click({ force: true });
           await this.page.waitForTimeout(500);
         }
       }
     }
 
-    // Final attempt - wait with longer timeout
-    await this.taskDrawer.waitFor({ timeout: 5000 });
+    // Final attempt
+    await this.taskDrawer.waitFor({ state: 'visible', timeout: 5000 });
   }
 
   /**
@@ -171,7 +180,7 @@ export class GraphPage {
    * Get the task title shown in the drawer.
    */
   async getDrawerTaskTitle(): Promise<string | null> {
-    const titleElement = this.taskDrawer.locator('.MuiTypography-root').first();
+    const titleElement = this.taskDrawer.locator('p, h1, h2, h3, h4, h5, h6').first();
     return await titleElement.textContent();
   }
 
@@ -199,22 +208,22 @@ export class GraphPage {
    * Use ReactFlow controls to zoom in.
    */
   async zoomIn(): Promise<void> {
-    // ReactFlow controls panel has zoom buttons
-    await this.page.locator('.react-flow__controls-zoomin').click();
+    // ReactFlow controls panel has zoom buttons — use force to bypass animation stability checks
+    await this.page.locator('.react-flow__controls-zoomin').click({ force: true });
   }
 
   /**
    * Use ReactFlow controls to zoom out.
    */
   async zoomOut(): Promise<void> {
-    await this.page.locator('.react-flow__controls-zoomout').click();
+    await this.page.locator('.react-flow__controls-zoomout').click({ force: true });
   }
 
   /**
    * Use ReactFlow controls to fit view.
    */
   async fitView(): Promise<void> {
-    await this.page.locator('.react-flow__controls-fitview').click();
+    await this.page.locator('.react-flow__controls-fitview').click({ force: true });
   }
 
   /**
@@ -256,7 +265,7 @@ export class GraphPage {
    */
   async getDependenciesInDrawer(): Promise<string[]> {
     const dependenciesSection = this.taskDrawer.getByText('Dependencies').locator('..');
-    const cards = dependenciesSection.locator('.MuiCard-root');
+    const cards = dependenciesSection.locator('[data-testid="task-card"]');
     const count = await cards.count();
     const titles: string[] = [];
     for (let i = 0; i < count; i++) {
