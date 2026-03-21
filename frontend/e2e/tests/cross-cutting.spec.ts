@@ -38,8 +38,8 @@ test.describe('Cross-Cutting Flows', () => {
       // Step 1: Start at dashboard (already authenticated)
       await page.goto('/');
 
-      // Step 2: Verify dashboard
-      await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+      // Step 2: Verify dashboard (no longer shows "Welcome back!" — uses Kinetic Console style)
+      await expect(page.getByText('CORE_SYSTEM_XP_LOADER')).toBeVisible();
 
       // Step 3: Create first task
       const tasksPage = new TasksPage(page);
@@ -74,8 +74,9 @@ test.describe('Cross-Cutting Flows', () => {
 
       // Step 8: Navigate to dashboard and verify XP awarded
       await page.goto('/');
-      const xpDisplay = page.getByRole('heading', { name: /\d+ xp/i });
-      await expect(xpDisplay).toBeVisible();
+      // XP is now displayed as "X / Y XP" in the XPProgressRing sublabel
+      const xpDisplay = page.getByText(/\d+\s*\/\s*\d+\s*XP/);
+      await expect(xpDisplay.first()).toBeVisible();
     });
   });
 
@@ -215,9 +216,10 @@ test.describe('Cross-Cutting Flows', () => {
 
       // Check XP increased on dashboard
       await page.goto('/');
-      const xpHeading = page.getByRole('heading', { name: /\d+ xp/i });
-      await expect(xpHeading).toBeVisible();
-      const finalXP = await xpHeading.textContent();
+      // XP is now displayed as "X / Y XP" in the XPProgressRing sublabel
+      const xpHeading = page.getByText(/\d+\s*\/\s*\d+\s*XP/);
+      await expect(xpHeading.first()).toBeVisible();
+      const finalXP = await xpHeading.first().textContent();
 
       expect(finalXP).toBeDefined();
     });
@@ -236,14 +238,15 @@ test.describe('Cross-Cutting Flows', () => {
         await page.goto('/');
       });
       navigationTimings.push(dashboardTiming);
-      await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+      // Dashboard now shows "CORE_SYSTEM_XP_LOADER" instead of "Welcome back!"
+      await expect(page.getByText('CORE_SYSTEM_XP_LOADER')).toBeVisible();
 
       // Tasks
       const tasksTiming = await measureNavigation(page, '/tasks', async () => {
         await page.goto('/tasks');
       });
       navigationTimings.push(tasksTiming);
-      await expect(page.getByRole('button', { name: 'New Task' })).toBeVisible();
+      await expect(page.getByRole('button', { name: /NEW TASK/i })).toBeVisible();
 
       // Calendar
       const calendarTiming = await measureNavigation(page, '/calendar', async () => {
@@ -264,7 +267,7 @@ test.describe('Cross-Cutting Flows', () => {
         await page.goto('/habits');
       });
       navigationTimings.push(habitsTiming);
-      await expect(page.getByRole('button', { name: 'New Habit' })).toBeVisible();
+      await expect(page.getByRole('button', { name: /INITIALIZE NEW PROTOCOL|Create Habit/i })).toBeVisible();
 
       // Graph
       const graphTiming = await measureNavigation(page, '/graph', async () => {
@@ -278,7 +281,8 @@ test.describe('Cross-Cutting Flows', () => {
         await page.goto('/settings');
       });
       navigationTimings.push(settingsTiming);
-      await expect(page.getByRole('heading', { name: 'Data Backup & Restore' })).toBeVisible();
+      // Settings section headers are now uppercase with underscores, rendered as role="button"
+      await expect(page.getByText('DATA_BACKUP_RESTORE')).toBeVisible();
 
       // Log performance summary
       await logPerformanceSummary('Multi-Page Navigation', navigationTimings, page);

@@ -15,7 +15,7 @@ test.describe('Refresh Functionality', () => {
       await page.goto('/tasks');
 
       // Wait for the page to load
-      await expect(page.getByRole('button', { name: 'New Task' })).toBeVisible();
+      await expect(page.getByRole('button', { name: /NEW TASK/i })).toBeVisible();
 
       // Refresh button should be visible in the mobile app bar
       const refreshButton = page.getByRole('button', { name: /refresh data/i });
@@ -50,7 +50,7 @@ test.describe('Refresh Functionality', () => {
       await page.setViewportSize({ width: 375, height: 667 });
       await page.goto('/tasks');
 
-      await expect(page.getByRole('button', { name: 'New Task' })).toBeVisible();
+      await expect(page.getByRole('button', { name: /NEW TASK/i })).toBeVisible();
 
       const refreshButton = page.getByRole('button', { name: /refresh data/i });
 
@@ -63,18 +63,20 @@ test.describe('Refresh Functionality', () => {
       await expect(refreshButton).toBeEnabled({ timeout: 5000 });
     });
 
-    test('should not show refresh button on desktop viewport', async ({ page }) => {
+    test('should show header with refresh button on desktop viewport', async ({ page }) => {
       // Set desktop viewport
       await page.setViewportSize({ width: 1280, height: 800 });
       await page.goto('/tasks');
 
       // Wait for the page to load
-      await expect(page.getByRole('button', { name: 'New Task' })).toBeVisible();
+      await expect(page.getByRole('button', { name: /NEW TASK/i })).toBeVisible();
 
-      // The mobile app bar (and refresh button) should not be visible on desktop
-      // The refresh button is only in the mobile AppBar
-      const mobileAppBar = page.locator('header.MuiAppBar-root');
-      await expect(mobileAppBar).toBeHidden();
+      // Desktop uses a sidebar (not a header) with data-testid="desktop-sidebar"
+      const desktopSidebar = page.locator('[data-testid="desktop-sidebar"]');
+      await expect(desktopSidebar).toBeVisible();
+
+      // Desktop refresh button says "REFRESH" (not "Refresh data" like the mobile ActionIcon)
+      await expect(page.getByRole('button', { name: /refresh/i })).toBeVisible();
     });
   });
 
@@ -85,7 +87,7 @@ test.describe('Refresh Functionality', () => {
       await page.goto('/tasks');
 
       // Wait for the page to load
-      await expect(page.getByRole('button', { name: 'New Task' })).toBeVisible();
+      await expect(page.getByRole('button', { name: /NEW TASK/i })).toBeVisible();
 
       // Main content area should be present and interactive
       const mainContent = page.locator('main');
@@ -120,15 +122,15 @@ test.describe('Refresh Functionality', () => {
       await page.setViewportSize({ width: 375, height: 667 });
       await page.goto('/');
 
-      // Dashboard should load
-      await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+      // Dashboard should load — now shows "CORE_SYSTEM_XP_LOADER" instead of "Welcome back!"
+      await expect(page.getByText('CORE_SYSTEM_XP_LOADER')).toBeVisible();
 
       // Click refresh
       const refreshButton = page.getByRole('button', { name: /refresh data/i });
       await refreshButton.click();
 
       // Dashboard should still be functional
-      await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+      await expect(page.getByText('CORE_SYSTEM_XP_LOADER')).toBeVisible();
     });
 
     test('should refresh data on Habits page', async ({ page }) => {
@@ -136,14 +138,14 @@ test.describe('Refresh Functionality', () => {
       await page.goto('/habits');
 
       // Habits page should load
-      await expect(page.getByRole('button', { name: 'New Habit' })).toBeVisible();
+      await expect(page.getByRole('button', { name: /INITIALIZE NEW PROTOCOL|Create Habit/i })).toBeVisible();
 
       // Click refresh
       const refreshButton = page.getByRole('button', { name: /refresh data/i });
       await refreshButton.click();
 
       // Habits page should still be functional
-      await expect(page.getByRole('button', { name: 'New Habit' })).toBeVisible();
+      await expect(page.getByRole('button', { name: /INITIALIZE NEW PROTOCOL|Create Habit/i })).toBeVisible();
     });
 
     test('should refresh data on Kanban page', async ({ page }) => {

@@ -1,129 +1,188 @@
-import { Card, CardContent, Typography, Box, Chip, IconButton } from '@mui/material';
+import { Box, Text, Group, ActionIcon } from '../../ui';
+import { IconEdit, IconClock, IconFlame, IconGripVertical, IconBolt, IconFolder } from '../../ui/icons';
 import { Draggable } from '@hello-pangea/dnd';
-import { Edit, Schedule, LocalFireDepartment } from '@mui/icons-material';
 import type { Task } from '../../types';
-import { PriorityChip, DurationChip } from '../common';
+import { DataBadge } from '../ui';
 
 interface KanbanCardProps {
   task: Task;
   index: number;
   onEdit?: (task: Task) => void;
+  isCrisisTask?: boolean;
 }
 
-const priorityColors: Record<string, string> = {
-  critical: '#d32f2f',
-  high: '#f57c00',
-  medium: '#1976d2',
-  low: '#388e3c',
-  trivial: '#757575',
+/** Priority → left accent color (4px border) */
+const priorityAccentColors: Record<string, string> = {
+  'Defcon One': '#FF007F',   // magenta — critical
+  'High': '#FFC775',         // amber — high
+  'Medium': '#00E5FF',       // cyan — medium
+  'Low': '#3B494C',          // muted — low
+  'Trivial': '#32343F',      // surface-highest — trivial
 };
 
 // UI component - tested via integration tests
 /* v8 ignore start */
-export default function KanbanCard({ task, index, onEdit }: KanbanCardProps) {
+export default function KanbanCard({ task, index, onEdit, isCrisisTask = false }: KanbanCardProps) {
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !task.is_complete;
+  const accentColor = priorityAccentColors[task.priority] || '#00E5FF';
 
   return (
     <Draggable draggableId={task.id} index={index}>
       {(provided, snapshot) => (
-        <Card
+        <div
           ref={provided.innerRef}
           {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          sx={{
-            mb: 1,
-            borderLeft: `4px solid ${priorityColors[task.priority] || '#1976d2'}`,
-            backgroundColor: snapshot.isDragging ? 'action.hover' : 'background.paper',
-            boxShadow: snapshot.isDragging ? 4 : 1,
-            transition: 'box-shadow 0.2s',
-            '&:hover': {
-              boxShadow: 2,
-            },
+          data-testid="kanban-card"
+          className={isCrisisTask ? 'crisis-card-amber-glow' : undefined}
+          style={{
+            ...provided.draggableProps.style,
+            backgroundColor: snapshot.isDragging
+              ? 'var(--kc-surface-high)'
+              : 'var(--kc-surface)',
+            border: '1px solid rgba(59, 73, 76, 0.15)',
+            borderLeft: `4px solid ${accentColor}`,
+            boxShadow: snapshot.isDragging
+              ? '4px 4px 0px rgba(0, 0, 0, 0.5)'
+              : '2px 2px 0px rgba(0, 0, 0, 0.3)',
+            padding: '10px 12px',
+            marginBottom: 8,
+            transition: 'background-color 0.15s ease, box-shadow 0.15s ease',
+            cursor: 'grab',
           }}
         >
-          <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <Typography
-                variant="body2"
-                fontWeight="medium"
-                sx={{
-                  flex: 1,
-                  textDecoration: task.is_complete ? 'line-through' : 'none',
-                  color: task.is_complete ? 'text.secondary' : 'text.primary',
+          {/* Title row + drag handle */}
+          <Group justify="space-between" align="flex-start" wrap="nowrap" gap={6}>
+            {/* Drag handle */}
+            <Box
+              {...provided.dragHandleProps}
+              style={{
+                color: 'var(--kc-text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                flexShrink: 0,
+                marginTop: 2,
+              }}
+            >
+              <IconGripVertical size={14} />
+            </Box>
+
+            {/* Title */}
+            <Text
+              size="sm"
+              fw={600}
+              style={{
+                flex: 1,
+                fontFamily: '"Space Grotesk", sans-serif',
+                color: task.is_complete ? 'var(--kc-text-muted)' : 'var(--kc-text-primary)',
+                textDecoration: task.is_complete ? 'line-through' : undefined,
+                lineHeight: 1.3,
+              }}
+            >
+              {task.icon && <span style={{ marginRight: 4 }}>{task.icon}</span>}
+              {task.title}
+            </Text>
+
+            {/* Edit button */}
+            {onEdit && (
+              <ActionIcon
+                size="sm"
+                variant="subtle"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(task);
+                }}
+                aria-label="Edit task"
+                style={{ color: 'var(--kc-text-muted)', flexShrink: 0 }}
+              >
+                <IconEdit size={14} data-testid="EditIcon" />
+              </ActionIcon>
+            )}
+          </Group>
+
+          {/* Meta row: due date, project tag, XP badge */}
+          <Group gap={6} mt={8} wrap="wrap" align="center">
+            {/* Due date */}
+            {task.due_date && (
+              <span
+                className="font-data"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  fontSize: '0.6875rem',
+                  color: isOverdue ? 'var(--kc-magenta)' : 'var(--kc-text-muted)',
                 }}
               >
-                {task.icon && <span style={{ marginRight: 4 }}>{task.icon}</span>}
-                {task.title}
-              </Typography>
-              {onEdit && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(task);
-                  }}
-                  sx={{ ml: 0.5, p: 0.5 }}
-                >
-                  <Edit fontSize="small" />
-                </IconButton>
-              )}
-            </Box>
-
-            {/* Tags */}
-            {task.tags && task.tags.length > 0 && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                {task.tags.slice(0, 3).map((tag) => (
-                  <Chip key={tag} label={tag} size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
-                ))}
-                {task.tags.length > 3 && (
-                  <Chip label={`+${task.tags.length - 3}`} size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
-                )}
-              </Box>
+                <IconClock size={12} data-testid="ScheduleIcon" />
+                {new Date(task.due_date).toLocaleDateString()}
+              </span>
             )}
 
-            {/* Meta info */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-              <PriorityChip priority={task.priority} size="small" />
-              <DurationChip duration={task.duration} size="small" />
-
-              {/* Streak for habits */}
-              {task.is_habit && task.streak_current > 0 && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                  <LocalFireDepartment sx={{ fontSize: 14, color: 'warning.main' }} />
-                  <Typography variant="caption" color="warning.main">
-                    {task.streak_current}
-                  </Typography>
-                </Box>
-              )}
-
-              {/* Due date */}
-              {task.due_date && (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.25,
-                    color: isOverdue ? 'error.main' : 'text.secondary',
-                  }}
-                >
-                  <Schedule sx={{ fontSize: 14 }} />
-                  <Typography variant="caption">
-                    {new Date(task.due_date).toLocaleDateString()}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-
-            {/* Subtask progress */}
-            {task.subtasks && task.subtasks.length > 0 && (
-              <Box sx={{ mt: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  {task.subtasks.filter((s) => s.complete).length}/{task.subtasks.length} subtasks
-                </Typography>
-              </Box>
+            {/* Project tag */}
+            {task.project && (
+              <span
+                className="font-data"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  fontSize: '0.6875rem',
+                  color: 'var(--kc-text-secondary)',
+                }}
+              >
+                <IconFolder size={12} />
+                {task.project}
+              </span>
             )}
-          </CardContent>
-        </Card>
+
+            {/* Streak for habits */}
+            {task.is_habit && task.streak_current > 0 && (
+              <span
+                className="font-data"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  fontSize: '0.6875rem',
+                  color: 'var(--kc-amber)',
+                }}
+              >
+                <IconFlame size={12} />
+                {task.streak_current}
+              </span>
+            )}
+
+            {/* Spacer */}
+            <span style={{ flex: 1 }} />
+
+            {/* XP badge */}
+            {task.score > 0 && (
+              <DataBadge
+                value={`${task.score} XP`}
+                color="cyan"
+                icon={<IconBolt size={10} />}
+                size="sm"
+              />
+            )}
+          </Group>
+
+          {/* Subtask progress */}
+          {task.subtasks && task.subtasks.length > 0 && (
+            <Box mt={6}>
+              <Text
+                size="xs"
+                style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.625rem',
+                  color: 'var(--kc-text-muted)',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {task.subtasks.filter((s) => s.complete).length}/{task.subtasks.length} SUBTASKS
+              </Text>
+            </Box>
+          )}
+        </div>
       )}
     </Draggable>
   );

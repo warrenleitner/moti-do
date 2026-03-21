@@ -4,21 +4,8 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import type { EventClickArg, DateSelectArg, EventDropArg } from '@fullcalendar/core';
-import {
-  Box,
-  Paper,
-  Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-} from '@mui/material';
+import { Box, Text, Modal, Select, Badge, CloseButton, Group } from '../../ui';
+import { ArcadeButton, DataBadge } from '../ui';
 import type { Task } from '../../types';
 
 interface TaskCalendarProps {
@@ -28,14 +15,23 @@ interface TaskCalendarProps {
   onCreateTask?: (date: Date) => void;
 }
 
-// Priority colors for events
+// Kinetic Console priority colors for events
 const priorityColors: Record<string, { bg: string; border: string; text: string }> = {
-  critical: { bg: '#ffebee', border: '#d32f2f', text: '#c62828' },
-  high: { bg: '#fff3e0', border: '#f57c00', text: '#e65100' },
-  medium: { bg: '#e3f2fd', border: '#1976d2', text: '#1565c0' },
-  low: { bg: '#e8f5e9', border: '#388e3c', text: '#2e7d32' },
-  trivial: { bg: '#f5f5f5', border: '#757575', text: '#616161' },
+  'Defcon One': { bg: 'rgba(255, 0, 127, 0.15)', border: '#FF007F', text: '#FF007F' },
+  'High': { bg: 'rgba(255, 199, 117, 0.15)', border: '#FFC775', text: '#FFC775' },
+  'Medium': { bg: 'rgba(0, 229, 255, 0.15)', border: '#00E5FF', text: '#00E5FF' },
+  'Low': { bg: 'rgba(59, 73, 76, 0.2)', border: '#3B494C', text: '#8A8F98' },
+  'Trivial': { bg: 'rgba(59, 73, 76, 0.1)', border: '#32343F', text: '#5A5E66' },
 };
+
+// Legend display (simplified keys for legend)
+const legendItems = [
+  { label: 'Critical', color: '#FF007F' },
+  { label: 'High', color: '#FFC775' },
+  { label: 'Medium', color: '#00E5FF' },
+  { label: 'Low', color: '#3B494C' },
+  { label: 'Complete', color: '#5A5E66' },
+];
 
 // UI component - tested via integration tests
 /* v8 ignore start */
@@ -68,7 +64,7 @@ export default function TaskCalendar({
         return true;
       })
       .map((task) => {
-        const colors = priorityColors[task.priority] || priorityColors.medium;
+        const colors = priorityColors[task.priority] || priorityColors['Medium'];
         const isOverdue = new Date(task.due_date!) < new Date() && !task.is_complete;
 
         return {
@@ -77,9 +73,9 @@ export default function TaskCalendar({
           start: task.due_date,
           end: task.due_date,
           allDay: !task.due_date?.includes('T'),
-          backgroundColor: task.is_complete ? '#e0e0e0' : colors.bg,
-          borderColor: task.is_complete ? '#9e9e9e' : isOverdue ? '#d32f2f' : colors.border,
-          textColor: task.is_complete ? '#757575' : colors.text,
+          backgroundColor: task.is_complete ? '#272A34' : colors.bg,
+          borderColor: task.is_complete ? '#5A5E66' : isOverdue ? '#FF007F' : colors.border,
+          textColor: task.is_complete ? '#5A5E66' : colors.text,
           extendedProps: {
             task,
             isHabit: task.is_habit,
@@ -94,7 +90,7 @@ export default function TaskCalendar({
   const handleEventClick = (info: EventClickArg) => {
     const task = info.event.extendedProps.task as Task;
     // If onSelectTask is provided, use it to open the edit form
-    // Otherwise fall back to the built-in details dialog
+    // Otherwise fall back to the built-in details modal
     if (onSelectTask) {
       onSelectTask(task);
     } else {
@@ -136,73 +132,62 @@ export default function TaskCalendar({
     }
   };
 
+  // Generate project options
+  const projectOptions = [
+    { value: 'all', label: 'All Projects' },
+    ...projects.map((project) => ({ value: project, label: project })),
+  ];
+
   return (
     <Box>
       {/* Filters */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center', flexWrap: 'wrap' }}>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Project</InputLabel>
-          <Select
-            value={filterProject}
-            label="Project"
-            onChange={(e) => setFilterProject(e.target.value)}
-          >
-            <MenuItem value="all">All Projects</MenuItem>
-            {projects.map((project) => (
-              <MenuItem key={project} value={project}>
-                {project}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <Group gap="md" mb="lg" align="flex-end" wrap="wrap">
+        <Select
+          label="Project"
+          value={filterProject}
+          onChange={(v) => setFilterProject(v || 'all')}
+          data={projectOptions}
+          size="sm"
+          w={150}
+          role="combobox"
+        />
 
         {filterProject !== 'all' && (
-          <Chip
-            label={`Project: ${filterProject}`}
-            size="small"
-            onDelete={() => setFilterProject('all')}
-          />
+          <Badge
+            size="lg"
+            variant="light"
+            rightSection={
+              <CloseButton size="xs" onClick={() => setFilterProject('all')} aria-label="Clear filter" />
+            }
+          >
+            Project: {filterProject}
+          </Badge>
         )}
 
-        <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
-          {events.length} tasks with due dates
-        </Typography>
-      </Box>
+        <DataBadge value={`${events.length} EVENTS`} color="cyan" size="md" />
+      </Group>
 
       {/* Legend */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-        {Object.entries(priorityColors).map(([priority, colors]) => (
-          <Box key={priority} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <Group gap="md" mb="md" wrap="wrap">
+        {legendItems.map(({ label, color }) => (
+          <Group key={label} gap={4} align="center">
             <Box
-              sx={{
+              style={{
                 width: 12,
                 height: 12,
-                borderRadius: 1,
-                backgroundColor: colors.bg,
-                border: `2px solid ${colors.border}`,
+                backgroundColor: `${color}33`,
+                borderLeft: `3px solid ${color}`,
               }}
             />
-            <Typography variant="caption" sx={{ textTransform: 'capitalize' }}>
-              {priority}
-            </Typography>
-          </Box>
+            <Text size="xs" className="font-data" style={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: '#8A8F98' }}>
+              {label}
+            </Text>
+          </Group>
         ))}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Box
-            sx={{
-              width: 12,
-              height: 12,
-              borderRadius: 1,
-              backgroundColor: '#e0e0e0',
-              border: '2px solid #9e9e9e',
-            }}
-          />
-          <Typography variant="caption">Completed</Typography>
-        </Box>
-      </Box>
+      </Group>
 
-      {/* Calendar */}
-      <Paper sx={{ p: 2 }}>
+      {/* Calendar — Kinetic Console themed via CSS overrides */}
+      <div className="kc-calendar ghost-border" style={{ backgroundColor: '#0B0E17', padding: '1rem', boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5)' }}>
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -230,82 +215,90 @@ export default function TaskCalendar({
             meridiem: 'short',
           }}
         />
-      </Paper>
+      </div>
 
-      {/* Task details dialog */}
-      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="sm" fullWidth>
+      {/* Task details modal */}
+      <Modal
+        opened={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        title={
+          selectedTask && (
+            <Group gap="xs">
+              {selectedTask.icon && <span>{selectedTask.icon}</span>}
+              <Text
+                size="lg"
+                fw={600}
+                className="font-display"
+                td={selectedTask.is_complete ? 'line-through' : undefined}
+                style={{ color: '#E0E0E0' }}
+              >
+                {selectedTask.title}
+              </Text>
+            </Group>
+          )
+        }
+        size="md"
+      >
         {selectedTask && (
-          <>
-            <DialogTitle>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {selectedTask.icon && <span>{selectedTask.icon}</span>}
-                <Typography
-                  variant="h6"
-                  sx={{
-                    textDecoration: selectedTask.is_complete ? 'line-through' : 'none',
-                  }}
-                >
-                  {selectedTask.title}
-                </Typography>
-              </Box>
-            </DialogTitle>
-            <DialogContent>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {selectedTask.description && (
-                  <Typography variant="body2">{selectedTask.description}</Typography>
-                )}
+          <Box>
+            {selectedTask.description && (
+              <Text size="sm" mb="md" style={{ color: '#8A8F98' }}>
+                {selectedTask.description}
+              </Text>
+            )}
 
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  <Chip
-                    label={selectedTask.priority}
-                    size="small"
-                    sx={{
-                      backgroundColor: priorityColors[selectedTask.priority]?.bg,
-                      color: priorityColors[selectedTask.priority]?.text,
-                      textTransform: 'capitalize',
-                    }}
-                  />
-                  <Chip label={selectedTask.difficulty} size="small" sx={{ textTransform: 'capitalize' }} />
-                  <Chip label={selectedTask.duration} size="small" sx={{ textTransform: 'capitalize' }} />
-                  {selectedTask.is_habit && <Chip label="Habit" size="small" color="secondary" />}
-                </Box>
+            <Group gap="xs" mb="md" wrap="wrap">
+              <DataBadge
+                value={selectedTask.priority}
+                color={
+                  selectedTask.priority === 'Defcon One' ? 'magenta' :
+                  selectedTask.priority === 'High' ? 'amber' :
+                  selectedTask.priority === 'Medium' ? 'cyan' : 'muted'
+                }
+              />
+              <DataBadge value={selectedTask.difficulty} color="muted" />
+              <DataBadge value={selectedTask.duration} color="muted" />
+              {selectedTask.is_habit && (
+                <DataBadge value="HABIT" color="magenta" />
+              )}
+            </Group>
 
-                {selectedTask.due_date && (
-                  <Typography variant="body2" color="text.secondary">
-                    Due: {selectedTask.due_date.includes('T')
-                      ? new Date(selectedTask.due_date).toLocaleString()
-                      : new Date(selectedTask.due_date + 'T00:00:00').toLocaleDateString()}
-                  </Typography>
-                )}
+            {selectedTask.due_date && (
+              <Text size="sm" className="font-data" style={{ color: '#8A8F98' }} mb="xs">
+                DUE: {selectedTask.due_date.includes('T')
+                  ? new Date(selectedTask.due_date).toLocaleString()
+                  : new Date(selectedTask.due_date + 'T00:00:00').toLocaleDateString()}
+              </Text>
+            )}
 
-                {selectedTask.project && (
-                  <Typography variant="body2" color="text.secondary">
-                    Project: {selectedTask.project}
-                  </Typography>
-                )}
+            {selectedTask.project && (
+              <Text size="sm" className="font-data" style={{ color: '#8A8F98' }} mb="xs">
+                PROJECT: {selectedTask.project}
+              </Text>
+            )}
 
-                {selectedTask.tags && selectedTask.tags.length > 0 && (
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                    {selectedTask.tags.map((tag) => (
-                      <Chip key={tag} label={tag} size="small" variant="outlined" />
-                    ))}
-                  </Box>
-                )}
-              </Box>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDetailsOpen(false)}>Close</Button>
-              <Button
-                variant="contained"
-                color={selectedTask.is_complete ? 'warning' : 'success'}
+            {selectedTask.tags && selectedTask.tags.length > 0 && (
+              <Group gap={4} mb="md" wrap="wrap">
+                {selectedTask.tags.map((tag) => (
+                  <DataBadge key={tag} value={tag} color="muted" />
+                ))}
+              </Group>
+            )}
+
+            <Group justify="flex-end" mt="lg">
+              <ArcadeButton variant="ghost" onClick={() => setDetailsOpen(false)}>
+                Close
+              </ArcadeButton>
+              <ArcadeButton
+                variant={selectedTask.is_complete ? 'secondary' : 'primary'}
                 onClick={handleToggleComplete}
               >
                 {selectedTask.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
-              </Button>
-            </DialogActions>
-          </>
+              </ArcadeButton>
+            </Group>
+          </Box>
         )}
-      </Dialog>
+      </Modal>
     </Box>
   );
 }

@@ -18,17 +18,18 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    // Logo image with alt text "Motodo"
-    this.heading = page.getByRole('img', { name: 'Motodo' });
-    this.subtitle = page.getByText('Task and Habit Tracker');
-    // ToggleButton elements in the ToggleButtonGroup - use group to scope
-    this.loginTab = page.getByRole('group').getByRole('button', { name: 'Login' });
-    this.registerTab = page.getByRole('group').getByRole('button', { name: 'Register' });
-    // Form fields - use getByRole textbox for MUI TextField components
-    // Note: Password needs exact: true to avoid matching "Confirm Password"
-    this.usernameInput = page.getByRole('textbox', { name: 'Username' });
-    this.passwordInput = page.getByRole('textbox', { name: 'Password', exact: true });
-    this.confirmPasswordInput = page.getByRole('textbox', { name: 'Confirm Password' });
+    // "MOTI-DO" text logo heading
+    this.heading = page.getByText('MOTI-DO', { exact: true });
+    this.subtitle = page.getByText('SYSTEM ACCESS');
+    // Mantine SegmentedControl renders as div[role="radiogroup"] with <label> elements
+    this.loginTab = page.getByRole('radiogroup').getByText('LOGIN');
+    this.registerTab = page.getByRole('radiogroup').getByText('REGISTER');
+    // Form fields - TerminalInput wraps Mantine TextInput with uppercase labels
+    this.usernameInput = page.getByRole('textbox', { name: /USERNAME/i });
+    // Mantine PasswordInput renders <input type="password">
+    // Use .first() to get "PASSWORD" and not "CONFIRM PASSWORD"
+    this.passwordInput = page.getByLabel(/^PASSWORD/i).first();
+    this.confirmPasswordInput = page.getByLabel(/CONFIRM PASSWORD/i);
     // Submit button - the form submit button (type="submit")
     this.submitButton = page.locator('button[type="submit"]');
     this.errorAlert = page.getByRole('alert');

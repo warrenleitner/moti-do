@@ -1,9 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Box, Snackbar, Alert } from '@mui/material';
+import { Box, Group, Text, notifications } from '../ui';
+import { IconPlus, IconAlertTriangle } from '../ui/icons';
 import { KanbanBoard } from '../components/kanban';
 import { TaskForm } from '../components/tasks';
 import { useTaskStore, useVisibleTasks } from '../store';
 import { useUserStore, useSystemStatus } from '../store/userStore';
+import { DataBadge, ArcadeButton } from '../components/ui';
 import type { Task } from '../types';
 import { Priority, Difficulty, Duration } from '../types';
 
@@ -19,6 +21,8 @@ export default function KanbanPage() {
     fetchTasks,
     hasCompletedData,
     crisisModeActive,
+    crisisTaskIds,
+    exitCrisisMode,
   } = useTaskStore();
   const visibleTasks = useVisibleTasks(tasks);
   const { fetchStats } = useUserStore();
@@ -69,21 +73,25 @@ export default function KanbanPage() {
   }, [visibleTasks, lastProcessedDate]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+
+  const showNotification = (message: string, color: 'green' | 'red') => {
+    notifications.show({ message, color, autoClose: 3000 });
+  };
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setFormOpen(true);
   };
 
+  const handleNewTask = () => {
+    setEditingTask(null);
+    setFormOpen(true);
+  };
+
   const handleSave = (taskData: Partial<Task>) => {
     if (editingTask) {
       updateTask(editingTask.id, taskData);
-      setSnackbar({ open: true, message: 'Task updated successfully', severity: 'success' });
+      showNotification('Task updated successfully', 'green');
     } else {
       const newTask: Task = {
         id: crypto.randomUUID(),
@@ -107,7 +115,7 @@ export default function KanbanPage() {
         ...taskData,
       };
       addTask(newTask);
-      setSnackbar({ open: true, message: 'Task created successfully', severity: 'success' });
+      showNotification('Task created successfully', 'green');
     }
     setFormOpen(false);
     setEditingTask(null);
@@ -115,11 +123,7 @@ export default function KanbanPage() {
 
   const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
     updateTask(taskId, updates);
-    setSnackbar({
-      open: true,
-      message: updates.is_complete ? 'Task completed!' : 'Task updated',
-      severity: 'success',
-    });
+    showNotification(updates.is_complete ? 'Task completed!' : 'Task updated', 'green');
   };
 
   const handleCompleteTask = async (taskId: string) => {
@@ -128,56 +132,120 @@ export default function KanbanPage() {
       await fetchStats();
 
       if (response.next_instance) {
-        setSnackbar({
-          open: true,
-          message: crisisModeActive
+        showNotification(
+          crisisModeActive
             ? `Task completed! +${response.xp_earned} XP. The next instance was created and hidden until crisis mode ends.`
             : `Task completed! +${response.xp_earned} XP. Next instance created.`,
-          severity: 'success',
-        });
+          'green',
+        );
       } else {
-        setSnackbar({
-          open: true,
-          message: `Task completed! +${response.xp_earned} XP`,
-          severity: 'success',
-        });
+        showNotification(`Task completed! +${response.xp_earned} XP`, 'green');
       }
     } catch {
-      setSnackbar({
-        open: true,
-        message: 'Failed to complete task',
-        severity: 'error',
-      });
+      showNotification('Failed to complete task', 'red');
     }
   };
 
   const handleUncompleteTask = async (taskId: string) => {
     try {
       await uncompleteTask(taskId);
-      setSnackbar({
-        open: true,
-        message: 'Task marked as incomplete',
-        severity: 'success',
-      });
+      showNotification('Task marked as incomplete', 'green');
     } catch {
-      setSnackbar({
-        open: true,
-        message: 'Failed to uncomplete task',
-        severity: 'error',
-      });
+      showNotification('Failed to uncomplete task', 'red');
     }
   };
 
+  const crisisTaskIdSet = useMemo(
+    () => new Set(crisisTaskIds),
+    [crisisTaskIds],
+  );
+
   return (
-    <Box>
+    <Box
+      className={crisisModeActive ? 'crisis-container-pulse' : undefined}
+      style={{ padding: 0 }}
+    >
+      {/* Crisis Mode Banner */}
+      {crisisModeActive && (
+        <Box
+          style={{
+            backgroundColor: 'var(--kc-amber)',
+            color: '#0B0E17',
+            padding: '8px 16px',
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <Group gap={8} align="center">
+            <IconAlertTriangle size={18} />
+            <Text
+              size="sm"
+              fw={700}
+              style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            >
+              ⚠ CRISIS MODE ACTIVE
+            </Text>
+          </Group>
+          <ArcadeButton
+            variant="ghost"
+            size="xs"
+            onClick={exitCrisisMode}
+            style={{
+              color: '#0B0E17',
+              borderColor: 'rgba(11, 14, 23, 0.3)',
+            }}
+          >
+            EXIT
+          </ArcadeButton>
+        </Box>
+      )}
+
+      {/* Page Header */}
+      <Group justify="space-between" align="center" mb="md" wrap="wrap">
+        <Group gap="md" align="center">
+          <Text
+            fw={700}
+            size="xl"
+            style={{
+              fontFamily: '"Space Grotesk", sans-serif',
+              letterSpacing: '0.05em',
+              color: 'var(--kc-text-primary)',
+            }}
+          >
+            KANBAN_BOARD
+          </Text>
+          <DataBadge
+            value={`${kanbanTasks.length} TASKS`}
+            color="cyan"
+          />
+        </Group>
+        <ArcadeButton
+          variant="primary"
+          size="sm"
+          leftSection={<IconPlus size={16} />}
+          onClick={handleNewTask}
+        >
+          NEW MISSION
+        </ArcadeButton>
+      </Group>
+
       {!ready ? null : (
-      <KanbanBoard
-        tasks={kanbanTasks}
-        onUpdateTask={handleUpdateTask}
-        onEditTask={handleEditTask}
-        onCompleteTask={handleCompleteTask}
-        onUncompleteTask={handleUncompleteTask}
-      />
+        <KanbanBoard
+          tasks={kanbanTasks}
+          onUpdateTask={handleUpdateTask}
+          onEditTask={handleEditTask}
+          onCompleteTask={handleCompleteTask}
+          onUncompleteTask={handleUncompleteTask}
+          crisisModeActive={crisisModeActive}
+          crisisTaskIds={crisisTaskIdSet}
+        />
       )}
 
       {/* Task form dialog */}
@@ -192,17 +260,6 @@ export default function KanbanPage() {
         }}
         allTasks={tasks}
       />
-
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

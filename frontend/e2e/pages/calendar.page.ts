@@ -16,8 +16,8 @@ export class CalendarPage {
     this.description = page.getByText('View and manage tasks by their due dates');
     // FullCalendar container
     this.calendar = page.locator('.fc');
-    // Project filter select
-    this.projectFilter = page.getByRole('combobox', { name: 'Project' });
+    // Project filter - Mantine Select renders <input readonly> with implicit textbox role
+    this.projectFilter = page.getByRole('textbox', { name: 'Project', exact: true });
     // Task details dialog
     this.taskDetailsDialog = page.getByRole('dialog');
   }
@@ -85,10 +85,11 @@ export class CalendarPage {
     }
 
     await option.first().click();
-    // Wait for MUI Select to close and calendar to update
+    // Wait for Select dropdown to close and calendar to update
     await this.page.waitForTimeout(500);
 
-    const selectedText = (await this.projectFilter.textContent()) || '';
+    // For Mantine Select (renders as <input>), use inputValue() instead of textContent()
+    const selectedText = (await this.projectFilter.inputValue()) || '';
     const isSelected = selectedText.toLowerCase().includes(project.toLowerCase());
     
     if (!isSelected) {

@@ -1,14 +1,6 @@
 import { useMemo } from 'react';
-import {
-  Box,
-  Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Stack,
-} from '@mui/material';
-import { Sort } from '@mui/icons-material';
+import { Box, Select, Group } from '../../ui';
+import { IconArrowsSort } from '../../ui/icons';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
 import type { Task, TaskStatus } from '../../types';
 import { Priority } from '../../types';
@@ -16,6 +8,7 @@ import KanbanColumn, { type KanbanStatus } from './KanbanColumn';
 import { useTaskStore } from '../../store';
 import { useDefinedProjects } from '../../store/userStore';
 import { FilterBar } from '../common';
+import { DataBadge } from '../ui';
 
 interface KanbanBoardProps {
   tasks: Task[];
@@ -23,6 +16,8 @@ interface KanbanBoardProps {
   onEditTask?: (task: Task) => void;
   onCompleteTask?: (taskId: string) => void;
   onUncompleteTask?: (taskId: string) => void;
+  crisisModeActive?: boolean;
+  crisisTaskIds?: Set<string>;
 }
 
 interface Column {
@@ -33,17 +28,24 @@ interface Column {
 }
 
 const columns: Column[] = [
-  { id: 'backlog', title: 'Backlog', color: '#9e9e9e' },
-  { id: 'todo', title: 'To Do', color: '#2196f3' },
-  { id: 'in_progress', title: 'In Progress', color: '#ff9800', wipLimit: 3 },
-  { id: 'blocked', title: 'Blocked', color: '#f44336' },
-  { id: 'done', title: 'Done', color: '#4caf50' },
+  { id: 'backlog', title: 'Backlog', color: '#3B494C' },
+  { id: 'todo', title: 'To Do', color: '#3B494C' },
+  { id: 'in_progress', title: 'In Progress', color: '#00E5FF', wipLimit: 3 },
+  { id: 'blocked', title: 'Blocked', color: '#FFC775' },
+  { id: 'done', title: 'Done', color: '#FF007F' },
 ];
 
 // Map task properties to kanban status
-function getTaskStatus(task: Task): KanbanStatus {
+function getTaskStatus(task: Task, allTaskMap: Map<string, Task>): KanbanStatus {
   if (task.is_complete) return 'done';
-  if (task.status === 'blocked') return 'blocked';
+  // Compute blocked from dependencies (backend doesn't set status field)
+  if (task.dependencies?.length > 0) {
+    const hasIncompleteDep = task.dependencies.some((depId) => {
+      const dep = allTaskMap.get(depId);
+      return dep && !dep.is_complete;
+    });
+    if (hasIncompleteDep) return 'blocked';
+  }
   if (task.status === 'in_progress') return 'in_progress';
   if (task.status === 'todo') return 'todo';
   return 'backlog';
@@ -57,6 +59,8 @@ export default function KanbanBoard({
   onEditTask,
   onCompleteTask,
   onUncompleteTask,
+  crisisModeActive = false,
+  crisisTaskIds,
 }: KanbanBoardProps) {
   const { filters, setFilters, resetFilters, sort, setSort } = useTaskStore();
   const definedProjects = useDefinedProjects();
@@ -118,6 +122,7 @@ export default function KanbanBoard({
 
   // Group tasks by status
   const tasksByStatus = useMemo(() => {
+    const allTaskMap = new Map(tasks.map((t) => [t.id, t]));
     const grouped: Record<KanbanStatus, Task[]> = {
       backlog: [],
       todo: [],
@@ -127,7 +132,7 @@ export default function KanbanBoard({
     };
 
     filteredTasks.forEach((task) => {
-      const status = getTaskStatus(task);
+      const status = getTaskStatus(task, allTaskMap);
       grouped[status].push(task);
     });
 
@@ -172,7 +177,7 @@ export default function KanbanBoard({
     });
 
     return grouped;
-  }, [filteredTasks, sort]);
+  }, [tasks, filteredTasks, sort]);
 
   // Handle drag end
   const handleDragEnd = (result: DropResult) => {
@@ -226,6 +231,21 @@ export default function KanbanBoard({
     });
   };
 
+  // Sort field options
+  const sortFieldData = [
+    { value: 'score', label: 'Score (XP)' },
+    { value: 'priority', label: 'Priority' },
+    { value: 'due_date', label: 'Due Date' },
+    { value: 'creation_date', label: 'Created' },
+    { value: 'title', label: 'Title' },
+  ];
+
+  // Sort order options
+  const sortOrderData = [
+    { value: 'desc', label: 'Descending' },
+    { value: 'asc', label: 'Ascending' },
+  ];
+
   return (
     <Box>
       {/* Filters - using global FilterBar */}
@@ -252,51 +272,43 @@ export default function KanbanBoard({
       />
 
       {/* Sort controls */}
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2, flexWrap: 'wrap', rowGap: 1 }}>
-        <Sort color="action" />
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Sort by</InputLabel>
-          <Select
-            value={sort.field}
-            label="Sort by"
-            onChange={(e) =>
-              setSort({ ...sort, field: e.target.value as typeof sort.field })
-            }
-          >
-            <MenuItem value="score">Score (XP)</MenuItem>
-            <MenuItem value="priority">Priority</MenuItem>
-            <MenuItem value="due_date">Due Date</MenuItem>
-            <MenuItem value="creation_date">Created</MenuItem>
-            <MenuItem value="title">Title</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Order</InputLabel>
-          <Select
-            value={sort.order}
-            label="Order"
-            onChange={(e) =>
-              setSort({ ...sort, order: e.target.value as 'asc' | 'desc' })
-            }
-          >
-            <MenuItem value="desc">Descending</MenuItem>
-            <MenuItem value="asc">Ascending</MenuItem>
-          </Select>
-        </FormControl>
-        <Box sx={{ flex: 1 }} />
-        <Typography variant="body2" color="text.secondary">
-          {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
-        </Typography>
-      </Stack>
+      <Group gap="md" mb="md" align="center" wrap="wrap">
+        <IconArrowsSort size={20} color="var(--kc-text-muted)" />
+        <Select
+          label="Sort by"
+          value={sort.field}
+          onChange={(v) =>
+            setSort({ ...sort, field: (v || 'score') as typeof sort.field })
+          }
+          data={sortFieldData}
+          size="sm"
+          w={150}
+        />
+        <Select
+          label="Order"
+          value={sort.order}
+          onChange={(v) =>
+            setSort({ ...sort, order: (v || 'desc') as 'asc' | 'desc' })
+          }
+          data={sortOrderData}
+          size="sm"
+          w={120}
+        />
+        <Box style={{ flex: 1 }} />
+        <DataBadge
+          value={`${filteredTasks.length} VISIBLE`}
+          color="muted"
+        />
+      </Group>
 
       {/* Kanban columns */}
       <DragDropContext onDragEnd={handleDragEnd}>
         <Box
-          sx={{
+          style={{
             display: 'flex',
-            gap: 2,
+            gap: '12px',
             overflowX: 'auto',
-            pb: 2,
+            paddingBottom: '12px',
           }}
         >
           {columns.map((column) => (
@@ -308,6 +320,8 @@ export default function KanbanBoard({
               color={column.color}
               wipLimit={column.wipLimit}
               onEditTask={onEditTask}
+              crisisModeActive={crisisModeActive}
+              crisisTaskIds={crisisTaskIds}
             />
           ))}
         </Box>

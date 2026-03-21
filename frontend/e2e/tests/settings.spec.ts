@@ -13,17 +13,18 @@ test.describe('Settings Page', () => {
       await page.goto('/settings');
 
       // Verify page loads with Data Backup section visible
-      await expect(page.getByRole('heading', { name: 'Data Backup & Restore' })).toBeVisible();
+      // Section headers are now uppercase with underscores, rendered as role="button" (not heading)
+      await expect(page.getByText('DATA_BACKUP_RESTORE')).toBeVisible();
     });
 
     test('should show all settings sections', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for actual settings sections on the page - use heading role to be specific
-      await expect(page.getByRole('heading', { name: 'Data Backup & Restore' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Vacation Mode' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'XP History' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Security' })).toBeVisible();
+      // Section headers use Kinetic Console style: uppercase with underscores
+      await expect(page.getByText('DATA_BACKUP_RESTORE')).toBeVisible();
+      await expect(page.getByText('VACATION_MODE')).toBeVisible();
+      await expect(page.getByText('XP_TRANSACTION_LEDGER')).toBeVisible();
+      await expect(page.getByText('SECURITY_CONFIG')).toBeVisible();
     });
   });
 
@@ -65,7 +66,7 @@ test.describe('Settings Page', () => {
     test('should toggle vacation mode on', async ({ page }) => {
       await page.goto('/settings');
 
-      // Find vacation mode toggle - MUI Switch gets name from FormControlLabel
+      // Find vacation mode toggle - Mantine Switch component
       // The label starts with "Enable vacation mode" or "Vacation mode is active"
       const vacationToggle = page.getByRole('switch');
       await expect(vacationToggle).toBeVisible();
@@ -94,8 +95,8 @@ test.describe('Settings Page', () => {
     test('should show vacation mode status', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for vacation mode heading
-      await expect(page.getByRole('heading', { name: 'Vacation Mode' })).toBeVisible();
+      // Check for vacation mode section header (now uppercase with underscores)
+      await expect(page.getByText('VACATION_MODE')).toBeVisible();
 
       // Check for vacation mode switch and label using the form control
       const vacationSwitch = page.getByRole('switch');
@@ -128,7 +129,7 @@ test.describe('Settings Page', () => {
 
         // Should show form with current and new password fields
         await expect(page.getByLabel(/current password/i)).toBeVisible();
-        await expect(page.getByLabel('New Password', { exact: true })).toBeVisible();
+        await expect(page.getByLabel('New Password')).toBeVisible();
       }
     });
 
@@ -142,7 +143,7 @@ test.describe('Settings Page', () => {
 
         // Try to submit with short password
         const currentPasswordInput = page.getByLabel(/current password/i);
-        const newPasswordInput = page.getByLabel('New Password', { exact: true });
+        const newPasswordInput = page.getByLabel('New Password');
         const confirmPasswordInput = page.getByLabel(/confirm new password/i);
 
         await currentPasswordInput.fill('testpassword123');
@@ -154,7 +155,7 @@ test.describe('Settings Page', () => {
         await submitBtn.click();
 
         // Should show validation error
-        const error = page.getByRole('alert');
+        const error = page.getByRole('alert').first();
         if (await error.isVisible()) {
           const errorText = await error.textContent();
           expect(errorText?.toLowerCase()).toContain('8 characters');
@@ -167,24 +168,24 @@ test.describe('Settings Page', () => {
     test('should display XP history section', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for XP History heading
-      await expect(page.getByRole('heading', { name: 'XP History' })).toBeVisible();
+      // Check for XP History section header (now "XP_TRANSACTION_LEDGER")
+      await expect(page.getByText('XP_TRANSACTION_LEDGER')).toBeVisible();
     });
 
     test('should show XP transaction list or empty message', async ({ page }) => {
       await page.goto('/settings');
 
       // XP History section should be visible
-      const xpHistoryHeading = page.getByRole('heading', { name: 'XP History' });
+      const xpHistoryHeading = page.getByText('XP_TRANSACTION_LEDGER');
       await expect(xpHistoryHeading).toBeVisible();
 
       // Wait for loading to complete - check for either transactions or empty message
-      // The page should show either list items (transactions) or the empty state message
-      const transactionsList = page.locator('li').filter({ hasText: /XP$/ });
+      // XP transactions are rendered as Paper elements (divs with border), not list items
+      const transactionItem = page.getByText(/[+-]?\d+ XP/).first();
       const emptyMessage = page.getByText('No XP transactions yet');
 
       // Wait for one of the states to appear
-      await expect(transactionsList.first().or(emptyMessage)).toBeVisible({ timeout: 5000 });
+      await expect(transactionItem.or(emptyMessage)).toBeVisible({ timeout: 5000 });
     });
   });
 
@@ -192,16 +193,16 @@ test.describe('Settings Page', () => {
     test('should display user profile information', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for level display in sidebar (use first() for multiple matches)
-      const levelDisplay = page.getByText(/level/i).first();
+      // Check for level display in sidebar — now shows "LVL X OPERATOR" format
+      const levelDisplay = page.getByText(/LVL/i).first();
       await expect(levelDisplay).toBeVisible();
     });
 
     test('should show current level and XP', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for level display (use first() for multiple matches)
-      const levelDisplay = page.getByText(/level/i).first();
+      // Check for level display — now shows "LVL X OPERATOR" format
+      const levelDisplay = page.getByText(/LVL/i).first();
       await expect(levelDisplay).toBeVisible();
     });
   });
@@ -231,15 +232,15 @@ test.describe('Settings Page', () => {
     test('should display tags section', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for Tags heading
-      await expect(page.getByRole('heading', { name: 'Tags' })).toBeVisible();
+      // Check for Tags section header (now "TAG_DEFINITIONS")
+      await expect(page.getByText('TAG_DEFINITIONS')).toBeVisible();
     });
 
     test('should have new tag button', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for add tag button
-      const addTagButton = page.getByRole('button', { name: 'Add Tag' });
+      // Check for add tag button (ArcadeButton text is "ADD TAG", case-insensitive match)
+      const addTagButton = page.getByRole('button', { name: /ADD TAG/i });
       await expect(addTagButton).toBeVisible();
     });
 
@@ -247,7 +248,7 @@ test.describe('Settings Page', () => {
       await page.goto('/settings');
 
       // Click add tag button
-      const addTagButton = page.getByRole('button', { name: 'Add Tag' });
+      const addTagButton = page.getByRole('button', { name: /ADD TAG/i });
       await addTagButton.click();
 
       // Wait for form row to appear
@@ -255,15 +256,15 @@ test.describe('Settings Page', () => {
 
       // Fill in tag name (first textbox in the form row - Tags section)
       const tagName = `TestTag${Date.now()}`;
-      const tagsSection = page.locator('.MuiCard-root').filter({ hasText: 'Tags' });
+      const tagsSection = page.locator('[data-testid="tags-section"]');
       const nameInput = tagsSection.getByRole('textbox').first();
       await nameInput.fill(tagName);
 
       // Click a quick multiplier button instead of typing
       await page.getByRole('button', { name: '1.5x' }).click();
 
-      // Submit form by clicking the check icon button
-      await tagsSection.getByRole('button').filter({ has: page.locator('svg[data-testid="CheckIcon"]') }).click();
+      // Submit form by clicking the save button (now an icon-only button with a check icon)
+      await tagsSection.locator('button:has(.tabler-icon-check)').first().click();
 
       // Verify tag appears in list
       await expect(page.getByText(tagName)).toBeVisible({ timeout: 5000 });
@@ -273,7 +274,7 @@ test.describe('Settings Page', () => {
       await page.goto('/settings');
 
       // Click add tag button
-      const addTagButton = page.getByRole('button', { name: 'Add Tag' });
+      const addTagButton = page.getByRole('button', { name: /ADD TAG/i });
       await addTagButton.click();
 
       // Wait for form to appear
@@ -291,15 +292,15 @@ test.describe('Settings Page', () => {
     test('should display projects section', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for Projects heading
-      await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible();
+      // Check for Projects section header (now "PROJECT_DEFINITIONS")
+      await expect(page.getByText('PROJECT_DEFINITIONS')).toBeVisible();
     });
 
     test('should have new project button', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for add project button
-      const addProjectButton = page.getByRole('button', { name: 'Add Project' });
+      // Check for add project button (ArcadeButton text is "ADD PROJECT", case-insensitive match)
+      const addProjectButton = page.getByRole('button', { name: /ADD PROJECT/i });
       await expect(addProjectButton).toBeVisible();
     });
 
@@ -307,7 +308,7 @@ test.describe('Settings Page', () => {
       await page.goto('/settings');
 
       // Click add project button
-      const addProjectButton = page.getByRole('button', { name: 'Add Project' });
+      const addProjectButton = page.getByRole('button', { name: /ADD PROJECT/i });
       await addProjectButton.click();
 
       // Wait for form row to appear
@@ -315,15 +316,15 @@ test.describe('Settings Page', () => {
 
       // Fill in project name (first textbox in the form row - Projects section)
       const projectName = `TestProject${Date.now()}`;
-      const projectsSection = page.locator('.MuiCard-root').filter({ hasText: 'Projects' });
+      const projectsSection = page.locator('[data-testid="projects-section"]');
       const nameInput = projectsSection.getByRole('textbox').first();
       await nameInput.fill(projectName);
 
       // Click a quick multiplier button (the Projects section should have its own buttons)
       await projectsSection.getByRole('button', { name: '2x' }).click();
 
-      // Submit form by clicking the check icon button
-      await projectsSection.getByRole('button').filter({ has: page.locator('svg[data-testid="CheckIcon"]') }).click();
+      // Submit form by clicking the save button (now an icon-only button with a check icon)
+      await projectsSection.locator('button:has(.tabler-icon-check)').first().click();
 
       // Verify project appears in list
       await expect(page.getByText(projectName)).toBeVisible({ timeout: 5000 });

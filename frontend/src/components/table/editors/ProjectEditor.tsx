@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Autocomplete, TextField, Box } from '@mui/material';
+import { Autocomplete, Box } from '../../../ui';
 import { useDefinedProjects } from '../../../store/userStore';
 
 export interface ProjectEditorProps {
@@ -10,7 +10,7 @@ export interface ProjectEditorProps {
 }
 
 /**
- * Inline project editor using MUI Autocomplete with freeSolo.
+ * Inline project editor using Mantine Autocomplete.
  * Allows selecting existing projects or entering new ones.
  * Auto-saves on selection or blur.
  */
@@ -38,21 +38,21 @@ export function ProjectEditor({
   }, []);
 
   const handleChange = useCallback(
-    (_event: React.SyntheticEvent, newValue: string | null) => {
-      const projectValue = newValue || undefined;
+    (newValue: string) => {
+      // Update value as user types (Mantine Autocomplete fires onChange on typing)
+      onChange(newValue || undefined);
+    },
+    [onChange]
+  );
+
+  const handleOptionSubmit = useCallback(
+    (selectedValue: string) => {
+      const projectValue = selectedValue || undefined;
       onChange(projectValue);
       // Auto-save on selection
       onSave(projectValue);
     },
     [onChange, onSave]
-  );
-
-  const handleInputChange = useCallback(
-    (_event: React.SyntheticEvent, newInputValue: string) => {
-      // Update value as user types (for freeSolo mode)
-      onChange(newInputValue || undefined);
-    },
-    [onChange]
   );
 
   const handleBlur = useCallback(() => {
@@ -74,28 +74,17 @@ export function ProjectEditor({
   );
 
   return (
-    <Box ref={containerRef} sx={{ minWidth: 150 }} data-testid="project-editor">
+    <Box ref={containerRef} style={{ minWidth: 150 }} data-testid="project-editor">
       <Autocomplete
-        freeSolo
-        options={projectNames}
+        data={projectNames}
         value={value || ''}
         onChange={handleChange}
-        onInputChange={handleInputChange}
+        onOptionSubmit={handleOptionSubmit}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        size="small"
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            placeholder="Select or type project"
-            size="small"
-          />
-        )}
-        slotProps={{
-          popper: {
-            placement: 'bottom-start',
-          },
-        }}
+        placeholder="Select or type project"
+        size="sm"
+        comboboxProps={{ withinPortal: false }}
       />
     </Box>
   );

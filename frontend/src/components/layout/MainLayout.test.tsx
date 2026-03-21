@@ -44,8 +44,8 @@ describe('MainLayout', () => {
 
   it('displays user info', () => {
     render(<MainLayout><div>Content</div></MainLayout>);
-    // MainLayout displays user level and XP, not username
-    const levelElements = screen.getAllByText(/Level 1/i);
+    // MainLayout displays user level and XP in terminal style
+    const levelElements = screen.getAllByText(/LVL 1 OPERATOR/i);
     expect(levelElements.length).toBeGreaterThan(0);
   });
 
@@ -66,8 +66,8 @@ describe('MainLayout', () => {
   it('calls logout when logout clicked', async () => {
     const { user } = render(<MainLayout><div>Content</div></MainLayout>);
 
-    // Component has v8 ignore - there are multiple logout buttons (mobile and desktop)
-    const logoutButtons = screen.queryAllByTitle('Logout');
+    // Component uses text "LOGOUT" on button elements
+    const logoutButtons = screen.queryAllByText(/LOGOUT/i);
     if (logoutButtons.length > 0) {
       await user.click(logoutButtons[0]);
     }
@@ -145,7 +145,7 @@ describe('MainLayout', () => {
   it('displays refresh button', () => {
     render(<MainLayout><div>Content</div></MainLayout>);
 
-    const refreshButton = screen.getByRole('button', { name: /refresh data/i });
+    const refreshButton = screen.getByText(/REFRESH/i);
     expect(refreshButton).toBeInTheDocument();
   });
 
@@ -158,7 +158,7 @@ describe('MainLayout', () => {
 
     const { user } = render(<MainLayout><div>Content</div></MainLayout>);
 
-    const refreshButton = screen.getByRole('button', { name: /refresh data/i });
+    const refreshButton = screen.getByText(/REFRESH/i);
     await user.click(refreshButton);
 
     expect(mockRefresh).toHaveBeenCalledTimes(1);
@@ -172,7 +172,7 @@ describe('MainLayout', () => {
 
     render(<MainLayout><div>Content</div></MainLayout>);
 
-    const refreshButton = screen.getByRole('button', { name: /refresh data/i });
-    expect(refreshButton).toBeDisabled();
+    const refreshButton = screen.getByText(/REFRESH/i);
+    expect(refreshButton.closest('button')).toBeDisabled();
   });
 });

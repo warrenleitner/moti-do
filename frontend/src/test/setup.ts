@@ -8,7 +8,7 @@ import { afterEach, beforeAll, afterAll, vi } from 'vitest';
 
 // Define global constants that Vite injects at build time
 // These are used for version display in the UI
-(globalThis as Record<string, unknown>).__APP_VERSION__ = '0.3.0';
+(globalThis as Record<string, unknown>).__APP_VERSION__ = '0.4.0';
 (globalThis as Record<string, unknown>).__BUILD_TIMESTAMP__ = new Date().toISOString();
 
 // Mock localStorage for Zustand persist middleware
@@ -24,6 +24,21 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
 
+// Mock window.matchMedia for Mantine responsive components
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
 // Mock ResizeObserver for React Flow
 class ResizeObserverMock {
   observe() {}
@@ -33,6 +48,9 @@ class ResizeObserverMock {
 Object.defineProperty(window, 'ResizeObserver', {
   value: ResizeObserverMock,
 });
+
+// Mock scrollIntoView for jsdom (Mantine Combobox uses it)
+Element.prototype.scrollIntoView = vi.fn() as unknown as typeof Element.prototype.scrollIntoView;
 
 // Import MSW server conditionally
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

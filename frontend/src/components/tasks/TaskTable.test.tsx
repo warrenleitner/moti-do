@@ -356,8 +356,8 @@ describe('TaskTable', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: /jump to current/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /crisis mode/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /jump/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /crisis/i })).toBeInTheDocument();
   });
 
   it('calls jump and crisis bulk callbacks', () => {
@@ -376,8 +376,8 @@ describe('TaskTable', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /jump to current/i }));
-    fireEvent.click(screen.getByRole('button', { name: /crisis mode/i }));
+    fireEvent.click(screen.getByRole('button', { name: /jump/i }));
+    fireEvent.click(screen.getByRole('button', { name: /crisis/i }));
 
     expect(mockOnBulkJumpToCurrent).toHaveBeenCalledWith(['1', '2']);
     expect(mockOnActivateCrisisMode).toHaveBeenCalledWith(['1', '2']);
@@ -571,7 +571,9 @@ describe('TaskTable', () => {
     // Find the editor input
     const input = screen.getByPlaceholderText('Emoji');
     await user.clear(input);
-    await user.type(input, '🚀{Enter}');
+    // Use fireEvent for emoji input (user-event has issues with multi-byte chars)
+    fireEvent.change(input, { target: { value: '🚀' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(mockOnInlineEdit).toHaveBeenCalledWith('1', { icon: '🚀' });
   });

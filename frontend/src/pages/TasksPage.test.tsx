@@ -208,7 +208,7 @@ describe('TasksPage', () => {
 
     const checkboxes = screen.getAllByRole('checkbox');
     await user.click(checkboxes[1]);
-    await user.click(screen.getByRole('button', { name: /jump to current/i }));
+    await user.click(screen.getByRole('button', { name: /jump/i }));
 
     expect(mockPreviewJumpToCurrentInstance).toHaveBeenCalledWith(['task-1']);
     expect(
@@ -222,7 +222,7 @@ describe('TasksPage', () => {
 
     const checkboxes = screen.getAllByRole('checkbox');
     await user.click(checkboxes[1]);
-    await user.click(screen.getByRole('button', { name: /crisis mode/i }));
+    await user.click(screen.getByRole('button', { name: /crisis/i }));
     await user.click(screen.getByRole('button', { name: /^activate$/i }));
 
     expect(mockActivateCrisisMode).toHaveBeenCalledWith(['task-1']);

@@ -1,6 +1,7 @@
-import { type ReactNode } from 'react';
-import { Box, Typography, Button } from '@mui/material';
-import { InboxOutlined } from '@mui/icons-material';
+import type { ReactNode } from 'react';
+import { Stack, Box } from '../../ui';
+import { ArcadeButton } from '../ui';
+import { IconInbox } from '../../ui/icons';
 
 interface EmptyStateProps {
   icon?: ReactNode;
@@ -18,39 +19,38 @@ export default function EmptyState({
   onAction,
 }: EmptyStateProps) {
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        py: 8,
-        px: 4,
-      }}
-    >
-      <Box
-        sx={{
-          color: 'text.secondary',
-          mb: 2,
-          '& svg': { fontSize: 64 },
+    <Stack align="center" justify="center" ta="center" py="xl" px="lg">
+      <Box mb="sm" style={{ color: '#3B494C' }}>
+        {icon || <IconInbox size={64} stroke={1.5} data-testid="InboxOutlinedIcon" />}
+      </Box>
+      <span
+        className="font-data"
+        style={{
+          fontSize: '0.8125rem',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.15em',
+          color: '#5A5E66',
         }}
       >
-        {icon || <InboxOutlined />}
-      </Box>
-      <Typography variant="h6" gutterBottom>
         {title}
-      </Typography>
+      </span>
       {description && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400 }}>
+        <span
+          style={{
+            fontSize: '0.8125rem',
+            color: '#5A5E66',
+            maxWidth: 400,
+          }}
+        >
           {description}
-        </Typography>
+        </span>
       )}
       {actionLabel && onAction && (
-        <Button variant="contained" onClick={onAction}>
+        <ArcadeButton onClick={onAction} variant="ghost" style={{ marginTop: '0.75rem' }}>
           {actionLabel}
-        </Button>
+        </ArcadeButton>
       )}
-    </Box>
+    </Stack>
   );
 }

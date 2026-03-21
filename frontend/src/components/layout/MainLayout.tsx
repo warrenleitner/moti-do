@@ -1,41 +1,24 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { Box, Text, Progress, Avatar, useMediaQuery } from '../../ui';
 import {
-  AppBar,
-  Box,
-  Drawer,
-  IconButton,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Toolbar,
-  Typography,
-  useTheme,
-  useMediaQuery,
-  Chip,
-  Avatar,
-} from '@mui/material';
-import {
-  Menu as MenuIcon,
-  Dashboard as DashboardIcon,
-  CheckBox as TasksIcon,
-  Loop as HabitsIcon,
-  CalendarMonth as CalendarIcon,
-  ViewKanban as KanbanIcon,
-  AccountTree as GraphIcon,
-  Settings as SettingsIcon,
-  EmojiEvents as XPIcon,
-  Logout as LogoutIcon,
-  Refresh as RefreshIcon,
-} from '@mui/icons-material';
+  IconLayoutDashboard,
+  IconCheckbox,
+  IconRepeat,
+  IconCalendar,
+  IconLayoutKanban,
+  IconBinaryTree2,
+  IconSettings,
+  IconLogout,
+  IconRefresh,
+  IconPlus,
+} from '../../ui/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '../../store';
 import { authApi } from '../../services/api';
 import { useRefresh } from '../../hooks';
 import PullToRefreshWrapper from '../common/PullToRefreshWrapper';
-
-const DRAWER_WIDTH = 240;
+import { BottomNav } from './BottomNav';
+import { MobileHeader } from './MobileHeader';
 
 interface NavItem {
   text: string;
@@ -44,13 +27,13 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-  { text: 'Tasks', icon: <TasksIcon />, path: '/tasks' },
-  { text: 'Habits', icon: <HabitsIcon />, path: '/habits' },
-  { text: 'Calendar', icon: <CalendarIcon />, path: '/calendar' },
-  { text: 'Kanban', icon: <KanbanIcon />, path: '/kanban' },
-  { text: 'Graph', icon: <GraphIcon />, path: '/graph' },
-  { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+  { text: 'DASHBOARD', icon: <IconLayoutDashboard size={20} />, path: '/' },
+  { text: 'TASKS', icon: <IconCheckbox size={20} />, path: '/tasks' },
+  { text: 'HABITS', icon: <IconRepeat size={20} />, path: '/habits' },
+  { text: 'CALENDAR', icon: <IconCalendar size={20} />, path: '/calendar' },
+  { text: 'KANBAN', icon: <IconLayoutKanban size={20} />, path: '/kanban' },
+  { text: 'GRAPH', icon: <IconBinaryTree2 size={20} />, path: '/graph' },
+  { text: 'SETTINGS', icon: <IconSettings size={20} />, path: '/settings' },
 ];
 
 interface MainLayoutProps {
@@ -60,192 +43,296 @@ interface MainLayoutProps {
 // UI component - tested via integration tests
 /* v8 ignore start */
 export default function MainLayout({ children }: MainLayoutProps) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 62em)');
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useUserStore();
   const { refresh, isRefreshing } = useRefresh();
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
-
   const handleNavClick = (path: string) => {
     navigate(path);
-    if (isMobile) {
-      setMobileOpen(false);
-    }
   };
 
   const handleLogout = () => {
     authApi.logout();
   };
 
-  const drawerContent = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Logo/Brand */}
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <img src="/logo-wordmark.png" alt="Motodo" style={{ height: 128, objectFit: 'contain' }} />
-      </Box>
+  // Calculate XP progress to next level (simplified — real formula can come later)
+  const currentXP = user?.xp ?? 0;
+  const currentLevel = user?.level ?? 1;
+  const xpForNextLevel = currentLevel * 1000; // simplified
+  const xpProgress = Math.min((currentXP / xpForNextLevel) * 100, 100);
 
-      {/* Navigation */}
-      <List sx={{ flex: 1 }}>
-        {navItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              selected={location.pathname === item.path}
-              onClick={() => handleNavClick(item.path)}
-              sx={{
-                mx: 1,
-                borderRadius: 2,
-                '&.Mui-selected': {
-                  backgroundColor: 'primary.light',
-                  color: 'primary.contrastText',
-                  '& .MuiListItemIcon-root': {
-                    color: 'primary.contrastText',
-                  },
-                  '&:hover': {
-                    backgroundColor: 'primary.main',
-                  },
-                },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-
-      {/* User XP Display */}
-      {user && (
-        <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-              {user.level}
-            </Avatar>
-            <Typography variant="body2" fontWeight="medium" sx={{ flexGrow: 1 }}>
-              Level {user.level}
-            </Typography>
-            <IconButton onClick={handleLogout} size="small" title="Logout">
-              <LogoutIcon fontSize="small" />
-            </IconButton>
-          </Box>
-          <Chip
-            icon={<XPIcon sx={{ fontSize: 16 }} />}
-            label={`${user.xp} XP`}
-            size="small"
-            color="primary"
-            variant="outlined"
-          />
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ display: 'block', mt: 1, textAlign: 'center' }}
-          >
-            v{__APP_VERSION__}
-          </Typography>
+  if (isMobile) {
+    return (
+      <Box style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <MobileHeader onRefresh={refresh} isRefreshing={isRefreshing} />
+        <Box
+          component="main"
+          style={{
+            flex: 1,
+            paddingTop: 56, // header height
+            paddingBottom: 64, // bottom nav height
+            overflowY: 'auto',
+            overflowX: 'hidden',
+          }}
+        >
+          <PullToRefreshWrapper>
+            <Box px="md" py="md" className="page-content-enter">
+              {children}
+            </Box>
+          </PullToRefreshWrapper>
         </Box>
-      )}
-    </Box>
-  );
+        <BottomNav currentPath={location.pathname} onNavigate={handleNavClick} />
+      </Box>
+    );
+  }
 
+  // Desktop layout
   return (
-    <>
-      {/* Mobile App Bar - only shown on small screens */}
-      <AppBar
-        position="fixed"
-        sx={{
-          display: { xs: 'block', md: 'none' },
-          backgroundColor: '#334155', // Slate - contrasts with logo gradient
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-            <img src="/logo-wordmark.png" alt="Motodo" style={{ height: 64, objectFit: 'contain' }} />
-          </Box>
-          <IconButton
-            color="inherit"
-            onClick={refresh}
-            disabled={isRefreshing}
-            aria-label="Refresh data"
-          >
-            <RefreshIcon
-              sx={{
-                animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
-                '@keyframes spin': {
-                  '0%': { transform: 'rotate(0deg)' },
-                  '100%': { transform: 'rotate(360deg)' },
-                },
-              }}
-            />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-
-      {/* Sidebar */}
+    <Box style={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Desktop Sidebar */}
       <Box
         component="nav"
-        sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
+        data-testid="desktop-sidebar"
+        style={{
+          width: 256,
+          flexShrink: 0,
+          backgroundColor: '#181B25',
+          borderRight: '1px solid rgba(59, 73, 76, 0.15)',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          zIndex: 100,
+          overflowY: 'auto',
+        }}
       >
-        {/* Mobile drawer */}
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: DRAWER_WIDTH,
-            },
-          }}
-        >
-          {drawerContent}
-        </Drawer>
+        {/* Profile Section */}
+        {user && (
+          <Box p="md" className="scanline-subtle" style={{ borderBottom: '1px solid rgba(59, 73, 76, 0.15)', position: 'relative' }}>
+            <Box style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <Avatar
+                size={40}
+                radius={0}
+                style={{
+                  backgroundColor: '#272A34',
+                  border: '2px solid #00E5FF',
+                  color: '#00E5FF',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontWeight: 700,
+                }}
+              >
+                {currentLevel}
+              </Avatar>
+              <Box>
+                <Text
+                  size="xs"
+                  style={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    color: '#00E5FF',
+                    fontWeight: 600,
+                  }}
+                >
+                  LVL {currentLevel} OPERATOR
+                </Text>
+                <Text
+                  size="xs"
+                  style={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    color: '#8A8F98',
+                    fontSize: '0.625rem',
+                  }}
+                >
+                  {user.username}
+                </Text>
+              </Box>
+            </Box>
 
-        {/* Desktop drawer */}
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: DRAWER_WIDTH,
-            },
+            {/* XP Progress Bar */}
+            <Box style={{ marginBottom: 8 }}>
+              <Text
+                size="xs"
+                style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  color: '#8A8F98',
+                  fontSize: '0.625rem',
+                  marginBottom: 4,
+                }}
+              >
+                {currentXP.toLocaleString()} / {xpForNextLevel.toLocaleString()} XP
+              </Text>
+              <Progress
+                value={xpProgress}
+                color="#00E5FF"
+                size={4}
+                radius={0}
+                styles={{
+                  root: { backgroundColor: '#272A34' },
+                  section: { boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)' },
+                }}
+              />
+            </Box>
+
+            {/* New Mission Button */}
+            <Box
+              component="button"
+              onClick={() => navigate('/tasks')}
+              className="arcade-btn arcade-btn-primary"
+              style={{
+                width: '100%',
+                padding: '8px 16px',
+                fontSize: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+              }}
+            >
+              <IconPlus size={14} />
+              NEW MISSION
+            </Box>
+          </Box>
+        )}
+
+        {/* Navigation Links */}
+        <Box style={{ flex: 1, padding: '8px 0' }}>
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Box
+                key={item.text}
+                component="button"
+                className="nav-item-stagger animate-slide-in-right sidebar-nav-item"
+                onClick={() => handleNavClick(item.path)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  width: '100%',
+                  padding: '10px 16px',
+                  border: 'none',
+                  borderLeft: isActive ? '4px solid #FF007F' : '4px solid transparent',
+                  backgroundColor: isActive ? '#10131C' : 'transparent',
+                  color: isActive ? '#E0E0E0' : '#8A8F98',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  fontFamily: '"Space Grotesk", sans-serif',
+                  fontSize: '0.8125rem',
+                  fontWeight: isActive ? 600 : 400,
+                  letterSpacing: '0.05em',
+                  textAlign: 'left' as const,
+                }}
+                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = '#272A34';
+                    e.currentTarget.style.color = '#00E5FF';
+                  }
+                }}
+                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = '#8A8F98';
+                  }
+                }}
+              >
+                {item.icon}
+                {item.text}
+              </Box>
+            );
+          })}
+        </Box>
+
+        {/* Footer */}
+        <Box
+          style={{
+            borderTop: '1px solid rgba(59, 73, 76, 0.15)',
+            padding: '12px 16px',
           }}
-          open
         >
-          {drawerContent}
-        </Drawer>
+          <Box
+            component="button"
+            onClick={refresh}
+            disabled={isRefreshing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              width: '100%',
+              padding: '6px 0',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: '#8A8F98',
+              cursor: 'pointer',
+              fontFamily: '"Space Grotesk", sans-serif',
+              fontSize: '0.75rem',
+              letterSpacing: '0.05em',
+              transition: 'color 0.15s ease',
+            }}
+          >
+            <IconRefresh
+              size={16}
+              style={{
+                animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
+              }}
+            />
+            REFRESH
+          </Box>
+          <Box
+            component="button"
+            onClick={handleLogout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              width: '100%',
+              padding: '6px 0',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: '#8A8F98',
+              cursor: 'pointer',
+              fontFamily: '"Space Grotesk", sans-serif',
+              fontSize: '0.75rem',
+              letterSpacing: '0.05em',
+              transition: 'color 0.15s ease',
+            }}
+          >
+            <IconLogout size={16} />
+            LOGOUT
+          </Box>
+          <Text
+            mt="xs"
+            ta="center"
+            style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.5625rem',
+              color: '#5A5E66',
+              letterSpacing: '0.1em',
+            }}
+          >
+            v{__APP_VERSION__}
+          </Text>
+        </Box>
       </Box>
 
-      {/* Main content */}
+      {/* Main Content Area */}
       <Box
         component="main"
-        sx={{
-          flexGrow: 1,
-          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-          mt: { xs: 8, md: 0 },
-          p: { xs: 2, md: 3 },
-          backgroundColor: 'background.default',
+        style={{
+          flex: 1,
+          marginLeft: 256,
           minHeight: '100vh',
         }}
       >
-        <PullToRefreshWrapper>{children}</PullToRefreshWrapper>
+        <Box px="xl" py="lg" maw={1200} mx="auto" className="page-content-enter">
+          {children}
+        </Box>
       </Box>
-    </>
+    </Box>
   );
 }
 /* v8 ignore stop */

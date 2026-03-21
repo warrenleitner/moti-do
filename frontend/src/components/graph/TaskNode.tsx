@@ -1,7 +1,5 @@
 import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Paper, Typography, Box } from '@mui/material';
-import { CheckCircle, RadioButtonUnchecked } from '@mui/icons-material';
 import type { Task } from '../../types';
 
 interface TaskNodeProps {
@@ -18,20 +16,25 @@ function TaskNode({ data }: TaskNodeProps) {
   const { task, isSelected, color } = data;
 
   return (
-    <Paper
-      elevation={isSelected ? 8 : 2}
-      sx={{
-        p: 1.5,
+    <div
+      style={{
+        padding: '10px',
         minWidth: 180,
         maxWidth: 220,
         borderLeft: `4px solid ${color}`,
-        backgroundColor: isSelected ? 'action.selected' : 'background.paper',
+        borderRadius: 0,
+        backgroundColor: isSelected ? '#272A34' : '#10131C',
+        border: isSelected
+          ? `1px solid #00E5FF`
+          : '1px solid rgba(59, 73, 76, 0.15)',
+        borderLeftWidth: 4,
+        borderLeftColor: color,
+        boxShadow: isSelected
+          ? '4px 4px 0px rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 229, 255, 0.3)'
+          : '4px 4px 0px rgba(0, 0, 0, 0.5)',
         cursor: 'pointer',
-        transition: 'all 0.2s',
-        '&:hover': {
-          elevation: 4,
-          transform: 'scale(1.02)',
-        },
+        transition: 'all 0.15s ease',
+        opacity: task.is_complete ? 0.6 : 1,
       }}
     >
       {/* Input handle */}
@@ -39,53 +42,111 @@ function TaskNode({ data }: TaskNodeProps) {
         type="target"
         position={Position.Left}
         style={{
-          background: '#666',
+          background: '#00E5FF',
           width: 8,
           height: 8,
+          border: '2px solid #10131C',
+          borderRadius: 0,
         }}
       />
 
       {/* Content */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
         {task.is_complete ? (
-          <CheckCircle sx={{ fontSize: 18, color: 'success.main', mt: 0.25 }} />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#00E5FF"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ marginTop: 2, flexShrink: 0 }}
+          >
+            <path d="M5 12l5 5l10 -10" />
+          </svg>
         ) : (
-          <RadioButtonUnchecked sx={{ fontSize: 18, color: 'text.secondary', mt: 0.25 }} />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#3B494C"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ marginTop: 2, flexShrink: 0 }}
+          >
+            <rect x="4" y="4" width="16" height="16" rx="0" />
+          </svg>
         )}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography
-            variant="body2"
-            fontWeight="medium"
-            sx={{
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontFamily: '"Space Grotesk", sans-serif',
+              fontSize: '0.8125rem',
+              fontWeight: 500,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               textDecoration: task.is_complete ? 'line-through' : 'none',
-              color: task.is_complete ? 'text.secondary' : 'text.primary',
+              color: task.is_complete ? '#5A5E66' : '#E0E0E0',
             }}
           >
             {task.icon && <span style={{ marginRight: 4 }}>{task.icon}</span>}
             {task.title}
-          </Typography>
+          </div>
           {task.project && (
-            <Typography variant="caption" color="text.secondary">
+            <div
+              style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '0.625rem',
+                color: '#5A5E66',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginTop: 2,
+              }}
+            >
               {task.project}
-            </Typography>
+            </div>
           )}
-        </Box>
-      </Box>
+          {/* Status badge */}
+          <div
+            style={{
+              display: 'inline-block',
+              marginTop: 4,
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.5625rem',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: task.is_complete ? '#5A5E66' : color,
+              backgroundColor: task.is_complete ? 'rgba(90, 94, 102, 0.1)' : `${color}1A`,
+              border: `1px solid ${task.is_complete ? 'rgba(90, 94, 102, 0.2)' : `${color}33`}`,
+              padding: '1px 5px',
+            }}
+          >
+            {task.is_complete ? 'DONE' : (task.status || 'TODO').toUpperCase()}
+          </div>
+        </div>
+      </div>
 
       {/* Output handle */}
       <Handle
         type="source"
         position={Position.Right}
         style={{
-          background: '#666',
+          background: '#00E5FF',
           width: 8,
           height: 8,
+          border: '2px solid #10131C',
+          borderRadius: 0,
         }}
       />
-    </Paper>
+    </div>
   );
 }
 /* v8 ignore stop */

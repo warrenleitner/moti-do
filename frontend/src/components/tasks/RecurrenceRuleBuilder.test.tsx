@@ -3,9 +3,13 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render } from '../../test/utils';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RecurrenceRuleBuilder from './RecurrenceRuleBuilder';
+
+// Mock scrollIntoView for jsdom (Mantine Combobox uses it)
+Element.prototype.scrollIntoView = vi.fn();
 
 describe('RecurrenceRuleBuilder', () => {
   describe('rendering', () => {
@@ -14,7 +18,8 @@ describe('RecurrenceRuleBuilder', () => {
       render(<RecurrenceRuleBuilder value="" onChange={onChange} />);
 
       expect(screen.getByText('Every')).toBeInTheDocument();
-      expect(screen.getByRole('spinbutton')).toHaveValue(1);
+      const intervalInput = document.querySelector<HTMLInputElement>('input[inputmode="decimal"]')!;
+      expect(intervalInput).toHaveValue('1');
       expect(screen.getByText('Every day')).toBeInTheDocument();
     });
 
@@ -22,7 +27,8 @@ describe('RecurrenceRuleBuilder', () => {
       const onChange = vi.fn();
       render(<RecurrenceRuleBuilder value="FREQ=DAILY;INTERVAL=3" onChange={onChange} />);
 
-      expect(screen.getByRole('spinbutton')).toHaveValue(3);
+      const intervalInput = document.querySelector<HTMLInputElement>('input[inputmode="decimal"]')!;
+      expect(intervalInput).toHaveValue('3');
       expect(screen.getByText('Every 3 days')).toBeInTheDocument();
     });
 
@@ -59,7 +65,8 @@ describe('RecurrenceRuleBuilder', () => {
       const onChange = vi.fn();
       render(<RecurrenceRuleBuilder value="FREQ=DAILY" onChange={onChange} disabled />);
 
-      expect(screen.getByRole('spinbutton')).toBeDisabled();
+      const intervalInput = document.querySelector<HTMLInputElement>('input[inputmode="decimal"]')!;
+      expect(intervalInput).toBeDisabled();
     });
   });
 
@@ -70,12 +77,14 @@ describe('RecurrenceRuleBuilder', () => {
       render(<RecurrenceRuleBuilder value="FREQ=DAILY" onChange={onChange} />);
 
       // Click the frequency select
-      const frequencySelect = screen.getByRole('combobox');
+      const frequencySelect = document.querySelector<HTMLInputElement>('input[aria-haspopup="listbox"]:not([inputmode])')!;
       await user.click(frequencySelect);
 
-      // Select weekly
-      const weekOption = screen.getByRole('option', { name: /week/i });
-      await user.click(weekOption);
+      // Select weekly (options may be hidden in jsdom)
+      const options = document.querySelectorAll('[role="option"]');
+      const weekOption = Array.from(options).find(o => /week/i.test(o.textContent || ''));
+      expect(weekOption).toBeTruthy();
+      await user.click(weekOption as HTMLElement);
 
       await waitFor(() => {
         expect(onChange).toHaveBeenCalledWith('FREQ=WEEKLY');
@@ -87,11 +96,13 @@ describe('RecurrenceRuleBuilder', () => {
       const user = userEvent.setup();
       render(<RecurrenceRuleBuilder value="FREQ=DAILY" onChange={onChange} />);
 
-      const frequencySelect = screen.getByRole('combobox');
+      const frequencySelect = document.querySelector<HTMLInputElement>('input[aria-haspopup="listbox"]:not([inputmode])')!;
       await user.click(frequencySelect);
 
-      const monthOption = screen.getByRole('option', { name: /month/i });
-      await user.click(monthOption);
+      const options = document.querySelectorAll('[role="option"]');
+      const monthOption = Array.from(options).find(o => /month/i.test(o.textContent || ''));
+      expect(monthOption).toBeTruthy();
+      await user.click(monthOption as HTMLElement);
 
       await waitFor(() => {
         expect(onChange).toHaveBeenCalledWith(expect.stringContaining('FREQ=MONTHLY'));
@@ -103,11 +114,13 @@ describe('RecurrenceRuleBuilder', () => {
       const user = userEvent.setup();
       render(<RecurrenceRuleBuilder value="FREQ=DAILY" onChange={onChange} />);
 
-      const frequencySelect = screen.getByRole('combobox');
+      const frequencySelect = document.querySelector<HTMLInputElement>('input[aria-haspopup="listbox"]:not([inputmode])')!;
       await user.click(frequencySelect);
 
-      const yearOption = screen.getByRole('option', { name: /year/i });
-      await user.click(yearOption);
+      const options = document.querySelectorAll('[role="option"]');
+      const yearOption = Array.from(options).find(o => /year/i.test(o.textContent || ''));
+      expect(yearOption).toBeTruthy();
+      await user.click(yearOption as HTMLElement);
 
       await waitFor(() => {
         expect(onChange).toHaveBeenCalledWith('FREQ=YEARLY');
@@ -121,7 +134,7 @@ describe('RecurrenceRuleBuilder', () => {
       const user = userEvent.setup();
       render(<RecurrenceRuleBuilder value="FREQ=DAILY" onChange={onChange} />);
 
-      const intervalInput = screen.getByRole('spinbutton');
+      const intervalInput = document.querySelector<HTMLInputElement>('input[inputmode="decimal"]')!;
       // Triple-click to select all, then type new value
       await user.tripleClick(intervalInput);
       await user.keyboard('5');
@@ -136,7 +149,7 @@ describe('RecurrenceRuleBuilder', () => {
       const user = userEvent.setup();
       render(<RecurrenceRuleBuilder value="FREQ=DAILY;INTERVAL=3" onChange={onChange} />);
 
-      const intervalInput = screen.getByRole('spinbutton');
+      const intervalInput = document.querySelector<HTMLInputElement>('input[inputmode="decimal"]')!;
       await user.clear(intervalInput);
       await user.type(intervalInput, '0');
 
@@ -269,7 +282,8 @@ describe('RecurrenceRuleBuilder', () => {
       const onChange = vi.fn();
       render(<RecurrenceRuleBuilder value="every 3 days" onChange={onChange} />);
       expect(screen.getByText('Every 3 days')).toBeInTheDocument();
-      expect(screen.getByRole('spinbutton')).toHaveValue(3);
+      const intervalInput = document.querySelector<HTMLInputElement>('input[inputmode="decimal"]')!;
+      expect(intervalInput).toHaveValue('3');
     });
   });
 });

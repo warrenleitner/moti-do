@@ -1,6 +1,7 @@
-import { Box, Paper, Typography, Badge } from '@mui/material';
+import { Box, Text, Group } from '../../ui';
 import { Droppable } from '@hello-pangea/dnd';
 import type { Task } from '../../types';
+import { DataBadge } from '../ui';
 import KanbanCard from './KanbanCard';
 
 export type KanbanStatus = 'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done';
@@ -12,6 +13,8 @@ interface KanbanColumnProps {
   color: string;
   wipLimit?: number;
   onEditTask?: (task: Task) => void;
+  crisisModeActive?: boolean;
+  crisisTaskIds?: Set<string>;
 }
 
 // UI component - tested via integration tests
@@ -23,50 +26,66 @@ export default function KanbanColumn({
   color,
   wipLimit,
   onEditTask,
+  crisisModeActive = false,
+  crisisTaskIds,
 }: KanbanColumnProps) {
   const isOverWipLimit = wipLimit !== undefined && tasks.length > wipLimit;
 
   return (
-    <Paper
-      sx={{
+    <div
+      data-testid="kanban-column"
+      style={{
         width: 280,
         minWidth: 280,
-        backgroundColor: 'grey.50',
+        backgroundColor: 'var(--kc-surface)',
         display: 'flex',
         flexDirection: 'column',
         maxHeight: 'calc(100vh - 200px)',
+        border: '1px solid rgba(59, 73, 76, 0.15)',
+        borderTop: `3px solid ${color}`,
       }}
     >
       {/* Column header */}
       <Box
-        sx={{
-          p: 2,
-          borderBottom: `3px solid ${color}`,
-          backgroundColor: 'background.paper',
+        p="sm"
+        style={{
+          backgroundColor: 'var(--kc-surface)',
+          borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="subtitle1" fontWeight="bold">
-            {title}
-          </Typography>
-          <Badge
-            badgeContent={tasks.length}
-            color={isOverWipLimit ? 'error' : 'primary'}
-            sx={{
-              '& .MuiBadge-badge': {
-                position: 'static',
-                transform: 'none',
-              },
+        <Group justify="space-between" align="center">
+          <Text
+            fw={700}
+            data-column-title={title}
+            style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              fontSize: '0.75rem',
+              color: 'var(--kc-text-primary)',
             }}
-          />
-        </Box>
-        {wipLimit !== undefined && (
-          <Typography
-            variant="caption"
-            color={isOverWipLimit ? 'error.main' : 'text.secondary'}
           >
-            WIP Limit: {wipLimit}
-          </Typography>
+            {title}
+          </Text>
+          <DataBadge
+            value={tasks.length}
+            color={isOverWipLimit ? 'magenta' : 'muted'}
+            size="sm"
+          />
+        </Group>
+        {wipLimit !== undefined && (
+          <Text
+            size="xs"
+            style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.625rem',
+              letterSpacing: '0.05em',
+              color: isOverWipLimit ? 'var(--kc-magenta)' : 'var(--kc-text-muted)',
+              marginTop: 4,
+            }}
+          >
+            WIP LIMIT: {wipLimit}
+          </Text>
         )}
       </Box>
 
@@ -76,12 +95,14 @@ export default function KanbanColumn({
           <Box
             ref={provided.innerRef}
             {...provided.droppableProps}
-            sx={{
-              p: 1,
+            p="xs"
+            style={{
               flexGrow: 1,
               overflowY: 'auto',
               minHeight: 100,
-              backgroundColor: snapshot.isDraggingOver ? 'action.hover' : 'transparent',
+              backgroundColor: snapshot.isDraggingOver
+                ? 'var(--kc-surface-high)'
+                : 'var(--kc-surface-low)',
               transition: 'background-color 0.2s',
             }}
           >
@@ -91,6 +112,7 @@ export default function KanbanColumn({
                 task={task}
                 index={index}
                 onEdit={onEditTask}
+                isCrisisTask={crisisModeActive && crisisTaskIds?.has(task.id)}
               />
             ))}
             {provided.placeholder}
@@ -100,13 +122,21 @@ export default function KanbanColumn({
 
       {/* Empty state */}
       {tasks.length === 0 && (
-        <Box sx={{ p: 2, textAlign: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            No tasks
-          </Typography>
+        <Box p="md" ta="center">
+          <Text
+            size="xs"
+            style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              color: 'var(--kc-text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+            }}
+          >
+            NO TASKS
+          </Text>
         </Box>
       )}
-    </Paper>
+    </div>
   );
 }
 /* v8 ignore stop */

@@ -14,10 +14,10 @@ vi.mock('../../hooks', () => ({
   })),
 }));
 
-// Mock useMediaQuery to control mobile/desktop behavior
+// Mock useMediaQuery from Mantine hooks (via ../../ui)
 const mockUseMediaQuery = vi.fn();
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material');
+vi.mock('@mantine/hooks', async () => {
+  const actual = await vi.importActual('@mantine/hooks');
   return {
     ...actual,
     useMediaQuery: () => mockUseMediaQuery(),

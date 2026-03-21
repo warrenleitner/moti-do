@@ -75,8 +75,8 @@ describe('SettingsPage', () => {
     it('should render settings page with all sections', () => {
       render(<SettingsPage />);
 
-      expect(screen.getByText('Data Backup & Restore')).toBeInTheDocument();
-      expect(screen.getByText('Security')).toBeInTheDocument();
+      expect(screen.getByText('DATA_BACKUP_RESTORE')).toBeInTheDocument();
+      expect(screen.getByText('SECURITY_CONFIG')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /export data/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /import data/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /change password/i })).toBeInTheDocument();
@@ -85,7 +85,7 @@ describe('SettingsPage', () => {
     it('should render warning message about import', () => {
       render(<SettingsPage />);
 
-      expect(screen.getByText(/importing data will replace ALL your current data/i)).toBeInTheDocument();
+      expect(screen.getByText(/IMPORTING DATA WILL REPLACE ALL CURRENT DATA/i)).toBeInTheDocument();
     });
   });
 
@@ -156,7 +156,7 @@ describe('SettingsPage', () => {
 
       fireEvent.change(fileInput);
 
-      expect(await screen.findByText(/confirm data import/i)).toBeInTheDocument();
+      expect(await screen.findByText(/CONFIRM_DATA_IMPORT/i)).toBeInTheDocument();
       expect(screen.getByText(/backup.json/)).toBeInTheDocument();
     });
   });
@@ -244,14 +244,14 @@ describe('SettingsPage', () => {
 
       fireEvent.change(fileInput);
 
-      expect(await screen.findByText(/confirm data import/i)).toBeInTheDocument();
+      expect(await screen.findByText(/CONFIRM_DATA_IMPORT/i)).toBeInTheDocument();
 
       // Cancel the import
       const cancelButton = screen.getByRole('button', { name: /cancel/i });
       fireEvent.click(cancelButton);
 
       await waitFor(() => {
-        expect(screen.queryByText(/confirm data import/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/CONFIRM_DATA_IMPORT/i)).not.toBeInTheDocument();
       });
     });
 
@@ -276,10 +276,10 @@ describe('SettingsPage', () => {
 
       fireEvent.change(fileInput);
 
-      expect(await screen.findByText(/confirm data import/i)).toBeInTheDocument();
+      expect(await screen.findByText(/CONFIRM_DATA_IMPORT/i)).toBeInTheDocument();
 
       // Confirm the import
-      const importButton = screen.getByRole('button', { name: /import and replace/i });
+      const importButton = screen.getByRole('button', { name: /import & replace/i });
       fireEvent.click(importButton);
 
       await waitFor(() => {
@@ -316,10 +316,10 @@ describe('SettingsPage', () => {
 
       fireEvent.change(fileInput);
 
-      await screen.findByText(/confirm data import/i);
+      await screen.findByText(/CONFIRM_DATA_IMPORT/i);
 
       // Confirm the import
-      const importButton = screen.getByRole('button', { name: /import and replace/i });
+      const importButton = screen.getByRole('button', { name: /import & replace/i });
       fireEvent.click(importButton);
 
       expect(await screen.findByText(errorMessage)).toBeInTheDocument();
@@ -340,10 +340,10 @@ describe('SettingsPage', () => {
 
       fireEvent.change(fileInput);
 
-      await screen.findByText(/confirm data import/i);
+      await screen.findByText(/CONFIRM_DATA_IMPORT/i);
 
       // Confirm the import
-      const importButton = screen.getByRole('button', { name: /import and replace/i });
+      const importButton = screen.getByRole('button', { name: /import & replace/i });
       fireEvent.click(importButton);
 
       expect(await screen.findByText(/failed to import data. please check the file format/i)).toBeInTheDocument();

@@ -15,13 +15,13 @@ export class KanbanPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.projectFilter = page.getByLabel('Project');
-    this.tagFilter = page.getByLabel('Tag');
-    this.taskCountText = page.getByText(/\d+ tasks?/);
-    this.snackbar = page.getByRole('alert');
-    // MUI Select components - use the label text within FormControl
-    this.sortBySelect = page.getByRole('combobox', { name: /sort by/i });
-    this.sortOrderSelect = page.getByRole('combobox', { name: /order/i });
+    // Mantine Select renders <input readonly> with implicit textbox role
+    this.projectFilter = page.getByRole('textbox', { name: 'Project', exact: true });
+    this.tagFilter = page.getByRole('textbox', { name: 'Tag', exact: true });
+    this.taskCountText = page.getByText(/\d+ tasks?/i);
+    this.snackbar = page.getByRole('alert').first();
+    this.sortBySelect = page.getByRole('textbox', { name: 'Sort by', exact: true });
+    this.sortOrderSelect = page.getByRole('textbox', { name: 'Order', exact: true });
   }
 
   /**
@@ -30,15 +30,17 @@ export class KanbanPage {
   async goto(): Promise<void> {
     await this.page.goto('/kanban');
     // Wait for the Backlog column to be visible (first column in kanban)
-    await this.page.getByText('Backlog', { exact: true }).waitFor({ timeout: 10000 });
+    await this.getColumn('Backlog').waitFor({ timeout: 10000 });
   }
 
   /**
    * Get a kanban column by its title.
    */
   getColumn(columnTitle: string): Locator {
-    // Find the Paper element containing the column title
-    return this.page.locator('.MuiPaper-root').filter({ hasText: columnTitle });
+    // Use data-column-title attribute for precise matching (avoids matching card text)
+    return this.page.locator('[data-testid="kanban-column"]').filter({
+      has: this.page.locator(`[data-column-title="${columnTitle}"]`),
+    });
   }
 
   /**
@@ -61,7 +63,9 @@ export class KanbanPage {
   async allColumnsVisible(): Promise<boolean> {
     const columns = ['Backlog', 'To Do', 'In Progress', 'Blocked', 'Done'];
     for (const col of columns) {
-      if (!(await this.page.getByText(col, { exact: true }).isVisible())) {
+      // Use data-testid="kanban-column" scoped selector to avoid matching card text
+      const column = this.getColumn(col);
+      if (!(await column.isVisible())) {
         return false;
       }
     }
@@ -72,7 +76,7 @@ export class KanbanPage {
    * Get a task card by its title.
    */
   getTaskByTitle(title: string): Locator {
-    return this.page.locator('.MuiCard-root').filter({ hasText: title });
+    return this.page.locator('[data-testid="kanban-card"]').filter({ hasText: title });
   }
 
   /**
@@ -86,7 +90,7 @@ export class KanbanPage {
     const columns = ['Backlog', 'To Do', 'In Progress', 'Blocked', 'Done'];
     for (const col of columns) {
       const column = this.getColumn(col);
-      const taskInColumn = column.locator('.MuiCard-root').filter({ hasText: title });
+      const taskInColumn = column.locator('[data-testid="kanban-card"]').filter({ hasText: title });
       if (await taskInColumn.isVisible()) {
         return col;
       }
@@ -114,8 +118,9 @@ export class KanbanPage {
    */
   async clickTaskEditButton(title: string): Promise<void> {
     const taskCard = this.getTaskByTitle(title);
-    // The edit button is a pencil icon - find by role button with SVG icon
-    const editButton = taskCard.getByRole('button').filter({ has: this.page.locator('svg') });
+    // The edit button has aria-label="Edit task" — use it directly to avoid
+    // strict mode violations from drag handle (which also has role="button" + SVG)
+    const editButton = taskCard.getByRole('button', { name: 'Edit task' });
     await editButton.click();
   }
 
@@ -139,9 +144,9 @@ export class KanbanPage {
    * Clear filters by clicking the chip's delete button.
    */
   async clearFilter(filterText: string): Promise<void> {
-    // Find the chip with this text and click its delete button
-    const chip = this.page.locator('.MuiChip-root').filter({ hasText: filterText });
-    await chip.locator('[data-testid="CancelIcon"]').click();
+    // Find the badge/pill with this text and click its close button
+    const pill = this.page.locator('button').filter({ hasText: filterText });
+    await pill.locator('[aria-label*="Clear"]').click();
   }
 
   /**
@@ -149,7 +154,7 @@ export class KanbanPage {
    */
   async taskExistsInColumn(taskTitle: string, columnTitle: string): Promise<boolean> {
     const column = this.getColumn(columnTitle);
-    const taskInColumn = column.locator('.MuiCard-root').filter({ hasText: taskTitle });
+    const taskInColumn = column.locator('[data-testid="kanban-card"]').filter({ hasText: taskTitle });
     return (await taskInColumn.count()) > 0;
   }
 
@@ -159,7 +164,7 @@ export class KanbanPage {
    */
   async getTasksInColumn(columnTitle: string): Promise<string[]> {
     const column = this.getColumn(columnTitle);
-    const cards = column.locator('.MuiCard-root');
+    const cards = column.locator('[data-testid="kanban-card"]');
     const count = await cards.count();
 
     // Limit to first 50 cards to avoid timeout in parallel tests
@@ -167,8 +172,8 @@ export class KanbanPage {
     const titles: string[] = [];
 
     for (let i = 0; i < limit; i++) {
-      // Get the first Typography element which contains the title
-      const titleText = await cards.nth(i).locator('.MuiTypography-root').first().textContent();
+      // Get the first text element which contains the title
+      const titleText = await cards.nth(i).locator('p').first().textContent();
       if (titleText) titles.push(titleText.trim());
     }
 

@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Box, Button, Snackbar, Alert } from '@mui/material';
-import { Add } from '@mui/icons-material';
-import { HabitList } from '../components/habits';
+import { Box, notifications } from '../ui';
+import { HabitList, AnnualHeatmap } from '../components/habits';
 import { TaskForm } from '../components/tasks';
 import { ConfirmDialog } from '../components/common';
 import { useTaskStore, useVisibleTasks } from '../store';
@@ -17,14 +16,21 @@ export default function HabitsPage() {
   const [editingHabit, setEditingHabit] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+
+  const showNotification = (message: string, color: 'green' | 'red') => {
+    notifications.show({ message, color, autoClose: 3000 });
+  };
 
   // Filter to only habits
   const habits = visibleTasks.filter((t) => t.is_habit);
+  const rootHabits = habits.filter((h) => !h.parent_habit_id);
+
+  // Global completion rate
+  const completedToday = rootHabits.filter((h) => h.is_complete).length;
+  const completionRate =
+    rootHabits.length > 0
+      ? Math.round((completedToday / rootHabits.length) * 100)
+      : 0;
 
   const handleCreateNew = () => {
     setEditingHabit(null);
@@ -39,7 +45,7 @@ export default function HabitsPage() {
   const handleSave = (taskData: Partial<Task>) => {
     if (editingHabit) {
       updateTask(editingHabit.id, taskData);
-      setSnackbar({ open: true, message: 'Habit updated successfully', severity: 'success' });
+      showNotification('Habit updated successfully', 'green');
     } else {
       const newHabit: Task = {
         id: crypto.randomUUID(),
@@ -64,7 +70,7 @@ export default function HabitsPage() {
         ...taskData,
       };
       addTask(newHabit);
-      setSnackbar({ open: true, message: 'Habit created successfully', severity: 'success' });
+      showNotification('Habit created successfully', 'green');
     }
     setFormOpen(false);
     setEditingHabit(null);
@@ -85,13 +91,10 @@ export default function HabitsPage() {
         streak_best: Math.max(habit.streak_best, newStreak),
       });
 
-      setSnackbar({
-        open: true,
-        message: wasComplete
-          ? 'Habit marked as incomplete'
-          : `Habit completed! Streak: ${newStreak} days`,
-        severity: 'success',
-      });
+      showNotification(
+        wasComplete ? 'Habit marked as incomplete' : `Habit completed! Streak: ${newStreak} days`,
+        'green',
+      );
     }
   };
 
@@ -103,7 +106,7 @@ export default function HabitsPage() {
   const handleConfirmDelete = () => {
     if (habitToDelete) {
       removeTask(habitToDelete);
-      setSnackbar({ open: true, message: 'Habit deleted successfully', severity: 'success' });
+      showNotification('Habit deleted successfully', 'green');
     }
     setDeleteDialogOpen(false);
     setHabitToDelete(null);
@@ -117,14 +120,53 @@ export default function HabitsPage() {
 
   return (
     <Box>
-      {/* Header actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-        <Button variant="contained" startIcon={<Add />} onClick={handleCreateNew}>
-          New Habit
-        </Button>
-      </Box>
+      {/* ─── Header Section ─── */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+          marginBottom: '0.25rem',
+        }}
+      >
+        <h1
+          className="font-display"
+          style={{
+            fontSize: '1.5rem',
+            fontWeight: 700,
+            color: '#E0E0E0',
+            margin: 0,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          HABIT_TRACKER
+        </h1>
+        <span
+          className="font-data"
+          style={{
+            fontSize: '0.8125rem',
+            color: '#9BA3AF',
+            letterSpacing: '0.05em',
+          }}
+        >
+          GLOBAL_COMPLETION_RATE: {completionRate}%
+        </span>
+      </div>
+      <p
+        className="micro-meta"
+        style={{ margin: '0 0 1.5rem 0', color: '#5A5E66' }}
+      >
+        SYSTEMATIC BEHAVIOR PROTOCOL MANAGEMENT
+      </p>
 
-      {/* Habit list */}
+      {/* ─── Annual Heatmap ─── */}
+      {rootHabits.length > 0 && (
+        <AnnualHeatmap habits={rootHabits} allTasks={tasks} />
+      )}
+
+      {/* ─── Habit list / grid ─── */}
       <HabitList
         habits={habits}
         allTasks={tasks}
@@ -158,17 +200,6 @@ export default function HabitsPage() {
           setHabitToDelete(null);
         }}
       />
-
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

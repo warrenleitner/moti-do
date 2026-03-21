@@ -1,17 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  CircularProgress,
-  ToggleButtonGroup,
-  ToggleButton,
-} from '@mui/material';
+import { SegmentedControl, Loader, Alert } from '../ui';
+import { GlowCard, ArcadeButton, TerminalInput } from '../components/ui';
 import { authApi } from '../services/api';
 
 // UI component - tested via integration tests
@@ -64,113 +54,163 @@ export default function LoginPage() {
     }
   };
 
-  const handleModeChange = (_event: React.MouseEvent<HTMLElement>, newMode: 'login' | 'register' | null) => {
-    if (newMode !== null) {
-      setMode(newMode);
-      setError(null);
-      setPassword('');
-      setConfirmPassword('');
-    }
+  const handleModeChange = (newMode: string) => {
+    setMode(newMode as 'login' | 'register');
+    setError(null);
+    setPassword('');
+    setConfirmPassword('');
   };
 
   return (
-    <Box
-      sx={{
+    <div
+      className="scanline-overlay"
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#0B0E17',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '100vh',
-        bgcolor: 'background.default',
-        p: 2,
+        padding: '1rem',
+        background: 'radial-gradient(ellipse at 50% 30%, rgba(0, 229, 255, 0.04) 0%, #0B0E17 70%)',
       }}
     >
-      <Card sx={{ maxWidth: 400, width: '100%' }}>
-        <CardContent sx={{ p: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-            <img src="/logo-wordmark.png" alt="Motodo" style={{ width: 280, height: 'auto', objectFit: 'contain' }} />
-          </Box>
-
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-            Task and Habit Tracker
-          </Typography>
-
-          <ToggleButtonGroup
-            value={mode}
-            exclusive
-            onChange={handleModeChange}
-            fullWidth
-            sx={{ mb: 3 }}
+      <div style={{ maxWidth: 400, width: '100%' }}>
+        {/* Logo / Title */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h1
+            className="font-display"
+            style={{
+              fontSize: '2.5rem',
+              fontWeight: 700,
+              color: '#00E5FF',
+              margin: 0,
+              letterSpacing: '0.1em',
+              textShadow: '0 0 24px rgba(0, 229, 255, 0.4)',
+            }}
           >
-            <ToggleButton value="login">Login</ToggleButton>
-            <ToggleButton value="register">Register</ToggleButton>
-          </ToggleButtonGroup>
+            MOTI-DO
+          </h1>
+          <p
+            className="font-data micro-meta"
+            style={{
+              margin: '0.5rem 0 0',
+              color: '#5A5E66',
+            }}
+          >
+            SYSTEM ACCESS
+          </p>
+        </div>
+
+        <GlowCard accentColor="cyan" accentPosition="top">
+          <SegmentedControl
+            value={mode}
+            onChange={handleModeChange}
+            data={[
+              { value: 'login', label: 'LOGIN' },
+              { value: 'register', label: 'REGISTER' },
+            ]}
+            fullWidth
+            style={{ marginBottom: '1.5rem' }}
+          />
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert
+              color="red"
+              mb="md"
+              styles={{
+                root: {
+                  backgroundColor: 'rgba(255, 0, 127, 0.08)',
+                  borderColor: 'rgba(255, 0, 127, 0.3)',
+                  borderLeft: '3px solid #FF007F',
+                },
+                message: {
+                  color: '#FF007F',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.75rem',
+                },
+              }}
+            >
               {error}
             </Alert>
           )}
 
           <form onSubmit={handleSubmit}>
-            <TextField
-              label="Username"
-              variant="outlined"
-              fullWidth
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              sx={{ mb: 2 }}
-              required
-              disabled={loading}
-              helperText="Single-user mode: use 'default_user'"
-            />
-
-            <TextField
-              label="Password"
-              type="password"
-              variant="outlined"
-              fullWidth
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              sx={{ mb: 2 }}
-              required
-              disabled={loading}
-              helperText="Minimum 8 characters"
-            />
-
-            {mode === 'register' && (
-              <TextField
-                label="Confirm Password"
-                type="password"
-                variant="outlined"
-                fullWidth
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                sx={{ mb: 2 }}
+            <div style={{ marginBottom: '1rem' }}>
+              <TerminalInput
+                label="USERNAME"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 disabled={loading}
+                placeholder="ENTER USERNAME"
               />
+              <span
+                className="font-data"
+                style={{ fontSize: '0.625rem', color: '#5A5E66', display: 'block', marginTop: 4 }}
+              >
+                Single-user mode: use &apos;default_user&apos;
+              </span>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <TerminalInput
+                label="PASSWORD"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                placeholder="ENTER PASSWORD"
+              />
+              <span
+                className="font-data"
+                style={{ fontSize: '0.625rem', color: '#5A5E66', display: 'block', marginTop: 4 }}
+              >
+                Minimum 8 characters
+              </span>
+            </div>
+
+            {mode === 'register' && (
+              <div style={{ marginBottom: '1rem' }}>
+                <TerminalInput
+                  label="CONFIRM PASSWORD"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  placeholder="RE-ENTER PASSWORD"
+                />
+              </div>
             )}
 
-            <Button
+            <ArcadeButton
               type="submit"
-              variant="contained"
               fullWidth
-              size="large"
+              size="lg"
               disabled={loading}
-              sx={{ mt: 2 }}
+              style={{ marginTop: '1rem' }}
             >
               {loading ? (
-                <CircularProgress size={24} color="inherit" />
+                <Loader size="sm" color="#00626E" />
               ) : mode === 'login' ? (
-                'Login'
+                'AUTHENTICATE'
               ) : (
-                'Register'
+                'REGISTER'
               )}
-            </Button>
+            </ArcadeButton>
           </form>
-        </CardContent>
-      </Card>
-    </Box>
+        </GlowCard>
+
+        {/* Footer */}
+        <p
+          className="micro-meta"
+          style={{ textAlign: 'center', marginTop: '1.5rem', color: '#32343F' }}
+        >
+          v2.0 // KINETIC_CONSOLE
+        </p>
+      </div>
+    </div>
   );
 }
 /* v8 ignore stop */

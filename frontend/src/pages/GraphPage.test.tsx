@@ -108,7 +108,7 @@ describe('GraphPage', () => {
     fireEvent.click(graphTask);
 
     await waitFor(() => {
-      expect(screen.getByText('Task Details')).toBeInTheDocument();
+      expect(screen.getByText('NODE_INSPECTOR')).toBeInTheDocument();
     });
   });
 
@@ -127,17 +127,16 @@ describe('GraphPage', () => {
     fireEvent.click(graphTask);
 
     await waitFor(() => {
-      expect(screen.getByText('Task Details')).toBeInTheDocument();
+      expect(screen.getByText('NODE_INSPECTOR')).toBeInTheDocument();
     });
 
-    // Find the IconButton (it contains Close icon)
-    const closeButtons = screen.getAllByRole('button');
-    const closeButton = closeButtons.find(btn => btn.querySelector('[data-testid="CloseIcon"]'));
+    // Find the close button by aria-label
+    const closeButton = screen.getByRole('button', { name: /close inspector/i });
     expect(closeButton).toBeDefined();
-    await user.click(closeButton!);
+    await user.click(closeButton);
 
     await waitFor(() => {
-      expect(screen.queryByText('Task Details')).not.toBeInTheDocument();
+      expect(screen.queryByText('NODE_INSPECTOR')).not.toBeInTheDocument();
     });
   });
 
@@ -151,23 +150,23 @@ describe('GraphPage', () => {
 
     render(<GraphPage />);
 
-    // Open drawer
+    // Open inspector
     const graphTask = screen.getByTestId('graph-task-1');
     fireEvent.click(graphTask);
 
     await waitFor(() => {
-      expect(screen.getByText('Task Details')).toBeInTheDocument();
+      expect(screen.getByText('NODE_INSPECTOR')).toBeInTheDocument();
     });
 
-    // Find and click checkbox in TaskCard
-    const checkbox = screen.getByTestId('checkbox-1');
-    fireEvent.click(checkbox);
+    // Find and click the COMPLETE button in the inspector
+    const completeButton = screen.getByRole('button', { name: /^COMPLETE$/i });
+    fireEvent.click(completeButton);
 
     await waitFor(() => {
       expect(mockUpdateTask).toHaveBeenCalledWith('1', expect.objectContaining({
         is_complete: true,
       }));
-      expect(screen.getByText('Task completed!')).toBeInTheDocument();
+      expect(screen.getAllByText('Task completed!').length).toBeGreaterThan(0);
     });
   });
 
@@ -181,23 +180,23 @@ describe('GraphPage', () => {
 
     render(<GraphPage />);
 
-    // Open drawer
+    // Open inspector
     const graphTask = screen.getByTestId('graph-task-1');
     fireEvent.click(graphTask);
 
     await waitFor(() => {
-      expect(screen.getByText('Task Details')).toBeInTheDocument();
+      expect(screen.getByText('NODE_INSPECTOR')).toBeInTheDocument();
     });
 
-    // Find and click checkbox
-    const checkbox = screen.getByTestId('checkbox-1');
-    fireEvent.click(checkbox);
+    // Find and click the REOPEN button
+    const reopenButton = screen.getByRole('button', { name: /REOPEN/i });
+    fireEvent.click(reopenButton);
 
     await waitFor(() => {
       expect(mockUpdateTask).toHaveBeenCalledWith('1', expect.objectContaining({
         is_complete: false,
       }));
-      expect(screen.getByText('Task marked incomplete')).toBeInTheDocument();
+      expect(screen.getAllByText('Task marked incomplete').length).toBeGreaterThan(0);
     });
   });
 
@@ -212,17 +211,17 @@ describe('GraphPage', () => {
 
     render(<GraphPage />);
 
-    // Open drawer
+    // Open inspector
     const graphTask = screen.getByTestId('graph-task-1');
     fireEvent.click(graphTask);
 
-    // Wait for drawer to open
-    await screen.findByText('Task Details');
+    // Wait for inspector to open
+    await screen.findByText('NODE_INSPECTOR');
 
-    // Check for dependencies section
-    expect(await screen.findByText(/Dependencies \(1\)/i)).toBeInTheDocument();
-    // Check that the dependency task card is rendered
-    expect(screen.getByTestId('task-card-dep1')).toBeInTheDocument();
+    // Check for dependencies section (now DEPENDS_ON)
+    expect(await screen.findByText(/DEPENDS_ON \(1\)/i)).toBeInTheDocument();
+    // Check that the dependency task title is rendered (appears in graph and inspector)
+    expect(screen.getAllByText('Dependency Task').length).toBeGreaterThanOrEqual(2);
   });
 
   it('displays tasks that depend on selected task (blocking)', async () => {
@@ -236,17 +235,17 @@ describe('GraphPage', () => {
 
     render(<GraphPage />);
 
-    // Open drawer
+    // Open inspector
     const graphTask = screen.getByTestId('graph-task-1');
     fireEvent.click(graphTask);
 
-    // Wait for drawer to open
-    await screen.findByText('Task Details');
+    // Wait for inspector to open
+    await screen.findByText('NODE_INSPECTOR');
 
     // Check for blocking section
-    expect(await screen.findByText(/Blocking \(1\)/i)).toBeInTheDocument();
-    // Check that the dependent task card is rendered
-    expect(screen.getByTestId('task-card-dep1')).toBeInTheDocument();
+    expect(await screen.findByText(/BLOCKING \(1\)/i)).toBeInTheDocument();
+    // Check that the dependent task title is rendered (appears in graph and inspector)
+    expect(screen.getAllByText('Dependent Task').length).toBeGreaterThanOrEqual(2);
   });
 
   it('does not show blocking section when no dependents', async () => {
@@ -259,15 +258,15 @@ describe('GraphPage', () => {
 
     render(<GraphPage />);
 
-    // Open drawer
+    // Open inspector
     const graphTask = screen.getByTestId('graph-task-1');
     fireEvent.click(graphTask);
 
     await waitFor(() => {
-      expect(screen.getByText('Task Details')).toBeInTheDocument();
+      expect(screen.getByText('NODE_INSPECTOR')).toBeInTheDocument();
     });
 
-    expect(screen.queryByText(/Blocking/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/BLOCKING/i)).not.toBeInTheDocument();
   });
 
   it('handles missing dependency task gracefully', async () => {
@@ -281,15 +280,15 @@ describe('GraphPage', () => {
 
     render(<GraphPage />);
 
-    // Open drawer
+    // Open inspector
     const graphTask = screen.getByTestId('graph-task-1');
     fireEvent.click(graphTask);
 
-    // Wait for drawer to open
-    await screen.findByText('Task Details');
+    // Wait for inspector to open
+    await screen.findByText('NODE_INSPECTOR');
 
     // Should show dependencies header but not crash
-    expect(await screen.findByText(/Dependencies \(1\)/i)).toBeInTheDocument();
+    expect(await screen.findByText(/DEPENDS_ON \(1\)/i)).toBeInTheDocument();
     // The missing dependency should not render, so we shouldn't see it
   });
 });

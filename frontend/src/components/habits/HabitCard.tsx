@@ -1,18 +1,7 @@
-import {
-  Card,
-  CardContent,
-  CardActions,
-  Typography,
-  Box,
-  IconButton,
-  Checkbox,
-  LinearProgress,
-  Tooltip,
-} from '@mui/material';
-import { Edit, Loop, Delete } from '@mui/icons-material';
+import { ActionIcon } from '../../ui';
+import { IconFlame, IconEdit, IconTrash } from '../../ui/icons';
+import { GlowCard, XPProgressRing, ArcadeButton } from '../ui';
 import type { Task } from '../../types';
-import { PriorityChip, DateDisplay, StreakBadge } from '../common';
-import { useSystemStatus } from '../../store/userStore';
 
 interface HabitCardProps {
   habit: Task;
@@ -21,120 +10,175 @@ interface HabitCardProps {
   onDelete: (id: string) => void;
 }
 
-// UI component - tested via integration tests
+// UI component — Kinetic Console redesign
 /* v8 ignore start */
 export default function HabitCard({ habit, onComplete, onEdit, onDelete }: HabitCardProps) {
-  const systemStatus = useSystemStatus();
+  const isCompletedToday = habit.is_complete;
+  const hasMilestone = habit.streak_current >= 30;
+  const hasActiveStreak = habit.streak_current > 0 && !isCompletedToday;
 
-  // Calculate current processing date (last_processed_date + 1 day) for relative date display
-  const currentProcessingDate = systemStatus?.last_processed_date
-    ? (() => {
-        const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
-        const nextDay = new Date(year, month - 1, day + 1);
-        return nextDay.toISOString().split('T')[0]; // Return as YYYY-MM-DD
-      })()
-    : undefined;
+  // Accent colour hierarchy: milestone > active streak > pending
+  const accentColor: 'amber' | 'magenta' | 'cyan' = hasMilestone
+    ? 'amber'
+    : hasActiveStreak
+      ? 'magenta'
+      : 'cyan';
 
-  // Calculate streak progress (visual indicator, max at 30 days)
-  const streakProgress = Math.min((habit.streak_current / 30) * 100, 100);
+  const statusLabel = hasMilestone
+    ? 'MILESTONE_UNLOCKED'
+    : hasActiveStreak
+      ? 'STREAK_ACTIVE'
+      : 'PENDING_STATUS';
+
+  const statusColorHex = hasMilestone
+    ? '#FFC775'
+    : hasActiveStreak
+      ? '#FF007F'
+      : '#00E5FF';
+
+  // Progress ring: streak relative to best or 30-day goal
+  const target = Math.max(habit.streak_best, 30);
+  const completionRate = target > 0 ? Math.min((habit.streak_current / target) * 100, 100) : 0;
 
   return (
-    <Card
-      sx={{
-        mb: 1,
-        opacity: habit.is_complete ? 0.7 : 1,
-        borderLeft: 4,
-        borderColor: habit.is_complete
-          ? 'success.main'
-          : habit.streak_current >= 7
-          ? 'warning.main'
-          : 'primary.main',
-        transition: 'all 0.2s ease',
-        '&:hover': {
-          boxShadow: 3,
-        },
+    <GlowCard
+      accentColor={accentColor}
+      accentPosition="left"
+      data-testid="habit-card"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.75rem',
+        opacity: isCompletedToday ? 0.75 : 1,
+        boxShadow: '2px 2px 0px rgba(0,0,0,0.3)',
       }}
     >
-      <CardContent sx={{ pb: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-          <Checkbox
-            checked={habit.is_complete}
-            onChange={() => onComplete(habit.id)}
-            sx={{ mt: -0.5, ml: -1 }}
+      {/* Top row — status label + actions */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span
+          className="font-data"
+          style={{
+            fontSize: '0.625rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            color: statusColorHex,
+            fontWeight: 600,
+          }}
+        >
+          {statusLabel}
+        </span>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <ActionIcon
+            size="sm"
+            variant="subtle"
+            onClick={() => onEdit(habit)}
+            title="Edit habit"
+            aria-label="Edit habit"
+          >
+            <IconEdit size={14} />
+          </ActionIcon>
+          <ActionIcon
+            size="sm"
+            variant="subtle"
+            color="red"
+            onClick={() => onDelete(habit.id)}
+            title="Delete habit"
+            aria-label="Delete habit"
+          >
+            <IconTrash size={14} />
+          </ActionIcon>
+        </div>
+      </div>
+
+      {/* Title */}
+      <div>
+        {habit.icon && <span style={{ marginRight: '0.25rem' }}>{habit.icon}</span>}
+        <span
+          className="font-display"
+          style={{
+            fontSize: '1.125rem',
+            fontWeight: 700,
+            color: '#E0E0E0',
+            textDecoration: isCompletedToday ? 'line-through' : undefined,
+          }}
+        >
+          {habit.title}
+        </span>
+      </div>
+
+      {/* Streak + Progress ring */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <IconFlame
+            size={24}
+            color={habit.streak_current > 0 ? '#FF007F' : '#5A5E66'}
           />
+          <span
+            className="font-data"
+            style={{ fontSize: '1.5rem', fontWeight: 700, color: '#E0E0E0' }}
+          >
+            {habit.streak_current}D
+          </span>
+        </div>
+        <XPProgressRing
+          size={64}
+          strokeWidth={5}
+          progress={completionRate}
+          color={statusColorHex}
+          label={`${Math.round(completionRate)}%`}
+        />
+      </div>
 
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            {/* Title row */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-              {habit.icon && <span>{habit.icon}</span>}
-              <Typography
-                variant="body1"
-                sx={{
-                  textDecoration: habit.is_complete ? 'line-through' : 'none',
-                  fontWeight: 500,
-                }}
-              >
-                {habit.title}
-              </Typography>
-              <Tooltip title={habit.recurrence_rule || 'Recurring'}>
-                <Loop fontSize="small" color="primary" />
-              </Tooltip>
-            </Box>
+      {/* Stats row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span
+          className="font-data"
+          style={{
+            fontSize: '0.6875rem',
+            color: '#9BA3AF',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+          }}
+        >
+          BEST_STREAK: {habit.streak_best}
+        </span>
+        <span
+          className="font-data"
+          style={{
+            fontSize: '0.6875rem',
+            color: '#9BA3AF',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+          }}
+        >
+          {habit.streak_current} / 30 days
+        </span>
+      </div>
 
-            {/* Streak and metadata row */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
-              <StreakBadge current={habit.streak_current} best={habit.streak_best} />
-              <PriorityChip priority={habit.priority} />
-              {habit.due_date && <DateDisplay date={habit.due_date} label="Due" referenceDate={currentProcessingDate} />}
-            </Box>
+      {/* Recurrence rule */}
+      <div
+        className="font-data"
+        style={{
+          fontSize: '0.625rem',
+          color: '#5A5E66',
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+        }}
+      >
+        Repeats: {habit.recurrence_rule || 'Daily'}
+      </div>
 
-            {/* Streak progress bar */}
-            <Box sx={{ mt: 1.5 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Streak Progress
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {habit.streak_current} / 30 days
-                </Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={streakProgress}
-                sx={{
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: 'action.hover',
-                  '& .MuiLinearProgress-bar': {
-                    backgroundColor:
-                      habit.streak_current >= 30
-                        ? 'success.main'
-                        : habit.streak_current >= 14
-                        ? 'warning.main'
-                        : 'primary.main',
-                  },
-                }}
-              />
-            </Box>
-
-            {/* Recurrence info */}
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-              Repeats: {habit.recurrence_rule || 'Daily'}
-            </Typography>
-          </Box>
-        </Box>
-      </CardContent>
-
-      <CardActions sx={{ px: 2, pt: 0 }}>
-        <Box sx={{ flex: 1 }} />
-        <IconButton size="small" onClick={() => onEdit(habit)} title="Edit habit">
-          <Edit fontSize="small" />
-        </IconButton>
-        <IconButton size="small" onClick={() => onDelete(habit.id)} title="Delete habit" color="error">
-          <Delete fontSize="small" />
-        </IconButton>
-      </CardActions>
-    </Card>
+      {/* Action button */}
+      <ArcadeButton
+        variant={isCompletedToday ? 'ghost' : 'primary'}
+        fullWidth
+        disabled={isCompletedToday}
+        onClick={() => onComplete(habit.id)}
+        size="sm"
+      >
+        {isCompletedToday ? 'GOAL_ACHIEVED' : 'COMPLETE TODAY'}
+      </ArcadeButton>
+    </GlowCard>
   );
 }
 /* v8 ignore stop */

@@ -1,37 +1,32 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   Checkbox,
-  IconButton,
+  ActionIcon,
   Tooltip,
-  Chip,
+  Badge,
   Box,
-  TableSortLabel,
-  Toolbar,
-  Typography,
-  Button,
-  alpha,
-} from '@mui/material';
+  Group,
+  Text,
+} from '../../ui';
 import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  CheckCircle as CheckCircleIcon,
-  RadioButtonUnchecked as RadioButtonUncheckedIcon,
-  Settings as SettingsIcon,
-  Block as BlockIcon,
-  Repeat as RepeatIcon,
-  Download as DownloadIcon,
-  ContentCopy as ContentCopyIcon,
-  Schedule as ScheduleIcon,
-  SkipNext as JumpIcon,
-  PriorityHigh as CrisisIcon,
-} from '@mui/icons-material';
+  IconEdit,
+  IconTrash,
+  IconCircleCheck,
+  IconCircle,
+  IconSettings,
+  IconChevronUp,
+  IconChevronDown,
+  IconBan,
+  IconRepeat,
+  IconDownload,
+  IconCopy,
+  IconClock,
+  IconPlayerSkipForward,
+  IconAlertTriangle,
+  IconBolt,
+} from '../../ui/icons';
+import { ArcadeButton, DataBadge } from '../ui';
 import type { Task } from '../../types/models';
 import {
   Priority,
@@ -445,34 +440,38 @@ const TaskTable: React.FC<TaskTableProps> = ({
           <Checkbox
             checked={selectedTasks.includes(task.id)}
             onChange={() => onSelectTask?.(task.id)}
-            size="small"
+            size="sm"
           />
         );
 
       case 'icon': {
         // Icon column with inline editing
         const iconDisplay = (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Group gap={4} wrap="nowrap" align="center">
             {task.icon ? (
-              <Tooltip title="Task Icon">
+              <Tooltip label="Task Icon">
                 <span style={{ fontSize: '1.5rem', cursor: 'pointer' }}>{task.icon}</span>
               </Tooltip>
             ) : (
-              <Tooltip title="Add Icon">
+              <Tooltip label="Add Icon">
                 <span style={{ fontSize: '1.5rem', opacity: 0.3, cursor: 'pointer' }}>+</span>
               </Tooltip>
             )}
             {task.status === 'blocked' && (
-              <Tooltip title="Blocked">
-                <BlockIcon fontSize="small" color="error" />
+              <Tooltip label="Blocked">
+                <span style={{ lineHeight: 1, display: 'inline-flex' }}>
+                  <IconBan size={16} color="var(--mantine-color-red-6)" />
+                </span>
               </Tooltip>
             )}
             {(task.is_habit || task.recurrence_rule) && (
-              <Tooltip title="Recurring">
-                <RepeatIcon fontSize="small" color="primary" />
+              <Tooltip label="Recurring">
+                <span style={{ lineHeight: 1, display: 'inline-flex' }}>
+                  <IconRepeat size={16} color="var(--mantine-color-blue-6)" />
+                </span>
               </Tooltip>
             )}
-          </Box>
+          </Group>
         );
 
         return onInlineEdit ? (
@@ -486,7 +485,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
                 value={value}
                 placeholder="Emoji"
                 maxLength={5}
-                sx={{ width: 80 }}
+                style={{ width: 80 }}
                 onChange={onChange}
                 onClose={onClose}
                 onSave={onSave}
@@ -501,7 +500,13 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'title': {
         const titleDisplay = (
-          <span style={{ textDecoration: task.is_complete ? 'line-through' : 'none' }}>
+          <span
+            className="font-display"
+            style={{
+              textDecoration: task.is_complete ? 'line-through' : 'none',
+              color: task.is_complete ? '#5A5E66' : '#E0E0E0',
+            }}
+          >
             {task.title}
           </span>
         );
@@ -532,11 +537,11 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'score':
         return (
-          <Chip
-            label={`${task.score} XP`}
-            size="small"
-            icon={<span>⭐</span>}
-            sx={{ fontWeight: 'bold' }}
+          <DataBadge
+            value={`${task.score} XP`}
+            color="cyan"
+            icon={<IconBolt size={12} />}
+            size="sm"
           />
         );
 
@@ -618,7 +623,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
           const startDate = new Date(year, month - 1, day);
           const isFuture = startDate > currentProcessingDate;
           return (
-            <span style={{ color: isFuture ? '#9e9e9e' : 'inherit' }}>
+            <span className="font-data" style={{ color: isFuture ? '#5A5E66' : '#E0E0E0', fontSize: '0.8125rem' }}>
               {format(startDate, 'MMM d, yyyy')}
             </span>
           );
@@ -655,7 +660,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
           const dueDate = new Date(year, month - 1, day);
           const isOverdue = dueDate < currentProcessingDate;
           return (
-            <span style={{ color: isOverdue ? '#f44336' : 'inherit' }}>
+            <span className="font-data" style={{ color: isOverdue ? '#FF007F' : '#E0E0E0', fontSize: '0.8125rem' }}>
               {format(dueDate, 'MMM d, yyyy')}
             </span>
           );
@@ -684,7 +689,11 @@ const TaskTable: React.FC<TaskTableProps> = ({
       }
 
       case 'creation_date':
-        return format(new Date(task.creation_date), 'MMM d, yyyy');
+        return (
+          <span className="font-data" style={{ color: '#8A8F98', fontSize: '0.8125rem' }}>
+            {format(new Date(task.creation_date), 'MMM d, yyyy')}
+          </span>
+        );
 
       case 'project': {
         const projectDisplay = task.project ? <ProjectChip project={task.project} /> : '-';
@@ -714,30 +723,33 @@ const TaskTable: React.FC<TaskTableProps> = ({
         const combinedTags = getCombinedTags(task);
         const explicitTags = new Set(task.tags.map((tag) => tag.toLowerCase()));
         const tagsDisplay = combinedTags.length > 0 ? (
-          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          <Group gap={4} wrap="wrap">
             {combinedTags.slice(0, 2).map((tag) => {
               const isImplicit = !explicitTags.has(tag.toLowerCase());
-              const chip = (
-                <Chip
+              const badge = (
+                <Badge
                   key={tag}
-                  label={tag}
-                  size="small"
-                  variant={isImplicit ? 'outlined' : 'filled'}
-                  color={isImplicit ? 'default' : 'primary'}
-                />
+                  size="sm"
+                  variant={isImplicit ? 'outline' : 'filled'}
+                  color={isImplicit ? 'gray' : undefined}
+                >
+                  {tag}
+                </Badge>
               );
               return isImplicit ? (
-                <Tooltip key={tag} title="Implicit tag">
-                  {chip}
+                <Tooltip key={tag} label="Implicit tag">
+                  {badge}
                 </Tooltip>
               ) : (
-                chip
+                badge
               );
             })}
             {combinedTags.length > 2 && (
-              <Chip label={`+${combinedTags.length - 2}`} size="small" variant="outlined" />
+              <Badge size="sm" variant="outline">
+                +{combinedTags.length - 2}
+              </Badge>
             )}
-          </Box>
+          </Group>
         ) : (
           '-'
         );
@@ -765,7 +777,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'streak':
         return task.is_habit && task.streak_current > 0 ? (
-          <Chip label={`🔥 ${task.streak_current}`} size="small" color="warning" />
+          <DataBadge value={`🔥 ${task.streak_current}`} color="amber" size="sm" />
         ) : (
           '-'
         );
@@ -778,16 +790,16 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'kanban_status':
         return task.status ? (
-          <Chip
-            label={task.status.replace('_', ' ')}
-            size="small"
+          <DataBadge
+            value={task.status.replace('_', ' ').toUpperCase()}
             color={
               task.status === 'in_progress'
-                ? 'primary'
+                ? 'cyan'
                 : task.status === 'blocked'
-                ? 'error'
-                : 'default'
+                ? 'magenta'
+                : 'muted'
             }
+            size="sm"
           />
         ) : (
           '-'
@@ -795,52 +807,53 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'status': {
         const lifecycleStatus = getLifecycleStatus(task);
-        const label = lifecycleStatus.charAt(0).toUpperCase() + lifecycleStatus.slice(1);
-        const color =
-          lifecycleStatus === 'completed'
-            ? 'success'
-            : lifecycleStatus === 'blocked'
-            ? 'error'
-            : lifecycleStatus === 'future'
-            ? 'info'
-            : 'primary';
+        const label = lifecycleStatus.toUpperCase();
+        const statusColor: Record<string, 'cyan' | 'magenta' | 'amber' | 'muted'> = {
+          active: 'cyan',
+          blocked: 'magenta',
+          future: 'amber',
+          completed: 'muted',
+        };
 
-        return <Chip label={label} size="small" color={color} variant={lifecycleStatus === 'active' ? 'outlined' : 'filled'} />;
+        return <DataBadge value={label} color={statusColor[lifecycleStatus] || 'muted'} size="sm" />;
       }
 
       case 'actions':
         return (
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Tooltip title={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}>
-              <IconButton
-                size="small"
+          <Group gap={4}>
+            <Tooltip label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}>
+              <ActionIcon
+                size="sm"
+                variant="subtle"
                 onClick={() => onComplete(task.id)}
+                aria-label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
+                style={{ color: task.is_complete ? '#00E5FF' : '#8A8F98' }}
               >
                 {task.is_complete ? (
-                  <RadioButtonUncheckedIcon fontSize="small" />
+                  <IconCircle size={16} />
                 ) : (
-                  <CheckCircleIcon fontSize="small" />
+                  <IconCircleCheck size={16} />
                 )}
-              </IconButton>
+              </ActionIcon>
             </Tooltip>
-            <Tooltip title="Edit">
-              <IconButton size="small" onClick={() => onEdit(task)}>
-                <EditIcon fontSize="small" />
-              </IconButton>
+            <Tooltip label="Edit">
+              <ActionIcon size="sm" variant="subtle" onClick={() => onEdit(task)} aria-label="Edit" style={{ color: '#8A8F98' }}>
+                <IconEdit size={16} />
+              </ActionIcon>
             </Tooltip>
             {onDuplicate && (
-              <Tooltip title="Duplicate">
-                <IconButton size="small" onClick={() => onDuplicate(task.id)}>
-                  <ContentCopyIcon fontSize="small" />
-                </IconButton>
+              <Tooltip label="Duplicate">
+                <ActionIcon size="sm" variant="subtle" onClick={() => onDuplicate(task.id)} aria-label="Duplicate" style={{ color: '#8A8F98' }}>
+                  <IconCopy size={16} />
+                </ActionIcon>
               </Tooltip>
             )}
-            <Tooltip title="Delete">
-              <IconButton size="small" onClick={() => onDelete(task.id)} color="error">
-                <DeleteIcon fontSize="small" />
-              </IconButton>
+            <Tooltip label="Delete">
+              <ActionIcon size="sm" variant="subtle" onClick={() => onDelete(task.id)} aria-label="Delete" style={{ color: '#FF007F' }}>
+                <IconTrash size={16} />
+              </ActionIcon>
             </Tooltip>
-          </Box>
+          </Group>
         );
 
       default:
@@ -864,159 +877,215 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
   return (
     <>
-      {/* Bulk Actions Toolbar */}
+      {/* Bulk Actions Toolbar — Kinetic Console styled */}
       {numSelected > 0 && (
-        <Toolbar
-          sx={{
-            pl: { sm: 2 },
-            pr: { xs: 1, sm: 1 },
-            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-            borderRadius: 1,
-            mb: 1,
+        <Box
+          p="xs"
+          px="sm"
+          mb="xs"
+          className="ghost-border"
+          style={{
+            backgroundColor: '#272A34',
+            borderTop: '2px solid #00E5FF',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexWrap: 'wrap',
           }}
         >
-          <Typography sx={{ flex: '1 1 100%' }} color="inherit" variant="subtitle1" component="div">
-            {numSelected} task{numSelected > 1 ? 's' : ''} selected
-          </Typography>
-          {onBulkComplete && (
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<CheckCircleIcon />}
-              onClick={() => onBulkComplete(selectedTasks)}
-              sx={{ mr: 1 }}
-            >
-              Complete Selected
-            </Button>
-          )}
-          {onBulkDuplicate && (
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<ContentCopyIcon />}
-              onClick={() => onBulkDuplicate(selectedTasks)}
-              sx={{ mr: 1 }}
-            >
-              Duplicate Selected
-            </Button>
-          )}
-          {onBulkDefer && (
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<ScheduleIcon />}
-              onClick={() => onBulkDefer(selectedTasks)}
-              sx={{ mr: 1 }}
-            >
-              Delay Selected
-            </Button>
-          )}
-          {onBulkJumpToCurrent && (
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<JumpIcon />}
-              onClick={() => onBulkJumpToCurrent(selectedTasks)}
-              sx={{ mr: 1 }}
-            >
-              Jump to Current
-            </Button>
-          )}
-          {onActivateCrisisMode && (
-            <Button
-              variant="outlined"
-              color="warning"
-              size="small"
-              startIcon={<CrisisIcon />}
-              onClick={() => onActivateCrisisMode(selectedTasks)}
-              sx={{ mr: 1 }}
-            >
-              Crisis Mode
-            </Button>
-          )}
-          {onBulkDelete && (
-            <Button
-              variant="outlined"
-              color="error"
-              size="small"
-              startIcon={<DeleteIcon />}
-              onClick={() => onBulkDelete(selectedTasks)}
-            >
-              Delete Selected
-            </Button>
-          )}
-        </Toolbar>
+          <Text
+            fw={700}
+            className="font-data"
+            style={{ flex: '1 1 auto', color: '#00E5FF', letterSpacing: '0.05em' }}
+          >
+            {numSelected} TASK{numSelected > 1 ? 'S' : ''} SELECTED
+          </Text>
+          <Group gap="xs">
+            {onBulkComplete && (
+              <ArcadeButton
+                variant="primary"
+                size="xs"
+                onClick={() => onBulkComplete(selectedTasks)}
+              >
+                <Group gap={4}>
+                  <IconCircleCheck size={16} />
+                  EXECUTE BATCH
+                </Group>
+              </ArcadeButton>
+            )}
+            {onBulkDuplicate && (
+              <ArcadeButton
+                variant="ghost"
+                size="xs"
+                onClick={() => onBulkDuplicate(selectedTasks)}
+              >
+                <Group gap={4}>
+                  <IconCopy size={16} />
+                  DUPLICATE
+                </Group>
+              </ArcadeButton>
+            )}
+            {onBulkDefer && (
+              <ArcadeButton
+                variant="ghost"
+                size="xs"
+                onClick={() => onBulkDefer(selectedTasks)}
+              >
+                <Group gap={4}>
+                  <IconClock size={16} />
+                  DELAY
+                </Group>
+              </ArcadeButton>
+            )}
+            {onBulkJumpToCurrent && (
+              <ArcadeButton
+                variant="ghost"
+                size="xs"
+                onClick={() => onBulkJumpToCurrent(selectedTasks)}
+              >
+                <Group gap={4}>
+                  <IconPlayerSkipForward size={16} />
+                  JUMP
+                </Group>
+              </ArcadeButton>
+            )}
+            {onActivateCrisisMode && (
+              <ArcadeButton
+                variant="ghost"
+                size="xs"
+                onClick={() => onActivateCrisisMode(selectedTasks)}
+                style={{ borderColor: '#FFC775', color: '#FFC775' }}
+              >
+                <Group gap={4}>
+                  <IconAlertTriangle size={16} />
+                  CRISIS
+                </Group>
+              </ArcadeButton>
+            )}
+            {onBulkDelete && (
+              <ArcadeButton
+                variant="secondary"
+                size="xs"
+                onClick={() => onBulkDelete(selectedTasks)}
+              >
+                <Group gap={4}>
+                  <IconTrash size={16} />
+                  DELETE
+                </Group>
+              </ArcadeButton>
+            )}
+          </Group>
+        </Box>
       )}
 
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-        <Tooltip title="Export to CSV">
-          <IconButton onClick={handleExportCSV} aria-label="Export to CSV">
-            <DownloadIcon />
-          </IconButton>
+      <Group mb="sm" justify="flex-end" gap="xs">
+        <Tooltip label="Export to CSV">
+          <ActionIcon variant="subtle" onClick={handleExportCSV} aria-label="Export to CSV">
+            <IconDownload size={20} />
+          </ActionIcon>
         </Tooltip>
-        <Tooltip title="Configure Columns">
-          <IconButton onClick={() => setConfigDialogOpen(true)}>
-            <SettingsIcon />
-          </IconButton>
+        <Tooltip label="Configure Columns">
+          <ActionIcon variant="subtle" onClick={() => setConfigDialogOpen(true)} aria-label="Configure Columns">
+            <IconSettings size={20} />
+          </ActionIcon>
         </Tooltip>
-      </Box>
+      </Group>
 
-      <TableContainer component={Paper}>
-        <Table size="small" stickyHeader>
-          <TableHead>
-            <TableRow>
+      <Table.ScrollContainer minWidth={800}>
+        <Table highlightOnHover withTableBorder verticalSpacing="xs" stickyHeader
+          styles={{
+            table: {
+              borderColor: 'rgba(59, 73, 76, 0.15)',
+            },
+            thead: {
+              backgroundColor: '#181B25',
+            },
+            th: {
+              fontFamily: '"JetBrains Mono", monospace',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              fontSize: '0.6875rem',
+              color: '#8A8F98',
+              fontWeight: 600,
+              backgroundColor: '#181B25',
+              borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+              padding: '6px 8px',
+            },
+            td: {
+              borderBottom: '1px solid rgba(59, 73, 76, 0.08)',
+              padding: '4px 8px',
+              backgroundColor: '#10131C',
+              transition: 'background-color 0.1s ease',
+            },
+            tr: {
+              '&:hover td': {
+                backgroundColor: '#181B25',
+              },
+            },
+          }}
+        >
+          <Table.Thead>
+            <Table.Tr>
               {visibleColumns.map((col) => (
-                <TableCell
+                <Table.Th
                   key={col.id}
-                  style={{ width: col.width, minWidth: col.minWidth }}
-                  sx={{ fontWeight: 'bold' }}
+                  style={{ width: col.width, minWidth: col.minWidth, fontWeight: 600 }}
                 >
                   {col.id === 'select' && onSelectAll ? (
                     <Checkbox
                       checked={allSelected}
                       indeterminate={someSelected}
-                      onChange={(e) => onSelectAll(e.target.checked)}
-                      size="small"
+                      onChange={(e) => onSelectAll(e.currentTarget.checked)}
+                      size="sm"
                     />
                   ) : col.sortable ? (
-                    <TableSortLabel
-                      active={getSortLabel(col.id)?.active}
-                      direction={getSortLabel(col.id)?.direction}
+                    <Group
+                      gap={4}
+                      wrap="nowrap"
+                      style={{ cursor: 'pointer' }}
                       onClick={() => handleSort(col.id)}
                     >
-                      {col.label}
-                      {getSortLabel(col.id)?.index && (
-                        <Box
-                          component="span"
-                          sx={{
-                            ml: 0.5,
-                            fontSize: '0.75rem',
-                            color: 'primary.main',
-                            fontWeight: 'bold',
-                          }}
-                        >
-                          {getSortLabel(col.id)?.index}
-                        </Box>
+                      <Text
+                        size="xs"
+                        fw={600}
+                        className="font-data"
+                        style={{ textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8F98' }}
+                      >
+                        {col.label}
+                      </Text>
+                      {getSortLabel(col.id)?.active && (
+                        <>
+                          {getSortLabel(col.id)?.direction === 'asc' ? (
+                            <IconChevronUp size={14} color="#00E5FF" />
+                          ) : (
+                            <IconChevronDown size={14} color="#00E5FF" />
+                          )}
+                          {getSortLabel(col.id)?.index && (
+                            <Text size="xs" fw={700} style={{ color: '#00E5FF' }}>
+                              {getSortLabel(col.id)?.index}
+                            </Text>
+                          )}
+                        </>
                       )}
-                    </TableSortLabel>
+                    </Group>
                   ) : (
                     col.label
                   )}
-                </TableCell>
+                </Table.Th>
               ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {sortedTasks.map((task) => (
-              <TableRow key={task.id} hover>
+              <Table.Tr key={task.id}>
                 {visibleColumns.map((col) => (
-                  <TableCell key={col.id}>{renderCellContent(task, col.id)}</TableCell>
+                  <Table.Td key={col.id}>{renderCellContent(task, col.id)}</Table.Td>
                 ))}
-              </TableRow>
+              </Table.Tr>
             ))}
-          </TableBody>
+          </Table.Tbody>
         </Table>
-      </TableContainer>
+      </Table.ScrollContainer>
 
       <ColumnConfigDialog
         open={configDialogOpen}

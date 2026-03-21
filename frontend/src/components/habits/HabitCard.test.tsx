@@ -53,8 +53,8 @@ describe('HabitCard', () => {
   it('calls onToggle when toggle clicked', async () => {
     const onComplete = vi.fn();
     const { user } = render(<HabitCard habit={mockHabit} onEdit={vi.fn()} onComplete={onComplete} />);
-    const checkbox = screen.getByRole('checkbox');
-    await user.click(checkbox);
+    const completeButton = screen.getByRole('button', { name: /COMPLETE TODAY/i });
+    await user.click(completeButton);
     expect(onComplete).toHaveBeenCalledWith(mockHabit.id);
   });
 

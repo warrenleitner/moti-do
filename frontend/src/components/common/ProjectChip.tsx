@@ -1,5 +1,5 @@
-import { Chip } from '@mui/material';
-import { FolderOutlined } from '@mui/icons-material';
+import { Badge } from '../../ui';
+import { IconFolder } from '../../ui/icons';
 import { useDefinedProjects } from '../../store/userStore';
 
 interface ProjectChipProps {
@@ -14,23 +14,24 @@ export default function ProjectChip({ project, size = 'small', onClick }: Projec
   // Look up the project color from defined projects
   const projectDef = definedProjects.find((p) => p.name === project);
   const color = projectDef?.color;
+  const mantineSize = size === 'small' ? 'sm' : 'md';
 
   return (
-    <Chip
-      icon={<FolderOutlined sx={{ fontSize: size === 'small' ? 14 : 18 }} />}
-      label={project}
-      size={size}
+    <Badge
+      size={mantineSize}
+      variant="outline"
+      leftSection={<IconFolder size={size === 'small' ? 14 : 18} />}
       onClick={onClick}
-      sx={{
-        backgroundColor: color ? `${color}20` : 'action.selected',
-        color: color || 'text.primary',
-        borderColor: color || 'divider',
-        cursor: onClick ? 'pointer' : 'default',
-        // Conditional hover style tested via integration tests
+      style={{
+        backgroundColor: color ? `${color}20` : undefined,
+        color: color || undefined,
+        borderColor: color || undefined,
+        // Conditional cursor tested via integration tests
         /* v8 ignore next 1 */
-        '&:hover': onClick ? { backgroundColor: color ? `${color}30` : 'action.hover' } : {},
+        cursor: onClick ? 'pointer' : 'default',
       }}
-      variant="outlined"
-    />
+    >
+      {project}
+    </Badge>
   );
 }

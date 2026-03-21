@@ -55,7 +55,9 @@ describe('ProjectChip', () => {
   });
 
   it('renders folder icon', () => {
-    render(<ProjectChip project="Work" />);
-    expect(screen.getByTestId('FolderOutlinedIcon')).toBeInTheDocument();
+    const { container } = render(<ProjectChip project="Work" />);
+    // Tabler IconFolder renders as an SVG
+    const svgIcon = container.querySelector('svg.tabler-icon-folder');
+    expect(svgIcon || container.querySelector('.mantine-Badge-section svg')).toBeInTheDocument();
   });
 });

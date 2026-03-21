@@ -8,62 +8,33 @@
  * - Project: ~projectname
  */
 
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  TextField,
-  InputAdornment,
-  IconButton,
-  Paper,
-  Snackbar,
-  Alert,
+  TextInput,
+  ActionIcon,
   Tooltip,
   Box,
-  Typography,
-  Chip,
-  Stack,
-  Popper,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  ClickAwayListener,
-} from '@mui/material';
-import { Add, Bolt, HelpOutline } from '@mui/icons-material';
+  Text,
+  Group,
+  notifications,
+} from '../../ui';
+import { IconPlus, IconBolt, IconHelp } from '../../ui/icons';
+import { DataBadge } from '../ui';
 import { useTaskStore } from '../../store';
-import { useDefinedTags, useDefinedProjects } from '../../store/userStore';
 import { parseQuickAddInput, quickAddResultToTask } from '../../utils/quickAdd';
 import { Priority, Difficulty, Duration, PriorityEmoji } from '../../types';
 
 /** Default tag added to all tasks created via QuickAdd */
 const QUICK_ADD_DEFAULT_TAG = 'inbox';
 
-/** Autocomplete options for each modifier type */
-interface AutocompleteOption {
-  label: string;
-  value: string;
-  description?: string;
-}
-
-const PRIORITY_OPTIONS: AutocompleteOption[] = [
-  { label: 'Trivial', value: 'trivial', description: 'Lowest priority' },
-  { label: 'Low', value: 'low', description: 'Low priority' },
-  { label: 'Medium', value: 'medium', description: 'Normal priority' },
-  { label: 'High', value: 'high', description: 'High priority' },
-  { label: 'Critical', value: 'critical', description: 'Highest priority' },
-];
-
-const DATE_OPTIONS: AutocompleteOption[] = [
-  { label: 'Today', value: 'today', description: 'Due today' },
-  { label: 'Tomorrow', value: 'tomorrow', description: 'Due tomorrow' },
-  { label: 'Next Week', value: 'next-week', description: 'Due in 7 days' },
-  { label: 'Monday', value: 'monday', description: 'Next Monday' },
-  { label: 'Tuesday', value: 'tuesday', description: 'Next Tuesday' },
-  { label: 'Wednesday', value: 'wednesday', description: 'Next Wednesday' },
-  { label: 'Thursday', value: 'thursday', description: 'Next Thursday' },
-  { label: 'Friday', value: 'friday', description: 'Next Friday' },
-  { label: 'Saturday', value: 'saturday', description: 'Next Saturday' },
-  { label: 'Sunday', value: 'sunday', description: 'Next Sunday' },
-];
+/** Priority → Kinetic Console DataBadge color */
+const priorityBadgeColor: Record<string, 'magenta' | 'amber' | 'cyan' | 'muted'> = {
+  [Priority.DEFCON_ONE]: 'magenta',
+  [Priority.HIGH]: 'amber',
+  [Priority.MEDIUM]: 'cyan',
+  [Priority.LOW]: 'muted',
+  [Priority.TRIVIAL]: 'muted',
+};
 
 interface QuickAddBoxProps {
   /** Called after a task is successfully created */
@@ -74,96 +45,14 @@ interface QuickAddBoxProps {
 /* v8 ignore start */
 export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
   const [input, setInput] = useState('');
-  const [cursorPos, setCursorPos] = useState(0);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [lastCreated, setLastCreated] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [anchorEl, setAnchorEl] = useState<HTMLInputElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const createTask = useTaskStore((state) => state.createTask);
-
-  // Get user's defined tags and projects for autocomplete
-  const definedTags = useDefinedTags();
-  const definedProjects = useDefinedProjects();
 
   // Parse input for preview
   const parsed = parseQuickAddInput(input);
   const hasModifiers =
     parsed.priority || parsed.tags.length > 0 || parsed.dueDate || parsed.project;
-
-  // Detect if user is typing a modifier and what options to show
-  const autocompleteState = useMemo(() => {
-    // Find the last modifier being typed (not yet completed)
-    const textBeforeCursor = input.slice(0, cursorPos);
-
-    // Match any modifier at the end that's still being typed
-    const modifierMatch = textBeforeCursor.match(/([!#@~])(\S*)$/);
-    if (!modifierMatch) return null;
-
-    const [fullMatch, prefix, partial] = modifierMatch;
-    const startPos = cursorPos - fullMatch.length;
-    const filter = partial.toLowerCase();
-
-    let options: AutocompleteOption[] = [];
-    switch (prefix) {
-      case '!':
-        options = PRIORITY_OPTIONS.filter(
-          (o) => o.value.startsWith(filter) || o.label.toLowerCase().startsWith(filter)
-        );
-        break;
-      case '#':
-        options = definedTags
-          .filter((t) => t.name.toLowerCase().startsWith(filter))
-          .map((t) => ({ label: t.name, value: t.name, description: `Tag: ${t.name}` }));
-        break;
-      case '@':
-        options = DATE_OPTIONS.filter(
-          (o) => o.value.startsWith(filter) || o.label.toLowerCase().startsWith(filter)
-        );
-        break;
-      case '~':
-        options = definedProjects
-          .filter((p) => p.name.toLowerCase().startsWith(filter))
-          .map((p) => ({ label: p.name, value: p.name, description: `Project: ${p.name}` }));
-        break;
-    }
-
-    if (options.length === 0) return null;
-
-    // If the typed partial exactly matches an option, don't show autocomplete
-    // This allows Enter to submit instead of selecting
-    if (options.length === 1 && options[0].value.toLowerCase() === filter) {
-      return null;
-    }
-
-    return { prefix, partial, startPos, endPos: cursorPos, options };
-  }, [input, cursorPos, definedTags, definedProjects]);
-
-  // Clamp selected index to valid range
-  const effectiveSelectedIndex = autocompleteState
-    ? Math.min(selectedIndex, autocompleteState.options.length - 1)
-    : 0;
-
-  const handleSelectOption = useCallback(
-    (option: AutocompleteOption) => {
-      if (!autocompleteState) return;
-
-      const { prefix, startPos, endPos } = autocompleteState;
-      const before = input.slice(0, startPos);
-      const after = input.slice(endPos);
-      const newInput = `${before}${prefix}${option.value} ${after}`;
-      setInput(newInput);
-
-      // Focus and move cursor to end of inserted text
-      setTimeout(() => {
-        inputRef.current?.focus();
-        const cursorPos = startPos + prefix.length + option.value.length + 1;
-        inputRef.current?.setSelectionRange(cursorPos, cursorPos);
-      }, 0);
-    },
-    [autocompleteState, input]
-  );
 
   const handleSubmit = useCallback(async () => {
     if (!parsed.title.trim()) return;
@@ -190,8 +79,11 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
 
     try {
       await createTask(fullTaskData);
-      setLastCreated(parsed.title);
-      setShowSuccess(true);
+      notifications.show({
+        title: 'Task created',
+        message: `Task "${parsed.title}" created!`,
+        color: 'green',
+      });
       setInput('');
       onTaskCreated?.();
     } catch (error) /* v8 ignore next */ {
@@ -201,38 +93,12 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      // Handle autocomplete navigation
-      if (autocompleteState) {
-        const { options } = autocompleteState;
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setSelectedIndex((prev) => (prev + 1) % options.length);
-          return;
-        }
-        if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setSelectedIndex((prev) => (prev - 1 + options.length) % options.length);
-          return;
-        }
-        if (e.key === 'Tab' || (e.key === 'Enter' && options.length > 0)) {
-          e.preventDefault();
-          handleSelectOption(options[effectiveSelectedIndex]);
-          return;
-        }
-        if (e.key === 'Escape') {
-          // Close autocomplete without doing anything
-          setInput((prev) => prev); // Force re-render to close
-          return;
-        }
-      }
-
-      // Regular enter key for submission
-      if (e.key === 'Enter' && !e.shiftKey && !autocompleteState) {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSubmit();
       }
     },
-    [handleSubmit, autocompleteState, effectiveSelectedIndex, handleSelectOption]
+    [handleSubmit]
   );
 
   // Keyboard shortcut (Ctrl/Cmd+K to focus) - tested via E2E
@@ -248,179 +114,152 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
   }, []);
 
   return (
-    <>
-      <Paper
-        elevation={0}
-        sx={{
-          p: 1.5,
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 2,
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, position: 'relative' }}>
-          <TextField
-            inputRef={inputRef}
-            fullWidth
-            size="small"
-            placeholder="Add a task... (try: !high #work @tomorrow ~project)"
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              setCursorPos(e.target.selectionStart ?? e.target.value.length);
-            }}
-            onSelect={(e) => {
-              const target = e.target as HTMLInputElement;
-              setCursorPos(target.selectionStart ?? input.length);
-            }}
-            onFocus={(e) => setAnchorEl(e.target as HTMLInputElement)}
-            onBlur={() => {
-              // Delay clearing anchor to allow click on dropdown options
-              setTimeout(() => setAnchorEl(null), 150);
-            }}
-            onKeyDown={handleKeyDown}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Bolt color="primary" fontSize="small" />
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Tooltip title="Show syntax help">
-                    <IconButton
-                      size="small"
-                      onClick={() => setShowHelp(!showHelp)}
-                      aria-label="Show syntax help"
-                      sx={{ mr: 0.5 }}
-                    >
-                      <HelpOutline fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Add task (Enter)">
-                    <span>
-                      <IconButton
-                        size="small"
-                        onClick={handleSubmit}
-                        disabled={!parsed.title.trim()}
-                        color="primary"
-                        aria-label="Add task"
-                      >
-                        <Add />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'background.paper',
+    <Box
+      className="ghost-border"
+      style={{
+        backgroundColor: '#0B0E17',
+        padding: '12px 16px',
+        boxShadow: '2px 2px 0px rgba(0, 0, 0, 0.3)',
+      }}
+    >
+      <Group gap="sm" wrap="nowrap" align="center">
+        {/* ">" cursor prefix */}
+        <span
+          className="font-data"
+          style={{
+            color: '#00E5FF',
+            fontWeight: 700,
+            fontSize: '1.1rem',
+            lineHeight: 1,
+            flexShrink: 0,
+          }}
+        >
+          &gt;
+        </span>
+
+        {/* Terminal input */}
+        <TextInput
+          ref={inputRef}
+          placeholder='DEPLOY NEW TASK: [TITLE] /PRIORITY /DUE...'
+          value={input}
+          onChange={(e) => setInput(e.currentTarget.value)}
+          onKeyDown={handleKeyDown}
+          variant="unstyled"
+          styles={{
+            root: { flex: 1 },
+            input: {
+              backgroundColor: 'transparent',
+              color: '#E0E0E0',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.875rem',
+              border: 'none',
+              padding: '4px 0',
+              '&::placeholder': {
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: '#5A5E66',
               },
-            }}
-          />
+            },
+          }}
+        />
 
-          {/* Autocomplete dropdown */}
-          <Popper
-            open={!!autocompleteState && !!anchorEl}
-            anchorEl={anchorEl}
-            placement="bottom-start"
-            sx={{ zIndex: 1300, width: anchorEl?.offsetWidth || 300 }}
+        {/* XP potential badge */}
+        <DataBadge
+          value="POTENTIAL +250 XP"
+          color="cyan"
+          icon={<IconBolt size={12} />}
+          size="sm"
+        />
+
+        {/* Help button */}
+        <Tooltip label="Show syntax help">
+          <ActionIcon
+            variant="subtle"
+            size="sm"
+            onClick={() => setShowHelp(!showHelp)}
+            aria-label="Show syntax help"
+            style={{ color: '#8A8F98' }}
           >
-            <ClickAwayListener onClickAway={() => setInput((prev) => prev)}>
-              <Paper elevation={8} sx={{ maxHeight: 200, overflow: 'auto', mt: 0.5 }}>
-                <List dense>
-                  {autocompleteState?.options.map((option, index) => (
-                    <ListItem key={option.value} disablePadding>
-                      <ListItemButton
-                        selected={index === effectiveSelectedIndex}
-                        onClick={() => handleSelectOption(option)}
-                        sx={{ py: 0.5 }}
-                      >
-                        <ListItemText
-                          primary={option.label}
-                          secondary={option.description}
-                          primaryTypographyProps={{ variant: 'body2' }}
-                          secondaryTypographyProps={{ variant: 'caption' }}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-                </List>
-              </Paper>
-            </ClickAwayListener>
-          </Popper>
+            <IconHelp size={16} />
+          </ActionIcon>
+        </Tooltip>
+
+        {/* Submit button */}
+        <Tooltip label="Add task (Enter)">
+          <ActionIcon
+            variant="subtle"
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!parsed.title.trim()}
+            aria-label="Add task"
+            style={{
+              color: parsed.title.trim() ? '#00E5FF' : '#5A5E66',
+            }}
+          >
+            <IconPlus size={18} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
+
+      {/* Preview of parsed modifiers */}
+      {hasModifiers && (
+        <Group gap="xs" mt="xs" wrap="wrap" pl={24}>
+          {parsed.priority && (
+            <DataBadge
+              value={`${PriorityEmoji[parsed.priority]} ${parsed.priority.toUpperCase()}`}
+              color={priorityBadgeColor[parsed.priority] || 'cyan'}
+            />
+          )}
+          {parsed.tags.map((tag) => (
+            <DataBadge key={tag} value={`#${tag.toUpperCase()}`} color="muted" />
+          ))}
+          {parsed.dueDate && (
+            <DataBadge
+              value={`DUE: ${parsed.dueDate.toLocaleDateString()}`}
+              color="amber"
+            />
+          )}
+          {parsed.project && (
+            <DataBadge value={`~${parsed.project.toUpperCase()}`} color="cyan" />
+          )}
+        </Group>
+      )}
+
+      {/* Help text */}
+      {showHelp && (
+        <Box
+          mt="sm"
+          p="sm"
+          style={{
+            backgroundColor: '#181B25',
+            border: '1px solid rgba(59, 73, 76, 0.15)',
+          }}
+        >
+          <Text
+            size="xs"
+            className="font-data"
+            style={{ color: '#8A8F98', lineHeight: 1.8 }}
+          >
+            <strong style={{ color: '#00E5FF' }}>QUICK-ADD SYNTAX:</strong>
+            <br />
+            <code style={{ color: '#FFC775' }}>!high</code>, <code style={{ color: '#FFC775' }}>!low</code>, <code style={{ color: '#FFC775' }}>!medium</code>,{' '}
+            <code style={{ color: '#FFC775' }}>!critical</code> — Priority
+            <br />
+            <code style={{ color: '#FFC775' }}>#tagname</code> — Add tags (multiple allowed)
+            <br />
+            <code style={{ color: '#FFC775' }}>@tomorrow</code>, <code style={{ color: '#FFC775' }}>@friday</code>, <code style={{ color: '#FFC775' }}>@next-week</code>,{' '}
+            <code style={{ color: '#FFC775' }}>@dec-25</code> — Due date
+            <br />
+            <code style={{ color: '#FFC775' }}>~project</code> — Project name
+            <br />
+            <br />
+            <em style={{ color: '#5A5E66' }}>Example: Buy groceries !high #shopping @friday ~home</em>
+            <br />
+            <em style={{ color: '#5A5E66' }}>Press Ctrl/Cmd+K to focus this input</em>
+          </Text>
         </Box>
-
-        {/* Preview of parsed modifiers */}
-        {hasModifiers && (
-          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }} useFlexGap>
-            {parsed.priority && (
-              <Chip
-                size="small"
-                label={`${PriorityEmoji[parsed.priority]} ${parsed.priority}`}
-                color="primary"
-                variant="outlined"
-              />
-            )}
-            {parsed.tags.map((tag) => (
-              <Chip key={tag} size="small" label={`#${tag}`} variant="outlined" />
-            ))}
-            {parsed.dueDate && (
-              <Chip
-                size="small"
-                label={`Due: ${parsed.dueDate.toLocaleDateString()}`}
-                color="secondary"
-                variant="outlined"
-              />
-            )}
-            {parsed.project && (
-              <Chip
-                size="small"
-                label={`~${parsed.project}`}
-                color="info"
-                variant="outlined"
-              />
-            )}
-          </Stack>
-        )}
-
-        {/* Help text */}
-        {showHelp && (
-          <Box sx={{ mt: 1.5, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-            <Typography variant="caption" color="text.secondary" component="div">
-              <strong>Quick-add syntax:</strong>
-              <br />
-              <code>!high</code>, <code>!low</code>, <code>!medium</code>,{' '}
-              <code>!critical</code> - Priority
-              <br />
-              <code>#tagname</code> - Add tags (multiple allowed)
-              <br />
-              <code>@tomorrow</code>, <code>@friday</code>, <code>@next-week</code>,{' '}
-              <code>@dec-25</code> - Due date
-              <br />
-              <code>~project</code> - Project name
-              <br />
-              <br />
-              <em>Example: Buy groceries !high #shopping @friday ~home</em>
-              <br />
-              <em>Press Ctrl/Cmd+K to focus this input</em>
-            </Typography>
-          </Box>
-        )}
-      </Paper>
-
-      <Snackbar
-        open={showSuccess}
-        autoHideDuration={3000}
-        onClose={() => setShowSuccess(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setShowSuccess(false)} severity="success" sx={{ width: '100%' }}>
-          Task "{lastCreated}" created!
-        </Alert>
-      </Snackbar>
-    </>
+      )}
+    </Box>
   );
 }
 /* v8 ignore stop */

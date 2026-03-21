@@ -1,29 +1,20 @@
 import { useState } from 'react';
-import type { SelectChangeEvent } from '@mui/material';
 import {
   Box,
-  FormControl,
-  InputLabel,
   Select,
-  MenuItem,
-  Chip,
-  Stack,
-  Button,
-  Checkbox,
-  ListItemText,
-  OutlinedInput,
-  Drawer,
   Badge,
-  Typography,
-  IconButton,
+  Indicator,
+  Group,
+  Stack,
+  Checkbox,
+  CloseButton,
+  Drawer,
   Divider,
+  Text,
+  DatePickerInput,
   useMediaQuery,
-  useTheme,
-} from '@mui/material';
-import { FilterList, Clear, Close } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+} from '../../ui';
+import { IconFilter, IconX } from '../../ui/icons';
 import { format } from 'date-fns';
 import {
   Priority,
@@ -33,6 +24,7 @@ import {
   Duration,
   DurationEmoji,
 } from '../../types';
+import { ArcadeButton } from '../ui';
 import SearchInput from './SearchInput';
 
 type StatusFilter = 'all' | 'active' | 'completed' | 'blocked' | 'future';
@@ -86,6 +78,60 @@ const durationOptions: { value: Duration; label: string }[] = [
   { value: Duration.MINUSCULE, label: `${DurationEmoji[Duration.MINUSCULE]} Minuscule` },
 ];
 
+// Status tabs for Kinetic Console
+const statusTabs: { value: StatusFilter; label: string }[] = [
+  { value: 'active', label: 'ACTIVE' },
+  { value: 'blocked', label: 'BLOCKED' },
+  { value: 'future', label: 'FUTURE' },
+  { value: 'completed', label: 'COMPLETED' },
+  { value: 'all', label: 'ALL' },
+];
+
+// Helper to toggle a value in an array (for multi-select checkboxes)
+function toggleArrayValue<T>(arr: T[], value: T): T[] {
+  return arr.includes(value) ? arr.filter((x) => x !== value) : [...arr, value];
+}
+
+/** Kinetic Console-styled select: void bg, ghost border, 0px radius, JetBrains Mono options */
+const kcSelectStyles = {
+  input: {
+    backgroundColor: '#0B0E17',
+    borderColor: 'rgba(59, 73, 76, 0.15)',
+    borderRadius: 0,
+    color: '#E0E0E0',
+    fontFamily: '"JetBrains Mono", monospace',
+    fontSize: '0.8125rem',
+    '&:focus': {
+      borderColor: '#00E5FF',
+      boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+    },
+  },
+  label: {
+    fontFamily: '"JetBrains Mono", monospace',
+    fontSize: '0.6875rem',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.1em',
+    color: '#8A8F98',
+  },
+  dropdown: {
+    backgroundColor: '#181B25',
+    borderColor: 'rgba(59, 73, 76, 0.15)',
+    borderRadius: 0,
+  },
+  option: {
+    fontFamily: '"JetBrains Mono", monospace',
+    fontSize: '0.8125rem',
+    color: '#E0E0E0',
+    '&[data-selected]': {
+      backgroundColor: 'rgba(0, 229, 255, 0.15)',
+      color: '#00E5FF',
+    },
+    '&[data-hovered]': {
+      backgroundColor: '#272A34',
+    },
+  },
+};
+
 // UI component - tested via integration tests
 /* v8 ignore start */
 export default function FilterBar({
@@ -110,8 +156,7 @@ export default function FilterBar({
   onReset,
 }: FilterBarProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const hasActiveFilters =
     search ||
@@ -133,364 +178,484 @@ export default function FilterBar({
     selectedTags.length +
     (maxDueDate ? 1 : 0);
 
-  const handlePriorityChange = (event: SelectChangeEvent<Priority[]>) => {
-    const value = event.target.value;
-    onPrioritiesChange(typeof value === 'string' ? (value.split(',') as Priority[]) : value);
-  };
-
-  const handleDifficultyChange = (event: SelectChangeEvent<Difficulty[]>) => {
-    const value = event.target.value;
-    onDifficultiesChange(typeof value === 'string' ? (value.split(',') as Difficulty[]) : value);
-  };
-
-  const handleDurationChange = (event: SelectChangeEvent<Duration[]>) => {
-    const value = event.target.value;
-    onDurationsChange(typeof value === 'string' ? (value.split(',') as Duration[]) : value);
-  };
-
-  const handleProjectChange = (event: SelectChangeEvent<string[]>) => {
-    const value = event.target.value;
-    onProjectsChange(typeof value === 'string' ? value.split(',') : value);
-  };
-
-  const handleTagChange = (event: SelectChangeEvent<string[]>) => {
-    const value = event.target.value;
-    onTagsChange(typeof value === 'string' ? value.split(',') : value);
-  };
-
-  const renderPriorityValue = (selected: Priority[]) => {
-    if (selected.length === 0) return '';
-    if (selected.length === 1) {
-      const option = priorityOptions.find((o) => o.value === selected[0]);
-      return option?.label || selected[0];
-    }
-    return `${selected.length} selected`;
-  };
-
-  const renderDifficultyValue = (selected: Difficulty[]) => {
-    if (selected.length === 0) return '';
-    if (selected.length === 1) {
-      const option = difficultyOptions.find((o) => o.value === selected[0]);
-      return option?.label || selected[0];
-    }
-    return `${selected.length} selected`;
-  };
-
-  const renderDurationValue = (selected: Duration[]) => {
-    if (selected.length === 0) return '';
-    if (selected.length === 1) {
-      const option = durationOptions.find((o) => o.value === selected[0]);
-      return option?.label || selected[0];
-    }
-    return `${selected.length} selected`;
-  };
-
-  const renderMultiValue = (selected: string[]) => {
-    if (selected.length === 0) return '';
-    if (selected.length === 1) return selected[0];
-    return `${selected.length} selected`;
-  };
-
   // Shared filter controls - used in both mobile drawer and desktop inline view
   const filterControls = (
     <>
-      <FormControl size="small" sx={{ minWidth: 120, width: isMobile ? '100%' : 'auto' }}>
-        <InputLabel>Status</InputLabel>
-        <Select
-          value={status}
-          label="Status"
-          onChange={(e) => onStatusChange(e.target.value as StatusFilter)}
-        >
-          <MenuItem value="active">Active</MenuItem>
-          <MenuItem value="blocked">Blocked</MenuItem>
-          <MenuItem value="future">Future</MenuItem>
-          <MenuItem value="completed">Completed</MenuItem>
-          <MenuItem value="all">All</MenuItem>
-        </Select>
-      </FormControl>
+      <Select
+        label="Priority"
+        size="sm"
+        w={isMobile ? '100%' : 140}
+        value={priorities.length === 1 ? priorities[0] : priorities.length > 1 ? '__multiple__' : null}
+        placeholder={priorities.length > 1 ? `${priorities.length} selected` : 'All'}
+        onChange={() => {/* handled by renderOption */}}
+        data={priorityOptions.map((o) => ({ value: o.value, label: o.label }))}
+        styles={kcSelectStyles}
+        renderOption={({ option }) => (
+          <Group gap="xs" wrap="nowrap" onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onPrioritiesChange(toggleArrayValue(priorities, option.value as Priority));
+          }}>
+            <Checkbox
+              checked={priorities.includes(option.value as Priority)}
+              onChange={() => {}}
+              size="xs"
+              tabIndex={-1}
+              style={{ pointerEvents: 'none' }}
+            />
+            <Text size="sm" className="font-data">{option.label}</Text>
+          </Group>
+        )}
+      />
 
-      <FormControl size="small" sx={{ minWidth: 140, width: isMobile ? '100%' : 'auto' }}>
-        <InputLabel>Priority</InputLabel>
-        <Select
-          multiple
-          value={priorities}
-          onChange={handlePriorityChange}
-          input={<OutlinedInput label="Priority" />}
-          renderValue={renderPriorityValue}
-        >
-          {priorityOptions.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              <Checkbox checked={priorities.includes(option.value)} size="small" />
-              <ListItemText primary={option.label} />
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      <Select
+        label="Difficulty"
+        size="sm"
+        w={isMobile ? '100%' : 140}
+        value={difficulties.length === 1 ? difficulties[0] : difficulties.length > 1 ? '__multiple__' : null}
+        placeholder={difficulties.length > 1 ? `${difficulties.length} selected` : 'All'}
+        onChange={() => {/* handled by renderOption */}}
+        data={difficultyOptions.map((o) => ({ value: o.value, label: o.label }))}
+        styles={kcSelectStyles}
+        renderOption={({ option }) => (
+          <Group gap="xs" wrap="nowrap" onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onDifficultiesChange(toggleArrayValue(difficulties, option.value as Difficulty));
+          }}>
+            <Checkbox
+              checked={difficulties.includes(option.value as Difficulty)}
+              onChange={() => {}}
+              size="xs"
+              tabIndex={-1}
+              style={{ pointerEvents: 'none' }}
+            />
+            <Text size="sm" className="font-data">{option.label}</Text>
+          </Group>
+        )}
+      />
 
-      <FormControl size="small" sx={{ minWidth: 140, width: isMobile ? '100%' : 'auto' }}>
-        <InputLabel>Difficulty</InputLabel>
-        <Select
-          multiple
-          value={difficulties}
-          onChange={handleDifficultyChange}
-          input={<OutlinedInput label="Difficulty" />}
-          renderValue={renderDifficultyValue}
-        >
-          {difficultyOptions.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              <Checkbox checked={difficulties.includes(option.value)} size="small" />
-              <ListItemText primary={option.label} />
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      <FormControl size="small" sx={{ minWidth: 140, width: isMobile ? '100%' : 'auto' }}>
-        <InputLabel>Duration</InputLabel>
-        <Select
-          multiple
-          value={durations}
-          onChange={handleDurationChange}
-          input={<OutlinedInput label="Duration" />}
-          renderValue={renderDurationValue}
-        >
-          {durationOptions.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              <Checkbox checked={durations.includes(option.value)} size="small" />
-              <ListItemText primary={option.label} />
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      <Select
+        label="Duration"
+        size="sm"
+        w={isMobile ? '100%' : 140}
+        value={durations.length === 1 ? durations[0] : durations.length > 1 ? '__multiple__' : null}
+        placeholder={durations.length > 1 ? `${durations.length} selected` : 'All'}
+        onChange={() => {/* handled by renderOption */}}
+        data={durationOptions.map((o) => ({ value: o.value, label: o.label }))}
+        styles={kcSelectStyles}
+        renderOption={({ option }) => (
+          <Group gap="xs" wrap="nowrap" onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onDurationsChange(toggleArrayValue(durations, option.value as Duration));
+          }}>
+            <Checkbox
+              checked={durations.includes(option.value as Duration)}
+              onChange={() => {}}
+              size="xs"
+              tabIndex={-1}
+              style={{ pointerEvents: 'none' }}
+            />
+            <Text size="sm" className="font-data">{option.label}</Text>
+          </Group>
+        )}
+      />
 
       {projects.length > 0 && (
-        <FormControl size="small" sx={{ minWidth: 140, width: isMobile ? '100%' : 'auto' }}>
-          <InputLabel>Project</InputLabel>
-          <Select
-            multiple
-            value={selectedProjects}
-            onChange={handleProjectChange}
-            input={<OutlinedInput label="Project" />}
-            renderValue={renderMultiValue}
-          >
-            {projects.map((p) => (
-              <MenuItem key={p} value={p}>
-                <Checkbox checked={selectedProjects.includes(p)} size="small" />
-                <ListItemText primary={p} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Select
+          label="Project"
+          size="sm"
+          w={isMobile ? '100%' : 140}
+          value={selectedProjects.length === 1 ? selectedProjects[0] : selectedProjects.length > 1 ? '__multiple__' : null}
+          placeholder={selectedProjects.length > 1 ? `${selectedProjects.length} selected` : 'All'}
+          onChange={() => {/* handled by renderOption */}}
+          data={projects.map((p) => ({ value: p, label: p }))}
+          styles={kcSelectStyles}
+          renderOption={({ option }) => (
+            <Group gap="xs" wrap="nowrap" onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onProjectsChange(toggleArrayValue(selectedProjects, option.value));
+            }}>
+              <Checkbox
+                checked={selectedProjects.includes(option.value)}
+                onChange={() => {}}
+                size="xs"
+                tabIndex={-1}
+                style={{ pointerEvents: 'none' }}
+              />
+              <Text size="sm" className="font-data">{option.label}</Text>
+            </Group>
+          )}
+        />
       )}
 
       {tags.length > 0 && (
-        <FormControl size="small" sx={{ minWidth: 140, width: isMobile ? '100%' : 'auto' }}>
-          <InputLabel>Tag</InputLabel>
-          <Select
-            multiple
-            value={selectedTags}
-            onChange={handleTagChange}
-            input={<OutlinedInput label="Tag" />}
-            renderValue={renderMultiValue}
-          >
-            {tags.map((t) => (
-              <MenuItem key={t} value={t}>
-                <Checkbox checked={selectedTags.includes(t)} size="small" />
-                <ListItemText primary={t} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Select
+          label="Tag"
+          size="sm"
+          w={isMobile ? '100%' : 140}
+          value={selectedTags.length === 1 ? selectedTags[0] : selectedTags.length > 1 ? '__multiple__' : null}
+          placeholder={selectedTags.length > 1 ? `${selectedTags.length} selected` : 'All'}
+          onChange={() => {/* handled by renderOption */}}
+          data={tags.map((t) => ({ value: t, label: t }))}
+          styles={kcSelectStyles}
+          renderOption={({ option }) => (
+            <Group gap="xs" wrap="nowrap" onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onTagsChange(toggleArrayValue(selectedTags, option.value));
+            }}>
+              <Checkbox
+                checked={selectedTags.includes(option.value)}
+                onChange={() => {}}
+                size="xs"
+                tabIndex={-1}
+                style={{ pointerEvents: 'none' }}
+              />
+              <Text size="sm" className="font-data">{option.label}</Text>
+            </Group>
+          )}
+        />
       )}
 
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <DatePicker
-          label="Due before"
-          value={maxDueDate ? new Date(maxDueDate + 'T00:00:00') : null}
-          onChange={(date) => {
-            if (date && !isNaN(date.getTime())) {
-              onMaxDueDateChange(format(date, 'yyyy-MM-dd'));
-            } else {
-              onMaxDueDateChange(undefined);
-            }
-          }}
-          slotProps={{
-            textField: {
-              size: 'small',
-              sx: { minWidth: 150, width: isMobile ? '100%' : 'auto' },
-            },
-            field: {
-              clearable: true,
-              onClear: () => onMaxDueDateChange(undefined),
-            },
-          }}
-        />
-      </LocalizationProvider>
+      <DatePickerInput
+        label="Due before"
+        size="sm"
+        w={isMobile ? '100%' : 160}
+        value={maxDueDate ? new Date(maxDueDate + 'T00:00:00') : null}
+        onChange={(date: string | Date | null) => {
+          const d = date ? new Date(date) : null;
+          if (d && !isNaN(d.getTime())) {
+            onMaxDueDateChange(format(d, 'yyyy-MM-dd'));
+          } else {
+            onMaxDueDateChange(undefined);
+          }
+        }}
+        clearable
+        placeholder="Pick a date"
+        styles={{
+          input: {
+            backgroundColor: '#0B0E17',
+            borderColor: 'rgba(59, 73, 76, 0.15)',
+            borderRadius: 0,
+            color: '#E0E0E0',
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: '0.8125rem',
+          },
+          label: {
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: '0.6875rem',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.1em',
+            color: '#8A8F98',
+          },
+        }}
+      />
 
       {hasActiveFilters && (
-        <Button
-          startIcon={<Clear />}
+        <ArcadeButton
+          variant="ghost"
+          size="xs"
           onClick={onReset}
-          size="small"
-          sx={{ whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto' }}
+          style={{ whiteSpace: 'nowrap', alignSelf: 'flex-end', width: isMobile ? '100%' : 'auto' }}
         >
-          Clear filters
-        </Button>
+          <Group gap={4}>
+            <IconX size={14} />
+            CLEAR FILTERS
+          </Group>
+        </ArcadeButton>
       )}
     </>
   );
 
   // Active filter chips - shown in both mobile and desktop
   const activeFilterChips = hasActiveFilters && (
-    <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap" useFlexGap>
-      <FilterList color="action" sx={{ mr: 1 }} />
+    <Group gap="xs" mt="sm" wrap="wrap">
+      <IconFilter size={18} color="#5A5E66" style={{ marginRight: 4 }} />
       {search && (
-        <Chip
-          label={`Search: "${search}"`}
-          size="small"
-          onDelete={() => onSearchChange('')}
-        />
+        <Badge
+          variant="light"
+          size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          rightSection={
+            <CloseButton size="xs" onClick={() => onSearchChange('')} aria-label="Clear search filter" data-testid="CancelIcon" />
+          }
+        >
+          Search: &quot;{search}&quot;
+        </Badge>
       )}
       {status !== 'active' && (
-        <Chip
-          label={`Status: ${status}`}
-          size="small"
-          onDelete={() => onStatusChange('active')}
-        />
+        <Badge
+          variant="light"
+          size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          rightSection={
+            <CloseButton size="xs" onClick={() => onStatusChange('active')} aria-label="Clear status filter" data-testid="CancelIcon" />
+          }
+        >
+          Status: {status}
+        </Badge>
       )}
       {priorities.map((p) => (
-        <Chip
+        <Badge
           key={p}
-          label={`Priority: ${p}`}
-          size="small"
-          onDelete={() => onPrioritiesChange(priorities.filter((x) => x !== p))}
-        />
+          variant="light"
+          size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          rightSection={
+            <CloseButton size="xs" onClick={() => onPrioritiesChange(priorities.filter((x) => x !== p))} aria-label="Clear priority filter" data-testid="CancelIcon" />
+          }
+        >
+          Priority: {p}
+        </Badge>
       ))}
       {difficulties.map((d) => (
-        <Chip
+        <Badge
           key={d}
-          label={`Difficulty: ${d}`}
-          size="small"
-          onDelete={() => onDifficultiesChange(difficulties.filter((x) => x !== d))}
-        />
+          variant="light"
+          size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          rightSection={
+            <CloseButton size="xs" onClick={() => onDifficultiesChange(difficulties.filter((x) => x !== d))} aria-label="Clear difficulty filter" data-testid="CancelIcon" />
+          }
+        >
+          Difficulty: {d}
+        </Badge>
       ))}
       {durations.map((d) => (
-        <Chip
+        <Badge
           key={d}
-          label={`Duration: ${d}`}
-          size="small"
-          onDelete={() => onDurationsChange(durations.filter((x) => x !== d))}
-        />
+          variant="light"
+          size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          rightSection={
+            <CloseButton size="xs" onClick={() => onDurationsChange(durations.filter((x) => x !== d))} aria-label="Clear duration filter" data-testid="CancelIcon" />
+          }
+        >
+          Duration: {d}
+        </Badge>
       ))}
       {selectedProjects.map((p) => (
-        <Chip
+        <Badge
           key={p}
-          label={`Project: ${p}`}
-          size="small"
-          onDelete={() => onProjectsChange(selectedProjects.filter((x) => x !== p))}
-        />
+          variant="light"
+          size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          rightSection={
+            <CloseButton size="xs" onClick={() => onProjectsChange(selectedProjects.filter((x) => x !== p))} aria-label="Clear project filter" data-testid="CancelIcon" />
+          }
+        >
+          Project: {p}
+        </Badge>
       ))}
       {selectedTags.map((t) => (
-        <Chip
+        <Badge
           key={t}
-          label={`Tag: ${t}`}
-          size="small"
-          onDelete={() => onTagsChange(selectedTags.filter((x) => x !== t))}
-        />
+          variant="light"
+          size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          rightSection={
+            <CloseButton size="xs" onClick={() => onTagsChange(selectedTags.filter((x) => x !== t))} aria-label="Clear tag filter" data-testid="CancelIcon" />
+          }
+        >
+          Tag: {t}
+        </Badge>
       ))}
       {maxDueDate && (
-        <Chip
-          label={`Due before: ${maxDueDate}`}
-          size="small"
-          onDelete={() => onMaxDueDateChange(undefined)}
-        />
+        <Badge
+          variant="light"
+          size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          rightSection={
+            <CloseButton size="xs" onClick={() => onMaxDueDateChange(undefined)} aria-label="Clear due date filter" data-testid="CancelIcon" />
+          }
+        >
+          Due before: {maxDueDate}
+        </Badge>
       )}
-    </Stack>
+    </Group>
   );
 
   // Mobile view: compact bar + drawer
   if (isMobile) {
     return (
-      <Box sx={{ mb: 3 }}>
+      <Box mb="lg">
+        {/* Status tabs (mobile) */}
+        <Box
+          style={{
+            display: 'flex',
+            gap: 0,
+            borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+            marginBottom: 12,
+            overflowX: 'auto',
+          }}
+        >
+          {statusTabs.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => onStatusChange(tab.value)}
+              style={{
+                background: 'none',
+                border: 'none',
+                borderBottom: status === tab.value ? '2px solid #00E5FF' : '2px solid transparent',
+                padding: '8px 16px',
+                fontFamily: '"Space Grotesk", sans-serif',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                letterSpacing: '0.05em',
+                color: status === tab.value ? '#00E5FF' : '#9BA3AF',
+                cursor: 'pointer',
+                transition: 'color 0.15s ease, border-color 0.15s ease',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </Box>
+
         {/* Compact mobile filter bar */}
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Box sx={{ flex: 1 }}>
+        <Group gap="sm" align="center" wrap="nowrap">
+          <Box style={{ flex: 1 }}>
             <SearchInput
               value={search}
               onChange={onSearchChange}
               placeholder="Search tasks..."
             />
           </Box>
-          <Badge badgeContent={activeFilterCount} color="primary">
-            <Button
-              variant="outlined"
-              startIcon={<FilterList />}
+          <Indicator label={activeFilterCount} color="blue" size={16} disabled={activeFilterCount === 0}>
+            <ArcadeButton
+              variant="ghost"
+              size="xs"
               onClick={() => setDrawerOpen(true)}
-              size="small"
             >
-              Filters
-            </Button>
-          </Badge>
-        </Stack>
+              <Group gap={4}>
+                <IconFilter size={16} />
+                FILTERS
+              </Group>
+            </ArcadeButton>
+          </Indicator>
+          {activeFilterCount === 0 && (
+            <ArcadeButton
+              variant="ghost"
+              size="xs"
+              onClick={() => setDrawerOpen(true)}
+            >
+              <Group gap={4}>
+                <IconFilter size={16} />
+                FILTERS
+              </Group>
+            </ArcadeButton>
+          )}
+        </Group>
 
         {/* Active filter chips below search bar */}
         {activeFilterChips}
 
         {/* Filter drawer */}
         <Drawer
-          anchor="bottom"
-          open={drawerOpen}
+          opened={drawerOpen}
           onClose={() => setDrawerOpen(false)}
-          PaperProps={{
-            sx: {
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
+          position="bottom"
+          size="auto"
+          styles={{
+            content: {
+              borderTopLeftRadius: 0,
+              borderTopRightRadius: 0,
               maxHeight: '80vh',
+              backgroundColor: '#181B25',
+              borderTop: '1px solid rgba(59, 73, 76, 0.15)',
             },
           }}
         >
-          <Box sx={{ p: 2 }}>
+          <Box p="md">
             {/* Drawer header */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-              <Typography variant="h6">Filter Tasks</Typography>
-              <IconButton onClick={() => setDrawerOpen(false)} size="small">
-                <Close />
-              </IconButton>
-            </Stack>
-            <Divider sx={{ mb: 2 }} />
+            <Group justify="space-between" align="center" mb="md">
+              <Text
+                fw={700}
+                size="lg"
+                className="font-display"
+                style={{ color: '#00E5FF', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+              >
+                FILTER TASKS
+              </Text>
+              <CloseButton onClick={() => setDrawerOpen(false)} style={{ color: '#8A8F98' }} />
+            </Group>
+            <Divider mb="md" style={{ borderColor: 'rgba(59, 73, 76, 0.15)' }} />
 
             {/* Filter controls in vertical stack */}
-            <Stack spacing={2}>
+            <Stack gap="sm">
               {filterControls}
             </Stack>
 
             {/* Apply button */}
-            <Button
-              variant="contained"
-              fullWidth
-              sx={{ mt: 3 }}
-              onClick={() => setDrawerOpen(false)}
-            >
-              Apply Filters
-            </Button>
+            <Box mt="lg">
+              <ArcadeButton
+                variant="primary"
+                fullWidth
+                onClick={() => setDrawerOpen(false)}
+              >
+                APPLY FILTERS
+              </ArcadeButton>
+            </Box>
           </Box>
         </Drawer>
       </Box>
     );
   }
 
-  // Desktop view: inline filters
+  // Desktop view: status tabs + inline filters
   return (
-    <Box sx={{ mb: 3 }}>
+    <Box mb="lg">
+      {/* Status tabs */}
+      <Box
+        style={{
+          display: 'flex',
+          gap: 0,
+          borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+          marginBottom: 16,
+        }}
+      >
+        {statusTabs.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => onStatusChange(tab.value)}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: status === tab.value ? '2px solid #00E5FF' : '2px solid transparent',
+              padding: '8px 20px',
+              fontFamily: '"Space Grotesk", sans-serif',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              letterSpacing: '0.05em',
+              color: status === tab.value ? '#00E5FF' : '#9BA3AF',
+              cursor: 'pointer',
+              transition: 'color 0.15s ease, border-color 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (status !== tab.value) (e.currentTarget.style.color = '#E0E0E0');
+            }}
+            onMouseLeave={(e) => {
+              if (status !== tab.value) (e.currentTarget.style.color = '#9BA3AF');
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </Box>
+
       {/* Main filter row */}
-      <Stack direction="row" spacing={2} alignItems="flex-start" flexWrap="wrap" useFlexGap>
+      <Group gap="sm" align="flex-start" wrap="wrap">
         <SearchInput
           value={search}
           onChange={onSearchChange}
           placeholder="Search tasks..."
         />
         {filterControls}
-      </Stack>
+      </Group>
 
       {/* Active filter chips */}
       {activeFilterChips}

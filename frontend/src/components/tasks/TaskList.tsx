@@ -1,21 +1,17 @@
 import {
   Box,
-  Typography,
-  FormControl,
-  InputLabel,
+  Text,
   Select,
-  MenuItem,
-  Stack,
-  ToggleButtonGroup,
-  ToggleButton,
+  Group,
+  SegmentedControl,
   Tooltip,
-} from '@mui/material';
+} from '../../ui';
 import {
-  Sort,
-  VisibilityOff,
-  ListAlt,
-  FormatListBulleted,
-} from '@mui/icons-material';
+  IconArrowsSort,
+  IconEyeOff,
+  IconList,
+  IconListDetails,
+} from '../../ui/icons';
 import type { Task } from '../../types';
 import { EmptyState, FilterBar } from '../common';
 import TaskCard from './TaskCard';
@@ -98,67 +94,131 @@ export default function TaskList({
       />
 
       {/* Sort controls */}
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2, flexWrap: 'wrap', rowGap: 1 }}>
-        <Sort color="action" />
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Sort by</InputLabel>
-          <Select
-            value={sort.field}
-            label="Sort by"
-            onChange={(e) =>
-              setSort({ ...sort, field: e.target.value as typeof sort.field })
-            }
-          >
-            <MenuItem value="score">Score (XP)</MenuItem>
-            <MenuItem value="priority">Priority</MenuItem>
-            <MenuItem value="due_date">Due Date</MenuItem>
-            <MenuItem value="creation_date">Created</MenuItem>
-            <MenuItem value="title">Title</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Order</InputLabel>
-          <Select
-            value={sort.order}
-            label="Order"
-            onChange={(e) =>
-              setSort({ ...sort, order: e.target.value as 'asc' | 'desc' })
-            }
-          >
-            <MenuItem value="desc">Descending</MenuItem>
-            <MenuItem value="asc">Ascending</MenuItem>
-          </Select>
-        </FormControl>
-        <ToggleButtonGroup
-          value={subtaskViewMode}
-          exclusive
-          onChange={(_, value: SubtaskViewMode | null) => {
-            if (value) setSubtaskViewMode(value);
+      <Group gap="md" align="center" mb="md" wrap="wrap">
+        <IconArrowsSort size={20} color="#8A8F98" />
+        <Select
+          value={sort.field}
+          onChange={(value) => {
+            if (value) setSort({ ...sort, field: value as typeof sort.field });
           }}
-          size="small"
+          data={[
+            { value: 'score', label: 'Score (XP)' },
+            { value: 'priority', label: 'Priority' },
+            { value: 'due_date', label: 'Due Date' },
+            { value: 'creation_date', label: 'Created' },
+            { value: 'title', label: 'Title' },
+          ]}
+          size="sm"
+          w={150}
+          aria-label="Sort by"
+          styles={{
+            input: {
+              backgroundColor: '#0B0E17',
+              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderRadius: 0,
+              color: '#E0E0E0',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.8125rem',
+            },
+            dropdown: {
+              backgroundColor: '#181B25',
+              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderRadius: 0,
+            },
+            option: {
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.8125rem',
+              color: '#E0E0E0',
+            },
+          }}
+        />
+        <Select
+          value={sort.order}
+          onChange={(value) => {
+            if (value) setSort({ ...sort, order: value as 'asc' | 'desc' });
+          }}
+          data={[
+            { value: 'desc', label: 'Descending' },
+            { value: 'asc', label: 'Ascending' },
+          ]}
+          size="sm"
+          w={120}
+          aria-label="Order"
+          styles={{
+            input: {
+              backgroundColor: '#0B0E17',
+              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderRadius: 0,
+              color: '#E0E0E0',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.8125rem',
+            },
+            dropdown: {
+              backgroundColor: '#181B25',
+              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderRadius: 0,
+            },
+            option: {
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.8125rem',
+              color: '#E0E0E0',
+            },
+          }}
+        />
+        <SegmentedControl
+          value={subtaskViewMode}
+          onChange={(value) => setSubtaskViewMode(value as SubtaskViewMode)}
+          size="xs"
           aria-label="subtask view mode"
-        >
-          <ToggleButton value="hidden" aria-label="hide subtasks">
-            <Tooltip title="Hide Subtasks">
-              <VisibilityOff fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
-          <ToggleButton value="inline" aria-label="show subtasks inline">
-            <Tooltip title="Show Inline">
-              <ListAlt fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
-          <ToggleButton value="top-level" aria-label="show subtasks as tasks">
-            <Tooltip title="Show as Tasks">
-              <FormatListBulleted fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
-        </ToggleButtonGroup>
-        <Box sx={{ flex: 1 }} />
-        <Typography variant="body2" color="text.secondary">
-          {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
-        </Typography>
-      </Stack>
+          styles={{
+            root: {
+              backgroundColor: '#272A34',
+              borderRadius: 0,
+            },
+            indicator: {
+              backgroundColor: '#10131C',
+              borderRadius: 0,
+              boxShadow: '0 0 6px rgba(0, 229, 255, 0.2)',
+            },
+            label: {
+              color: '#8A8F98',
+              '&[data-active]': {
+                color: '#00E5FF',
+              },
+            },
+          }}
+          data={[
+            {
+              value: 'hidden',
+              label: (
+                <Tooltip label="Hide Subtasks">
+                  <IconEyeOff size={16} />
+                </Tooltip>
+              ),
+            },
+            {
+              value: 'inline',
+              label: (
+                <Tooltip label="Show Inline">
+                  <IconList size={16} />
+                </Tooltip>
+              ),
+            },
+            {
+              value: 'top-level',
+              label: (
+                <Tooltip label="Show as Tasks">
+                  <IconListDetails size={16} />
+                </Tooltip>
+              ),
+            },
+          ]}
+        />
+        <Box style={{ flex: 1 }} />
+        <Text size="sm" className="font-data" style={{ color: '#5A5E66', letterSpacing: '0.05em' }}>
+          {filteredTasks.length} TASK{filteredTasks.length !== 1 ? 'S' : ''}
+        </Text>
+      </Group>
 
       {/* Task list */}
       {filteredTasks.length === 0 ? (

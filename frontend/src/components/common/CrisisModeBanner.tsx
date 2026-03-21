@@ -1,5 +1,5 @@
-import { Alert, Box, Button, Typography } from '@mui/material';
-import { PriorityHigh as CrisisIcon } from '@mui/icons-material';
+import { Alert, Group, Button, Text } from '../../ui';
+import { IconAlertTriangle } from '../../ui/icons';
 import { useTaskStore } from '../../store';
 
 /* v8 ignore start */
@@ -16,36 +16,36 @@ export default function CrisisModeBanner() {
 
   return (
     <Alert
-      severity="warning"
-      icon={<CrisisIcon />}
-      sx={{
-        mb: 3,
-        borderRadius: 2,
+      color="orange"
+      icon={<IconAlertTriangle size={20} />}
+      mb="lg"
+      radius="md"
+      style={{
         border: '1px solid rgba(230, 81, 0, 0.2)',
         background:
           'linear-gradient(135deg, rgba(255, 224, 178, 0.5), rgba(255, 204, 188, 0.45))',
       }}
-      action={
+    >
+      <Group justify="space-between" wrap="wrap" gap="sm">
+        <div>
+          <Text fw={700} size="sm">
+            Crisis mode is active
+          </Text>
+          <Text size="sm">
+            Showing only {visibleFocusCount} selected task
+            {visibleFocusCount === 1 ? '' : 's'} across task views so you can focus on what matters
+            right now.
+          </Text>
+        </div>
         <Button
-          color="inherit"
-          size="small"
-          variant="outlined"
+          variant="outline"
+          color="dark"
+          size="xs"
           onClick={exitCrisisMode}
         >
           Exit Crisis Mode
         </Button>
-      }
-    >
-      <Box>
-        <Typography variant="subtitle2" fontWeight={700}>
-          Crisis mode is active
-        </Typography>
-        <Typography variant="body2">
-          Showing only {visibleFocusCount} selected task
-          {visibleFocusCount === 1 ? '' : 's'} across task views so you can focus on what matters
-          right now.
-        </Typography>
-      </Box>
+      </Group>
     </Alert>
   );
 }

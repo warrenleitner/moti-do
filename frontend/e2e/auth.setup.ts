@@ -9,11 +9,12 @@ const AUTH_FILE = 'playwright/.auth/user.json';
 setup('authenticate', async ({ page }) => {
   // Navigate to login page
   await page.goto('/login');
-  await page.getByRole('img', { name: 'Motodo' }).waitFor({ timeout: 10000 });
+  await page.getByText('MOTI-DO', { exact: true }).waitFor({ timeout: 10000 });
 
   // Login with test credentials
-  await page.getByRole('textbox', { name: 'Username' }).fill('default_user');
-  await page.getByRole('textbox', { name: 'Password', exact: true }).fill('testpassword123');
+  await page.getByRole('textbox', { name: /USERNAME/i }).fill('default_user');
+  // TerminalInput wraps Mantine TextInput with uppercase labels
+  await page.getByLabel(/^PASSWORD/i).first().fill('testpassword123');
   await page.locator('button[type="submit"]').click();
 
   // Wait for successful login (redirect away from login page)
@@ -21,8 +22,8 @@ setup('authenticate', async ({ page }) => {
     timeout: 15000,
   });
 
-  // Verify we're on the dashboard (main heading is "Welcome back!")
-  await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+  // Verify we're on the dashboard (check for XP ring or dashboard content)
+  await expect(page.getByText('CORE_SYSTEM_XP_LOADER')).toBeVisible({ timeout: 10000 });
 
   // Save authentication state
   await page.context().storageState({ path: AUTH_FILE });

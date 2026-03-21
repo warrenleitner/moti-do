@@ -12,9 +12,10 @@ export class HabitsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.newHabitButton = page.getByRole('button', { name: 'New Habit' });
+    // "INITIALIZE NEW PROTOCOL" card (when habits exist) or "Create Habit" button (empty state)
+    this.newHabitButton = page.getByRole('button', { name: /INITIALIZE NEW PROTOCOL|Create Habit/i });
     this.habitFormDialog = page.getByRole('dialog');
-    this.snackbar = page.getByRole('alert');
+    this.snackbar = page.getByRole('alert').first();
   }
 
   /**
@@ -61,12 +62,11 @@ export class HabitsPage {
 
     // Set frequency if specified (using the RecurrenceRuleBuilder visual UI)
     if (options?.frequency && options.frequency !== 'DAILY') {
-      // Click the frequency dropdown and select the desired frequency
+      // Click the frequency dropdown (Mantine Select with aria-label="Frequency")
       const frequencyLabel = options.frequency === 'WEEKLY' ? 'Week' :
                              options.frequency === 'MONTHLY' ? 'Month' :
                              options.frequency === 'YEARLY' ? 'Year' : 'Day';
-      const frequencyDropdown = dialog.getByRole('combobox').filter({ hasText: /Day|Week|Month|Year/ });
-      await frequencyDropdown.click();
+      await dialog.getByLabel('Frequency').click();
       await this.page.getByRole('option', { name: new RegExp(`^${frequencyLabel}s?$`) }).click();
     }
 
@@ -86,9 +86,9 @@ export class HabitsPage {
       await dialog.getByLabel('Description').fill(options.description);
     }
 
-    // Set priority if specified (MUI Select - find by emoji prefix)
+    // Set priority if specified (Mantine Select - click label to open dropdown)
     if (options?.priority) {
-      await dialog.getByRole('combobox').filter({ hasText: '🟡' }).click();
+      await dialog.getByLabel('Priority', { exact: true }).click();
       await this.page.getByRole('option', { name: new RegExp(options.priority, 'i') }).click();
     }
 
@@ -109,15 +109,15 @@ export class HabitsPage {
           always: 'Always Copy All',
         }[options.subtaskRecurrenceMode];
 
-        // Click the subtask recurrence dropdown
-        const recurrenceDropdown = dialog.locator('.MuiFormControl-root').filter({ hasText: 'Subtask Recurrence' }).getByRole('combobox');
+        // Click the subtask recurrence dropdown (Mantine Select with label)
+        const recurrenceDropdown = dialog.getByLabel('Subtask Recurrence');
         await recurrenceDropdown.click();
         await this.page.getByRole('option', { name: new RegExp(modeLabel) }).click();
       }
     }
 
-    // Submit the form - Habits page uses "Save Changes" button
-    await dialog.getByRole('button', { name: 'Save Changes' }).click();
+    // Submit the form - "CREATE MISSION" for new habits (TaskForm uses isEditing check)
+    await dialog.getByRole('button', { name: /CREATE MISSION/i }).click();
 
     // Wait for dialog to close and habit to appear in list
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
@@ -128,8 +128,8 @@ export class HabitsPage {
    * Get a habit card by its title.
    */
   getHabitByTitle(title: string): Locator {
-    // Habits are displayed as MuiCard elements
-    return this.page.locator('.MuiCard-root').filter({ hasText: title });
+    // Habits are displayed as Card elements with data-testid
+    return this.page.locator('[data-testid="habit-card"]').filter({ hasText: title });
   }
 
   /**
@@ -140,36 +140,37 @@ export class HabitsPage {
   }
 
   /**
-   * Complete a habit (toggle checkbox).
+   * Complete a habit (click the ArcadeButton "COMPLETE TODAY").
    */
   async completeHabit(title: string): Promise<void> {
     const habitCard = this.getHabitByTitle(title);
-    await habitCard.getByRole('checkbox').click();
+    await habitCard.getByRole('button', { name: /COMPLETE TODAY/i }).click();
   }
 
   /**
-   * Check if the heatmap section is visible.
-   * The heatmap shows habit completion history.
+   * Check if the heatmap / completion rate section is visible.
+   * The HabitsPage header shows GLOBAL_COMPLETION_RATE: XX%.
    */
   async isHeatmapVisible(): Promise<boolean> {
-    // Heatmap is in a Paper element with completion rate text
-    return await this.page.getByText(/% completion/).isVisible();
+    // HabitsPage shows "GLOBAL_COMPLETION_RATE: XX%" in the header
+    return await this.page.getByText(/GLOBAL_COMPLETION_RATE/i).isVisible();
   }
 
   /**
    * Get the streak text for a habit.
+   * The redesigned HabitCard shows streak as "{N}D" and progress as "{N} / 30 days".
    */
   async getHabitStreak(title: string): Promise<string | null> {
     const habitCard = this.getHabitByTitle(title);
-    // Streak Progress is shown as a label with "0 / 30 days" format
-    const streakProgress = habitCard.getByText('Streak Progress');
-    if (await streakProgress.isVisible()) {
-      // Return the adjacent progress text (e.g., "0 / 30 days")
-      const progressText = habitCard.getByText(/\d+ \/ \d+ days/);
-      if (await progressText.isVisible()) {
-        return await progressText.textContent();
-      }
-      return 'Streak Progress visible';
+    // HabitCard shows "{streak_current} / 30 days" at the bottom
+    const progressText = habitCard.getByText(/\d+ \/ \d+ days/);
+    if (await progressText.isVisible()) {
+      return await progressText.textContent();
+    }
+    // Fallback: check for the "{N}D" streak display
+    const streakBadge = habitCard.getByText(/\d+D/);
+    if (await streakBadge.isVisible()) {
+      return await streakBadge.textContent();
     }
     return null;
   }
@@ -179,9 +180,8 @@ export class HabitsPage {
    */
   async editHabit(title: string): Promise<void> {
     const habitCard = this.getHabitByTitle(title);
-    // The edit button is a pencil icon - find by aria-label or role
-    const editButton = habitCard.getByRole('button').filter({ has: this.page.locator('svg') }).last();
-    await editButton.click();
+    // The edit button has aria-label="Edit habit"
+    await habitCard.getByRole('button', { name: /Edit habit/i }).click();
     await this.habitFormDialog.waitFor({ timeout: 5000 });
   }
 
@@ -200,12 +200,11 @@ export class HabitsPage {
       const frequencyLabel = updates.frequency === 'WEEKLY' ? 'Week' :
                              updates.frequency === 'MONTHLY' ? 'Month' :
                              updates.frequency === 'YEARLY' ? 'Year' : 'Day';
-      const frequencyDropdown = this.page.getByRole('combobox').filter({ hasText: /Day|Week|Month|Year/ });
-      await frequencyDropdown.click();
+      await this.page.getByLabel('Frequency').click();
       await this.page.getByRole('option', { name: new RegExp(`^${frequencyLabel}s?$`) }).click();
     }
 
-    await this.page.getByRole('button', { name: 'Save Changes' }).click();
+    await this.page.getByRole('button', { name: /SAVE CHANGES/i }).click();
     await expect(this.page.getByText('Task updated successfully')).toBeVisible({ timeout: 5000 });
   }
 
@@ -216,9 +215,10 @@ export class HabitsPage {
     const habitCard = this.getHabitByTitle(title);
     await habitCard.getByRole('button', { name: 'Delete habit' }).click();
 
-    // Confirm deletion in dialog
-    await this.page.getByRole('dialog').filter({ hasText: 'Delete Habit' }).waitFor();
-    await this.page.getByRole('button', { name: 'Delete' }).click();
+    // Confirm deletion in dialog — scope button to dialog to avoid matching card's delete button
+    const confirmDialog = this.page.getByRole('dialog').filter({ hasText: 'Delete Habit' });
+    await confirmDialog.waitFor();
+    await confirmDialog.getByRole('button', { name: 'Delete' }).click();
 
     await expect(this.page.getByText('Habit deleted successfully')).toBeVisible({ timeout: 5000 });
   }
@@ -227,15 +227,15 @@ export class HabitsPage {
    * Get count of visible habits.
    */
   async getHabitCount(): Promise<number> {
-    // Count cards that have the Loop icon (habit indicator)
-    return await this.page.locator('.MuiCard-root').count();
+    // Count habit cards
+    return await this.page.locator('[data-testid="habit-card"]').count();
   }
 
   /**
    * Close the habit form dialog.
    */
   async closeHabitForm(): Promise<void> {
-    await this.page.getByRole('button', { name: 'Cancel' }).click();
+    await this.page.getByRole('button', { name: /CANCEL/i }).click();
     await expect(this.habitFormDialog).not.toBeVisible();
   }
 }

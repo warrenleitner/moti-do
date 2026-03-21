@@ -54,7 +54,7 @@ describe('HabitsPage', () => {
 
   it('shows create habit button', () => {
     render(<HabitsPage />);
-    expect(screen.getByRole('button', { name: /new habit/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /initialize new protocol/i })).toBeInTheDocument();
   });
 
   it('displays empty state when no habits exist', () => {

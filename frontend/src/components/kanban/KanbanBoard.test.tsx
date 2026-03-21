@@ -105,7 +105,8 @@ describe('KanbanBoard', () => {
     expect(screen.getByText(/Backlog/i)).toBeInTheDocument();
     expect(screen.getByText(/In Progress/i)).toBeInTheDocument();
     expect(screen.getByText(/Done/i)).toBeInTheDocument();
-    expect(screen.getByText(/Blocked/i)).toBeInTheDocument();
+    // "Blocked" may appear multiple times (column header), use getAllByText
+    expect(screen.getAllByText(/Blocked/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('displays tasks in correct columns', () => {
@@ -152,9 +153,9 @@ describe('KanbanBoard', () => {
     // This component is wrapped in v8 ignore, testing that filter controls render
     render(<KanbanBoard tasks={mockTasks} onUpdateTask={vi.fn()} />);
 
-    // Verify filter controls are present (there are multiple comboboxes for project/tag)
-    const comboboxes = screen.getAllByRole('combobox');
-    expect(comboboxes.length).toBeGreaterThan(0);
+    // Verify filter controls are present (Mantine Select renders as textbox)
+    const textboxes = screen.getAllByRole('textbox');
+    expect(textboxes.length).toBeGreaterThan(0);
     expect(screen.getAllByText('Project').length).toBeGreaterThan(0);
   });
 
@@ -162,9 +163,9 @@ describe('KanbanBoard', () => {
     // This component is wrapped in v8 ignore, testing basic render
     render(<KanbanBoard tasks={mockTasks} onUpdateTask={vi.fn()} />);
 
-    // Verify filter controls render (there are multiple comboboxes)
-    const comboboxes = screen.getAllByRole('combobox');
-    expect(comboboxes.length).toBeGreaterThan(0);
+    // Verify filter controls render (Mantine Select renders as textbox)
+    const textboxes = screen.getAllByRole('textbox');
+    expect(textboxes.length).toBeGreaterThan(0);
     expect(screen.getAllByText('Project').length).toBeGreaterThan(0);
   });
 
@@ -301,8 +302,8 @@ describe('KanbanBoard', () => {
   it('shows task count', () => {
     render(<KanbanBoard tasks={mockTasks} onUpdateTask={vi.fn()} />);
 
-    // Should show filtered task count
-    expect(screen.getByText(/\d+ tasks?/)).toBeInTheDocument();
+    // Should show filtered task count in DataBadge
+    expect(screen.getByText(/\d+ VISIBLE/)).toBeInTheDocument();
   });
 
   it('calls onUncompleteTask when dragging from done column', () => {

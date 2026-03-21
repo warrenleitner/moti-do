@@ -1,19 +1,6 @@
 import { useState, useMemo } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { Modal, Radio, Tooltip, Text, Stack, DatePickerInput } from '../../ui';
+import { ArcadeButton } from '../ui';
 import type { Task } from '../../types/models';
 
 interface DeferDialogProps {
@@ -56,66 +43,87 @@ export default function DeferDialog({ open, tasks, onConfirm, onCancel }: DeferD
     onCancel();
   };
 
+  const nextRecurrenceTooltip = !hasRecurringTasks
+    ? 'Only available for recurring tasks'
+    : !allRecurring
+      ? 'Some selected tasks are not recurring'
+      : '';
+
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-      <DialogTitle>Delay {tasks.length} task{tasks.length !== 1 ? 's' : ''}</DialogTitle>
-      <DialogContent>
-        <RadioGroup
-          value={mode}
-          onChange={(e) => setMode(e.target.value as 'next_recurrence' | 'specific_date')}
+    <Modal
+      opened={open}
+      onClose={handleClose}
+      title={
+        <span
+          className="font-display"
+          style={{
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            color: '#FFC775',
+          }}
         >
-          <Tooltip
-            title={
-              !hasRecurringTasks
-                ? 'Only available for recurring tasks'
-                : !allRecurring
-                  ? 'Some selected tasks are not recurring'
-                  : ''
-            }
-            placement="right"
-          >
-            <span>
-              <FormControlLabel
-                value="next_recurrence"
-                control={<Radio />}
-                label="Until next recurrence"
-                disabled={!allRecurring}
-              />
-            </span>
-          </Tooltip>
-          <FormControlLabel
-            value="specific_date"
-            control={<Radio />}
-            label="Until a specific date"
-          />
-        </RadioGroup>
+          DEFER {tasks.length} TASK{tasks.length !== 1 ? 'S' : ''}
+        </span>
+      }
+      size="xs"
+      centered
+      styles={{
+        content: {
+          borderTop: '3px solid #FFC775',
+        },
+      }}
+    >
+      <Stack>
+        <Radio.Group
+          value={mode}
+          onChange={(value) => setMode(value as 'next_recurrence' | 'specific_date')}
+        >
+          <Stack gap="xs">
+            <Tooltip
+              label={nextRecurrenceTooltip}
+              position="right"
+              disabled={!nextRecurrenceTooltip}
+            >
+              <span>
+                <Radio
+                  value="next_recurrence"
+                  label="Until next recurrence"
+                  disabled={!allRecurring}
+                />
+              </span>
+            </Tooltip>
+            <Radio value="specific_date" label="Until a specific date" />
+          </Stack>
+        </Radio.Group>
 
         {mode === 'specific_date' && (
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DatePicker
-              label="Defer until"
-              value={selectedDate}
-              onChange={(date) => setSelectedDate(date)}
-              slotProps={{ textField: { fullWidth: true, sx: { mt: 2 } } }}
-              minDate={new Date()}
-            />
-          </LocalizationProvider>
+          <DatePickerInput
+            label="Defer until"
+            value={selectedDate}
+            onChange={(date: string | Date | null) => setSelectedDate(date ? new Date(date) : null)}
+            minDate={new Date()}
+            mt="xs"
+          />
         )}
 
         {mode === 'next_recurrence' && !allRecurring && hasRecurringTasks && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Text size="sm" style={{ color: '#5A5E66' }} mt="xs">
             Some selected tasks are not recurring. Only recurring tasks can be deferred to their
             next recurrence.
-          </Typography>
+          </Text>
         )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
-        <Button onClick={handleConfirm} variant="contained" disabled={!canConfirm}>
-          Defer
-        </Button>
-      </DialogActions>
-    </Dialog>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+          <ArcadeButton variant="ghost" onClick={handleClose}>
+            Cancel
+          </ArcadeButton>
+          <ArcadeButton variant="primary" onClick={handleConfirm} disabled={!canConfirm}>
+            Defer
+          </ArcadeButton>
+        </div>
+      </Stack>
+    </Modal>
   );
 }
 /* v8 ignore stop */

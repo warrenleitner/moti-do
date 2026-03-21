@@ -1,37 +1,33 @@
 import {
-  Card,
-  CardContent,
-  CardActions,
-  Typography,
+  Text,
   Box,
-  IconButton,
+  ActionIcon,
   Collapse,
-  Stack,
+  Group,
   Tooltip,
-  Chip,
   useMediaQuery,
-  useTheme,
-} from '@mui/material';
+} from '../../ui';
 import {
-  ExpandMore,
-  ExpandLess,
-  Edit,
-  Delete,
-  Loop,
-  ContentCopy,
-  Link as LinkIcon,
-  Star,
-  Undo,
-  CheckCircle,
-  RadioButtonUnchecked,
-  Add,
-  Remove,
-} from '@mui/icons-material';
+  IconChevronDown,
+  IconChevronUp,
+  IconEdit,
+  IconTrash,
+  IconRepeat,
+  IconCopy,
+  IconLink,
+  IconBolt,
+  IconArrowBackUp,
+  IconCircleCheck,
+  IconPlus,
+  IconMinus,
+} from '../../ui/icons';
 import { useState, useCallback } from 'react';
 import { useSwipeable } from 'react-swipeable';
 import type { Task } from '../../types';
+import { Priority } from '../../types';
 import type { SubtaskViewMode } from '../../store/taskStore';
 import { useSystemStatus } from '../../store/userStore';
+import { DataBadge } from '../ui';
 import {
   PriorityChip,
   DifficultyChip,
@@ -60,6 +56,24 @@ interface TaskCardProps {
 // Threshold for completing a swipe action (in pixels)
 const SWIPE_THRESHOLD = 100;
 
+/** Map priority → left accent border color (Kinetic Console palette) */
+const priorityAccentColor: Record<string, string> = {
+  [Priority.DEFCON_ONE]: '#FF007F',
+  [Priority.HIGH]: '#FFC775',
+  [Priority.MEDIUM]: '#00E5FF',
+  [Priority.LOW]: '#3B494C',
+  [Priority.TRIVIAL]: '#32343F',
+};
+
+/** Map priority → DataBadge color variant */
+const priorityBadgeColor: Record<string, 'magenta' | 'amber' | 'cyan' | 'muted'> = {
+  [Priority.DEFCON_ONE]: 'magenta',
+  [Priority.HIGH]: 'amber',
+  [Priority.MEDIUM]: 'cyan',
+  [Priority.LOW]: 'muted',
+  [Priority.TRIVIAL]: 'muted',
+};
+
 export default function TaskCard({
   task,
   onComplete,
@@ -75,8 +89,8 @@ export default function TaskCard({
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [hovered, setHovered] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 48em)');
   const systemStatus = useSystemStatus();
 
   // Calculate current processing date (last_processed_date + 1 day) for relative date display
@@ -132,36 +146,43 @@ export default function TaskCard({
   // On mobile, always show expand button since we hide some metadata when collapsed
   const hasDetails = isMobile || task.text_description || showSubtasksInline || task.tags.length > 0;
 
+  const accentColor = task.is_complete
+    ? '#3B494C'
+    : priorityAccentColor[task.priority] || '#3B494C';
+
   return (
     <Box
       {...swipeHandlers}
-      sx={{
+      style={{
         position: 'relative',
         overflow: 'hidden',
-        mb: 1,
-        borderRadius: 1,
+        marginBottom: 8,
       }}
     >
       {/* Swipe indicator background - only show on mobile when swiping incomplete tasks */}
       {isMobile && !task.is_complete && !isBlocked && swipeOffset > 0 && (
         <Box
-          sx={{
+          style={{
             position: 'absolute',
             left: 0,
             top: 0,
             bottom: 0,
             width: swipeOffset,
-            bgcolor: swipeProgress >= 1 ? 'success.main' : 'success.light',
+            backgroundColor:
+              swipeProgress >= 1
+                ? '#00E5FF'
+                : 'rgba(0, 229, 255, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-start',
-            pl: 2,
+            paddingLeft: 16,
             transition: swipeProgress >= 1 ? 'background-color 0.2s' : 'none',
           }}
         >
-          <CheckCircle
-            sx={{
-              color: 'white',
+          <IconCircleCheck
+            size={24}
+            color="white"
+            style={{
               opacity: swipeProgress,
               transform: `scale(${0.5 + swipeProgress * 0.5})`,
               transition: 'transform 0.1s',
@@ -169,107 +190,143 @@ export default function TaskCard({
           />
         </Box>
       )}
-      <Card
-        sx={{
-          opacity: task.is_complete ? 0.7 : isBlocked ? 0.6 : 1,
-          borderLeft: 4,
-          borderColor: task.is_complete
-            ? 'success.main'
-            : isBlocked
-            ? 'grey.400'
-            : 'primary.main',
-          transition: swipeOffset > 0 ? 'none' : 'all 0.2s ease',
+
+      {/* Card container: surface bg, ghost border, left accent, hard shadow */}
+      <Box
+        className="ghost-border"
+        data-testid="task-card"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          backgroundColor: hovered && !isMobile ? '#272A34' : '#10131C',
+          borderLeft: `4px solid ${accentColor}`,
+          boxShadow: '2px 2px 0px rgba(0, 0, 0, 0.3)',
+          opacity: task.is_complete ? 0.6 : isBlocked ? 0.5 : 1,
+          transition: swipeOffset > 0 ? 'none' : 'background-color 0.15s ease, opacity 0.15s ease',
           transform: isMobile ? `translateX(${swipeOffset}px)` : 'none',
-          '&:hover': {
-            boxShadow: 3,
-          },
+          padding: '12px 16px',
         }}
       >
-      <CardContent sx={{ pb: 1 }}>
-        {/* Main row */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
+        {/* Main row: checkbox + content + XP badge */}
+        <Group align="flex-start" gap="sm" wrap="nowrap">
+          {/* Square checkbox */}
+          <Tooltip label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}>
+            <span>
+              <ActionIcon
+                size="sm"
+                variant="subtle"
+                onClick={() => onComplete(task.id)}
+                disabled={isBlocked}
+                aria-label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
+                style={{
+                  color: task.is_complete ? '#00E5FF' : '#5A5E66',
+                  border: task.is_complete ? '1px solid #00E5FF' : '1px solid #3B494C',
+                  borderRadius: 0,
+                  width: 22,
+                  height: 22,
+                  minWidth: 22,
+                  minHeight: 22,
+                  marginTop: 2,
+                  transition: 'all 0.15s ease',
+                  boxShadow: task.is_complete ? '0 0 6px rgba(0, 229, 255, 0.3)' : 'none',
+                }}
+              >
+                {task.is_complete ? (
+                  <IconCircleCheck size={14} />
+                ) : (
+                  <span />
+                )}
+              </ActionIcon>
+            </span>
+          </Tooltip>
+
+          {/* Center content */}
+          <Box style={{ flex: 1, minWidth: 0 }}>
             {/* Title row */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Group gap="xs" wrap="wrap" align="center">
               {task.icon && <span>{task.icon}</span>}
-              <Typography
-                variant="body1"
-                sx={{
+              <Text
+                className="font-display"
+                fw={500}
+                style={{
                   textDecoration: task.is_complete ? 'line-through' : 'none',
-                  fontWeight: 500,
+                  color: task.is_complete ? '#5A5E66' : '#E0E0E0',
                 }}
               >
                 {task.title}
-              </Typography>
+              </Text>
               {task.is_habit && (
-                <Tooltip title="Recurring habit">
-                  <Loop fontSize="small" color="primary" />
+                <Tooltip label="Recurring habit">
+                  <IconRepeat size={16} color="#00E5FF" />
                 </Tooltip>
               )}
               {task.dependencies.length > 0 && (
-                <Tooltip title={`${task.dependencies.length} dependencies`}>
-                  <LinkIcon fontSize="small" color="action" />
+                <Tooltip label={`${task.dependencies.length} dependencies`}>
+                  <IconLink size={16} color="#5A5E66" />
                 </Tooltip>
               )}
               {isBlocked && (
-                <Chip label="Blocked" size="small" color="warning" variant="outlined" />
+                <DataBadge value="BLOCKED" color="amber" size="sm" />
               )}
-            </Box>
+            </Group>
 
-            {/* Metadata row - on mobile, show only XP and due date when collapsed */}
-            <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
-              <Tooltip title="XP reward for completing this task">
-                <Chip
-                  icon={<Star sx={{ fontSize: 16 }} />}
-                  label={`${task.score} XP`}
-                  size="small"
-                  color="secondary"
-                  variant="outlined"
-                  sx={{ fontWeight: 600 }}
-                />
-              </Tooltip>
+            {/* Meta row: task ID style + due date */}
+            <Group gap="xs" mt={4} wrap="wrap">
+              {/* Task ID micro-label */}
+              <span
+                className="font-data"
+                style={{
+                  fontSize: '0.6875rem',
+                  color: '#5A5E66',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {task.id.slice(0, 8).toUpperCase()}
+              </span>
+
               {/* Counter controls for counter tasks */}
               {task.target_count !== undefined && task.target_count > 0 && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Tooltip title="Decrease count">
+                <Group gap={4} align="center" wrap="nowrap">
+                  <Tooltip label="Decrease count">
                     <span>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
+                      <ActionIcon
+                        size="xs"
+                        variant="subtle"
+                        onClick={(e: React.MouseEvent) => {
                           e.stopPropagation();
                           onDecrement?.(task.id);
                         }}
                         disabled={task.current_count <= 0 || task.is_complete}
-                        sx={{ p: 0.25 }}
+                        style={{ color: '#8A8F98' }}
                       >
-                        <Remove fontSize="small" />
-                      </IconButton>
+                        <IconMinus size={14} />
+                      </ActionIcon>
                     </span>
                   </Tooltip>
-                  <Chip
-                    label={`${task.current_count}/${task.target_count}`}
-                    size="small"
-                    color={task.current_count >= task.target_count ? 'success' : 'default'}
-                    variant="outlined"
-                    sx={{ minWidth: 50, fontWeight: 600 }}
+                  <DataBadge
+                    value={`${task.current_count}/${task.target_count}`}
+                    color={task.current_count >= task.target_count ? 'cyan' : 'muted'}
+                    size="sm"
                   />
-                  <Tooltip title="Increase count">
+                  <Tooltip label="Increase count">
                     <span>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
+                      <ActionIcon
+                        size="xs"
+                        variant="subtle"
+                        onClick={(e: React.MouseEvent) => {
                           e.stopPropagation();
                           onIncrement?.(task.id);
                         }}
                         disabled={task.is_complete}
-                        sx={{ p: 0.25 }}
+                        style={{ color: '#8A8F98' }}
                       >
-                        <Add fontSize="small" />
-                      </IconButton>
+                        <IconPlus size={14} />
+                      </ActionIcon>
                     </span>
                   </Tooltip>
-                </Box>
+                </Group>
               )}
+
               {/* Show full metadata on desktop, minimal on mobile */}
               {!isMobile && (
                 <>
@@ -284,30 +341,49 @@ export default function TaskCard({
               )}
               {/* Project badge - inline with other metadata (desktop only) */}
               {!isMobile && task.project && <ProjectChip project={task.project} />}
-            </Stack>
+            </Group>
 
             {/* Subtask progress - show in inline and top-level modes (desktop only when collapsed) */}
             {!isMobile && hasSubtasks && subtaskViewMode !== 'hidden' && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                Subtasks: {completedSubtasks}/{task.subtasks.length}
-              </Typography>
+              <Text
+                size="xs"
+                mt="xs"
+                className="font-data"
+                style={{ color: '#5A5E66', fontSize: '0.6875rem', letterSpacing: '0.05em' }}
+              >
+                SUBTASKS: {completedSubtasks}/{task.subtasks.length}
+              </Text>
             )}
           </Box>
 
+          {/* Right side: XP DataBadge */}
+          <DataBadge
+            value={`${task.score} XP`}
+            color={priorityBadgeColor[task.priority] || 'cyan'}
+            icon={<IconBolt size={12} />}
+            size="sm"
+          />
+
           {/* Expand button */}
           {hasDetails && (
-            <IconButton size="small" onClick={() => setExpanded(!expanded)}>
-              {expanded ? <ExpandLess /> : <ExpandMore />}
-            </IconButton>
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              onClick={() => setExpanded(!expanded)}
+              aria-label={expanded ? 'Collapse details' : 'Expand details'}
+              style={{ color: '#8A8F98' }}
+            >
+              {expanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+            </ActionIcon>
           )}
-        </Box>
+        </Group>
 
         {/* Expanded details */}
-        <Collapse in={expanded}>
-          <Box sx={{ mt: 2, pl: 4 }}>
+        <Collapse in={expanded} transitionDuration={0}>
+          <Box mt="md" pl={40}>
             {/* Mobile-only: show hidden metadata when expanded */}
             {isMobile && (
-              <Stack direction="row" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
+              <Group gap="xs" mb="sm" wrap="wrap">
                 <PriorityChip priority={task.priority} />
                 <DifficultyChip difficulty={task.difficulty} />
                 <DurationChip duration={task.duration} />
@@ -315,28 +391,33 @@ export default function TaskCard({
                   <StreakBadge current={task.streak_current} best={task.streak_best} />
                 )}
                 {task.project && <ProjectChip project={task.project} />}
-              </Stack>
+              </Group>
             )}
 
             {/* Mobile: show subtask progress in expanded section */}
             {isMobile && hasSubtasks && subtaskViewMode !== 'hidden' && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-                Subtasks: {completedSubtasks}/{task.subtasks.length}
-              </Typography>
+              <Text
+                size="xs"
+                mb="sm"
+                className="font-data"
+                style={{ color: '#5A5E66', fontSize: '0.6875rem', letterSpacing: '0.05em' }}
+              >
+                SUBTASKS: {completedSubtasks}/{task.subtasks.length}
+              </Text>
             )}
 
             {task.text_description && (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              <Text size="sm" mb="sm" style={{ color: '#8A8F98' }}>
                 {task.text_description}
-              </Typography>
+              </Text>
             )}
 
             {task.tags.length > 0 && (
-              <Stack direction="row" spacing={0.5} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
+              <Group gap={4} mb="sm" wrap="wrap">
                 {task.tags.map((tag) => (
                   <TagChip key={tag} tag={tag} />
                 ))}
-              </Stack>
+              </Group>
             )}
 
             {showSubtasksInline && (
@@ -351,56 +432,56 @@ export default function TaskCard({
             )}
           </Box>
         </Collapse>
-      </CardContent>
 
-      <CardActions sx={{ px: 2, pt: 0 }}>
-        <Box sx={{ flex: 1 }} />
-        <Tooltip title={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}>
-          <span>
-            <IconButton
-              size="small"
-              onClick={() => onComplete(task.id)}
-              disabled={isBlocked}
-              color={task.is_complete ? 'success' : 'default'}
-              aria-label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
-            >
-              {task.is_complete ? (
-                <CheckCircle fontSize="small" />
-              ) : (
-                <RadioButtonUnchecked fontSize="small" />
-              )}
-            </IconButton>
-          </span>
-        </Tooltip>
-        {onUndo && task.history.length > 0 && (
-          <Tooltip title="Undo last change">
-            <IconButton size="small" onClick={() => onUndo(task.id)} color="info">
-              <Undo fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        )}
-        <IconButton size="small" onClick={() => onEdit(task)} title="Edit task">
-          <Edit fontSize="small" />
-        </IconButton>
-        {onDuplicate && (
-          <IconButton
-            size="small"
-            onClick={() => onDuplicate(task.id)}
-            title="Duplicate task"
+        {/* Actions */}
+        <Group justify="flex-end" gap="xs" mt="xs">
+          {onUndo && task.history.length > 0 && (
+            <Tooltip label="Undo last change">
+              <ActionIcon
+                size="sm"
+                variant="subtle"
+                onClick={() => onUndo(task.id)}
+                aria-label="Undo last change"
+                style={{ color: '#00E5FF' }}
+              >
+                <IconArrowBackUp size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+          <ActionIcon
+            size="sm"
+            variant="subtle"
+            onClick={() => onEdit(task)}
+            title="Edit task"
+            aria-label="Edit task"
+            style={{ color: '#8A8F98' }}
           >
-            <ContentCopy fontSize="small" />
-          </IconButton>
-        )}
-        <IconButton
-          size="small"
-          onClick={() => onDelete(task.id)}
-          color="error"
-          title="Delete task"
-        >
-          <Delete fontSize="small" />
-        </IconButton>
-      </CardActions>
-    </Card>
+            <IconEdit size={16} />
+          </ActionIcon>
+          {onDuplicate && (
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              onClick={() => onDuplicate(task.id)}
+              title="Duplicate task"
+              aria-label="Duplicate task"
+              style={{ color: '#8A8F98' }}
+            >
+              <IconCopy size={16} />
+            </ActionIcon>
+          )}
+          <ActionIcon
+            size="sm"
+            variant="subtle"
+            onClick={() => onDelete(task.id)}
+            title="Delete task"
+            aria-label="Delete task"
+            style={{ color: '#FF007F' }}
+          >
+            <IconTrash size={16} />
+          </ActionIcon>
+        </Group>
+      </Box>
     </Box>
   );
 }

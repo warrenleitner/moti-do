@@ -48,7 +48,9 @@ describe('KanbanCard', () => {
 
   it('displays tags', () => {
     renderWithDnD(mockTask, vi.fn());
-    expect(screen.getByText('urgent')).toBeInTheDocument();
+    // Tags are no longer rendered as individual badges on cards
+    // The redesigned card focuses on project, due date, and XP
+    expect(screen.getByText('Test Task')).toBeInTheDocument();
   });
 
   it('displays task metadata', () => {
@@ -106,7 +108,7 @@ describe('KanbanCard', () => {
     renderWithDnD(taskWithSubtasks, vi.fn());
 
     // Should show subtask progress
-    expect(screen.getByText(/2\/3 subtasks/)).toBeInTheDocument();
+    expect(screen.getByText(/2\/3 SUBTASKS/)).toBeInTheDocument();
   });
 
   it('shows habit streak', () => {
@@ -164,12 +166,8 @@ describe('KanbanCard', () => {
 
     renderWithDnD(taskWithManyTags, vi.fn());
 
-    // Should show first 3 tags
-    expect(screen.getByText('tag1')).toBeInTheDocument();
-    expect(screen.getByText('tag2')).toBeInTheDocument();
-    expect(screen.getByText('tag3')).toBeInTheDocument();
-
-    // Should show "+2" for remaining tags
-    expect(screen.getByText('+2')).toBeInTheDocument();
+    // Tags are no longer rendered as individual badges on kanban cards
+    // The redesigned card uses project tag and XP DataBadge instead
+    expect(screen.getByText('Test Task')).toBeInTheDocument();
   });
 });

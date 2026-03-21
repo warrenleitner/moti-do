@@ -34,6 +34,11 @@ describe('SearchInput', () => {
     expect(onChange).toHaveBeenCalledWith('');
   });
 
+  it('renders full width when fullWidth is true', () => {
+    render(<SearchInput value="" onChange={vi.fn()} fullWidth />);
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+  });
+
   it('shows clear button only when value is not empty', () => {
     const { rerender } = render(<SearchInput value="" onChange={vi.fn()} />);
     expect(screen.queryByRole('button')).not.toBeInTheDocument();

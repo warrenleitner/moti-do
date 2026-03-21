@@ -28,29 +28,31 @@ export class TasksPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.newTaskButton = page.getByRole('button', { name: 'New Task' });
-    // aria-label attributes from the ToggleButton components
+    this.newTaskButton = page.getByRole('button', { name: /NEW TASK/i });
+    // View mode toggle - Mantine ActionIcon buttons with aria-label attributes
     this.listViewButton = page.getByRole('button', { name: 'list view' });
     this.tableViewButton = page.getByRole('button', { name: 'table view' });
     this.taskFormDialog = page.getByRole('dialog');
     this.deleteConfirmDialog = page.getByRole('dialog').filter({ hasText: 'Delete Task' });
-    this.snackbar = page.getByRole('alert');
+    this.snackbar = page.getByRole('alert').first();
 
-    // Filter controls - use FormControl container to find Select components
-    // getByLabel doesn't work reliably with MUI Select InputLabel
+    // Filter controls - Mantine Select renders <input readonly> with implicit textbox role
     this.searchInput = page.getByPlaceholder('Search tasks...');
-    this.statusFilter = page.locator('.MuiFormControl-root').filter({ hasText: 'Status' }).getByRole('combobox');
-    this.priorityFilter = page.locator('.MuiFormControl-root').filter({ hasText: 'Priority' }).getByRole('combobox');
-    this.projectFilter = page.locator('.MuiFormControl-root').filter({ hasText: 'Project' }).getByRole('combobox');
+    // Status filter is now rendered as tab buttons (ACTIVE, COMPLETED, ALL, etc.)
+    this.statusFilter = page.getByRole('button', { name: /^active$/i });
+    this.priorityFilter = page.getByRole('textbox', { name: 'Priority', exact: true });
+    this.projectFilter = page.getByRole('textbox', { name: 'Project', exact: true });
 
     // Quick Add Box - the persistent input at the top of TasksPage
-    // Placeholder includes hint text, so use partial match
-    this.quickAddInput = page.getByPlaceholder(/Add a task/);
+    // Placeholder is now terminal-style: "DEPLOY NEW TASK: [TITLE] /PRIORITY /DUE..."
+    this.quickAddInput = page.getByPlaceholder(/DEPLOY NEW TASK/);
 
-    // Subtask View Toggle buttons - aria-label attributes from ToggleButton components
-    this.subtaskHiddenButton = page.getByRole('button', { name: 'hide subtasks' });
-    this.subtaskInlineButton = page.getByRole('button', { name: 'show subtasks inline' });
-    this.subtaskTopLevelButton = page.getByRole('button', { name: 'show subtasks as tasks' });
+    // Subtask View Toggle - Mantine SegmentedControl renders labels in order: hidden, inline, top-level
+    // Use positional nth selectors scoped to the radiogroup (CSS '+' sibling selectors don't work in Playwright)
+    const subtaskToggle = page.locator('[aria-label="subtask view mode"]');
+    this.subtaskHiddenButton = subtaskToggle.locator('label').nth(0);
+    this.subtaskInlineButton = subtaskToggle.locator('label').nth(1);
+    this.subtaskTopLevelButton = subtaskToggle.locator('label').nth(2);
   }
 
   /**
@@ -103,24 +105,21 @@ export class TasksPage {
       await dialog.getByLabel('Description').fill(options.description);
     }
 
-    // Set priority if specified (MUI Select - find by displayed text content)
+    // Set priority if specified (Mantine Select - click label to open dropdown)
     if (options?.priority) {
-      // Priority combobox shows "🟡 Medium" by default
-      await dialog.getByRole('combobox').filter({ hasText: '🟡' }).click();
+      await dialog.getByLabel('Priority', { exact: true }).click();
       await this.page.getByRole('option', { name: new RegExp(options.priority, 'i') }).click();
     }
 
     // Set difficulty if specified
     if (options?.difficulty) {
-      // Difficulty combobox shows "🧱 Medium" by default
-      await dialog.getByRole('combobox').filter({ hasText: '🧱' }).click();
+      await dialog.getByLabel('Difficulty', { exact: true }).click();
       await this.page.getByRole('option', { name: new RegExp(options.difficulty, 'i') }).click();
     }
 
     // Set duration if specified
     if (options?.duration) {
-      // Duration combobox shows "🕰️ Medium" by default
-      await dialog.getByRole('combobox').filter({ hasText: '🕰️' }).click();
+      await dialog.getByLabel('Duration', { exact: true }).click();
       await this.page.getByRole('option', { name: new RegExp(options.duration, 'i') }).click();
     }
 
@@ -129,23 +128,49 @@ export class TasksPage {
       await dialog.getByLabel('Project').fill(options.project);
     }
 
-    // Set due date if specified (MUI DateTimePicker - click and type)
+    // Set due date if specified (Mantine DateTimePicker - opens a popover calendar)
     if (options?.dueDate) {
       // Parse the date (expected format: YYYY-MM-DD)
       const [year, month, day] = options.dueDate.split('-');
-      const dateGroup = dialog.getByRole('group', { name: 'Due Date' });
-      // Click the month spinbutton and type the date parts
-      const monthSpinbutton = dateGroup.getByRole('spinbutton', { name: 'Month' });
-      await monthSpinbutton.click();
-      await monthSpinbutton.pressSequentially(month);
-      await this.page.keyboard.press('Tab');
-      await this.page.keyboard.type(day);
-      await this.page.keyboard.press('Tab');
-      await this.page.keyboard.type(year);
+      const targetDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+
+      // Click the Due Date button to open the calendar popover
+      await dialog.getByLabel('Due Date').click();
+
+      // Navigate to the correct month/year in the calendar
+      // The calendar shows the current month by default
+      const targetMonthYear = targetDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+      // Keep clicking the next/prev month button until we reach the target month
+      for (let i = 0; i < 24; i++) {
+        const calendarHeader = this.page.locator('[data-calendar] button[data-mantine-level-control]').first();
+        const headerText = await calendarHeader.textContent();
+        if (headerText?.includes(targetMonthYear)) break;
+
+        // Determine if we need to go forward or backward
+        const headerDate = new Date(headerText || '');
+        if (targetDate > headerDate) {
+          await this.page.locator('[data-calendar] button[data-next]').first().click();
+        } else {
+          await this.page.locator('[data-calendar] button[data-previous]').first().click();
+        }
+        await this.page.waitForTimeout(100);
+      }
+
+      // Click the target day button in the calendar
+      const dayButton = this.page.locator(`[data-calendar] button[data-day="${options.dueDate}"]`);
+      await dayButton.click();
+
+      // Click the submit (check) button to confirm the date selection
+      const submitButton = this.page.locator('[class*="DateTimePicker"] button:has(svg)').last();
+      await submitButton.click().catch(() => {
+        // If submit button not found, press Escape to close the popover
+        return this.page.keyboard.press('Escape');
+      });
     }
 
-    // Submit the form - button text is "Create Task" for new tasks
-    await dialog.getByRole('button', { name: 'Create Task' }).click();
+    // Submit the form - button text is "CREATE MISSION" for new tasks
+    await dialog.getByRole('button', { name: /CREATE MISSION/i }).click();
 
     // Wait for success snackbar
     await expect(this.page.getByText('Task created successfully')).toBeVisible({ timeout: 5000 });
@@ -157,7 +182,7 @@ export class TasksPage {
    */
   getTaskByTitle(title: string): Locator {
     // Find the card/row that contains this title text
-    return this.page.locator('.MuiCard-root').filter({ hasText: title });
+    return this.page.locator('[data-testid="task-card"]').filter({ hasText: title });
   }
 
   /**
@@ -201,8 +226,8 @@ export class TasksPage {
       await this.page.getByLabel('Description').fill(updates.description);
     }
 
-    // Submit - button text is "Save Changes" for editing
-    await this.page.getByRole('button', { name: 'Save Changes' }).click();
+    // Submit - button text is "SAVE CHANGES" for editing
+    await this.page.getByRole('button', { name: /SAVE CHANGES/i }).click();
 
     // Wait for success snackbar
     await expect(this.page.getByText('Task updated successfully')).toBeVisible({ timeout: 5000 });
@@ -216,9 +241,9 @@ export class TasksPage {
     // The delete button has title="Delete task"
     await taskCard.getByRole('button', { name: 'Delete task' }).click();
 
-    // Confirm deletion in the dialog
+    // Confirm deletion in the dialog — scope to dialog to avoid matching card buttons
     await this.deleteConfirmDialog.waitFor({ timeout: 5000 });
-    await this.page.getByRole('button', { name: 'Delete' }).click();
+    await this.deleteConfirmDialog.getByRole('button', { name: 'Delete' }).click();
 
     // Wait for success snackbar
     await expect(this.page.getByText('Task deleted')).toBeVisible({ timeout: 5000 });
@@ -247,10 +272,11 @@ export class TasksPage {
 
   /**
    * Filter by status.
+   * Status filter is now rendered as tab buttons (ACTIVE, COMPLETED, ALL, etc.)
    */
   async filterByStatus(status: 'Active' | 'Completed' | 'All'): Promise<void> {
-    await this.statusFilter.click();
-    await this.page.getByRole('option', { name: status }).click();
+    // Status tabs are uppercase buttons: ACTIVE, BLOCKED, FUTURE, COMPLETED, ALL
+    await this.page.getByRole('button', { name: new RegExp(`^${status}$`, 'i') }).click();
   }
 
   /**
@@ -269,7 +295,7 @@ export class TasksPage {
    * Close the task form dialog.
    */
   async closeTaskForm(): Promise<void> {
-    await this.page.getByRole('button', { name: 'Cancel' }).click();
+    await this.page.getByRole('button', { name: /CANCEL/i }).click();
     await expect(this.taskFormDialog).not.toBeVisible();
   }
 
@@ -277,8 +303,8 @@ export class TasksPage {
    * Get count of visible tasks.
    */
   async getTaskCount(): Promise<number> {
-    // Count MuiCard-root elements that contain task content
-    return await this.page.locator('.MuiCard-root').count();
+    // Count task card elements
+    return await this.page.locator('[data-testid="task-card"]').count();
   }
 
   /**
@@ -317,7 +343,7 @@ export class TasksPage {
    * Check if a subtask is visible as a separate card (top-level mode).
    */
   async subtaskCardVisible(subtaskText: string): Promise<boolean> {
-    // Subtask cards have a SubdirectoryArrowRight icon and the subtask text
-    return await this.page.locator('.MuiCard-root').filter({ hasText: subtaskText }).locator('svg[data-testid="SubdirectoryArrowRightIcon"]').isVisible();
+    // Subtask cards have a subtask-icon and the subtask text
+    return await this.page.locator('[data-testid="subtask-card"]').filter({ hasText: subtaskText }).locator('[data-testid="subtask-icon"]').isVisible();
   }
 }

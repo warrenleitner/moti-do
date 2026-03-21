@@ -27,14 +27,12 @@ export async function login(
 ): Promise<void> {
   await page.goto('/login');
 
-  // Wait for login page to load
-  await page.getByRole('heading', { name: 'Motodo' }).waitFor({ timeout: 10000 });
+  // Wait for login page to load - text logo "MOTI-DO"
+  await page.getByText('MOTI-DO', { exact: true }).waitFor({ timeout: 10000 });
 
-  // Fill credentials using MUI TextField textbox roles
-  await page.getByRole('textbox', { name: 'Username' }).fill(username);
-  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(password);
-
-  // Click submit button
+  // Fill credentials - TerminalInput wraps Mantine TextInput with uppercase labels
+  await page.getByRole('textbox', { name: /USERNAME/i }).fill(username);
+  await page.getByLabel(/^PASSWORD/i).first().fill(password);
   await page.locator('button[type="submit"]').click();
 
   // Wait for redirect to dashboard (away from login page)
@@ -57,18 +55,18 @@ export async function register(
   await page.goto('/login');
 
   // Wait for login page to load
-  await page.getByRole('heading', { name: 'Motodo' }).waitFor({ timeout: 10000 });
+  await page.getByText('MOTI-DO', { exact: true }).waitFor({ timeout: 10000 });
 
-  // Switch to register mode using the ToggleButton
-  await page.getByRole('button', { name: 'Register', exact: true }).click();
+  // Switch to register mode using Mantine SegmentedControl (renders as radiogroup)
+  await page.getByRole('radiogroup').getByText('REGISTER').click();
 
   // Wait for confirm password field to appear
-  await page.getByRole('textbox', { name: 'Confirm Password' }).waitFor({ timeout: 5000 });
+  await page.getByLabel(/CONFIRM PASSWORD/i).waitFor({ timeout: 5000 });
 
-  // Fill registration form using MUI TextField textbox roles
-  await page.getByRole('textbox', { name: 'Username' }).fill(username);
-  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(password);
-  await page.getByRole('textbox', { name: 'Confirm Password' }).fill(password);
+  // Fill registration form
+  await page.getByRole('textbox', { name: /USERNAME/i }).fill(username);
+  await page.getByLabel(/^PASSWORD/i).first().fill(password);
+  await page.getByLabel(/CONFIRM PASSWORD/i).fill(password);
 
   // Submit
   await page.locator('button[type="submit"]').click();
@@ -93,7 +91,7 @@ export async function logout(page: Page): Promise<void> {
   await page.goto('/login');
 
   // Wait for login page
-  await page.getByRole('heading', { name: 'Motodo' }).waitFor({ timeout: 10000 });
+  await page.getByText('MOTI-DO', { exact: true }).waitFor({ timeout: 10000 });
 }
 
 /**
