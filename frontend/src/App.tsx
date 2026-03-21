@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
-import { Box, Center, Container, Loader, Text, Button, Alert, Stack } from './ui';
+import { Center, Loader, Text, Button, Alert, Stack } from './ui';
 import MainLayout from './components/layout/MainLayout';
 import { InstallPrompt } from './components/common/InstallPrompt';
 import CrisisModeBanner from './components/common/CrisisModeBanner';
@@ -62,23 +62,19 @@ function App() {
         path="/*"
         element={
           <ProtectedRoute>
-            <Box style={{ display: 'flex', minHeight: '100vh' }}>
-              <MainLayout>
-                <Container size="xl" py="lg">
-                  <CrisisModeBanner />
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/tasks" element={<TasksPage />} />
-                    <Route path="/habits" element={<HabitsPage />} />
-                    <Route path="/calendar" element={<CalendarPage />} />
-                    <Route path="/kanban" element={<KanbanPage />} />
-                    <Route path="/graph" element={<GraphPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                  </Routes>
-                </Container>
-              </MainLayout>
+            <MainLayout>
+              <CrisisModeBanner />
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/tasks" element={<TasksPage />} />
+                <Route path="/habits" element={<HabitsPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/kanban" element={<KanbanPage />} />
+                <Route path="/graph" element={<GraphPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Routes>
               <InstallPrompt />
-            </Box>
+            </MainLayout>
           </ProtectedRoute>
         }
       />

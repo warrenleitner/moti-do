@@ -8,7 +8,6 @@ import {
   Box,
   Group,
   Text,
-  Button,
 } from '../../ui';
 import {
   IconEdit,
@@ -25,7 +24,9 @@ import {
   IconClock,
   IconPlayerSkipForward,
   IconAlertTriangle,
+  IconBolt,
 } from '../../ui/icons';
+import { ArcadeButton, DataBadge } from '../ui';
 import type { Task } from '../../types/models';
 import {
   Priority,
@@ -499,7 +500,13 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'title': {
         const titleDisplay = (
-          <span style={{ textDecoration: task.is_complete ? 'line-through' : 'none' }}>
+          <span
+            className="font-display"
+            style={{
+              textDecoration: task.is_complete ? 'line-through' : 'none',
+              color: task.is_complete ? '#5A5E66' : '#E0E0E0',
+            }}
+          >
             {task.title}
           </span>
         );
@@ -530,9 +537,12 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'score':
         return (
-          <Badge size="sm" leftSection="⭐" variant="outline" color="grape" fw={600}>
-            {task.score} XP
-          </Badge>
+          <DataBadge
+            value={`${task.score} XP`}
+            color="cyan"
+            icon={<IconBolt size={12} />}
+            size="sm"
+          />
         );
 
       case 'priority':
@@ -613,7 +623,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
           const startDate = new Date(year, month - 1, day);
           const isFuture = startDate > currentProcessingDate;
           return (
-            <span style={{ color: isFuture ? '#9e9e9e' : 'inherit' }}>
+            <span className="font-data" style={{ color: isFuture ? '#5A5E66' : '#E0E0E0', fontSize: '0.8125rem' }}>
               {format(startDate, 'MMM d, yyyy')}
             </span>
           );
@@ -650,7 +660,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
           const dueDate = new Date(year, month - 1, day);
           const isOverdue = dueDate < currentProcessingDate;
           return (
-            <span style={{ color: isOverdue ? '#f44336' : 'inherit' }}>
+            <span className="font-data" style={{ color: isOverdue ? '#FF007F' : '#E0E0E0', fontSize: '0.8125rem' }}>
               {format(dueDate, 'MMM d, yyyy')}
             </span>
           );
@@ -679,7 +689,11 @@ const TaskTable: React.FC<TaskTableProps> = ({
       }
 
       case 'creation_date':
-        return format(new Date(task.creation_date), 'MMM d, yyyy');
+        return (
+          <span className="font-data" style={{ color: '#8A8F98', fontSize: '0.8125rem' }}>
+            {format(new Date(task.creation_date), 'MMM d, yyyy')}
+          </span>
+        );
 
       case 'project': {
         const projectDisplay = task.project ? <ProjectChip project={task.project} /> : '-';
@@ -763,7 +777,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'streak':
         return task.is_habit && task.streak_current > 0 ? (
-          <Badge size="sm" color="orange">🔥 {task.streak_current}</Badge>
+          <DataBadge value={`🔥 ${task.streak_current}`} color="amber" size="sm" />
         ) : (
           '-'
         );
@@ -776,35 +790,32 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'kanban_status':
         return task.status ? (
-          <Badge
-            size="sm"
+          <DataBadge
+            value={task.status.replace('_', ' ').toUpperCase()}
             color={
               task.status === 'in_progress'
-                ? 'blue'
+                ? 'cyan'
                 : task.status === 'blocked'
-                ? 'red'
-                : 'gray'
+                ? 'magenta'
+                : 'muted'
             }
-          >
-            {task.status.replace('_', ' ')}
-          </Badge>
+            size="sm"
+          />
         ) : (
           '-'
         );
 
       case 'status': {
         const lifecycleStatus = getLifecycleStatus(task);
-        const label = lifecycleStatus.charAt(0).toUpperCase() + lifecycleStatus.slice(1);
-        const color =
-          lifecycleStatus === 'completed'
-            ? 'green'
-            : lifecycleStatus === 'blocked'
-            ? 'red'
-            : lifecycleStatus === 'future'
-            ? 'cyan'
-            : 'blue';
+        const label = lifecycleStatus.toUpperCase();
+        const statusColor: Record<string, 'cyan' | 'magenta' | 'amber' | 'muted'> = {
+          active: 'cyan',
+          blocked: 'magenta',
+          future: 'amber',
+          completed: 'muted',
+        };
 
-        return <Badge size="sm" color={color} variant={lifecycleStatus === 'active' ? 'outline' : 'filled'}>{label}</Badge>;
+        return <DataBadge value={label} color={statusColor[lifecycleStatus] || 'muted'} size="sm" />;
       }
 
       case 'actions':
@@ -816,6 +827,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
                 variant="subtle"
                 onClick={() => onComplete(task.id)}
                 aria-label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
+                style={{ color: task.is_complete ? '#00E5FF' : '#8A8F98' }}
               >
                 {task.is_complete ? (
                   <IconCircle size={16} />
@@ -825,19 +837,19 @@ const TaskTable: React.FC<TaskTableProps> = ({
               </ActionIcon>
             </Tooltip>
             <Tooltip label="Edit">
-              <ActionIcon size="sm" variant="subtle" onClick={() => onEdit(task)} aria-label="Edit">
+              <ActionIcon size="sm" variant="subtle" onClick={() => onEdit(task)} aria-label="Edit" style={{ color: '#8A8F98' }}>
                 <IconEdit size={16} />
               </ActionIcon>
             </Tooltip>
             {onDuplicate && (
               <Tooltip label="Duplicate">
-                <ActionIcon size="sm" variant="subtle" onClick={() => onDuplicate(task.id)} aria-label="Duplicate">
+                <ActionIcon size="sm" variant="subtle" onClick={() => onDuplicate(task.id)} aria-label="Duplicate" style={{ color: '#8A8F98' }}>
                   <IconCopy size={16} />
                 </ActionIcon>
               </Tooltip>
             )}
             <Tooltip label="Delete">
-              <ActionIcon size="sm" variant="subtle" color="red" onClick={() => onDelete(task.id)} aria-label="Delete">
+              <ActionIcon size="sm" variant="subtle" onClick={() => onDelete(task.id)} aria-label="Delete" style={{ color: '#FF007F' }}>
                 <IconTrash size={16} />
               </ActionIcon>
             </Tooltip>
@@ -865,86 +877,102 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
   return (
     <>
-      {/* Bulk Actions Toolbar */}
+      {/* Bulk Actions Toolbar — Kinetic Console styled */}
       {numSelected > 0 && (
         <Box
           p="xs"
           px="sm"
           mb="xs"
+          className="ghost-border"
           style={{
-            backgroundColor: 'var(--mantine-color-blue-0)',
-            borderRadius: 'var(--mantine-radius-sm)',
+            backgroundColor: '#272A34',
+            borderTop: '2px solid #00E5FF',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
             flexWrap: 'wrap',
           }}
         >
-          <Text fw={500} style={{ flex: '1 1 auto' }}>
-            {numSelected} task{numSelected > 1 ? 's' : ''} selected
+          <Text
+            fw={700}
+            className="font-data"
+            style={{ flex: '1 1 auto', color: '#00E5FF', letterSpacing: '0.05em' }}
+          >
+            {numSelected} TASK{numSelected > 1 ? 'S' : ''} SELECTED
           </Text>
           <Group gap="xs">
             {onBulkComplete && (
-              <Button
-                variant="outline"
+              <ArcadeButton
+                variant="primary"
                 size="xs"
-                leftSection={<IconCircleCheck size={16} />}
                 onClick={() => onBulkComplete(selectedTasks)}
               >
-                Complete Selected
-              </Button>
+                <Group gap={4}>
+                  <IconCircleCheck size={16} />
+                  EXECUTE BATCH
+                </Group>
+              </ArcadeButton>
             )}
             {onBulkDuplicate && (
-              <Button
-                variant="outline"
+              <ArcadeButton
+                variant="ghost"
                 size="xs"
-                leftSection={<IconCopy size={16} />}
                 onClick={() => onBulkDuplicate(selectedTasks)}
               >
-                Duplicate Selected
-              </Button>
+                <Group gap={4}>
+                  <IconCopy size={16} />
+                  DUPLICATE
+                </Group>
+              </ArcadeButton>
             )}
             {onBulkDefer && (
-              <Button
-                variant="outline"
+              <ArcadeButton
+                variant="ghost"
                 size="xs"
-                leftSection={<IconClock size={16} />}
                 onClick={() => onBulkDefer(selectedTasks)}
               >
-                Delay Selected
-              </Button>
+                <Group gap={4}>
+                  <IconClock size={16} />
+                  DELAY
+                </Group>
+              </ArcadeButton>
             )}
             {onBulkJumpToCurrent && (
-              <Button
-                variant="outline"
+              <ArcadeButton
+                variant="ghost"
                 size="xs"
-                leftSection={<IconPlayerSkipForward size={16} />}
                 onClick={() => onBulkJumpToCurrent(selectedTasks)}
               >
-                Jump to Current
-              </Button>
+                <Group gap={4}>
+                  <IconPlayerSkipForward size={16} />
+                  JUMP
+                </Group>
+              </ArcadeButton>
             )}
             {onActivateCrisisMode && (
-              <Button
-                variant="outline"
-                color="yellow"
+              <ArcadeButton
+                variant="ghost"
                 size="xs"
-                leftSection={<IconAlertTriangle size={16} />}
                 onClick={() => onActivateCrisisMode(selectedTasks)}
+                style={{ borderColor: '#FFC775', color: '#FFC775' }}
               >
-                Crisis Mode
-              </Button>
+                <Group gap={4}>
+                  <IconAlertTriangle size={16} />
+                  CRISIS
+                </Group>
+              </ArcadeButton>
             )}
             {onBulkDelete && (
-              <Button
-                variant="outline"
-                color="red"
+              <ArcadeButton
+                variant="secondary"
                 size="xs"
-                leftSection={<IconTrash size={16} />}
                 onClick={() => onBulkDelete(selectedTasks)}
               >
-                Delete Selected
-              </Button>
+                <Group gap={4}>
+                  <IconTrash size={16} />
+                  DELETE
+                </Group>
+              </ArcadeButton>
             )}
           </Group>
         </Box>
@@ -964,7 +992,38 @@ const TaskTable: React.FC<TaskTableProps> = ({
       </Group>
 
       <Table.ScrollContainer minWidth={800}>
-        <Table striped highlightOnHover withTableBorder withColumnBorders verticalSpacing="xs" stickyHeader>
+        <Table highlightOnHover withTableBorder verticalSpacing="xs" stickyHeader
+          styles={{
+            table: {
+              borderColor: 'rgba(59, 73, 76, 0.15)',
+            },
+            thead: {
+              backgroundColor: '#181B25',
+            },
+            th: {
+              fontFamily: '"JetBrains Mono", monospace',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              fontSize: '0.6875rem',
+              color: '#8A8F98',
+              fontWeight: 600,
+              backgroundColor: '#181B25',
+              borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+              padding: '6px 8px',
+            },
+            td: {
+              borderBottom: '1px solid rgba(59, 73, 76, 0.08)',
+              padding: '4px 8px',
+              backgroundColor: '#10131C',
+              transition: 'background-color 0.1s ease',
+            },
+            tr: {
+              '&:hover td': {
+                backgroundColor: '#181B25',
+              },
+            },
+          }}
+        >
           <Table.Thead>
             <Table.Tr>
               {visibleColumns.map((col) => (
@@ -986,18 +1045,23 @@ const TaskTable: React.FC<TaskTableProps> = ({
                       style={{ cursor: 'pointer' }}
                       onClick={() => handleSort(col.id)}
                     >
-                      <Text size="sm" fw={600}>
+                      <Text
+                        size="xs"
+                        fw={600}
+                        className="font-data"
+                        style={{ textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8F98' }}
+                      >
                         {col.label}
                       </Text>
                       {getSortLabel(col.id)?.active && (
                         <>
                           {getSortLabel(col.id)?.direction === 'asc' ? (
-                            <IconChevronUp size={14} />
+                            <IconChevronUp size={14} color="#00E5FF" />
                           ) : (
-                            <IconChevronDown size={14} />
+                            <IconChevronDown size={14} color="#00E5FF" />
                           )}
                           {getSortLabel(col.id)?.index && (
-                            <Text size="xs" c="blue" fw={700}>
+                            <Text size="xs" fw={700} style={{ color: '#00E5FF' }}>
                               {getSortLabel(col.id)?.index}
                             </Text>
                           )}

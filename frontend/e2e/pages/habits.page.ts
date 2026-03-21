@@ -12,7 +12,8 @@ export class HabitsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.newHabitButton = page.getByRole('button', { name: 'New Habit' });
+    // "INITIALIZE NEW PROTOCOL" card (when habits exist) or "Create Habit" button (empty state)
+    this.newHabitButton = page.getByRole('button', { name: /INITIALIZE NEW PROTOCOL|Create Habit/i });
     this.habitFormDialog = page.getByRole('dialog');
     this.snackbar = page.getByRole('alert').first();
   }
@@ -115,8 +116,8 @@ export class HabitsPage {
       }
     }
 
-    // Submit the form - Habits page uses "Save Changes" button
-    await dialog.getByRole('button', { name: 'Save Changes' }).click();
+    // Submit the form - "CREATE MISSION" for new habits (TaskForm uses isEditing check)
+    await dialog.getByRole('button', { name: /CREATE MISSION/i }).click();
 
     // Wait for dialog to close and habit to appear in list
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
@@ -139,36 +140,37 @@ export class HabitsPage {
   }
 
   /**
-   * Complete a habit (toggle checkbox).
+   * Complete a habit (click the ArcadeButton "COMPLETE TODAY").
    */
   async completeHabit(title: string): Promise<void> {
     const habitCard = this.getHabitByTitle(title);
-    await habitCard.getByRole('checkbox').click();
+    await habitCard.getByRole('button', { name: /COMPLETE TODAY/i }).click();
   }
 
   /**
-   * Check if the heatmap section is visible.
-   * The heatmap shows habit completion history.
+   * Check if the heatmap / completion rate section is visible.
+   * The HabitsPage header shows GLOBAL_COMPLETION_RATE: XX%.
    */
   async isHeatmapVisible(): Promise<boolean> {
-    // Heatmap is in a Paper element with completion rate text
-    return await this.page.getByText(/% completion/).isVisible();
+    // HabitsPage shows "GLOBAL_COMPLETION_RATE: XX%" in the header
+    return await this.page.getByText(/GLOBAL_COMPLETION_RATE/i).isVisible();
   }
 
   /**
    * Get the streak text for a habit.
+   * The redesigned HabitCard shows streak as "{N}D" and progress as "{N} / 30 days".
    */
   async getHabitStreak(title: string): Promise<string | null> {
     const habitCard = this.getHabitByTitle(title);
-    // Streak Progress is shown as a label with "0 / 30 days" format
-    const streakProgress = habitCard.getByText('Streak Progress');
-    if (await streakProgress.isVisible()) {
-      // Return the adjacent progress text (e.g., "0 / 30 days")
-      const progressText = habitCard.getByText(/\d+ \/ \d+ days/);
-      if (await progressText.isVisible()) {
-        return await progressText.textContent();
-      }
-      return 'Streak Progress visible';
+    // HabitCard shows "{streak_current} / 30 days" at the bottom
+    const progressText = habitCard.getByText(/\d+ \/ \d+ days/);
+    if (await progressText.isVisible()) {
+      return await progressText.textContent();
+    }
+    // Fallback: check for the "{N}D" streak display
+    const streakBadge = habitCard.getByText(/\d+D/);
+    if (await streakBadge.isVisible()) {
+      return await streakBadge.textContent();
     }
     return null;
   }
@@ -178,9 +180,8 @@ export class HabitsPage {
    */
   async editHabit(title: string): Promise<void> {
     const habitCard = this.getHabitByTitle(title);
-    // The edit button is a pencil icon - find by aria-label or role
-    const editButton = habitCard.getByRole('button').filter({ has: this.page.locator('svg') }).last();
-    await editButton.click();
+    // The edit button has aria-label="Edit habit"
+    await habitCard.getByRole('button', { name: /Edit habit/i }).click();
     await this.habitFormDialog.waitFor({ timeout: 5000 });
   }
 
@@ -203,7 +204,7 @@ export class HabitsPage {
       await this.page.getByRole('option', { name: new RegExp(`^${frequencyLabel}s?$`) }).click();
     }
 
-    await this.page.getByRole('button', { name: 'Save Changes' }).click();
+    await this.page.getByRole('button', { name: /SAVE CHANGES/i }).click();
     await expect(this.page.getByText('Task updated successfully')).toBeVisible({ timeout: 5000 });
   }
 
@@ -234,7 +235,7 @@ export class HabitsPage {
    * Close the habit form dialog.
    */
   async closeHabitForm(): Promise<void> {
-    await this.page.getByRole('button', { name: 'Cancel' }).click();
+    await this.page.getByRole('button', { name: /CANCEL/i }).click();
     await expect(this.habitFormDialog).not.toBeVisible();
   }
 }

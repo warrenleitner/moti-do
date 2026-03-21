@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Box,
-  Button,
   Group,
   Text,
-  Badge,
   ActionIcon,
   notifications,
 } from '../ui';
@@ -15,6 +13,7 @@ import {
   IconCalendar,
   IconFilter,
 } from '../ui/icons';
+import { ArcadeButton, DataBadge } from '../components/ui';
 import { AxiosError } from 'axios';
 import { TaskList, TaskForm } from '../components/tasks';
 import TaskTable from '../components/tasks/TaskTable';
@@ -494,17 +493,21 @@ export default function TasksPage() {
     <Box>
       {/* Processing date indicator */}
       <Group gap="xs" mb="sm" wrap="wrap">
-        <IconCalendar size={16} color="var(--mantine-color-blue-6)" />
-        <Text size="sm" c="dimmed">
-          Processing:
+        <IconCalendar size={16} color="#00E5FF" />
+        <Text size="sm" className="font-data" style={{ color: '#8A8F98', letterSpacing: '0.05em' }}>
+          PROCESSING:
         </Text>
-        <Badge size="sm" variant="outline" color="blue">
-          {currentProcessingDate || 'Not started'}
-        </Badge>
+        <DataBadge
+          value={currentProcessingDate || 'NOT STARTED'}
+          color="cyan"
+          size="sm"
+        />
         {systemStatus && systemStatus.pending_days > 0 && (
-          <Badge size="sm" color="red">
-            {systemStatus.pending_days} day{systemStatus.pending_days > 1 ? 's' : ''} behind
-          </Badge>
+          <DataBadge
+            value={`${systemStatus.pending_days} DAY${systemStatus.pending_days > 1 ? 'S' : ''} BEHIND`}
+            color="magenta"
+            size="sm"
+          />
         )}
       </Group>
 
@@ -514,34 +517,55 @@ export default function TasksPage() {
         <Box style={{ flex: 1, minWidth: 200 }}>
           <QuickAddBox />
         </Box>
-        <Group gap={4}>
+        {/* View toggle: card vs table */}
+        <Group
+          gap={0}
+          style={{
+            border: '1px solid rgba(59, 73, 76, 0.15)',
+          }}
+        >
           <ActionIcon
-            variant={viewMode === 'list' ? 'filled' : 'default'}
             size="md"
             onClick={() => handleViewModeChange('list')}
             aria-label="list view"
             aria-pressed={viewMode === 'list'}
+            style={{
+              backgroundColor: viewMode === 'list' ? '#272A34' : 'transparent',
+              color: viewMode === 'list' ? '#00E5FF' : '#8A8F98',
+              border: 'none',
+              borderRadius: 0,
+              boxShadow: viewMode === 'list' ? '0 0 6px rgba(0, 229, 255, 0.2)' : 'none',
+            }}
           >
             <IconList size={16} />
           </ActionIcon>
           <ActionIcon
-            variant={viewMode === 'table' ? 'filled' : 'default'}
             size="md"
             onClick={() => handleViewModeChange('table')}
             aria-label="table view"
             aria-pressed={viewMode === 'table'}
+            style={{
+              backgroundColor: viewMode === 'table' ? '#272A34' : 'transparent',
+              color: viewMode === 'table' ? '#00E5FF' : '#8A8F98',
+              border: 'none',
+              borderRadius: 0,
+              boxShadow: viewMode === 'table' ? '0 0 6px rgba(0, 229, 255, 0.2)' : 'none',
+            }}
           >
             <IconTable size={16} />
           </ActionIcon>
         </Group>
-        <Button
-          leftSection={<IconPlus size={16} />}
+        <ArcadeButton
+          variant="primary"
           onClick={handleCreateNew}
           disabled={isLoading}
           data-testid="add-task-fab"
         >
-          New Task
-        </Button>
+          <Group gap={4}>
+            <IconPlus size={16} />
+            NEW TASK
+          </Group>
+        </ArcadeButton>
       </Group>
 
       {/* Task list or table based on view mode */}
@@ -558,14 +582,16 @@ export default function TasksPage() {
       ) : (
         <>
           <Group justify="flex-end" mb={filtersVisible ? 0 : 'sm'}>
-            <Button
-              variant="subtle"
+            <ArcadeButton
+              variant="ghost"
               size="xs"
-              leftSection={<IconFilter size={16} />}
               onClick={handleToggleFilters}
             >
-              {filtersVisible ? 'Hide Filters' : 'Show Filters'}
-            </Button>
+              <Group gap={4}>
+                <IconFilter size={16} />
+                {filtersVisible ? 'HIDE FILTERS' : 'SHOW FILTERS'}
+              </Group>
+            </ArcadeButton>
           </Group>
           {filtersVisible && (
             <FilterBar
@@ -609,12 +635,12 @@ export default function TasksPage() {
             onActivateCrisisMode={handleActivateCrisisModeClick}
           />
           <Group justify="space-between" mt="sm">
-            <Text size="xs" c="dimmed">
-              Showing {visibleTasks.length} of {filteredTasks.length} tasks
+            <Text size="xs" className="font-data" style={{ color: '#5A5E66', letterSpacing: '0.05em' }}>
+              SHOWING {visibleTasks.length} OF {filteredTasks.length} TASKS
             </Text>
-            <Button variant="outline" size="xs" onClick={handleLoadMore} disabled={!hasMoreTasks}>
-              Load more
-            </Button>
+            <ArcadeButton variant="ghost" size="xs" onClick={handleLoadMore} disabled={!hasMoreTasks}>
+              LOAD MORE
+            </ArcadeButton>
           </Group>
         </>
       )}

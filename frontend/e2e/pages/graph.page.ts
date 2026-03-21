@@ -26,8 +26,8 @@ export class GraphPage {
     this.graphContainer = page.locator('.react-flow');
     // Empty state when no dependencies exist
     this.emptyStateMessage = page.getByText('No Dependencies');
-    // Mantine Drawer content panel (root overlay has height:0, so target the visible content)
-    this.taskDrawer = page.locator('[data-testid="task-drawer"] .mantine-Drawer-content');
+    // Inline inspector sidebar (ghost-border styled div with NODE_INSPECTOR header)
+    this.taskDrawer = page.locator('.ghost-border').filter({ has: page.locator('[aria-label="Close inspector"]') });
     this.snackbar = page.getByRole('alert').first();
 
     // Direction toggle - Mantine SegmentedControl renders labels inside a radiogroup
@@ -167,12 +167,11 @@ export class GraphPage {
   }
 
   /**
-   * Close the task drawer.
+   * Close the task inspector sidebar.
    */
   async closeDrawer(): Promise<void> {
-    // Find the close button in the drawer (X icon next to "Task Details" heading)
-    const closeButton = this.taskDrawer.locator('button').first();
-    await closeButton.click();
+    // The close button has aria-label="Close inspector"
+    await this.taskDrawer.locator('[aria-label="Close inspector"]').click();
     await expect(this.taskDrawer).not.toBeVisible({ timeout: 5000 });
   }
 
@@ -185,12 +184,11 @@ export class GraphPage {
   }
 
   /**
-   * Toggle task completion from the drawer.
+   * Toggle task completion from the inspector sidebar.
    */
   async toggleTaskCompleteInDrawer(): Promise<void> {
-    // The completion button has aria-label="Mark Complete" or "Mark Incomplete"
-    // Use .first() to select the main task completion button (not subtask buttons)
-    const completeButton = this.taskDrawer.getByRole('button', { name: /Mark Complete|Mark Incomplete/ }).first();
+    // ArcadeButton shows "COMPLETE" or "REOPEN"
+    const completeButton = this.taskDrawer.getByRole('button', { name: /^COMPLETE$|^REOPEN$/i }).first();
     await completeButton.click();
   }
 
@@ -261,11 +259,12 @@ export class GraphPage {
   }
 
   /**
-   * Get dependencies section from drawer.
+   * Get dependencies section from inspector sidebar.
    */
   async getDependenciesInDrawer(): Promise<string[]> {
-    const dependenciesSection = this.taskDrawer.getByText('Dependencies').locator('..');
-    const cards = dependenciesSection.locator('[data-testid="task-card"]');
+    // The dependency header uses "DEPENDS_ON" text
+    const dependenciesSection = this.taskDrawer.getByText(/DEPENDS_ON/).locator('..');
+    const cards = dependenciesSection.locator('[data-testid="task-card"], .ghost-border');
     const count = await cards.count();
     const titles: string[] = [];
     for (let i = 0; i < count; i++) {

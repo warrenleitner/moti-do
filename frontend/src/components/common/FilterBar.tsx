@@ -6,7 +6,6 @@ import {
   Indicator,
   Group,
   Stack,
-  Button,
   Checkbox,
   CloseButton,
   Drawer,
@@ -25,6 +24,7 @@ import {
   Duration,
   DurationEmoji,
 } from '../../types';
+import { ArcadeButton } from '../ui';
 import SearchInput from './SearchInput';
 
 type StatusFilter = 'all' | 'active' | 'completed' | 'blocked' | 'future';
@@ -78,10 +78,59 @@ const durationOptions: { value: Duration; label: string }[] = [
   { value: Duration.MINUSCULE, label: `${DurationEmoji[Duration.MINUSCULE]} Minuscule` },
 ];
 
+// Status tabs for Kinetic Console
+const statusTabs: { value: StatusFilter; label: string }[] = [
+  { value: 'active', label: 'ACTIVE' },
+  { value: 'blocked', label: 'BLOCKED' },
+  { value: 'future', label: 'FUTURE' },
+  { value: 'completed', label: 'COMPLETED' },
+  { value: 'all', label: 'ALL' },
+];
+
 // Helper to toggle a value in an array (for multi-select checkboxes)
 function toggleArrayValue<T>(arr: T[], value: T): T[] {
   return arr.includes(value) ? arr.filter((x) => x !== value) : [...arr, value];
 }
+
+/** Kinetic Console-styled select: void bg, ghost border, 0px radius, JetBrains Mono options */
+const kcSelectStyles = {
+  input: {
+    backgroundColor: '#0B0E17',
+    borderColor: 'rgba(59, 73, 76, 0.15)',
+    borderRadius: 0,
+    color: '#E0E0E0',
+    fontFamily: '"JetBrains Mono", monospace',
+    fontSize: '0.8125rem',
+    '&:focus': {
+      borderColor: '#00E5FF',
+      boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+    },
+  },
+  label: {
+    fontFamily: '"JetBrains Mono", monospace',
+    fontSize: '0.6875rem',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.1em',
+    color: '#8A8F98',
+  },
+  dropdown: {
+    backgroundColor: '#181B25',
+    borderColor: 'rgba(59, 73, 76, 0.15)',
+    borderRadius: 0,
+  },
+  option: {
+    fontFamily: '"JetBrains Mono", monospace',
+    fontSize: '0.8125rem',
+    color: '#E0E0E0',
+    '&[data-selected]': {
+      backgroundColor: 'rgba(0, 229, 255, 0.15)',
+      color: '#00E5FF',
+    },
+    '&[data-hovered]': {
+      backgroundColor: '#272A34',
+    },
+  },
+};
 
 // UI component - tested via integration tests
 /* v8 ignore start */
@@ -133,21 +182,6 @@ export default function FilterBar({
   const filterControls = (
     <>
       <Select
-        label="Status"
-        size="sm"
-        w={isMobile ? '100%' : 120}
-        value={status}
-        onChange={(val) => onStatusChange((val || 'active') as StatusFilter)}
-        data={[
-          { value: 'active', label: 'Active' },
-          { value: 'blocked', label: 'Blocked' },
-          { value: 'future', label: 'Future' },
-          { value: 'completed', label: 'Completed' },
-          { value: 'all', label: 'All' },
-        ]}
-      />
-
-      <Select
         label="Priority"
         size="sm"
         w={isMobile ? '100%' : 140}
@@ -155,6 +189,7 @@ export default function FilterBar({
         placeholder={priorities.length > 1 ? `${priorities.length} selected` : 'All'}
         onChange={() => {/* handled by renderOption */}}
         data={priorityOptions.map((o) => ({ value: o.value, label: o.label }))}
+        styles={kcSelectStyles}
         renderOption={({ option }) => (
           <Group gap="xs" wrap="nowrap" onClick={(e) => {
             e.stopPropagation();
@@ -168,7 +203,7 @@ export default function FilterBar({
               tabIndex={-1}
               style={{ pointerEvents: 'none' }}
             />
-            <Text size="sm">{option.label}</Text>
+            <Text size="sm" className="font-data">{option.label}</Text>
           </Group>
         )}
       />
@@ -181,6 +216,7 @@ export default function FilterBar({
         placeholder={difficulties.length > 1 ? `${difficulties.length} selected` : 'All'}
         onChange={() => {/* handled by renderOption */}}
         data={difficultyOptions.map((o) => ({ value: o.value, label: o.label }))}
+        styles={kcSelectStyles}
         renderOption={({ option }) => (
           <Group gap="xs" wrap="nowrap" onClick={(e) => {
             e.stopPropagation();
@@ -194,7 +230,7 @@ export default function FilterBar({
               tabIndex={-1}
               style={{ pointerEvents: 'none' }}
             />
-            <Text size="sm">{option.label}</Text>
+            <Text size="sm" className="font-data">{option.label}</Text>
           </Group>
         )}
       />
@@ -207,6 +243,7 @@ export default function FilterBar({
         placeholder={durations.length > 1 ? `${durations.length} selected` : 'All'}
         onChange={() => {/* handled by renderOption */}}
         data={durationOptions.map((o) => ({ value: o.value, label: o.label }))}
+        styles={kcSelectStyles}
         renderOption={({ option }) => (
           <Group gap="xs" wrap="nowrap" onClick={(e) => {
             e.stopPropagation();
@@ -220,7 +257,7 @@ export default function FilterBar({
               tabIndex={-1}
               style={{ pointerEvents: 'none' }}
             />
-            <Text size="sm">{option.label}</Text>
+            <Text size="sm" className="font-data">{option.label}</Text>
           </Group>
         )}
       />
@@ -234,6 +271,7 @@ export default function FilterBar({
           placeholder={selectedProjects.length > 1 ? `${selectedProjects.length} selected` : 'All'}
           onChange={() => {/* handled by renderOption */}}
           data={projects.map((p) => ({ value: p, label: p }))}
+          styles={kcSelectStyles}
           renderOption={({ option }) => (
             <Group gap="xs" wrap="nowrap" onClick={(e) => {
               e.stopPropagation();
@@ -247,7 +285,7 @@ export default function FilterBar({
                 tabIndex={-1}
                 style={{ pointerEvents: 'none' }}
               />
-              <Text size="sm">{option.label}</Text>
+              <Text size="sm" className="font-data">{option.label}</Text>
             </Group>
           )}
         />
@@ -262,6 +300,7 @@ export default function FilterBar({
           placeholder={selectedTags.length > 1 ? `${selectedTags.length} selected` : 'All'}
           onChange={() => {/* handled by renderOption */}}
           data={tags.map((t) => ({ value: t, label: t }))}
+          styles={kcSelectStyles}
           renderOption={({ option }) => (
             <Group gap="xs" wrap="nowrap" onClick={(e) => {
               e.stopPropagation();
@@ -275,7 +314,7 @@ export default function FilterBar({
                 tabIndex={-1}
                 style={{ pointerEvents: 'none' }}
               />
-              <Text size="sm">{option.label}</Text>
+              <Text size="sm" className="font-data">{option.label}</Text>
             </Group>
           )}
         />
@@ -296,18 +335,37 @@ export default function FilterBar({
         }}
         clearable
         placeholder="Pick a date"
+        styles={{
+          input: {
+            backgroundColor: '#0B0E17',
+            borderColor: 'rgba(59, 73, 76, 0.15)',
+            borderRadius: 0,
+            color: '#E0E0E0',
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: '0.8125rem',
+          },
+          label: {
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: '0.6875rem',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.1em',
+            color: '#8A8F98',
+          },
+        }}
       />
 
       {hasActiveFilters && (
-        <Button
-          leftSection={<IconX size={16} />}
+        <ArcadeButton
+          variant="ghost"
+          size="xs"
           onClick={onReset}
-          size="sm"
-          variant="subtle"
           style={{ whiteSpace: 'nowrap', alignSelf: 'flex-end', width: isMobile ? '100%' : 'auto' }}
         >
-          Clear filters
-        </Button>
+          <Group gap={4}>
+            <IconX size={14} />
+            CLEAR FILTERS
+          </Group>
+        </ArcadeButton>
       )}
     </>
   );
@@ -315,11 +373,12 @@ export default function FilterBar({
   // Active filter chips - shown in both mobile and desktop
   const activeFilterChips = hasActiveFilters && (
     <Group gap="xs" mt="sm" wrap="wrap">
-      <IconFilter size={18} color="gray" style={{ marginRight: 4 }} />
+      <IconFilter size={18} color="#5A5E66" style={{ marginRight: 4 }} />
       {search && (
         <Badge
           variant="light"
           size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onSearchChange('')} aria-label="Clear search filter" data-testid="CancelIcon" />
           }
@@ -331,6 +390,7 @@ export default function FilterBar({
         <Badge
           variant="light"
           size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onStatusChange('active')} aria-label="Clear status filter" data-testid="CancelIcon" />
           }
@@ -343,6 +403,7 @@ export default function FilterBar({
           key={p}
           variant="light"
           size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onPrioritiesChange(priorities.filter((x) => x !== p))} aria-label="Clear priority filter" data-testid="CancelIcon" />
           }
@@ -355,6 +416,7 @@ export default function FilterBar({
           key={d}
           variant="light"
           size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onDifficultiesChange(difficulties.filter((x) => x !== d))} aria-label="Clear difficulty filter" data-testid="CancelIcon" />
           }
@@ -367,6 +429,7 @@ export default function FilterBar({
           key={d}
           variant="light"
           size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onDurationsChange(durations.filter((x) => x !== d))} aria-label="Clear duration filter" data-testid="CancelIcon" />
           }
@@ -379,6 +442,7 @@ export default function FilterBar({
           key={p}
           variant="light"
           size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onProjectsChange(selectedProjects.filter((x) => x !== p))} aria-label="Clear project filter" data-testid="CancelIcon" />
           }
@@ -391,6 +455,7 @@ export default function FilterBar({
           key={t}
           variant="light"
           size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onTagsChange(selectedTags.filter((x) => x !== t))} aria-label="Clear tag filter" data-testid="CancelIcon" />
           }
@@ -402,6 +467,7 @@ export default function FilterBar({
         <Badge
           variant="light"
           size="sm"
+          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onMaxDueDateChange(undefined)} aria-label="Clear due date filter" data-testid="CancelIcon" />
           }
@@ -416,6 +482,40 @@ export default function FilterBar({
   if (isMobile) {
     return (
       <Box mb="lg">
+        {/* Status tabs (mobile) */}
+        <Box
+          style={{
+            display: 'flex',
+            gap: 0,
+            borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+            marginBottom: 12,
+            overflowX: 'auto',
+          }}
+        >
+          {statusTabs.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => onStatusChange(tab.value)}
+              style={{
+                background: 'none',
+                border: 'none',
+                borderBottom: status === tab.value ? '2px solid #00E5FF' : '2px solid transparent',
+                padding: '8px 16px',
+                fontFamily: '"Space Grotesk", sans-serif',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                letterSpacing: '0.05em',
+                color: status === tab.value ? '#00E5FF' : '#9BA3AF',
+                cursor: 'pointer',
+                transition: 'color 0.15s ease, border-color 0.15s ease',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </Box>
+
         {/* Compact mobile filter bar */}
         <Group gap="sm" align="center" wrap="nowrap">
           <Box style={{ flex: 1 }}>
@@ -426,24 +526,28 @@ export default function FilterBar({
             />
           </Box>
           <Indicator label={activeFilterCount} color="blue" size={16} disabled={activeFilterCount === 0}>
-            <Button
-              variant="outline"
-              leftSection={<IconFilter size={16} />}
+            <ArcadeButton
+              variant="ghost"
+              size="xs"
               onClick={() => setDrawerOpen(true)}
-              size="sm"
             >
-              Filters
-            </Button>
+              <Group gap={4}>
+                <IconFilter size={16} />
+                FILTERS
+              </Group>
+            </ArcadeButton>
           </Indicator>
           {activeFilterCount === 0 && (
-            <Button
-              variant="outline"
-              leftSection={<IconFilter size={16} />}
+            <ArcadeButton
+              variant="ghost"
+              size="xs"
               onClick={() => setDrawerOpen(true)}
-              size="sm"
             >
-              Filters
-            </Button>
+              <Group gap={4}>
+                <IconFilter size={16} />
+                FILTERS
+              </Group>
+            </ArcadeButton>
           )}
         </Group>
 
@@ -458,19 +562,28 @@ export default function FilterBar({
           size="auto"
           styles={{
             content: {
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
+              borderTopLeftRadius: 0,
+              borderTopRightRadius: 0,
               maxHeight: '80vh',
+              backgroundColor: '#181B25',
+              borderTop: '1px solid rgba(59, 73, 76, 0.15)',
             },
           }}
         >
           <Box p="md">
             {/* Drawer header */}
             <Group justify="space-between" align="center" mb="md">
-              <Text fw={700} size="lg">Filter Tasks</Text>
-              <CloseButton onClick={() => setDrawerOpen(false)} />
+              <Text
+                fw={700}
+                size="lg"
+                className="font-display"
+                style={{ color: '#00E5FF', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+              >
+                FILTER TASKS
+              </Text>
+              <CloseButton onClick={() => setDrawerOpen(false)} style={{ color: '#8A8F98' }} />
             </Group>
-            <Divider mb="md" />
+            <Divider mb="md" style={{ borderColor: 'rgba(59, 73, 76, 0.15)' }} />
 
             {/* Filter controls in vertical stack */}
             <Stack gap="sm">
@@ -478,22 +591,62 @@ export default function FilterBar({
             </Stack>
 
             {/* Apply button */}
-            <Button
-              fullWidth
-              mt="lg"
-              onClick={() => setDrawerOpen(false)}
-            >
-              Apply Filters
-            </Button>
+            <Box mt="lg">
+              <ArcadeButton
+                variant="primary"
+                fullWidth
+                onClick={() => setDrawerOpen(false)}
+              >
+                APPLY FILTERS
+              </ArcadeButton>
+            </Box>
           </Box>
         </Drawer>
       </Box>
     );
   }
 
-  // Desktop view: inline filters
+  // Desktop view: status tabs + inline filters
   return (
     <Box mb="lg">
+      {/* Status tabs */}
+      <Box
+        style={{
+          display: 'flex',
+          gap: 0,
+          borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+          marginBottom: 16,
+        }}
+      >
+        {statusTabs.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => onStatusChange(tab.value)}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: status === tab.value ? '2px solid #00E5FF' : '2px solid transparent',
+              padding: '8px 20px',
+              fontFamily: '"Space Grotesk", sans-serif',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              letterSpacing: '0.05em',
+              color: status === tab.value ? '#00E5FF' : '#9BA3AF',
+              cursor: 'pointer',
+              transition: 'color 0.15s ease, border-color 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (status !== tab.value) (e.currentTarget.style.color = '#E0E0E0');
+            }}
+            onMouseLeave={(e) => {
+              if (status !== tab.value) (e.currentTarget.style.color = '#9BA3AF');
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </Box>
+
       {/* Main filter row */}
       <Group gap="sm" align="flex-start" wrap="wrap">
         <SearchInput

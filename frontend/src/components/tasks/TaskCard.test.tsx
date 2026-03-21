@@ -123,7 +123,7 @@ describe('TaskCard', () => {
         onDelete={mockOnDelete}
       />
     );
-    expect(screen.getByText(/Subtasks: 1\/2/)).toBeInTheDocument();
+    expect(screen.getByText(/SUBTASKS: 1\/2/)).toBeInTheDocument();
   });
 
   it('calls onComplete when complete button is clicked', async () => {
@@ -218,7 +218,7 @@ describe('TaskCard', () => {
         isBlocked={true}
       />
     );
-    expect(screen.getByText('Blocked')).toBeInTheDocument();
+    expect(screen.getByText('BLOCKED')).toBeInTheDocument();
   });
 
   it('disables complete button when blocked', () => {
@@ -698,7 +698,7 @@ describe('TaskCard', () => {
 
         // The swipe indicator should not be present for blocked tasks
         expect(screen.getByText('Test Task')).toBeInTheDocument();
-        expect(screen.getByText('Blocked')).toBeInTheDocument();
+        expect(screen.getByText('BLOCKED')).toBeInTheDocument();
       });
 
       it('calls onComplete when swiped right far enough on mobile', async () => {

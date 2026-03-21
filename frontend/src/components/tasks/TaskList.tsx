@@ -95,7 +95,7 @@ export default function TaskList({
 
       {/* Sort controls */}
       <Group gap="md" align="center" mb="md" wrap="wrap">
-        <IconArrowsSort size={20} color="var(--mantine-color-gray-6)" />
+        <IconArrowsSort size={20} color="#8A8F98" />
         <Select
           value={sort.field}
           onChange={(value) => {
@@ -111,6 +111,26 @@ export default function TaskList({
           size="sm"
           w={150}
           aria-label="Sort by"
+          styles={{
+            input: {
+              backgroundColor: '#0B0E17',
+              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderRadius: 0,
+              color: '#E0E0E0',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.8125rem',
+            },
+            dropdown: {
+              backgroundColor: '#181B25',
+              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderRadius: 0,
+            },
+            option: {
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.8125rem',
+              color: '#E0E0E0',
+            },
+          }}
         />
         <Select
           value={sort.order}
@@ -124,12 +144,49 @@ export default function TaskList({
           size="sm"
           w={120}
           aria-label="Order"
+          styles={{
+            input: {
+              backgroundColor: '#0B0E17',
+              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderRadius: 0,
+              color: '#E0E0E0',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.8125rem',
+            },
+            dropdown: {
+              backgroundColor: '#181B25',
+              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderRadius: 0,
+            },
+            option: {
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.8125rem',
+              color: '#E0E0E0',
+            },
+          }}
         />
         <SegmentedControl
           value={subtaskViewMode}
           onChange={(value) => setSubtaskViewMode(value as SubtaskViewMode)}
           size="xs"
           aria-label="subtask view mode"
+          styles={{
+            root: {
+              backgroundColor: '#272A34',
+              borderRadius: 0,
+            },
+            indicator: {
+              backgroundColor: '#10131C',
+              borderRadius: 0,
+              boxShadow: '0 0 6px rgba(0, 229, 255, 0.2)',
+            },
+            label: {
+              color: '#8A8F98',
+              '&[data-active]': {
+                color: '#00E5FF',
+              },
+            },
+          }}
           data={[
             {
               value: 'hidden',
@@ -158,8 +215,8 @@ export default function TaskList({
           ]}
         />
         <Box style={{ flex: 1 }} />
-        <Text size="sm" c="dimmed">
-          {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
+        <Text size="sm" className="font-data" style={{ color: '#5A5E66', letterSpacing: '0.05em' }}>
+          {filteredTasks.length} TASK{filteredTasks.length !== 1 ? 'S' : ''}
         </Text>
       </Group>
 

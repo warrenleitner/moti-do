@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Box, Text, notifications } from '../ui';
+import { useState, useEffect, useMemo } from 'react';
+import { Box, notifications } from '../ui';
+import { StatCard } from '../components/ui';
 import { TaskCalendar } from '../components/calendar';
 import { TaskForm } from '../components/tasks';
 import { useTaskStore, useVisibleTasks } from '../store';
@@ -25,6 +26,30 @@ export default function CalendarPage() {
       fetchTasks({ includeCompleted: true }).catch(() => {});
     }
   }, [fetchTasks, hasCompletedData]);
+
+  // Calendar stats
+  const stats = useMemo(() => {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+    let thisWeek = 0;
+    let overdue = 0;
+    let upcoming = 0;
+
+    visibleTasks.forEach((t) => {
+      if (!t.due_date || t.is_complete) return;
+      const due = new Date(t.due_date);
+      if (due >= startOfWeek && due < endOfWeek) thisWeek++;
+      if (due < now) overdue++;
+      if (due >= now) upcoming++;
+    });
+
+    return { thisWeek, overdue, upcoming };
+  }, [visibleTasks]);
 
   const handleCreateTask = (date: Date) => {
     setEditingTask(null);
@@ -110,9 +135,39 @@ export default function CalendarPage() {
 
   return (
     <Box>
-      <Text size="sm" c="dimmed" mb="md">
-        View and manage tasks by their due dates. Click on a task to edit it, or click on a date to create a new task. Drag tasks to reschedule.
-      </Text>
+      {/* Page header */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1
+          className="font-display"
+          style={{
+            fontSize: '1.5rem',
+            fontWeight: 700,
+            color: '#E0E0E0',
+            margin: 0,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+          }}
+        >
+          TEMPORAL_GRID
+        </h1>
+        <p className="micro-meta" style={{ margin: '0.25rem 0 0' }}>
+          View and manage tasks by their due dates
+        </p>
+      </div>
+
+      {/* Stats bar */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gap: '0.75rem',
+          marginBottom: '1.5rem',
+        }}
+      >
+        <StatCard label="TASKS_THIS_WEEK" value={stats.thisWeek} accentColor="cyan" />
+        <StatCard label="OVERDUE" value={stats.overdue} accentColor="magenta" />
+        <StatCard label="UPCOMING" value={stats.upcoming} accentColor="amber" />
+      </div>
 
       <TaskCalendar
         tasks={visibleTasks}

@@ -76,6 +76,5 @@ describe('CalendarPage', () => {
   it('displays helper text for calendar usage', () => {
     render(<CalendarPage />);
     expect(screen.getByText(/view and manage tasks by their due dates/i)).toBeInTheDocument();
-    expect(screen.getByText(/click on a date to create a new task/i)).toBeInTheDocument();
   });
 });

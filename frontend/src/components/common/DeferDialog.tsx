@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Modal, Button, Radio, Tooltip, Text, Stack, Group, DatePickerInput } from '../../ui';
+import { Modal, Radio, Tooltip, Text, Stack, DatePickerInput } from '../../ui';
+import { ArcadeButton } from '../ui';
 import type { Task } from '../../types/models';
 
 interface DeferDialogProps {
@@ -52,9 +53,26 @@ export default function DeferDialog({ open, tasks, onConfirm, onCancel }: DeferD
     <Modal
       opened={open}
       onClose={handleClose}
-      title={`Delay ${tasks.length} task${tasks.length !== 1 ? 's' : ''}`}
+      title={
+        <span
+          className="font-display"
+          style={{
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            color: '#FFC775',
+          }}
+        >
+          DEFER {tasks.length} TASK{tasks.length !== 1 ? 'S' : ''}
+        </span>
+      }
       size="xs"
       centered
+      styles={{
+        content: {
+          borderTop: '3px solid #FFC775',
+        },
+      }}
     >
       <Stack>
         <Radio.Group
@@ -90,20 +108,20 @@ export default function DeferDialog({ open, tasks, onConfirm, onCancel }: DeferD
         )}
 
         {mode === 'next_recurrence' && !allRecurring && hasRecurringTasks && (
-          <Text size="sm" c="dimmed" mt="xs">
+          <Text size="sm" style={{ color: '#5A5E66' }} mt="xs">
             Some selected tasks are not recurring. Only recurring tasks can be deferred to their
             next recurrence.
           </Text>
         )}
 
-        <Group justify="flex-end" mt="md">
-          <Button variant="subtle" onClick={handleClose}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+          <ArcadeButton variant="ghost" onClick={handleClose}>
             Cancel
-          </Button>
-          <Button onClick={handleConfirm} disabled={!canConfirm}>
+          </ArcadeButton>
+          <ArcadeButton variant="primary" onClick={handleConfirm} disabled={!canConfirm}>
             Defer
-          </Button>
-        </Group>
+          </ArcadeButton>
+        </div>
       </Stack>
     </Modal>
   );

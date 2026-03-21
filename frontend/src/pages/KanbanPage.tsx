@@ -1,9 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Box, notifications } from '../ui';
+import { Box, Group, Text, notifications } from '../ui';
+import { IconPlus, IconAlertTriangle } from '../ui/icons';
 import { KanbanBoard } from '../components/kanban';
 import { TaskForm } from '../components/tasks';
 import { useTaskStore, useVisibleTasks } from '../store';
 import { useUserStore, useSystemStatus } from '../store/userStore';
+import { DataBadge, ArcadeButton } from '../components/ui';
 import type { Task } from '../types';
 import { Priority, Difficulty, Duration } from '../types';
 
@@ -19,6 +21,8 @@ export default function KanbanPage() {
     fetchTasks,
     hasCompletedData,
     crisisModeActive,
+    crisisTaskIds,
+    exitCrisisMode,
   } = useTaskStore();
   const visibleTasks = useVisibleTasks(tasks);
   const { fetchStats } = useUserStore();
@@ -76,6 +80,11 @@ export default function KanbanPage() {
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
+    setFormOpen(true);
+  };
+
+  const handleNewTask = () => {
+    setEditingTask(null);
     setFormOpen(true);
   };
 
@@ -146,16 +155,97 @@ export default function KanbanPage() {
     }
   };
 
+  const crisisTaskIdSet = useMemo(
+    () => new Set(crisisTaskIds),
+    [crisisTaskIds],
+  );
+
   return (
-    <Box>
+    <Box
+      className={crisisModeActive ? 'crisis-container-pulse' : undefined}
+      style={{ padding: 0 }}
+    >
+      {/* Crisis Mode Banner */}
+      {crisisModeActive && (
+        <Box
+          style={{
+            backgroundColor: 'var(--kc-amber)',
+            color: '#0B0E17',
+            padding: '8px 16px',
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <Group gap={8} align="center">
+            <IconAlertTriangle size={18} />
+            <Text
+              size="sm"
+              fw={700}
+              style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            >
+              ⚠ CRISIS MODE ACTIVE
+            </Text>
+          </Group>
+          <ArcadeButton
+            variant="ghost"
+            size="xs"
+            onClick={exitCrisisMode}
+            style={{
+              color: '#0B0E17',
+              borderColor: 'rgba(11, 14, 23, 0.3)',
+            }}
+          >
+            EXIT
+          </ArcadeButton>
+        </Box>
+      )}
+
+      {/* Page Header */}
+      <Group justify="space-between" align="center" mb="md" wrap="wrap">
+        <Group gap="md" align="center">
+          <Text
+            fw={700}
+            size="xl"
+            style={{
+              fontFamily: '"Space Grotesk", sans-serif',
+              letterSpacing: '0.05em',
+              color: 'var(--kc-text-primary)',
+            }}
+          >
+            KANBAN_BOARD
+          </Text>
+          <DataBadge
+            value={`${kanbanTasks.length} TASKS`}
+            color="cyan"
+          />
+        </Group>
+        <ArcadeButton
+          variant="primary"
+          size="sm"
+          leftSection={<IconPlus size={16} />}
+          onClick={handleNewTask}
+        >
+          NEW MISSION
+        </ArcadeButton>
+      </Group>
+
       {!ready ? null : (
-      <KanbanBoard
-        tasks={kanbanTasks}
-        onUpdateTask={handleUpdateTask}
-        onEditTask={handleEditTask}
-        onCompleteTask={handleCompleteTask}
-        onUncompleteTask={handleUncompleteTask}
-      />
+        <KanbanBoard
+          tasks={kanbanTasks}
+          onUpdateTask={handleUpdateTask}
+          onEditTask={handleEditTask}
+          onCompleteTask={handleCompleteTask}
+          onUncompleteTask={handleUncompleteTask}
+          crisisModeActive={crisisModeActive}
+          crisisTaskIds={crisisTaskIdSet}
+        />
       )}
 
       {/* Task form dialog */}

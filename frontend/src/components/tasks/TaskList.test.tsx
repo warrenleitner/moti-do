@@ -152,7 +152,7 @@ describe('TaskList', () => {
     vi.mocked(stores.useFilteredTasks).mockReturnValue(tasks);
 
     render(<TaskList {...defaultProps} />);
-    expect(screen.getByText('2 tasks')).toBeInTheDocument();
+    expect(screen.getByText('2 TASKS')).toBeInTheDocument();
   });
 
   it('handles sort field change by interacting with select', async () => {
@@ -359,7 +359,7 @@ describe('TaskList', () => {
     vi.mocked(stores.useFilteredTasks).mockReturnValue(tasks);
 
     render(<TaskList {...defaultProps} />);
-    expect(screen.getByText('1 task')).toBeInTheDocument();
+    expect(screen.getByText('1 TASK')).toBeInTheDocument();
   });
 
   it('provides projects list from all tasks to FilterBar', () => {

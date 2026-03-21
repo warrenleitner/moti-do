@@ -23,6 +23,7 @@ export {
   IconClock,
   IconCopy,
   IconCornerDownRight,
+  IconDots,
   IconDownload,
   IconEdit,
   IconExternalLink,

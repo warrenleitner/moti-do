@@ -30,7 +30,7 @@ describe('QuickAddBox', () => {
 
   it('renders input field', () => {
     render(<QuickAddBox />);
-    expect(screen.getByPlaceholderText(/add a task/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/DEPLOY NEW TASK/i)).toBeInTheDocument();
   });
 
   it('renders add button', () => {
@@ -47,7 +47,7 @@ describe('QuickAddBox', () => {
   it('add button is enabled when input has text', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Test task');
 
     const addButton = screen.getByRole('button', { name: /add task/i });
@@ -57,7 +57,7 @@ describe('QuickAddBox', () => {
   it('creates task on Enter key', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Test task{Enter}');
 
     await waitFor(() => {
@@ -72,7 +72,7 @@ describe('QuickAddBox', () => {
   it('creates task on add button click', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Test task');
 
     const addButton = screen.getByRole('button', { name: /add task/i });
@@ -90,7 +90,7 @@ describe('QuickAddBox', () => {
   it('clears input after successful creation', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Test task{Enter}');
 
     await waitFor(() => {
@@ -101,7 +101,7 @@ describe('QuickAddBox', () => {
   it('shows success message after task creation', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Test task{Enter}');
 
     await waitFor(() => {
@@ -113,7 +113,7 @@ describe('QuickAddBox', () => {
     const onTaskCreated = vi.fn();
     const { user } = render(<QuickAddBox onTaskCreated={onTaskCreated} />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Test task{Enter}');
 
     await waitFor(() => {
@@ -133,7 +133,7 @@ describe('QuickAddBox', () => {
   it('shows priority chip when priority modifier used', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Test task !high');
 
     expect(screen.getByText(/high/i)).toBeInTheDocument();
@@ -142,26 +142,26 @@ describe('QuickAddBox', () => {
   it('shows tag chips when tag modifiers used', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Test task #work #urgent');
 
-    expect(screen.getByText('#work')).toBeInTheDocument();
-    expect(screen.getByText('#urgent')).toBeInTheDocument();
+    expect(screen.getByText('#WORK')).toBeInTheDocument();
+    expect(screen.getByText('#URGENT')).toBeInTheDocument();
   });
 
   it('shows project chip when project modifier used', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Test task ~home');
 
-    expect(screen.getByText('~home')).toBeInTheDocument();
+    expect(screen.getByText('~HOME')).toBeInTheDocument();
   });
 
   it('parses priority and passes to createTask', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Test task !high{Enter}');
 
     await waitFor(() => {
@@ -177,7 +177,7 @@ describe('QuickAddBox', () => {
   it('parses tags and passes to createTask with inbox default', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Test task #work #urgent{Enter}');
 
     await waitFor(() => {
@@ -193,7 +193,7 @@ describe('QuickAddBox', () => {
   it('parses project and passes to createTask', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Test task ~home{Enter}');
 
     await waitFor(() => {
@@ -209,7 +209,7 @@ describe('QuickAddBox', () => {
   it('applies default values for missing fields including inbox tag', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, 'Simple task{Enter}');
 
     await waitFor(() => {
@@ -231,7 +231,7 @@ describe('QuickAddBox', () => {
   it('does not create task with empty title', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, '   {Enter}');
 
     expect(mockCreateTask).not.toHaveBeenCalled();
@@ -240,7 +240,7 @@ describe('QuickAddBox', () => {
   it('does not create task with only modifiers', async () => {
     const { user } = render(<QuickAddBox />);
 
-    const input = screen.getByPlaceholderText(/add a task/i);
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
     await user.type(input, '!high #tag{Enter}');
 
     expect(mockCreateTask).not.toHaveBeenCalled();

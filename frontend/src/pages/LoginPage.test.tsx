@@ -39,13 +39,12 @@ describe('LoginPage', () => {
     it('should render login form by default', () => {
       render(<LoginPage />);
 
-      expect(screen.getByRole('img', { name: 'Motodo' })).toBeInTheDocument();
-      expect(screen.getByText('Task and Habit Tracker')).toBeInTheDocument();
+      expect(screen.getByText('MOTI-DO')).toBeInTheDocument();
+      expect(screen.getByText('SYSTEM ACCESS')).toBeInTheDocument();
       expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-      // Check for submit button (type="submit")
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit');
+      // Check for submit button (type="submit") - button text is now "AUTHENTICATE"
+      const submitButton = screen.getByRole('button', { name: /authenticate/i });
       expect(submitButton).toBeInTheDocument();
     });
 
@@ -59,7 +58,7 @@ describe('LoginPage', () => {
       const user = userEvent.setup();
       render(<LoginPage />);
 
-      const registerButton = screen.getByText('Register');
+      const registerButton = screen.getByText('REGISTER');
       await user.click(registerButton);
 
       expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
@@ -71,7 +70,7 @@ describe('LoginPage', () => {
       const user = userEvent.setup();
       render(<LoginPage />);
 
-      const registerToggle = screen.getByText('Register');
+      const registerToggle = screen.getByText('REGISTER');
       await user.click(registerToggle);
 
       // Check that submit button exists (type="submit")
@@ -88,7 +87,7 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'testpassword');
 
-      const registerToggle = screen.getByText('Register');
+      const registerToggle = screen.getByText('REGISTER');
       await user.click(registerToggle);
 
       expect(passwordField).toHaveValue('');
@@ -102,14 +101,13 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'short');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /authenticate/i });
       await user.click(submitButton);
 
       expect(await screen.findByText(/password must be at least 8 characters/i)).toBeInTheDocument();
 
       // Switch to register mode
-      const registerToggle = screen.getByText('Register');
+      const registerToggle = screen.getByText('REGISTER');
       await user.click(registerToggle);
 
       expect(screen.queryByText(/password must be at least 8 characters/i)).not.toBeInTheDocument();
@@ -124,8 +122,7 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'short');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /authenticate/i });
       await user.click(submitButton);
 
       expect(await screen.findByText(/password must be at least 8 characters/i)).toBeInTheDocument();
@@ -137,7 +134,7 @@ describe('LoginPage', () => {
       render(<LoginPage />);
 
       // Switch to register mode
-      const registerToggle = screen.getByText('Register');
+      const registerToggle = screen.getByText('REGISTER');
       await user.click(registerToggle);
 
       const passwordField = screen.getAllByLabelText(/password/i)[0];
@@ -169,8 +166,7 @@ describe('LoginPage', () => {
       await user.type(usernameField, 'testuser');
       await user.type(passwordField, 'password123');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /authenticate/i });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -187,8 +183,7 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'password123');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /authenticate/i });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -207,8 +202,7 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'wrongpassword');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /authenticate/i });
       await user.click(submitButton);
 
       expect(await screen.findByText(/invalid credentials/i)).toBeInTheDocument();
@@ -223,8 +217,7 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'password123');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /authenticate/i });
       await user.click(submitButton);
 
       expect(await screen.findByText(/login failed/i)).toBeInTheDocument();
@@ -243,8 +236,7 @@ describe('LoginPage', () => {
       const passwordField = screen.getByLabelText(/password/i);
       await user.type(passwordField, 'password123');
 
-      const buttons = screen.getAllByRole('button', { name: /login/i });
-      const submitButton = buttons.find((btn) => btn.getAttribute('type') === 'submit')!;
+      const submitButton = screen.getByRole('button', { name: /authenticate/i });
       await user.click(submitButton);
 
       // Form should be disabled
@@ -271,7 +263,7 @@ describe('LoginPage', () => {
       render(<LoginPage />);
 
       // Switch to register mode
-      const registerToggle = screen.getByText('Register');
+      const registerToggle = screen.getByText('REGISTER');
       await user.click(registerToggle);
 
       const usernameField = screen.getByLabelText(/username/i);
@@ -299,7 +291,7 @@ describe('LoginPage', () => {
       render(<LoginPage />);
 
       // Switch to register mode
-      const registerToggle = screen.getByText('Register');
+      const registerToggle = screen.getByText('REGISTER');
       await user.click(registerToggle);
 
       const passwordField = screen.getAllByLabelText(/password/i)[0];
@@ -326,7 +318,7 @@ describe('LoginPage', () => {
       render(<LoginPage />);
 
       // Switch to register mode
-      const registerToggle = screen.getByText('Register');
+      const registerToggle = screen.getByText('REGISTER');
       await user.click(registerToggle);
 
       const passwordField = screen.getAllByLabelText(/password/i)[0];

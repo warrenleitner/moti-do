@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Stack, Text, Title, Button, Box } from '../../ui';
+import { Stack, Box } from '../../ui';
+import { ArcadeButton } from '../ui';
 import { IconInbox } from '../../ui/icons';
 
 interface EmptyStateProps {
@@ -19,19 +20,36 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <Stack align="center" justify="center" ta="center" py="xl" px="lg">
-      <Box c="dimmed" mb="sm">
+      <Box mb="sm" style={{ color: '#3B494C' }}>
         {icon || <IconInbox size={64} stroke={1.5} data-testid="InboxOutlinedIcon" />}
       </Box>
-      <Title order={4}>{title}</Title>
+      <span
+        className="font-data"
+        style={{
+          fontSize: '0.8125rem',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.15em',
+          color: '#5A5E66',
+        }}
+      >
+        {title}
+      </span>
       {description && (
-        <Text size="sm" c="dimmed" maw={400}>
+        <span
+          style={{
+            fontSize: '0.8125rem',
+            color: '#5A5E66',
+            maxWidth: 400,
+          }}
+        >
           {description}
-        </Text>
+        </span>
       )}
       {actionLabel && onAction && (
-        <Button onClick={onAction} mt="md">
+        <ArcadeButton onClick={onAction} variant="ghost" style={{ marginTop: '0.75rem' }}>
           {actionLabel}
-        </Button>
+        </ArcadeButton>
       )}
     </Stack>
   );

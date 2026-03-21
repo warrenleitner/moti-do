@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Box, Button, Group, notifications } from '../ui';
-import { IconPlus } from '../ui/icons';
-import { HabitList } from '../components/habits';
+import { Box, notifications } from '../ui';
+import { HabitList, AnnualHeatmap } from '../components/habits';
 import { TaskForm } from '../components/tasks';
 import { ConfirmDialog } from '../components/common';
 import { useTaskStore, useVisibleTasks } from '../store';
@@ -24,6 +23,14 @@ export default function HabitsPage() {
 
   // Filter to only habits
   const habits = visibleTasks.filter((t) => t.is_habit);
+  const rootHabits = habits.filter((h) => !h.parent_habit_id);
+
+  // Global completion rate
+  const completedToday = rootHabits.filter((h) => h.is_complete).length;
+  const completionRate =
+    rootHabits.length > 0
+      ? Math.round((completedToday / rootHabits.length) * 100)
+      : 0;
 
   const handleCreateNew = () => {
     setEditingHabit(null);
@@ -113,14 +120,53 @@ export default function HabitsPage() {
 
   return (
     <Box>
-      {/* Header actions */}
-      <Group justify="flex-end" mb="lg">
-        <Button leftSection={<IconPlus size={16} />} onClick={handleCreateNew}>
-          New Habit
-        </Button>
-      </Group>
+      {/* ─── Header Section ─── */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+          marginBottom: '0.25rem',
+        }}
+      >
+        <h1
+          className="font-display"
+          style={{
+            fontSize: '1.5rem',
+            fontWeight: 700,
+            color: '#E0E0E0',
+            margin: 0,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          HABIT_TRACKER
+        </h1>
+        <span
+          className="font-data"
+          style={{
+            fontSize: '0.8125rem',
+            color: '#9BA3AF',
+            letterSpacing: '0.05em',
+          }}
+        >
+          GLOBAL_COMPLETION_RATE: {completionRate}%
+        </span>
+      </div>
+      <p
+        className="micro-meta"
+        style={{ margin: '0 0 1.5rem 0', color: '#5A5E66' }}
+      >
+        SYSTEMATIC BEHAVIOR PROTOCOL MANAGEMENT
+      </p>
 
-      {/* Habit list */}
+      {/* ─── Annual Heatmap ─── */}
+      {rootHabits.length > 0 && (
+        <AnnualHeatmap habits={rootHabits} allTasks={tasks} />
+      )}
+
+      {/* ─── Habit list / grid ─── */}
       <HabitList
         habits={habits}
         allTasks={tasks}

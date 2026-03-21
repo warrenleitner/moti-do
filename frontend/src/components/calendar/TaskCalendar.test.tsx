@@ -324,8 +324,8 @@ describe('TaskCalendar', () => {
   it('shows event count', () => {
     render(<TaskCalendar {...defaultProps} tasks={mockTasks} />);
 
-    // Should show event count
-    expect(screen.getByText(/\d+ tasks with due dates/)).toBeInTheDocument();
+    // Should show event count (now uses DataBadge with "X EVENTS" format)
+    expect(screen.getByText(/\d+ EVENTS/)).toBeInTheDocument();
   });
 
   it('filters out tasks without due dates', () => {

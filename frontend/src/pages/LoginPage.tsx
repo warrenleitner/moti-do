@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, TextInput, PasswordInput, Button, Text, Alert, Loader, SegmentedControl, Center } from '../ui';
+import { SegmentedControl, Loader, Alert } from '../ui';
+import { GlowCard, ArcadeButton, TerminalInput } from '../components/ui';
 import { authApi } from '../services/api';
 
 // UI component - tested via integration tests
@@ -61,89 +62,155 @@ export default function LoginPage() {
   };
 
   return (
-    <Center
+    <div
+      className="scanline-overlay"
       style={{
         minHeight: '100vh',
-        backgroundColor: 'var(--mantine-color-gray-0)',
-        padding: 'var(--mantine-spacing-md)',
+        backgroundColor: '#0B0E17',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        background: 'radial-gradient(ellipse at 50% 30%, rgba(0, 229, 255, 0.04) 0%, #0B0E17 70%)',
       }}
     >
-      <Card shadow="md" padding="xl" radius="md" style={{ maxWidth: 400, width: '100%' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--mantine-spacing-lg)' }}>
-          <img src="/logo-wordmark.png" alt="Motodo" style={{ width: 280, height: 'auto', objectFit: 'contain' }} />
+      <div style={{ maxWidth: 400, width: '100%' }}>
+        {/* Logo / Title */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h1
+            className="font-display"
+            style={{
+              fontSize: '2.5rem',
+              fontWeight: 700,
+              color: '#00E5FF',
+              margin: 0,
+              letterSpacing: '0.1em',
+              textShadow: '0 0 24px rgba(0, 229, 255, 0.4)',
+            }}
+          >
+            MOTI-DO
+          </h1>
+          <p
+            className="font-data micro-meta"
+            style={{
+              margin: '0.5rem 0 0',
+              color: '#5A5E66',
+            }}
+          >
+            SYSTEM ACCESS
+          </p>
         </div>
 
-        <Text size="sm" c="dimmed" ta="center" mb="lg">
-          Task and Habit Tracker
-        </Text>
-
-        <SegmentedControl
-          value={mode}
-          onChange={handleModeChange}
-          data={[
-            { value: 'login', label: 'Login' },
-            { value: 'register', label: 'Register' },
-          ]}
-          fullWidth
-          mb="lg"
-        />
-
-        {error && (
-          <Alert color="red" mb="md">
-            {error}
-          </Alert>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <TextInput
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            mb="md"
-            required
-            disabled={loading}
-            description="Single-user mode: use 'default_user'"
+        <GlowCard accentColor="cyan" accentPosition="top">
+          <SegmentedControl
+            value={mode}
+            onChange={handleModeChange}
+            data={[
+              { value: 'login', label: 'LOGIN' },
+              { value: 'register', label: 'REGISTER' },
+            ]}
+            fullWidth
+            style={{ marginBottom: '1.5rem' }}
           />
 
-          <PasswordInput
-            label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            mb="md"
-            required
-            disabled={loading}
-            description="Minimum 8 characters"
-          />
-
-          {mode === 'register' && (
-            <PasswordInput
-              label="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+          {error && (
+            <Alert
+              color="red"
               mb="md"
-              required
-              disabled={loading}
-            />
+              styles={{
+                root: {
+                  backgroundColor: 'rgba(255, 0, 127, 0.08)',
+                  borderColor: 'rgba(255, 0, 127, 0.3)',
+                  borderLeft: '3px solid #FF007F',
+                },
+                message: {
+                  color: '#FF007F',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.75rem',
+                },
+              }}
+            >
+              {error}
+            </Alert>
           )}
 
-          <Button
-            type="submit"
-            fullWidth
-            size="lg"
-            disabled={loading}
-            mt="md"
-          >
-            {loading ? (
-              <Loader size="sm" color="white" />
-            ) : mode === 'login' ? (
-              'Login'
-            ) : (
-              'Register'
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: '1rem' }}>
+              <TerminalInput
+                label="USERNAME"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                disabled={loading}
+                placeholder="ENTER USERNAME"
+              />
+              <span
+                className="font-data"
+                style={{ fontSize: '0.625rem', color: '#5A5E66', display: 'block', marginTop: 4 }}
+              >
+                Single-user mode: use &apos;default_user&apos;
+              </span>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <TerminalInput
+                label="PASSWORD"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                placeholder="ENTER PASSWORD"
+              />
+              <span
+                className="font-data"
+                style={{ fontSize: '0.625rem', color: '#5A5E66', display: 'block', marginTop: 4 }}
+              >
+                Minimum 8 characters
+              </span>
+            </div>
+
+            {mode === 'register' && (
+              <div style={{ marginBottom: '1rem' }}>
+                <TerminalInput
+                  label="CONFIRM PASSWORD"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  placeholder="RE-ENTER PASSWORD"
+                />
+              </div>
             )}
-          </Button>
-        </form>
-      </Card>
-    </Center>
+
+            <ArcadeButton
+              type="submit"
+              fullWidth
+              size="lg"
+              disabled={loading}
+              style={{ marginTop: '1rem' }}
+            >
+              {loading ? (
+                <Loader size="sm" color="#00626E" />
+              ) : mode === 'login' ? (
+                'AUTHENTICATE'
+              ) : (
+                'REGISTER'
+              )}
+            </ArcadeButton>
+          </form>
+        </GlowCard>
+
+        {/* Footer */}
+        <p
+          className="micro-meta"
+          style={{ textAlign: 'center', marginTop: '1.5rem', color: '#32343F' }}
+        >
+          v2.0 // KINETIC_CONSOLE
+        </p>
+      </div>
+    </div>
   );
 }
 /* v8 ignore stop */

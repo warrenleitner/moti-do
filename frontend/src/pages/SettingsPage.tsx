@@ -3,8 +3,6 @@ import {
   Box,
   Title,
   Text,
-  Card,
-  Button,
   Alert,
   Modal,
   TextInput,
@@ -14,13 +12,11 @@ import {
   Loader,
   Divider,
   Switch,
-  Badge,
-  Table,
   ActionIcon,
-  Paper,
   Group,
   Stack,
   Select,
+  Collapse,
 } from '../ui';
 import {
   IconDownload,
@@ -39,6 +35,8 @@ import {
   IconTrophy,
   IconRefresh,
   IconInfoCircle,
+  IconChevronDown,
+  IconChevronRight,
 } from '../ui/icons';
 import {
   dataApi,
@@ -51,6 +49,7 @@ import {
   type ScoringConfig,
 } from '../services/api';
 import { useUserStore, useSystemStatus, useUserStats } from '../store/userStore';
+import { GlowCard, ArcadeButton, DataBadge } from '../components/ui';
 
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
@@ -97,10 +96,26 @@ export default function SettingsPage() {
   const [loadingScoringConfig, setLoadingScoringConfig] = useState(false);
   const [savingScoringConfig, setSavingScoringConfig] = useState(false);
   const [resettingScoringConfig, setResettingScoringConfig] = useState(false);
-  const [scoringConfigExpanded, setScoringConfigExpanded] = useState(false);
-
   // Backend version state
   const [backendVersion, setBackendVersion] = useState<string | null>(null);
+
+  // Collapsible section states (mobile accordion)
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    xpLedger: true,
+    scoring: false,
+    tags: true,
+    projects: true,
+    dateProcessing: true,
+    xpWithdraw: true,
+    vacation: true,
+    backup: true,
+    security: true,
+    about: false,
+  });
+
+  const toggleSection = (key: string) => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   // Fetch XP history, tags, and projects on mount
   useEffect(() => {
@@ -507,8 +522,57 @@ export default function SettingsPage() {
     setScoringConfig({ ...scoringConfig, [field]: value });
   };
 
+  /* ── Inline styles ──────────────────────────────── */
+  const sectionHeaderStyle: React.CSSProperties = {
+    fontFamily: '"JetBrains Mono", monospace',
+    fontSize: '0.6875rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.15em',
+    color: '#8A8F98',
+    marginBottom: '0.75rem',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    userSelect: 'none',
+  };
+
+  const terminalNumberStyle: React.CSSProperties = {
+    backgroundColor: '#0B0E17',
+    border: '1px solid rgba(59, 73, 76, 0.15)',
+    color: '#E0E0E0',
+    fontFamily: '"JetBrains Mono", monospace',
+    padding: '0.25rem 0.5rem',
+    fontSize: '0.8125rem',
+    minWidth: 80,
+  };
+
   return (
-    <Box>
+    <Box style={{ maxWidth: 960, margin: '0 auto' }}>
+      {/* ── Page Header ─────────────────────────────── */}
+      <Box mb="xl">
+        <Title
+          order={1}
+          style={{
+            fontFamily: '"Space Grotesk", sans-serif',
+            fontWeight: 700,
+            color: '#E0E0E0',
+            letterSpacing: '0.05em',
+            fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+          }}
+        >
+          SYSTEM_CONFIG
+        </Title>
+        <Text
+          className="font-data"
+          size="sm"
+          style={{ color: '#8A8F98', letterSpacing: '0.1em', marginTop: 4 }}
+        >
+          CONFIGURATION &amp; DATA MANAGEMENT
+        </Text>
+      </Box>
+
+      {/* ── Status Alert ────────────────────────────── */}
       {message && (
         <Alert
           color={message.type === 'success' ? 'green' : 'red'}
@@ -516,699 +580,306 @@ export default function SettingsPage() {
           withCloseButton
           closeButtonLabel="Close alert"
           onClose={() => setMessage(null)}
+          style={{ border: message.type === 'success' ? '1px solid rgba(0,229,255,0.3)' : '1px solid rgba(255,0,127,0.3)' }}
         >
-          {message.text}
+          <Text className="font-data" size="sm">{message.text}</Text>
         </Alert>
       )}
 
-      {/* Data Backup & Restore */}
-      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
-        <Title order={4} mb="xs">
-          Data Backup & Restore
-        </Title>
-        <Text size="sm" c="dimmed" mb="md">
-          Export your data as a JSON backup file or restore from a previous backup.
-        </Text>
+      {/* ═══════════════════════════════════════════════
+          6.1 — XP Transaction Ledger
+          ═══════════════════════════════════════════════ */}
+      <GlowCard accentColor="cyan" accentPosition="left" className="settings-section" style={{ marginBottom: '1.5rem' }}>
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => toggleSection('xpLedger')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleSection('xpLedger')}
+        >
+          {expandedSections.xpLedger ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          <IconHistory size={14} style={{ color: '#00E5FF' }} />
+          XP_TRANSACTION_LEDGER
+        </div>
 
-        <Group gap="md" wrap="wrap">
-          <Button
-            leftSection={loading ? <Loader size={16} color="white" /> : <IconDownload size={16} />}
-            onClick={handleExport}
-            disabled={loading}
-          >
-            Export Data
-          </Button>
-
-          <Box>
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleFileSelect}
-              style={{ display: 'none' }}
-              ref={fileInputRef}
-            />
-            <Button
-              variant="outline"
-              leftSection={<IconUpload size={16} />}
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading}
+        <Collapse in={expandedSections.xpLedger}>
+          {loadingXP ? (
+            <Group justify="center" py="md">
+              <Loader size="sm" />
+            </Group>
+          ) : xpHistory.length === 0 ? (
+            <Box
+              style={{
+                backgroundColor: '#0B0E17',
+                border: '1px solid rgba(59, 73, 76, 0.15)',
+                padding: '1.5rem',
+                textAlign: 'center',
+              }}
             >
-              Import Data
-            </Button>
-          </Box>
-        </Group>
-
-        <Alert color="yellow" mt="md">
-          <strong>Warning:</strong> Importing data will replace ALL your current data. Make sure to export your current data before importing.
-        </Alert>
-      </Card>
-
-      {/* Tags Management */}
-      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder data-testid="tags-section">
-        <Group justify="space-between" mb="md">
-          <Group gap="xs">
-            <IconTag size={20} color="var(--mantine-color-blue-6)" />
-            <Title order={4}>Tags</Title>
-          </Group>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => {
-              setShowAddTag(true);
-              setEditingTagId(null);
-              setTagForm({ name: '', color: '#808080', multiplier: 1.0 });
-            }}
-            disabled={loading || showAddTag}
-            size="sm"
-          >
-            Add Tag
-          </Button>
-        </Group>
-        <Text size="sm" c="dimmed" mb="md">
-          Manage your tags and set score multipliers. Tags with multiplier {'>'} 1.0 will give bonus XP.
-        </Text>
-
-        {loadingTags ? (
-          <Group justify="center" py="md">
-            <Loader size="sm" />
-          </Group>
-        ) : (
-          <Paper withBorder>
-            <Table>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Name</Table.Th>
-                  <Table.Th>Color</Table.Th>
-                  <Table.Th>Multiplier</Table.Th>
-                  <Table.Th style={{ textAlign: 'right' }}>Actions</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {showAddTag && (
-                  <Table.Tr>
-                    <Table.Td>
-                      <TextInput
-                        size="sm"
-                        placeholder="Tag name"
-                        value={tagForm.name}
-                        onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
-                        autoFocus
-                      />
-                    </Table.Td>
-                    <Table.Td>
-                      <ColorInput
-                        size="sm"
-                        value={tagForm.color}
-                        onChange={(color) => setTagForm({ ...tagForm, color })}
-                        w={100}
-                      />
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap="xs">
-                        <NumberInput
-                          size="sm"
-                          value={tagForm.multiplier}
-                          onChange={(val) => setTagForm({ ...tagForm, multiplier: Number(val) || 1.0 })}
-                          min={0.1}
-                          max={10}
-                          step={0.1}
-                          w={80}
-                          suffix="x"
-                        />
-                        <Button.Group>
-                          <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(0.5)}>0.5x</Button>
-                          <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(1.0)}>1x</Button>
-                          <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(1.5)}>1.5x</Button>
-                          <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(2.0)}>2x</Button>
-                        </Button.Group>
-                      </Group>
-                    </Table.Td>
-                    <Table.Td style={{ textAlign: 'right' }}>
-                      <ActionIcon size="sm" color="blue" onClick={handleSaveTag} mr={4} aria-label="Save">
-                        <IconCheck size={16} />
-                      </ActionIcon>
-                      <ActionIcon size="sm" onClick={handleCancelEditTag}>
-                        <IconX size={16} />
-                      </ActionIcon>
-                    </Table.Td>
-                  </Table.Tr>
-                )}
-                {tags.map((tag) => (
-                  <Table.Tr key={tag.id}>
-                    <Table.Td>
-                      {editingTagId === tag.id ? (
-                        <TextInput
-                          size="sm"
-                          value={tagForm.name}
-                          onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
-                        />
-                      ) : (
-                        <Badge style={{ backgroundColor: tag.color, color: 'white' }}>
-                          {tag.name}
-                        </Badge>
-                      )}
-                    </Table.Td>
-                    <Table.Td>
-                      {editingTagId === tag.id ? (
-                        <ColorInput
-                          size="sm"
-                          value={tagForm.color}
-                          onChange={(color) => setTagForm({ ...tagForm, color })}
-                          w={100}
-                        />
-                      ) : (
-                        <Box
-                          style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: 4,
-                            backgroundColor: tag.color,
-                            border: '1px solid rgba(0,0,0,0.2)',
-                          }}
-                        />
-                      )}
-                    </Table.Td>
-                    <Table.Td>
-                      {editingTagId === tag.id ? (
-                        <Group gap="xs">
-                          <NumberInput
-                            size="sm"
-                            value={tagForm.multiplier}
-                            onChange={(val) => setTagForm({ ...tagForm, multiplier: Number(val) || 1.0 })}
-                            min={0.1}
-                            max={10}
-                            step={0.1}
-                            w={80}
-                            suffix="x"
-                          />
-                          <Button.Group>
-                            <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(0.5)}>0.5x</Button>
-                            <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(1.0)}>1x</Button>
-                            <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(1.5)}>1.5x</Button>
-                            <Button size="xs" variant="outline" onClick={() => handleSetTagMultiplier(2.0)}>2x</Button>
-                          </Button.Group>
-                        </Group>
-                      ) : (
-                        <Badge
-                          color={tag.multiplier > 1 ? 'green' : tag.multiplier < 1 ? 'yellow' : 'gray'}
-                          variant="light"
-                        >
-                          {tag.multiplier}x
-                        </Badge>
-                      )}
-                    </Table.Td>
-                    <Table.Td style={{ textAlign: 'right' }}>
-                      {editingTagId === tag.id ? (
-                        <>
-                          <ActionIcon size="sm" color="blue" onClick={handleSaveTag} mr={4} aria-label="Save">
-                            <IconCheck size={16} />
-                          </ActionIcon>
-                          <ActionIcon size="sm" onClick={handleCancelEditTag}>
-                            <IconX size={16} />
-                          </ActionIcon>
-                        </>
-                      ) : (
-                        <>
-                          <ActionIcon size="sm" onClick={() => handleStartEditTag(tag)} mr={4}>
-                            <IconPencil size={16} />
-                          </ActionIcon>
-                          <ActionIcon size="sm" color="red" onClick={() => handleDeleteTag(tag.id)}>
-                            <IconTrash size={16} />
-                          </ActionIcon>
-                        </>
-                      )}
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-                {tags.length === 0 && !showAddTag && (
-                  <Table.Tr>
-                    <Table.Td colSpan={4} style={{ textAlign: 'center' }}>
-                      <Text size="sm" c="dimmed">
-                        No tags defined. Click &quot;Add Tag&quot; to create one.
-                      </Text>
-                    </Table.Td>
-                  </Table.Tr>
-                )}
-              </Table.Tbody>
-            </Table>
-          </Paper>
-        )}
-      </Card>
-
-      {/* Projects Management */}
-      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder data-testid="projects-section">
-        <Group justify="space-between" mb="md">
-          <Group gap="xs">
-            <IconFolder size={20} color="var(--mantine-color-violet-6)" />
-            <Title order={4}>Projects</Title>
-          </Group>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => {
-              setShowAddProject(true);
-              setEditingProjectId(null);
-              setProjectForm({ name: '', color: '#4A90D9', multiplier: 1.0 });
-            }}
-            disabled={loading || showAddProject}
-            size="sm"
-          >
-            Add Project
-          </Button>
-        </Group>
-        <Text size="sm" c="dimmed" mb="md">
-          Manage your projects and set score multipliers. Projects with multiplier {'>'} 1.0 will give bonus XP.
-        </Text>
-
-        {loadingProjects ? (
-          <Group justify="center" py="md">
-            <Loader size="sm" />
-          </Group>
-        ) : (
-          <Paper withBorder>
-            <Table>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Name</Table.Th>
-                  <Table.Th>Color</Table.Th>
-                  <Table.Th>Multiplier</Table.Th>
-                  <Table.Th style={{ textAlign: 'right' }}>Actions</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {showAddProject && (
-                  <Table.Tr>
-                    <Table.Td>
-                      <TextInput
-                        size="sm"
-                        placeholder="Project name"
-                        value={projectForm.name}
-                        onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
-                        autoFocus
-                      />
-                    </Table.Td>
-                    <Table.Td>
-                      <ColorInput
-                        size="sm"
-                        value={projectForm.color}
-                        onChange={(color) => setProjectForm({ ...projectForm, color })}
-                        w={100}
-                      />
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap="xs">
-                        <NumberInput
-                          size="sm"
-                          value={projectForm.multiplier}
-                          onChange={(val) => setProjectForm({ ...projectForm, multiplier: Number(val) || 1.0 })}
-                          min={0.1}
-                          max={10}
-                          step={0.1}
-                          w={80}
-                          suffix="x"
-                        />
-                        <Button.Group>
-                          <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(0.5)}>0.5x</Button>
-                          <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(1.0)}>1x</Button>
-                          <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(1.5)}>1.5x</Button>
-                          <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(2.0)}>2x</Button>
-                        </Button.Group>
-                      </Group>
-                    </Table.Td>
-                    <Table.Td style={{ textAlign: 'right' }}>
-                      <ActionIcon size="sm" color="blue" onClick={handleSaveProject} mr={4} aria-label="Save">
-                        <IconCheck size={16} />
-                      </ActionIcon>
-                      <ActionIcon size="sm" onClick={handleCancelEditProject}>
-                        <IconX size={16} />
-                      </ActionIcon>
-                    </Table.Td>
-                  </Table.Tr>
-                )}
-                {projects.map((project) => (
-                  <Table.Tr key={project.id}>
-                    <Table.Td>
-                      {editingProjectId === project.id ? (
-                        <TextInput
-                          size="sm"
-                          value={projectForm.name}
-                          onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
-                        />
-                      ) : (
-                        <Badge style={{ backgroundColor: project.color, color: 'white' }}>
-                          {project.name}
-                        </Badge>
-                      )}
-                    </Table.Td>
-                    <Table.Td>
-                      {editingProjectId === project.id ? (
-                        <ColorInput
-                          size="sm"
-                          value={projectForm.color}
-                          onChange={(color) => setProjectForm({ ...projectForm, color })}
-                          w={100}
-                        />
-                      ) : (
-                        <Box
-                          style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: 4,
-                            backgroundColor: project.color,
-                            border: '1px solid rgba(0,0,0,0.2)',
-                          }}
-                        />
-                      )}
-                    </Table.Td>
-                    <Table.Td>
-                      {editingProjectId === project.id ? (
-                        <Group gap="xs">
-                          <NumberInput
-                            size="sm"
-                            value={projectForm.multiplier}
-                            onChange={(val) => setProjectForm({ ...projectForm, multiplier: Number(val) || 1.0 })}
-                            min={0.1}
-                            max={10}
-                            step={0.1}
-                            w={80}
-                            suffix="x"
-                          />
-                          <Button.Group>
-                            <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(0.5)}>0.5x</Button>
-                            <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(1.0)}>1x</Button>
-                            <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(1.5)}>1.5x</Button>
-                            <Button size="xs" variant="outline" onClick={() => handleSetProjectMultiplier(2.0)}>2x</Button>
-                          </Button.Group>
-                        </Group>
-                      ) : (
-                        <Badge
-                          color={project.multiplier > 1 ? 'green' : project.multiplier < 1 ? 'yellow' : 'gray'}
-                          variant="light"
-                        >
-                          {project.multiplier}x
-                        </Badge>
-                      )}
-                    </Table.Td>
-                    <Table.Td style={{ textAlign: 'right' }}>
-                      {editingProjectId === project.id ? (
-                        <>
-                          <ActionIcon size="sm" color="blue" onClick={handleSaveProject} mr={4} aria-label="Save">
-                            <IconCheck size={16} />
-                          </ActionIcon>
-                          <ActionIcon size="sm" onClick={handleCancelEditProject}>
-                            <IconX size={16} />
-                          </ActionIcon>
-                        </>
-                      ) : (
-                        <>
-                          <ActionIcon size="sm" onClick={() => handleStartEditProject(project)} mr={4}>
-                            <IconPencil size={16} />
-                          </ActionIcon>
-                          <ActionIcon size="sm" color="red" onClick={() => handleDeleteProject(project.id)}>
-                            <IconTrash size={16} />
-                          </ActionIcon>
-                        </>
-                      )}
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-                {projects.length === 0 && !showAddProject && (
-                  <Table.Tr>
-                    <Table.Td colSpan={4} style={{ textAlign: 'center' }}>
-                      <Text size="sm" c="dimmed">
-                        No projects defined. Click &quot;Add Project&quot; to create one.
-                      </Text>
-                    </Table.Td>
-                  </Table.Tr>
-                )}
-              </Table.Tbody>
-            </Table>
-          </Paper>
-        )}
-      </Card>
-
-      {/* Scoring Configuration */}
-      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
-        <Group justify="space-between" mb="md">
-          <Group gap="xs">
-            <IconHistory size={20} color="var(--mantine-color-blue-6)" />
-            <Title order={4}>Scoring Configuration</Title>
-          </Group>
-          <Button
-            variant="subtle"
-            onClick={() => setScoringConfigExpanded(!scoringConfigExpanded)}
-          >
-            {scoringConfigExpanded ? 'Collapse' : 'Expand'}
-          </Button>
-        </Group>
-        <Text size="sm" c="dimmed" mb="md">
-          Configure how task scores are calculated. Higher scores mean higher priority in the task list.
-        </Text>
-
-        {loadingScoringConfig ? (
-          <Group justify="center" p="lg">
-            <Loader size="sm" />
-          </Group>
-        ) : scoringConfig && scoringConfigExpanded ? (
-          <Stack gap="lg">
-            {/* Base Score */}
-            <Box>
-              <Text fw={600} size="sm" mb="xs">Base Score</Text>
-              <NumberInput
-                size="sm"
-                value={scoringConfig.base_score}
-                onChange={(val) => updateScoringField('base_score', Number(val) || 0)}
-                description="Starting score for all tasks (default: 10, recommended: 5-20)"
-                w={200}
-              />
-            </Box>
-
-            <Divider />
-
-            {/* Priority Multipliers */}
-            <Box>
-              <Text fw={600} size="sm" mb="xs">Priority Multipliers</Text>
-              <Text size="xs" c="dimmed" mb="sm">
-                Recommended: 1.0-2.5 (defaults: NOT_SET=1.0, TRIVIAL=1.05, LOW=1.2, MEDIUM=1.45, HIGH=1.8, DEFCON_ONE=2.1)
+              <Text className="font-data" size="sm" style={{ color: '#5A5E66', letterSpacing: '0.1em' }}>
+                NO TRANSACTIONS RECORDED
               </Text>
-              <Group gap="md" wrap="wrap">
-                {Object.entries(scoringConfig.priority_multiplier).map(([key, value]) => (
-                  <NumberInput
-                    key={key}
-                    size="sm"
-                    label={key.replace(/_/g, ' ')}
-                    value={value}
-                    onChange={(val) => updateScoringField('priority_multiplier', {
-                      ...scoringConfig.priority_multiplier,
-                      [key]: Number(val) || 1,
-                    })}
-                    step={0.1}
-                    min={1}
-                    w={120}
-                  />
-                ))}
-              </Group>
             </Box>
-
-            <Divider />
-
-            {/* Difficulty Multipliers */}
-            <Box>
-              <Text fw={600} size="sm" mb="xs">Difficulty Multipliers</Text>
-              <Text size="xs" c="dimmed" mb="sm">
-                Recommended: 1.0-2.5 (defaults: NOT_SET=1.0, TRIVIAL=1.05, LOW=1.2, MEDIUM=1.45, HIGH=1.8, HERCULEAN=2.1)
-              </Text>
-              <Group gap="md" wrap="wrap">
-                {Object.entries(scoringConfig.difficulty_multiplier).map(([key, value]) => (
-                  <NumberInput
-                    key={key}
-                    size="sm"
-                    label={key.replace(/_/g, ' ')}
-                    value={value}
-                    onChange={(val) => updateScoringField('difficulty_multiplier', {
-                      ...scoringConfig.difficulty_multiplier,
-                      [key]: Number(val) || 1,
-                    })}
-                    step={0.1}
-                    min={1}
-                    w={120}
-                  />
-                ))}
-              </Group>
-            </Box>
-
-            <Divider />
-
-            {/* Duration Multipliers */}
-            <Box>
-              <Text fw={600} size="sm" mb="xs">Duration Multipliers</Text>
-              <Text size="xs" c="dimmed" mb="sm">
-                Recommended: 1.0-2.5 (defaults: NOT_SET=1.0, MINUSCULE=1.05, SHORT=1.2, MEDIUM=1.45, LONG=1.8, ODYSSEYAN=2.1)
-              </Text>
-              <Group gap="md" wrap="wrap">
-                {Object.entries(scoringConfig.duration_multiplier).map(([key, value]) => (
-                  <NumberInput
-                    key={key}
-                    size="sm"
-                    label={key.replace(/_/g, ' ')}
-                    value={value}
-                    onChange={(val) => updateScoringField('duration_multiplier', {
-                      ...scoringConfig.duration_multiplier,
-                      [key]: Number(val) || 1,
-                    })}
-                    step={0.1}
-                    min={1}
-                    w={120}
-                  />
-                ))}
-              </Group>
-            </Box>
-
-            <Divider />
-
-            {/* Age Factor */}
-            <Box>
-              <Text fw={600} size="sm" mb="xs">Age Factor</Text>
-              <Switch
-                checked={scoringConfig.age_factor.enabled}
-                onChange={(e) => updateScoringField('age_factor', {
-                  ...scoringConfig.age_factor,
-                  enabled: e.currentTarget.checked,
-                })}
-                label="Enable age-based bonus"
-                mb="sm"
-              />
-              {scoringConfig.age_factor.enabled && (
-                <Stack gap="sm" mt="xs">
-                  <Text size="xs" c="dimmed">
-                    Defaults: 0.025 per unit (days), max multiplier 1.5
-                  </Text>
-                  <Group gap="md" wrap="wrap">
-                    <NumberInput
-                      size="sm"
-                      label="Multiplier per unit"
-                      value={scoringConfig.age_factor.multiplier_per_unit}
-                      onChange={(val) => updateScoringField('age_factor', {
-                        ...scoringConfig.age_factor,
-                        multiplier_per_unit: Number(val) || 0,
-                      })}
-                      step={0.01}
-                      min={0}
-                      w={150}
-                    />
-                    <NumberInput
-                      size="sm"
-                      label="Max multiplier"
-                      value={scoringConfig.age_factor.max_multiplier}
-                      onChange={(val) => updateScoringField('age_factor', {
-                        ...scoringConfig.age_factor,
-                        max_multiplier: Number(val) || 1,
-                      })}
-                      description="1.0-3.0"
-                      step={0.1}
-                      min={1}
-                      w={150}
-                    />
-                    <Select
-                      size="sm"
-                      label="Unit"
-                      value={scoringConfig.age_factor.unit}
-                      onChange={(val) => updateScoringField('age_factor', {
-                        ...scoringConfig.age_factor,
-                        unit: (val as 'days' | 'weeks') || 'days',
-                      })}
-                      data={[
-                        { value: 'days', label: 'Days' },
-                        { value: 'weeks', label: 'Weeks' },
-                      ]}
-                      w={120}
-                    />
-                  </Group>
-                </Stack>
-              )}
-            </Box>
-
-            <Divider />
-
-            {/* Due Date Proximity */}
-            <Box>
-              <Text fw={600} size="sm" mb="xs">Due Date Proximity</Text>
-              <Switch
-                checked={scoringConfig.due_date_proximity.enabled}
-                onChange={(e) => updateScoringField('due_date_proximity', {
-                  ...scoringConfig.due_date_proximity,
-                  enabled: e.currentTarget.checked,
-                })}
-                label="Enable due date proximity scoring"
-                mb="sm"
-              />
-              {scoringConfig.due_date_proximity.enabled && (
-                <Stack gap="sm" mt="xs">
-                  <Text size="xs" c="dimmed">
-                    Defaults: 0.02 per unit (days), max multiplier 1.5
-                  </Text>
-                  <Group gap="md" wrap="wrap">
-                    <NumberInput
-                      size="sm"
-                      label="Multiplier per unit"
-                      value={scoringConfig.due_date_proximity.multiplier_per_unit}
-                      onChange={(val) => updateScoringField('due_date_proximity', {
-                        ...scoringConfig.due_date_proximity,
-                        multiplier_per_unit: Number(val) || 0,
-                      })}
-                      description="0.01-0.1"
-                      step={0.01}
-                      min={0}
-                      w={190}
-                    />
-                    <NumberInput
-                      size="sm"
-                      label="Max multiplier"
-                      value={scoringConfig.due_date_proximity.max_multiplier}
-                      onChange={(val) => updateScoringField('due_date_proximity', {
-                        ...scoringConfig.due_date_proximity,
-                        max_multiplier: Number(val) || 1,
-                      })}
-                      description="1.0-3.0"
-                      step={0.1}
-                      min={1}
-                      w={150}
-                    />
-                    <Select
-                      size="sm"
-                      label="Unit"
-                      value={scoringConfig.due_date_proximity.unit}
-                      onChange={(val) => updateScoringField('due_date_proximity', {
-                        ...scoringConfig.due_date_proximity,
-                        unit: (val as 'days' | 'weeks') || 'days',
-                      })}
-                      data={[
-                        { value: 'days', label: 'Days' },
-                        { value: 'weeks', label: 'Weeks' },
-                      ]}
-                      w={120}
-                    />
-                  </Group>
-                </Stack>
-              )}
-            </Box>
-
-            <Divider />
-
-            {/* Penalty Weight Inversion */}
-            <Box>
-              <Text fw={600} size="sm" mb="xs">Penalty Weighting</Text>
-              <Text size="xs" c="dimmed" mb="sm">
-                Choose which components use inverted weights when calculating penalties.
-              </Text>
-              <div
+          ) : (
+            <Box style={{ overflowX: 'auto' }}>
+              <table
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: 'var(--mantine-spacing-xs)',
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.8125rem',
                 }}
               >
-                {Object.entries(scoringConfig.penalty_invert_weights).map(([key, value]) => {
-                  const label = key.replace(/_/g, ' ');
-                  return (
+                <thead>
+                  <tr
+                    style={{
+                      backgroundColor: '#181B25',
+                      borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+                    }}
+                  >
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#8A8F98', letterSpacing: '0.15em', fontSize: '0.6875rem', fontWeight: 500 }}>DATE</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#8A8F98', letterSpacing: '0.15em', fontSize: '0.6875rem', fontWeight: 500 }}>ACTION</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#8A8F98', letterSpacing: '0.15em', fontSize: '0.6875rem', fontWeight: 500 }}>XP_GAINED</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#8A8F98', letterSpacing: '0.15em', fontSize: '0.6875rem', fontWeight: 500 }}>SOURCE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {xpHistory.map((tx) => (
+                    <tr
+                      key={tx.id}
+                      style={{
+                        backgroundColor: '#10131C',
+                        borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+                        transition: 'background-color 0.15s ease',
+                      }}
+                    >
+                      <td style={{ padding: '0.5rem 0.75rem', color: '#8A8F98', whiteSpace: 'nowrap' }}>
+                        {new Date(tx.timestamp).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: '0.5rem 0.75rem', color: '#E0E0E0' }}>
+                        {tx.description}
+                      </td>
+                      <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>
+                        <DataBadge
+                          value={`${tx.amount > 0 ? '+' : ''}${tx.amount} XP`}
+                          color={tx.amount >= 0 ? 'cyan' : 'magenta'}
+                          size="sm"
+                        />
+                      </td>
+                      <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#8A8F98' }}>
+                        {tx.source}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Box>
+          )}
+        </Collapse>
+      </GlowCard>
+
+      {/* ═══════════════════════════════════════════════
+          6.2 — Scoring Configuration Panel
+          ═══════════════════════════════════════════════ */}
+      <GlowCard accentColor="amber" accentPosition="left" className="settings-section" style={{ marginBottom: '1.5rem' }}>
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => toggleSection('scoring')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleSection('scoring')}
+        >
+          {expandedSections.scoring ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          <IconHistory size={14} style={{ color: '#FFC775' }} />
+          SCORING_PARAMETERS
+        </div>
+        <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '0.75rem' }}>
+          Configure how task scores are calculated. Higher scores mean higher priority.
+        </Text>
+
+        <Collapse in={expandedSections.scoring}>
+          {loadingScoringConfig ? (
+            <Group justify="center" p="lg">
+              <Loader size="sm" />
+            </Group>
+          ) : scoringConfig ? (
+            <Stack gap="lg">
+              {/* Base Score */}
+              <Box>
+                <Text className="micro-meta" mb="xs">BASE_SCORE</Text>
+                <NumberInput
+                  size="sm"
+                  value={scoringConfig.base_score}
+                  onChange={(val) => updateScoringField('base_score', Number(val) || 0)}
+                  description="Starting score for all tasks (default: 10)"
+                  w={200}
+                  styles={{ input: terminalNumberStyle }}
+                />
+              </Box>
+
+              <Divider />
+
+              {/* Priority Multipliers */}
+              <Box>
+                <Text className="micro-meta" mb="xs">PRIORITY_MULTIPLIERS</Text>
+                <Text size="xs" style={{ color: '#5A5E66' }} mb="sm">
+                  Recommended: 1.0–2.5
+                </Text>
+                <Group gap="md" wrap="wrap">
+                  {Object.entries(scoringConfig.priority_multiplier).map(([key, value]) => (
+                    <NumberInput
+                      key={key}
+                      size="sm"
+                      label={key.replace(/_/g, ' ')}
+                      value={value}
+                      onChange={(val) => updateScoringField('priority_multiplier', {
+                        ...scoringConfig.priority_multiplier,
+                        [key]: Number(val) || 1,
+                      })}
+                      step={0.1}
+                      min={1}
+                      w={120}
+                    />
+                  ))}
+                </Group>
+              </Box>
+
+              <Divider />
+
+              {/* Difficulty Multipliers */}
+              <Box>
+                <Text className="micro-meta" mb="xs">DIFFICULTY_MULTIPLIERS</Text>
+                <Text size="xs" style={{ color: '#5A5E66' }} mb="sm">
+                  Recommended: 1.0–2.5
+                </Text>
+                <Group gap="md" wrap="wrap">
+                  {Object.entries(scoringConfig.difficulty_multiplier).map(([key, value]) => (
+                    <NumberInput
+                      key={key}
+                      size="sm"
+                      label={key.replace(/_/g, ' ')}
+                      value={value}
+                      onChange={(val) => updateScoringField('difficulty_multiplier', {
+                        ...scoringConfig.difficulty_multiplier,
+                        [key]: Number(val) || 1,
+                      })}
+                      step={0.1}
+                      min={1}
+                      w={120}
+                    />
+                  ))}
+                </Group>
+              </Box>
+
+              <Divider />
+
+              {/* Duration Multipliers */}
+              <Box>
+                <Text className="micro-meta" mb="xs">DURATION_MULTIPLIERS</Text>
+                <Text size="xs" style={{ color: '#5A5E66' }} mb="sm">
+                  Recommended: 1.0–2.5
+                </Text>
+                <Group gap="md" wrap="wrap">
+                  {Object.entries(scoringConfig.duration_multiplier).map(([key, value]) => (
+                    <NumberInput
+                      key={key}
+                      size="sm"
+                      label={key.replace(/_/g, ' ')}
+                      value={value}
+                      onChange={(val) => updateScoringField('duration_multiplier', {
+                        ...scoringConfig.duration_multiplier,
+                        [key]: Number(val) || 1,
+                      })}
+                      step={0.1}
+                      min={1}
+                      w={120}
+                    />
+                  ))}
+                </Group>
+              </Box>
+
+              <Divider />
+
+              {/* Age Factor */}
+              <Box>
+                <Text className="micro-meta" mb="xs">AGE_FACTOR</Text>
+                <Switch
+                  checked={scoringConfig.age_factor.enabled}
+                  onChange={(e) => updateScoringField('age_factor', {
+                    ...scoringConfig.age_factor,
+                    enabled: e.currentTarget.checked,
+                  })}
+                  label="Enable age-based bonus"
+                  mb="sm"
+                  color="cyan"
+                  styles={{ label: { fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' } }}
+                />
+                {scoringConfig.age_factor.enabled && (
+                  <Stack gap="sm" mt="xs">
+                    <Text size="xs" style={{ color: '#5A5E66' }}>
+                      Defaults: 0.025 per unit (days), max multiplier 1.5
+                    </Text>
+                    <Group gap="md" wrap="wrap">
+                      <NumberInput size="sm" label="Multiplier per unit" value={scoringConfig.age_factor.multiplier_per_unit}
+                        onChange={(val) => updateScoringField('age_factor', { ...scoringConfig.age_factor, multiplier_per_unit: Number(val) || 0 })}
+                        step={0.01} min={0} w={150} />
+                      <NumberInput size="sm" label="Max multiplier" value={scoringConfig.age_factor.max_multiplier}
+                        onChange={(val) => updateScoringField('age_factor', { ...scoringConfig.age_factor, max_multiplier: Number(val) || 1 })}
+                        description="1.0-3.0" step={0.1} min={1} w={150} />
+                      <Select size="sm" label="Unit" value={scoringConfig.age_factor.unit}
+                        onChange={(val) => updateScoringField('age_factor', { ...scoringConfig.age_factor, unit: (val as 'days' | 'weeks') || 'days' })}
+                        data={[{ value: 'days', label: 'Days' }, { value: 'weeks', label: 'Weeks' }]} w={120} />
+                    </Group>
+                  </Stack>
+                )}
+              </Box>
+
+              <Divider />
+
+              {/* Due Date Proximity */}
+              <Box>
+                <Text className="micro-meta" mb="xs">DUE_DATE_PROXIMITY</Text>
+                <Switch
+                  checked={scoringConfig.due_date_proximity.enabled}
+                  onChange={(e) => updateScoringField('due_date_proximity', {
+                    ...scoringConfig.due_date_proximity,
+                    enabled: e.currentTarget.checked,
+                  })}
+                  label="Enable due date proximity scoring"
+                  mb="sm"
+                  color="cyan"
+                  styles={{ label: { fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' } }}
+                />
+                {scoringConfig.due_date_proximity.enabled && (
+                  <Stack gap="sm" mt="xs">
+                    <Text size="xs" style={{ color: '#5A5E66' }}>
+                      Defaults: 0.02 per unit (days), max multiplier 1.5
+                    </Text>
+                    <Group gap="md" wrap="wrap">
+                      <NumberInput size="sm" label="Multiplier per unit" value={scoringConfig.due_date_proximity.multiplier_per_unit}
+                        onChange={(val) => updateScoringField('due_date_proximity', { ...scoringConfig.due_date_proximity, multiplier_per_unit: Number(val) || 0 })}
+                        description="0.01-0.1" step={0.01} min={0} w={190} />
+                      <NumberInput size="sm" label="Max multiplier" value={scoringConfig.due_date_proximity.max_multiplier}
+                        onChange={(val) => updateScoringField('due_date_proximity', { ...scoringConfig.due_date_proximity, max_multiplier: Number(val) || 1 })}
+                        description="1.0-3.0" step={0.1} min={1} w={150} />
+                      <Select size="sm" label="Unit" value={scoringConfig.due_date_proximity.unit}
+                        onChange={(val) => updateScoringField('due_date_proximity', { ...scoringConfig.due_date_proximity, unit: (val as 'days' | 'weeks') || 'days' })}
+                        data={[{ value: 'days', label: 'Days' }, { value: 'weeks', label: 'Weeks' }]} w={120} />
+                    </Group>
+                  </Stack>
+                )}
+              </Box>
+
+              <Divider />
+
+              {/* Penalty Weight Inversion */}
+              <Box>
+                <Text className="micro-meta" mb="xs">PENALTY_WEIGHTING</Text>
+                <Text size="xs" style={{ color: '#5A5E66' }} mb="sm">
+                  Choose which components use inverted weights for penalties.
+                </Text>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                  {Object.entries(scoringConfig.penalty_invert_weights).map(([key, value]) => (
                     <Switch
                       key={key}
                       checked={value}
@@ -1216,375 +887,816 @@ export default function SettingsPage() {
                         ...scoringConfig.penalty_invert_weights,
                         [key]: e.currentTarget.checked,
                       })}
-                      label={`Invert ${label} weight`}
+                      label={`Invert ${key.replace(/_/g, ' ')} weight`}
+                      color="cyan"
+                      styles={{ label: { fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' } }}
                     />
-                  );
-                })}
-              </div>
-            </Box>
+                  ))}
+                </div>
+              </Box>
 
-            <Divider />
+              <Divider />
 
-            {/* Habit Streak Bonus */}
-            <Box>
-              <Text fw={600} size="sm" mb="xs">Habit Streak Bonus</Text>
-              <Switch
-                checked={scoringConfig.habit_streak_bonus.enabled}
-                onChange={(e) => updateScoringField('habit_streak_bonus', {
-                  ...scoringConfig.habit_streak_bonus,
-                  enabled: e.currentTarget.checked,
-                })}
-                label="Enable habit streak bonuses"
-                mb="sm"
-              />
-              {scoringConfig.habit_streak_bonus.enabled && (
-                <Stack gap="sm" mt="xs">
-                  <Text size="xs" c="dimmed">
-                    Defaults: 1.2/streak day, max 25 bonus
-                  </Text>
-                  <Group gap="md" wrap="wrap">
-                    <NumberInput
-                      size="sm"
-                      label="Bonus per streak day"
-                      value={scoringConfig.habit_streak_bonus.bonus_per_streak_day}
-                      onChange={(val) => updateScoringField('habit_streak_bonus', {
-                        ...scoringConfig.habit_streak_bonus,
-                        bonus_per_streak_day: Number(val) || 0,
-                      })}
-                      description="0.5-5.0"
-                      step={0.1}
-                      min={0}
-                      w={150}
-                    />
-                    <NumberInput
-                      size="sm"
-                      label="Max bonus"
-                      value={scoringConfig.habit_streak_bonus.max_bonus}
-                      onChange={(val) => updateScoringField('habit_streak_bonus', {
-                        ...scoringConfig.habit_streak_bonus,
-                        max_bonus: Number(val) || 0,
-                      })}
-                      description="10-100"
-                      step={1}
-                      min={0}
-                      w={120}
-                    />
-                  </Group>
-                </Stack>
-              )}
-            </Box>
-
-            <Divider />
-
-            <Group gap="md" mt="md">
-              <Button
-                onClick={handleSaveScoringConfig}
-                disabled={savingScoringConfig || resettingScoringConfig}
-                leftSection={savingScoringConfig ? <Loader size={16} color="white" /> : <IconCheck size={16} />}
-              >
-                {savingScoringConfig ? 'Saving...' : 'Save Scoring Configuration'}
-              </Button>
-              <Button
-                variant="outline"
-                color="yellow"
-                onClick={handleResetScoringConfig}
-                disabled={savingScoringConfig || resettingScoringConfig}
-                leftSection={resettingScoringConfig ? <Loader size={16} /> : <IconRefresh size={16} />}
-              >
-                {resettingScoringConfig ? 'Resetting...' : 'Reset to Defaults'}
-              </Button>
-            </Group>
-          </Stack>
-        ) : scoringConfig ? (
-          <Text size="sm" c="dimmed">
-            Click &quot;Expand&quot; to view and edit scoring configuration.
-          </Text>
-        ) : null}
-      </Card>
-
-      {/* Date Processing */}
-      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
-        <Group gap="xs" mb="xs">
-          <IconCalendar size={20} color="var(--mantine-color-blue-6)" />
-          <Title order={4}>Date Processing</Title>
-        </Group>
-        <Text size="sm" c="dimmed" mb="md">
-          Process pending days to apply overdue penalties and generate recurring tasks.
-        </Text>
-
-        <Box mb="md">
-          <Text size="sm" fw={700} c="blue">
-            <strong>Current Processing Date:</strong>{' '}
-            {systemStatus?.last_processed_date
-              ? (() => {
-                  // Parse as local date to avoid timezone issues
-                  const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
-                  const nextDay = new Date(year, month - 1, day + 1);
-                  return nextDay.toLocaleDateString();
-                })()
-              : 'Not started'}
-          </Text>
-          <Text size="sm" c="dimmed">
-            <strong>Real Date:</strong> {new Date().toLocaleDateString()}
-          </Text>
-          <Text size="sm" c="dimmed">
-            <strong>Last Completed:</strong> {systemStatus?.last_processed_date || 'Never'}
-          </Text>
-          <Text size="sm" c={systemStatus?.pending_days && systemStatus.pending_days > 0 ? 'red' : 'dimmed'}>
-            <strong>Days Behind:</strong> {systemStatus?.pending_days ?? 0} day{(systemStatus?.pending_days ?? 0) !== 1 ? 's' : ''}
-          </Text>
-        </Box>
-
-        {systemStatus?.pending_days && systemStatus.pending_days > 0 ? (
-          <Group gap="md" wrap="wrap">
-            <Button
-              onClick={() => handleAdvanceDate(1)}
-              disabled={advancingDate || loading}
-              leftSection={advancingDate ? <Loader size={16} color="white" /> : <IconCalendar size={16} />}
-            >
-              Process {systemStatus?.last_processed_date
-                ? (() => {
-                    const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
-                    const nextDay = new Date(year, month - 1, day + 1);
-                    return nextDay.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-                  })()
-                : 'Next Day'}
-            </Button>
-            {systemStatus.pending_days > 1 && (
-              <Button
-                variant="outline"
-                onClick={() => handleAdvanceDate()}
-                disabled={advancingDate || loading}
-                leftSection={advancingDate ? <Loader size={16} /> : <IconCalendar size={16} />}
-              >
-                Process All {systemStatus.pending_days} Days
-              </Button>
-            )}
-          </Group>
-        ) : (
-          <Alert color="green" mt="xs">
-            All caught up! No pending days to process.
-          </Alert>
-        )}
-
-        {systemStatus && systemStatus.pending_days > 0 && (
-          <Alert color="yellow" mt="md">
-            Processing will apply penalties for incomplete overdue tasks.
-          </Alert>
-        )}
-      </Card>
-
-      {/* XP Withdrawal */}
-      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
-        <Group gap="xs" mb="xs">
-          <IconTrophy size={20} color="var(--mantine-color-violet-6)" />
-          <Title order={4}>Spend XP</Title>
-        </Group>
-        <Text size="sm" c="dimmed" mb="md">
-          Spend your earned XP on rewards. Current balance: <strong>{stats?.total_xp ?? 0} XP</strong>
-        </Text>
-
-        <Group gap="md" wrap="wrap" align="flex-start">
-          <NumberInput
-            label="Amount"
-            size="sm"
-            value={withdrawAmount === '' ? '' : Number(withdrawAmount)}
-            onChange={(val) => setWithdrawAmount(String(val))}
-            min={1}
-            suffix=" XP"
-            w={120}
-          />
-          <TextInput
-            label="Reward Description (optional)"
-            size="sm"
-            value={withdrawDescription}
-            onChange={(e) => setWithdrawDescription(e.target.value)}
-            placeholder="e.g., Movie night"
-            style={{ flex: 1, minWidth: 200 }}
-          />
-          <Button
-            color="violet"
-            onClick={handleWithdrawXP}
-            disabled={withdrawing || loading || !withdrawAmount}
-            leftSection={withdrawing ? <Loader size={16} color="white" /> : <IconTrophy size={16} />}
-            mt={24}
-          >
-            Withdraw
-          </Button>
-        </Group>
-
-        <Text size="xs" c="dimmed" mt="xs">
-          You can go into XP debt if you withdraw more than your current balance.
-        </Text>
-      </Card>
-
-      {/* Vacation Mode */}
-      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
-        <Group gap="xs" mb="xs">
-          <IconBeach size={20} color="var(--mantine-color-cyan-6)" />
-          <Title order={4}>Vacation Mode</Title>
-        </Group>
-        <Text size="sm" c="dimmed" mb="md">
-          Enable vacation mode to pause streak penalties and task due date enforcement while you're away.
-        </Text>
-
-        <Switch
-          checked={systemStatus?.vacation_mode ?? false}
-          onChange={(e) => handleVacationToggle(e.currentTarget.checked)}
-          disabled={loading}
-          label={systemStatus?.vacation_mode ? 'Vacation mode is active' : 'Enable vacation mode'}
-          aria-label="Vacation Mode"
-        />
-
-        {systemStatus?.vacation_mode && (
-          <Alert color="blue" mt="md">
-            Vacation mode is currently active. No penalties will be applied for overdue tasks.
-          </Alert>
-        )}
-      </Card>
-
-      {/* XP History */}
-      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
-        <Group gap="xs" mb="xs">
-          <IconHistory size={20} color="var(--mantine-color-blue-6)" />
-          <Title order={4}>XP History</Title>
-        </Group>
-        <Text size="sm" c="dimmed" mb="md">
-          Recent experience points earned or spent.
-        </Text>
-
-        {loadingXP ? (
-          <Group justify="center" py="md">
-            <Loader size="sm" />
-          </Group>
-        ) : xpHistory.length === 0 ? (
-          <Text size="sm" c="dimmed">
-            No XP transactions yet. Complete tasks to earn experience!
-          </Text>
-        ) : (
-          <Stack gap="xs">
-            {xpHistory.map((transaction) => (
-              <Paper key={transaction.id} p="sm" withBorder>
-                <Group justify="space-between">
-                  <Box>
-                    <Text size="sm">{transaction.description}</Text>
-                    <Text size="xs" c="dimmed">
-                      {new Date(transaction.timestamp).toLocaleDateString()}
+              {/* Habit Streak Bonus */}
+              <Box>
+                <Text className="micro-meta" mb="xs">HABIT_STREAK_BONUS</Text>
+                <Switch
+                  checked={scoringConfig.habit_streak_bonus.enabled}
+                  onChange={(e) => updateScoringField('habit_streak_bonus', {
+                    ...scoringConfig.habit_streak_bonus,
+                    enabled: e.currentTarget.checked,
+                  })}
+                  label="Enable habit streak bonuses"
+                  mb="sm"
+                  color="cyan"
+                  styles={{ label: { fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' } }}
+                />
+                {scoringConfig.habit_streak_bonus.enabled && (
+                  <Stack gap="sm" mt="xs">
+                    <Text size="xs" style={{ color: '#5A5E66' }}>
+                      Defaults: 1.2/streak day, max 25 bonus
                     </Text>
-                  </Box>
-                  <Badge
-                    color={transaction.amount > 0 ? 'green' : 'red'}
-                    variant="light"
-                  >
-                    {transaction.amount > 0 ? '+' : ''}{transaction.amount} XP
-                  </Badge>
-                </Group>
-              </Paper>
-            ))}
-          </Stack>
-        )}
-      </Card>
+                    <Group gap="md" wrap="wrap">
+                      <NumberInput size="sm" label="Bonus per streak day" value={scoringConfig.habit_streak_bonus.bonus_per_streak_day}
+                        onChange={(val) => updateScoringField('habit_streak_bonus', { ...scoringConfig.habit_streak_bonus, bonus_per_streak_day: Number(val) || 0 })}
+                        description="0.5-5.0" step={0.1} min={0} w={150} />
+                      <NumberInput size="sm" label="Max bonus" value={scoringConfig.habit_streak_bonus.max_bonus}
+                        onChange={(val) => updateScoringField('habit_streak_bonus', { ...scoringConfig.habit_streak_bonus, max_bonus: Number(val) || 0 })}
+                        description="10-100" step={1} min={0} w={120} />
+                    </Group>
+                  </Stack>
+                )}
+              </Box>
 
-      {/* Security */}
-      <Card shadow="sm" padding="lg" radius="md" mb="lg" withBorder>
-        <Title order={4} mb="xs">
-          Security
-        </Title>
-        <Text size="sm" c="dimmed" mb="md">
-          Manage your account security settings.
-        </Text>
+              <Divider />
 
-        <Button
-          variant="outline"
-          leftSection={<IconLock size={16} />}
-          onClick={() => setChangePasswordOpen(true)}
+              {/* Action Buttons */}
+              <Group gap="md" mt="md">
+                <ArcadeButton
+                  onClick={handleSaveScoringConfig}
+                  disabled={savingScoringConfig || resettingScoringConfig}
+                  loading={savingScoringConfig}
+                  variant="primary"
+                  style={{ minHeight: 44 }}
+                >
+                  {savingScoringConfig ? 'SAVING...' : 'SAVE CONFIG'}
+                </ArcadeButton>
+                <ArcadeButton
+                  variant="ghost"
+                  onClick={handleResetScoringConfig}
+                  disabled={savingScoringConfig || resettingScoringConfig}
+                  loading={resettingScoringConfig}
+                  leftSection={<IconRefresh size={16} />}
+                  style={{ minHeight: 44, color: '#FFC775', borderColor: 'rgba(255, 199, 117, 0.3)' }}
+                >
+                  {resettingScoringConfig ? 'RESETTING...' : 'RECALCULATE'}
+                </ArcadeButton>
+              </Group>
+            </Stack>
+          ) : null}
+        </Collapse>
+      </GlowCard>
+
+      {/* ═══════════════════════════════════════════════
+          6.3a — Tags CRUD Management
+          ═══════════════════════════════════════════════ */}
+      <GlowCard accentColor="cyan" accentPosition="left" className="settings-section" style={{ marginBottom: '1.5rem' }} data-testid="tags-section">
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => toggleSection('tags')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleSection('tags')}
         >
-          Change Password
-        </Button>
-      </Card>
+          {expandedSections.tags ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          <IconTag size={14} style={{ color: '#00E5FF' }} />
+          TAG_DEFINITIONS
+        </div>
 
-      {/* About */}
-      <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Group gap="xs" mb="xs">
-          <IconInfoCircle size={20} color="var(--mantine-color-blue-6)" />
-          <Title order={4}>About</Title>
-        </Group>
-        <Text size="sm" c="dimmed" mb="md">
-          Application version and build information.
-        </Text>
+        <Collapse in={expandedSections.tags}>
+          <Group justify="space-between" mb="md">
+            <Text className="font-data" size="xs" style={{ color: '#5A5E66' }}>
+              Manage tags and set XP multipliers. Multiplier {'>'} 1.0 = bonus XP.
+            </Text>
+            <ArcadeButton
+              variant="ghost"
+              size="xs"
+              leftSection={<IconPlus size={14} />}
+              onClick={() => {
+                setShowAddTag(true);
+                setEditingTagId(null);
+                setTagForm({ name: '', color: '#808080', multiplier: 1.0 });
+              }}
+              disabled={loading || showAddTag}
+              style={{ minHeight: 44 }}
+            >
+              ADD TAG
+            </ArcadeButton>
+          </Group>
 
-        <Paper withBorder>
-          <Table>
-            <Table.Tbody>
-              <Table.Tr>
-                <Table.Td style={{ fontWeight: 'bold', width: 180 }}>
-                  Frontend Version
-                </Table.Td>
-                <Table.Td>{__APP_VERSION__}</Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Td style={{ fontWeight: 'bold' }}>
-                  Backend Version
-                </Table.Td>
-                <Table.Td>{backendVersion ?? 'Loading...'}</Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Td style={{ fontWeight: 'bold' }}>
-                  Build Date
-                </Table.Td>
-                <Table.Td>{new Date(__BUILD_TIMESTAMP__).toLocaleString()}</Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Td style={{ fontWeight: 'bold' }}>
-                  Environment
-                </Table.Td>
-                <Table.Td>
-                  <Badge
-                    color={import.meta.env.MODE === 'production' ? 'green' : 'yellow'}
-                    variant="light"
-                  >
-                    {import.meta.env.MODE}
-                  </Badge>
-                </Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Td style={{ fontWeight: 'bold' }}>
-                  API URL
-                </Table.Td>
-                <Table.Td style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                  {import.meta.env.VITE_API_URL || window.location.origin}
-                </Table.Td>
-              </Table.Tr>
-            </Table.Tbody>
-          </Table>
-        </Paper>
-      </Card>
+          {loadingTags ? (
+            <Group justify="center" py="md"><Loader size="sm" /></Group>
+          ) : (
+            <Stack gap="xs">
+              {/* Add tag form */}
+              {showAddTag && (
+                <Box
+                  style={{
+                    backgroundColor: '#0B0E17',
+                    border: '1px dashed rgba(0, 229, 255, 0.3)',
+                    padding: '0.75rem',
+                  }}
+                >
+                  <Group gap="sm" wrap="wrap" align="flex-end">
+                    <TextInput
+                      size="sm"
+                      label="Name"
+                      placeholder="Tag name"
+                      value={tagForm.name}
+                      onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
+                      autoFocus
+                      style={{ flex: 1, minWidth: 120 }}
+                    />
+                    <ColorInput
+                      size="sm"
+                      label="Color"
+                      value={tagForm.color}
+                      onChange={(color) => setTagForm({ ...tagForm, color })}
+                      w={100}
+                    />
+                    <NumberInput
+                      size="sm"
+                      label="Multiplier"
+                      value={tagForm.multiplier}
+                      onChange={(val) => setTagForm({ ...tagForm, multiplier: Number(val) || 1.0 })}
+                      min={0.1} max={10} step={0.1} w={90} suffix="x"
+                    />
+                    <Group gap={4}>
+                      <ArcadeButton size="xs" variant="primary" onClick={handleSaveTag} style={{ minHeight: 44 }}>
+                        <IconCheck size={16} />
+                      </ArcadeButton>
+                      <ArcadeButton size="xs" variant="ghost" onClick={handleCancelEditTag} style={{ minHeight: 44 }}>
+                        <IconX size={16} />
+                      </ArcadeButton>
+                    </Group>
+                  </Group>
+                  <Group gap={4} mt="xs">
+                    {[0.5, 1.0, 1.5, 2.0].map((m) => (
+                      <ArcadeButton key={m} size="xs" variant="ghost" onClick={() => handleSetTagMultiplier(m)}
+                        style={{ minHeight: 36, fontSize: '0.7rem' }}>
+                        {m}x
+                      </ArcadeButton>
+                    ))}
+                  </Group>
+                </Box>
+              )}
 
-      {/* Import Confirmation Modal */}
+              {/* Tag items */}
+              {tags.map((tag) => (
+                <Box
+                  key={tag.id}
+                  className="ghost-border"
+                  style={{
+                    backgroundColor: '#10131C',
+                    padding: '0.75rem',
+                    transition: 'background-color 0.15s ease',
+                  }}
+                >
+                  {editingTagId === tag.id ? (
+                    /* Edit mode */
+                    <>
+                      <Group gap="sm" wrap="wrap" align="flex-end">
+                        <TextInput size="sm" label="Name" value={tagForm.name}
+                          onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
+                          style={{ flex: 1, minWidth: 120 }} />
+                        <ColorInput size="sm" label="Color" value={tagForm.color}
+                          onChange={(color) => setTagForm({ ...tagForm, color })} w={100} />
+                        <NumberInput size="sm" label="Multiplier" value={tagForm.multiplier}
+                          onChange={(val) => setTagForm({ ...tagForm, multiplier: Number(val) || 1.0 })}
+                          min={0.1} max={10} step={0.1} w={90} suffix="x" />
+                        <Group gap={4}>
+                          <ArcadeButton size="xs" variant="primary" onClick={handleSaveTag} style={{ minHeight: 44 }}>
+                            <IconCheck size={16} />
+                          </ArcadeButton>
+                          <ArcadeButton size="xs" variant="ghost" onClick={handleCancelEditTag} style={{ minHeight: 44 }}>
+                            <IconX size={16} />
+                          </ArcadeButton>
+                        </Group>
+                      </Group>
+                      <Group gap={4} mt="xs">
+                        {[0.5, 1.0, 1.5, 2.0].map((m) => (
+                          <ArcadeButton key={m} size="xs" variant="ghost" onClick={() => handleSetTagMultiplier(m)}
+                            style={{ minHeight: 36, fontSize: '0.7rem' }}>
+                            {m}x
+                          </ArcadeButton>
+                        ))}
+                      </Group>
+                    </>
+                  ) : (
+                    /* Display mode */
+                    <Group justify="space-between" wrap="wrap">
+                      <Group gap="sm">
+                        <Box style={{ width: 16, height: 16, backgroundColor: tag.color, border: '1px solid rgba(59,73,76,0.3)' }} />
+                        <Text className="font-data" size="sm" style={{ color: '#E0E0E0' }}>{tag.name}</Text>
+                        <DataBadge
+                          value={`${tag.multiplier}x`}
+                          color={tag.multiplier > 1 ? 'cyan' : tag.multiplier < 1 ? 'amber' : 'muted'}
+                          size="sm"
+                        />
+                      </Group>
+                      <Group gap={4}>
+                        <ActionIcon size="md" variant="subtle" onClick={() => handleStartEditTag(tag)} style={{ minWidth: 44, minHeight: 44 }}>
+                          <IconPencil size={16} style={{ color: '#8A8F98' }} />
+                        </ActionIcon>
+                        <ActionIcon size="md" variant="subtle" onClick={() => handleDeleteTag(tag.id)} style={{ minWidth: 44, minHeight: 44 }}>
+                          <IconTrash size={16} style={{ color: '#FF007F' }} />
+                        </ActionIcon>
+                      </Group>
+                    </Group>
+                  )}
+                </Box>
+              ))}
+
+              {tags.length === 0 && !showAddTag && (
+                <Box style={{ backgroundColor: '#0B0E17', border: '1px dashed rgba(59,73,76,0.15)', padding: '1.5rem', textAlign: 'center' }}>
+                  <Text className="font-data" size="sm" style={{ color: '#5A5E66' }}>
+                    NO TAGS DEFINED — CLICK &quot;ADD TAG&quot; TO CREATE ONE
+                  </Text>
+                </Box>
+              )}
+            </Stack>
+          )}
+        </Collapse>
+      </GlowCard>
+
+      {/* ═══════════════════════════════════════════════
+          6.3b — Projects CRUD Management
+          ═══════════════════════════════════════════════ */}
+      <GlowCard accentColor="magenta" accentPosition="left" className="settings-section" style={{ marginBottom: '1.5rem' }} data-testid="projects-section">
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => toggleSection('projects')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleSection('projects')}
+        >
+          {expandedSections.projects ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          <IconFolder size={14} style={{ color: '#FF007F' }} />
+          PROJECT_DEFINITIONS
+        </div>
+
+        <Collapse in={expandedSections.projects}>
+          <Group justify="space-between" mb="md">
+            <Text className="font-data" size="xs" style={{ color: '#5A5E66' }}>
+              Manage projects and XP multipliers.
+            </Text>
+            <ArcadeButton
+              variant="ghost"
+              size="xs"
+              leftSection={<IconPlus size={14} />}
+              onClick={() => {
+                setShowAddProject(true);
+                setEditingProjectId(null);
+                setProjectForm({ name: '', color: '#4A90D9', multiplier: 1.0 });
+              }}
+              disabled={loading || showAddProject}
+              style={{ minHeight: 44 }}
+            >
+              ADD PROJECT
+            </ArcadeButton>
+          </Group>
+
+          {loadingProjects ? (
+            <Group justify="center" py="md"><Loader size="sm" /></Group>
+          ) : (
+            <Stack gap="xs">
+              {/* Add project form */}
+              {showAddProject && (
+                <Box
+                  style={{
+                    backgroundColor: '#0B0E17',
+                    border: '1px dashed rgba(255, 0, 127, 0.3)',
+                    padding: '0.75rem',
+                  }}
+                >
+                  <Group gap="sm" wrap="wrap" align="flex-end">
+                    <TextInput size="sm" label="Name" placeholder="Project name" value={projectForm.name}
+                      onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                      autoFocus style={{ flex: 1, minWidth: 120 }} />
+                    <ColorInput size="sm" label="Color" value={projectForm.color}
+                      onChange={(color) => setProjectForm({ ...projectForm, color })} w={100} />
+                    <NumberInput size="sm" label="Multiplier" value={projectForm.multiplier}
+                      onChange={(val) => setProjectForm({ ...projectForm, multiplier: Number(val) || 1.0 })}
+                      min={0.1} max={10} step={0.1} w={90} suffix="x" />
+                    <Group gap={4}>
+                      <ArcadeButton size="xs" variant="primary" onClick={handleSaveProject} style={{ minHeight: 44 }}>
+                        <IconCheck size={16} />
+                      </ArcadeButton>
+                      <ArcadeButton size="xs" variant="ghost" onClick={handleCancelEditProject} style={{ minHeight: 44 }}>
+                        <IconX size={16} />
+                      </ArcadeButton>
+                    </Group>
+                  </Group>
+                  <Group gap={4} mt="xs">
+                    {[0.5, 1.0, 1.5, 2.0].map((m) => (
+                      <ArcadeButton key={m} size="xs" variant="ghost" onClick={() => handleSetProjectMultiplier(m)}
+                        style={{ minHeight: 36, fontSize: '0.7rem' }}>
+                        {m}x
+                      </ArcadeButton>
+                    ))}
+                  </Group>
+                </Box>
+              )}
+
+              {/* Project items */}
+              {projects.map((project) => (
+                <Box
+                  key={project.id}
+                  className="ghost-border"
+                  style={{
+                    backgroundColor: '#10131C',
+                    padding: '0.75rem',
+                    transition: 'background-color 0.15s ease',
+                  }}
+                >
+                  {editingProjectId === project.id ? (
+                    <>
+                      <Group gap="sm" wrap="wrap" align="flex-end">
+                        <TextInput size="sm" label="Name" value={projectForm.name}
+                          onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                          style={{ flex: 1, minWidth: 120 }} />
+                        <ColorInput size="sm" label="Color" value={projectForm.color}
+                          onChange={(color) => setProjectForm({ ...projectForm, color })} w={100} />
+                        <NumberInput size="sm" label="Multiplier" value={projectForm.multiplier}
+                          onChange={(val) => setProjectForm({ ...projectForm, multiplier: Number(val) || 1.0 })}
+                          min={0.1} max={10} step={0.1} w={90} suffix="x" />
+                        <Group gap={4}>
+                          <ArcadeButton size="xs" variant="primary" onClick={handleSaveProject} style={{ minHeight: 44 }}>
+                            <IconCheck size={16} />
+                          </ArcadeButton>
+                          <ArcadeButton size="xs" variant="ghost" onClick={handleCancelEditProject} style={{ minHeight: 44 }}>
+                            <IconX size={16} />
+                          </ArcadeButton>
+                        </Group>
+                      </Group>
+                      <Group gap={4} mt="xs">
+                        {[0.5, 1.0, 1.5, 2.0].map((m) => (
+                          <ArcadeButton key={m} size="xs" variant="ghost" onClick={() => handleSetProjectMultiplier(m)}
+                            style={{ minHeight: 36, fontSize: '0.7rem' }}>
+                            {m}x
+                          </ArcadeButton>
+                        ))}
+                      </Group>
+                    </>
+                  ) : (
+                    <Group justify="space-between" wrap="wrap">
+                      <Group gap="sm">
+                        <Box style={{ width: 16, height: 16, backgroundColor: project.color, border: '1px solid rgba(59,73,76,0.3)' }} />
+                        <Text className="font-data" size="sm" style={{ color: '#E0E0E0' }}>{project.name}</Text>
+                        <DataBadge
+                          value={`${project.multiplier}x`}
+                          color={project.multiplier > 1 ? 'cyan' : project.multiplier < 1 ? 'amber' : 'muted'}
+                          size="sm"
+                        />
+                      </Group>
+                      <Group gap={4}>
+                        <ActionIcon size="md" variant="subtle" onClick={() => handleStartEditProject(project)} style={{ minWidth: 44, minHeight: 44 }}>
+                          <IconPencil size={16} style={{ color: '#8A8F98' }} />
+                        </ActionIcon>
+                        <ActionIcon size="md" variant="subtle" onClick={() => handleDeleteProject(project.id)} style={{ minWidth: 44, minHeight: 44 }}>
+                          <IconTrash size={16} style={{ color: '#FF007F' }} />
+                        </ActionIcon>
+                      </Group>
+                    </Group>
+                  )}
+                </Box>
+              ))}
+
+              {projects.length === 0 && !showAddProject && (
+                <Box style={{ backgroundColor: '#0B0E17', border: '1px dashed rgba(59,73,76,0.15)', padding: '1.5rem', textAlign: 'center' }}>
+                  <Text className="font-data" size="sm" style={{ color: '#5A5E66' }}>
+                    NO PROJECTS DEFINED — CLICK &quot;ADD PROJECT&quot; TO CREATE ONE
+                  </Text>
+                </Box>
+              )}
+            </Stack>
+          )}
+        </Collapse>
+      </GlowCard>
+
+      {/* ═══════════════════════════════════════════════
+          Date Processing
+          ═══════════════════════════════════════════════ */}
+      <GlowCard accentColor="amber" accentPosition="left" className="settings-section" style={{ marginBottom: '1.5rem' }}>
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => toggleSection('dateProcessing')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleSection('dateProcessing')}
+        >
+          {expandedSections.dateProcessing ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          <IconCalendar size={14} style={{ color: '#FFC775' }} />
+          DATE_PROCESSING
+        </div>
+
+        <Collapse in={expandedSections.dateProcessing}>
+          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '1rem' }}>
+            Process pending days to apply overdue penalties and generate recurring tasks.
+          </Text>
+
+          <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(59, 73, 76, 0.15)', padding: '0.75rem', marginBottom: '1rem' }}>
+            <Stack gap={6}>
+              <Group gap="xs">
+                <Text className="font-data" size="xs" style={{ color: '#8A8F98', width: 180 }}>CURRENT_PROCESSING_DATE:</Text>
+                <Text className="font-data" size="xs" style={{ color: '#00E5FF' }}>
+                  {systemStatus?.last_processed_date
+                    ? (() => {
+                        const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
+                        const nextDay = new Date(year, month - 1, day + 1);
+                        return nextDay.toLocaleDateString();
+                      })()
+                    : 'NOT_STARTED'}
+                </Text>
+              </Group>
+              <Group gap="xs">
+                <Text className="font-data" size="xs" style={{ color: '#8A8F98', width: 180 }}>REAL_DATE:</Text>
+                <Text className="font-data" size="xs" style={{ color: '#E0E0E0' }}>{new Date().toLocaleDateString()}</Text>
+              </Group>
+              <Group gap="xs">
+                <Text className="font-data" size="xs" style={{ color: '#8A8F98', width: 180 }}>LAST_COMPLETED:</Text>
+                <Text className="font-data" size="xs" style={{ color: '#E0E0E0' }}>{systemStatus?.last_processed_date || 'NEVER'}</Text>
+              </Group>
+              <Group gap="xs">
+                <Text className="font-data" size="xs" style={{ color: '#8A8F98', width: 180 }}>DAYS_BEHIND:</Text>
+                <DataBadge
+                  value={`${systemStatus?.pending_days ?? 0} day${(systemStatus?.pending_days ?? 0) !== 1 ? 's' : ''}`}
+                  color={systemStatus?.pending_days && systemStatus.pending_days > 0 ? 'magenta' : 'cyan'}
+                  size="sm"
+                />
+              </Group>
+            </Stack>
+          </Box>
+
+          {systemStatus?.pending_days && systemStatus.pending_days > 0 ? (
+            <Group gap="md" wrap="wrap">
+              <ArcadeButton
+                variant="primary"
+                onClick={() => handleAdvanceDate(1)}
+                disabled={advancingDate || loading}
+                loading={advancingDate}
+                leftSection={<IconCalendar size={16} />}
+                style={{ minHeight: 44 }}
+              >
+                PROCESS{' '}
+                {systemStatus?.last_processed_date
+                  ? (() => {
+                      const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
+                      const nextDay = new Date(year, month - 1, day + 1);
+                      return nextDay.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                    })()
+                  : 'NEXT DAY'}
+              </ArcadeButton>
+              {systemStatus.pending_days > 1 && (
+                <ArcadeButton
+                  variant="ghost"
+                  onClick={() => handleAdvanceDate()}
+                  disabled={advancingDate || loading}
+                  loading={advancingDate}
+                  leftSection={<IconCalendar size={16} />}
+                  style={{ minHeight: 44 }}
+                >
+                  PROCESS ALL {systemStatus.pending_days} DAYS
+                </ArcadeButton>
+              )}
+            </Group>
+          ) : (
+            <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(0, 229, 255, 0.2)', padding: '0.75rem' }}>
+              <Text className="font-data" size="xs" style={{ color: '#00E5FF' }}>
+                ✓ ALL CAUGHT UP — NO PENDING DAYS
+              </Text>
+            </Box>
+          )}
+
+          {systemStatus && systemStatus.pending_days > 0 && (
+            <Box mt="md" style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(255, 199, 117, 0.3)', padding: '0.75rem' }}>
+              <Text className="font-data" size="xs" style={{ color: '#FFC775' }}>
+                ⚠ PROCESSING WILL APPLY PENALTIES FOR INCOMPLETE OVERDUE TASKS
+              </Text>
+            </Box>
+          )}
+        </Collapse>
+      </GlowCard>
+
+      {/* ═══════════════════════════════════════════════
+          XP Withdrawal / Spend
+          ═══════════════════════════════════════════════ */}
+      <GlowCard accentColor="magenta" accentPosition="left" className="settings-section" style={{ marginBottom: '1.5rem' }}>
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => toggleSection('xpWithdraw')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleSection('xpWithdraw')}
+        >
+          {expandedSections.xpWithdraw ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          <IconTrophy size={14} style={{ color: '#FF007F' }} />
+          XP_WITHDRAWAL
+        </div>
+
+        <Collapse in={expandedSections.xpWithdraw}>
+          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '0.75rem' }}>
+            Spend earned XP on rewards. Current balance:{' '}
+            <DataBadge value={`${stats?.total_xp ?? 0} XP`} color="cyan" size="sm" />
+          </Text>
+
+          <Group gap="md" wrap="wrap" align="flex-end">
+            <NumberInput
+              label="Amount"
+              size="sm"
+              value={withdrawAmount === '' ? '' : Number(withdrawAmount)}
+              onChange={(val) => setWithdrawAmount(String(val))}
+              min={1}
+              suffix=" XP"
+              w={120}
+            />
+            <TextInput
+              label="Reward Description (optional)"
+              size="sm"
+              value={withdrawDescription}
+              onChange={(e) => setWithdrawDescription(e.target.value)}
+              placeholder="e.g., Movie night"
+              style={{ flex: 1, minWidth: 200 }}
+            />
+            <ArcadeButton
+              variant="secondary"
+              onClick={handleWithdrawXP}
+              disabled={withdrawing || loading || !withdrawAmount}
+              loading={withdrawing}
+              leftSection={<IconTrophy size={16} />}
+              style={{ minHeight: 44 }}
+            >
+              WITHDRAW
+            </ArcadeButton>
+          </Group>
+
+          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginTop: '0.5rem' }}>
+            You can go into XP debt if you withdraw more than your current balance.
+          </Text>
+        </Collapse>
+      </GlowCard>
+
+      {/* ═══════════════════════════════════════════════
+          Vacation Mode
+          ═══════════════════════════════════════════════ */}
+      <GlowCard accentColor="cyan" accentPosition="left" className="settings-section" style={{ marginBottom: '1.5rem' }}>
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => toggleSection('vacation')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleSection('vacation')}
+        >
+          {expandedSections.vacation ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          <IconBeach size={14} style={{ color: '#00E5FF' }} />
+          VACATION_MODE
+        </div>
+
+        <Collapse in={expandedSections.vacation}>
+          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '0.75rem' }}>
+            Pause streak penalties and due date enforcement while away.
+          </Text>
+
+          <Switch
+            checked={systemStatus?.vacation_mode ?? false}
+            onChange={(e) => handleVacationToggle(e.currentTarget.checked)}
+            disabled={loading}
+            label={systemStatus?.vacation_mode ? 'VACATION MODE ACTIVE' : 'ENABLE VACATION MODE'}
+            aria-label="Vacation Mode"
+            color="cyan"
+            styles={{ label: { fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', letterSpacing: '0.05em' } }}
+          />
+
+          {systemStatus?.vacation_mode && (
+            <Box mt="md" style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(0, 229, 255, 0.2)', padding: '0.75rem' }}>
+              <Text className="font-data" size="xs" style={{ color: '#00E5FF' }}>
+                ✓ VACATION MODE ACTIVE — NO PENALTIES APPLIED
+              </Text>
+            </Box>
+          )}
+        </Collapse>
+      </GlowCard>
+
+      {/* ═══════════════════════════════════════════════
+          Data Backup & Restore
+          ═══════════════════════════════════════════════ */}
+      <GlowCard accentColor="amber" accentPosition="left" className="settings-section" style={{ marginBottom: '1.5rem' }}>
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => toggleSection('backup')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleSection('backup')}
+        >
+          {expandedSections.backup ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          <IconDownload size={14} style={{ color: '#FFC775' }} />
+          DATA_BACKUP_RESTORE
+        </div>
+
+        <Collapse in={expandedSections.backup}>
+          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '1rem' }}>
+            Export data as JSON backup or restore from a previous backup.
+          </Text>
+
+          <Group gap="md" wrap="wrap">
+            <ArcadeButton
+              variant="primary"
+              leftSection={loading ? <Loader size={16} color="white" /> : <IconDownload size={16} />}
+              onClick={handleExport}
+              disabled={loading}
+              style={{ minHeight: 44 }}
+            >
+              EXPORT DATA
+            </ArcadeButton>
+
+            <Box>
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+                ref={fileInputRef}
+              />
+              <ArcadeButton
+                variant="ghost"
+                leftSection={<IconUpload size={16} />}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                style={{ minHeight: 44 }}
+              >
+                IMPORT DATA
+              </ArcadeButton>
+            </Box>
+          </Group>
+
+          <Box mt="md" style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(255, 199, 117, 0.3)', padding: '0.75rem' }}>
+            <Text className="font-data" size="xs" style={{ color: '#FFC775' }}>
+              ⚠ IMPORTING DATA WILL REPLACE ALL CURRENT DATA. EXPORT FIRST.
+            </Text>
+          </Box>
+        </Collapse>
+      </GlowCard>
+
+      {/* ═══════════════════════════════════════════════
+          Security
+          ═══════════════════════════════════════════════ */}
+      <GlowCard accentColor="magenta" accentPosition="left" className="settings-section" style={{ marginBottom: '1.5rem' }}>
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => toggleSection('security')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleSection('security')}
+        >
+          {expandedSections.security ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          <IconLock size={14} style={{ color: '#FF007F' }} />
+          SECURITY_CONFIG
+        </div>
+
+        <Collapse in={expandedSections.security}>
+          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '0.75rem' }}>
+            Manage account security settings.
+          </Text>
+
+          <ArcadeButton
+            variant="ghost"
+            leftSection={<IconLock size={16} />}
+            onClick={() => setChangePasswordOpen(true)}
+            style={{ minHeight: 44 }}
+          >
+            CHANGE PASSWORD
+          </ArcadeButton>
+        </Collapse>
+      </GlowCard>
+
+      {/* ═══════════════════════════════════════════════
+          About / System Info
+          ═══════════════════════════════════════════════ */}
+      <GlowCard accentColor="none" className="settings-section" style={{ marginBottom: '1.5rem' }}>
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => toggleSection('about')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleSection('about')}
+        >
+          {expandedSections.about ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          <IconInfoCircle size={14} style={{ color: '#8A8F98' }} />
+          SYSTEM_INFO
+        </div>
+
+        <Collapse in={expandedSections.about}>
+          <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(59, 73, 76, 0.15)', overflow: 'hidden' }}>
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '0.8125rem',
+              }}
+            >
+              <tbody>
+                {[
+                  { key: 'FRONTEND_VERSION', val: __APP_VERSION__ },
+                  { key: 'BACKEND_VERSION', val: backendVersion ?? 'Loading...' },
+                  { key: 'BUILD_DATE', val: new Date(__BUILD_TIMESTAMP__).toLocaleString() },
+                  { key: 'ENVIRONMENT', val: import.meta.env.MODE, badge: true },
+                  { key: 'API_URL', val: import.meta.env.VITE_API_URL || window.location.origin },
+                ].map((row) => (
+                  <tr key={row.key} style={{ borderBottom: '1px solid rgba(59, 73, 76, 0.15)' }}>
+                    <td style={{ padding: '0.5rem 0.75rem', color: '#8A8F98', whiteSpace: 'nowrap', width: 200, backgroundColor: '#181B25', letterSpacing: '0.1em', fontSize: '0.6875rem' }}>
+                      {row.key}
+                    </td>
+                    <td style={{ padding: '0.5rem 0.75rem', color: '#E0E0E0' }}>
+                      {row.badge ? (
+                        <DataBadge
+                          value={row.val}
+                          color={row.val === 'production' ? 'cyan' : 'amber'}
+                          size="sm"
+                        />
+                      ) : (
+                        row.val
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Box>
+        </Collapse>
+      </GlowCard>
+
+      {/* ═══════════════════════════════════════════════
+          Import Confirmation Modal — Glassmorphism
+          ═══════════════════════════════════════════════ */}
       <Modal
         opened={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
-        title="Confirm Data Import"
+        title={
+          <Text className="font-data" style={{ color: '#FF007F', letterSpacing: '0.1em', fontSize: '0.8125rem' }}>
+            CONFIRM_DATA_IMPORT
+          </Text>
+        }
+        styles={{
+          content: {
+            backgroundColor: 'rgba(16, 19, 28, 0.95)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 0, 127, 0.3)',
+          },
+          header: {
+            backgroundColor: 'transparent',
+          },
+        }}
       >
-        <Text mb="md">
-          Are you sure you want to import data from <strong>{selectedFile?.name}</strong>?
+        <Text className="font-data" size="sm" mb="md" style={{ color: '#E0E0E0' }}>
+          Replace all data from <strong style={{ color: '#FFC775' }}>{selectedFile?.name}</strong>?
         </Text>
-        <Alert color="red" mb="lg">
-          <strong>Warning:</strong> This will replace ALL your current data. This action cannot be undone.
-        </Alert>
-        <Group justify="flex-end">
-          <Button variant="subtle" onClick={() => setImportDialogOpen(false)}>Cancel</Button>
-          <Button color="red" onClick={handleImportConfirm}>
-            Import and Replace
-          </Button>
+        <Box mb="lg" style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(255, 0, 127, 0.3)', padding: '0.75rem' }}>
+          <Text className="font-data" size="xs" style={{ color: '#FF007F' }}>
+            ⚠ THIS WILL REPLACE ALL DATA. THIS ACTION CANNOT BE UNDONE.
+          </Text>
+        </Box>
+        <Group justify="flex-end" gap="sm">
+          <ArcadeButton variant="ghost" onClick={() => setImportDialogOpen(false)} style={{ minHeight: 44 }}>
+            CANCEL
+          </ArcadeButton>
+          <ArcadeButton variant="secondary" onClick={handleImportConfirm} style={{ minHeight: 44 }}>
+            IMPORT & REPLACE
+          </ArcadeButton>
         </Group>
       </Modal>
 
-      {/* Change Password Modal */}
+      {/* ═══════════════════════════════════════════════
+          Change Password Modal — Glassmorphism
+          ═══════════════════════════════════════════════ */}
       <Modal
         opened={changePasswordOpen}
         onClose={() => setChangePasswordOpen(false)}
-        title="Change Password"
+        title={
+          <Text className="font-data" style={{ color: '#00E5FF', letterSpacing: '0.1em', fontSize: '0.8125rem' }}>
+            CHANGE_PASSWORD
+          </Text>
+        }
+        styles={{
+          content: {
+            backgroundColor: 'rgba(16, 19, 28, 0.95)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(0, 229, 255, 0.3)',
+          },
+          header: {
+            backgroundColor: 'transparent',
+          },
+        }}
       >
         <Stack gap="md">
           <PasswordInput
@@ -1605,14 +1717,19 @@ export default function SettingsPage() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
           />
-          <Group justify="flex-end" mt="md">
-            <Button variant="subtle" onClick={() => setChangePasswordOpen(false)}>Cancel</Button>
-            <Button
+          <Group justify="flex-end" mt="md" gap="sm">
+            <ArcadeButton variant="ghost" onClick={() => setChangePasswordOpen(false)} style={{ minHeight: 44 }}>
+              CANCEL
+            </ArcadeButton>
+            <ArcadeButton
+              variant="primary"
               onClick={handleChangePassword}
               disabled={loading || !currentPassword || !newPassword || !confirmPassword}
+              loading={loading}
+              style={{ minHeight: 44 }}
             >
-              {loading ? <Loader size={16} color="white" /> : 'Change Password'}
-            </Button>
+              CHANGE PASSWORD
+            </ArcadeButton>
           </Group>
         </Stack>
       </Modal>

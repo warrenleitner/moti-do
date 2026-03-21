@@ -12,7 +12,8 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Box, Paper, Text, Select, Badge, CloseButton, Group, SegmentedControl, Center } from '../../ui';
+import { Box, Text, Select, Group, SegmentedControl, Center } from '../../ui';
+import { DataBadge } from '../ui';
 import { IconBinaryTree2, IconChevronUp, IconChevronDown, IconEye } from '../../ui/icons';
 import type { Task } from '../../types';
 import TaskNode from './TaskNode';
@@ -29,13 +30,13 @@ const nodeTypes: Record<string, any> = {
   task: TaskNode,
 };
 
-// Priority colors for nodes
+// Kinetic Console priority colors for nodes
 const priorityColors: Record<string, string> = {
-  critical: '#d32f2f',
-  high: '#f57c00',
-  medium: '#1976d2',
-  low: '#388e3c',
-  trivial: '#757575',
+  'Defcon One': '#FF007F',
+  'High': '#FFC775',
+  'Medium': '#00E5FF',
+  'Low': '#3B494C',
+  'Trivial': '#32343F',
 };
 
 // Build graph nodes and edges from tasks
@@ -143,7 +144,7 @@ function buildGraph(
         data: {
           task,
           isSelected: task.id === selectedTaskId,
-          color: priorityColors[task.priority] || '#1976d2',
+          color: priorityColors[task.priority] || '#00E5FF',
         },
       });
     });
@@ -156,6 +157,10 @@ function buildGraph(
 
     task.dependencies.forEach((depId) => {
       if (includedTasks.has(depId)) {
+        const depTask = taskMap.get(depId);
+        const isCriticalPath = task.priority === 'Defcon One' || task.priority === 'High';
+        const edgeColor = isCriticalPath ? '#00E5FF' : '#3B494C';
+
         edges.push({
           id: `${depId}-${taskId}`,
           source: depId,
@@ -164,13 +169,13 @@ function buildGraph(
             type: MarkerType.ArrowClosed,
             width: 20,
             height: 20,
-            color: '#666',
+            color: edgeColor,
           },
           style: {
-            stroke: '#666',
-            strokeWidth: 2,
+            stroke: edgeColor,
+            strokeWidth: isCriticalPath ? 2.5 : 1.5,
           },
-          animated: taskMap.get(depId)?.is_complete === false,
+          animated: depTask?.is_complete === false,
         });
       }
     });
@@ -220,20 +225,32 @@ export default function DependencyGraph({ tasks, onSelectTask }: DependencyGraph
 
   const getNodeColor = useCallback((node: Node): string => {
     const data = node.data as { color?: string } | undefined;
-    return data?.color || '#1976d2';
+    return data?.color || '#00E5FF';
   }, []);
 
   if (tasksWithDeps.length === 0) {
     return (
-      <Paper p="xl" ta="center">
-        <IconBinaryTree2 size={64} color="var(--mantine-color-gray-5)" style={{ marginBottom: 16 }} />
-        <Text size="lg" c="dimmed">
-          No Dependencies
+      <div
+        className="ghost-border"
+        style={{
+          backgroundColor: '#10131C',
+          padding: '3rem',
+          textAlign: 'center',
+          boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5)',
+        }}
+      >
+        <IconBinaryTree2 size={64} color="#3B494C" style={{ marginBottom: 16 }} />
+        <Text
+          className="font-data"
+          size="sm"
+          style={{ color: '#5A5E66', textTransform: 'uppercase', letterSpacing: '0.15em' }}
+        >
+          NO DEPENDENCIES DETECTED
         </Text>
-        <Text size="sm" c="dimmed">
-          Add dependencies between tasks to see the dependency graph.
+        <Text size="xs" style={{ color: '#5A5E66', marginTop: 4 }}>
+          Add dependencies between tasks to activate the dependency matrix.
         </Text>
-      </Paper>
+      </div>
     );
   }
 
@@ -286,7 +303,7 @@ export default function DependencyGraph({ tasks, onSelectTask }: DependencyGraph
   ];
 
   return (
-    <Box style={{ height: 'calc(100vh - 250px)', display: 'flex', flexDirection: 'column' }}>
+    <Box style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Controls */}
       <Group gap="md" mb="md" align="flex-end" wrap="wrap">
         <Select
@@ -308,20 +325,24 @@ export default function DependencyGraph({ tasks, onSelectTask }: DependencyGraph
         )}
 
         {selectedTaskId && (
-          <Badge
-            size="lg"
-            variant="light"
-            rightSection={
-              <CloseButton size="xs" onClick={() => setSelectedTaskId(null)} aria-label="Clear focus" />
-            }
-          >
-            Focused: {tasks.find((t) => t.id === selectedTaskId)?.title}
-          </Badge>
+          <DataBadge
+            value={`FOCUS: ${tasks.find((t) => t.id === selectedTaskId)?.title || ''}`}
+            color="cyan"
+            size="md"
+          />
         )}
       </Group>
 
       {/* Graph */}
-      <Paper style={{ flex: 1 }}>
+      <div
+        className="kc-graph ghost-border"
+        style={{
+          flex: 1,
+          backgroundColor: '#0B0E17',
+          boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5)',
+          minHeight: 400,
+        }}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -332,14 +353,24 @@ export default function DependencyGraph({ tasks, onSelectTask }: DependencyGraph
           fitView
           fitViewOptions={{ padding: 0.2 }}
         >
-          <Controls />
+          <Controls
+            style={{
+              borderRadius: 0,
+              boxShadow: '2px 2px 0px rgba(0, 0, 0, 0.3)',
+            }}
+          />
           <MiniMap
             nodeColor={getNodeColor}
-            maskColor="rgba(0, 0, 0, 0.1)"
+            maskColor="rgba(0, 0, 0, 0.3)"
+            style={{
+              backgroundColor: '#10131C',
+              border: '1px solid rgba(59, 73, 76, 0.15)',
+              borderRadius: 0,
+            }}
           />
-          <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
+          <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#272A34" />
         </ReactFlow>
-      </Paper>
+      </div>
 
       {/* Legend */}
       <Group gap="md" mt="md" wrap="wrap">
@@ -349,11 +380,19 @@ export default function DependencyGraph({ tasks, onSelectTask }: DependencyGraph
               style={{
                 width: 12,
                 height: 12,
-                borderRadius: '50%',
-                backgroundColor: color,
+                backgroundColor: `${color}33`,
+                borderLeft: `3px solid ${color}`,
               }}
             />
-            <Text size="xs" style={{ textTransform: 'capitalize' }}>
+            <Text
+              size="xs"
+              className="font-data"
+              style={{
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: '#8A8F98',
+              }}
+            >
               {priority}
             </Text>
           </Group>

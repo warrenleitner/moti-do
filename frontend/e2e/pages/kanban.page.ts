@@ -18,7 +18,7 @@ export class KanbanPage {
     // Mantine Select renders <input readonly> with implicit textbox role
     this.projectFilter = page.getByRole('textbox', { name: 'Project', exact: true });
     this.tagFilter = page.getByRole('textbox', { name: 'Tag', exact: true });
-    this.taskCountText = page.getByText(/\d+ tasks?/);
+    this.taskCountText = page.getByText(/\d+ tasks?/i);
     this.snackbar = page.getByRole('alert').first();
     this.sortBySelect = page.getByRole('textbox', { name: 'Sort by', exact: true });
     this.sortOrderSelect = page.getByRole('textbox', { name: 'Order', exact: true });
@@ -118,8 +118,9 @@ export class KanbanPage {
    */
   async clickTaskEditButton(title: string): Promise<void> {
     const taskCard = this.getTaskByTitle(title);
-    // The edit button is a pencil icon - find by role button with SVG icon
-    const editButton = taskCard.getByRole('button').filter({ has: this.page.locator('svg') });
+    // The edit button has aria-label="Edit task" — use it directly to avoid
+    // strict mode violations from drag handle (which also has role="button" + SVG)
+    const editButton = taskCard.getByRole('button', { name: 'Edit task' });
     await editButton.click();
   }
 

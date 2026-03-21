@@ -1,4 +1,5 @@
-import { Modal, Text, Group, Button, Stack } from '../../ui';
+import { Modal, Text, Stack } from '../../ui';
+import { ArcadeButton } from '../ui';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -11,14 +12,23 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-// Map MUI color names to Mantine colors
-const colorMap: Record<string, string> = {
-  primary: 'blue',
-  secondary: 'violet',
-  error: 'red',
-  warning: 'yellow',
-  info: 'cyan',
-  success: 'green',
+// Map confirm colors to ArcadeButton variants and accent colors
+const confirmVariantMap: Record<string, 'primary' | 'secondary' | 'ghost'> = {
+  primary: 'primary',
+  secondary: 'secondary',
+  error: 'secondary',
+  warning: 'secondary',
+  info: 'primary',
+  success: 'primary',
+};
+
+const accentBorderMap: Record<string, string> = {
+  primary: '#00E5FF',
+  secondary: '#FF007F',
+  error: '#FF007F',
+  warning: '#FFC775',
+  info: '#00E5FF',
+  success: '#00E5FF',
 };
 
 export default function ConfirmDialog({
@@ -31,18 +41,45 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const isDestructive = confirmColor === 'error' || confirmColor === 'warning';
+  const accentColor = accentBorderMap[confirmColor] || '#00E5FF';
+
   return (
-    <Modal opened={open} onClose={onCancel} title={title} size="xs" centered transitionProps={{ duration: 0 }}>
+    <Modal
+      opened={open}
+      onClose={onCancel}
+      title={
+        <span
+          className="font-display"
+          style={{
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            color: isDestructive ? '#FF007F' : '#E0E0E0',
+          }}
+        >
+          {title}
+        </span>
+      }
+      size="xs"
+      centered
+      transitionProps={{ duration: 0 }}
+      styles={{
+        content: {
+          borderTop: `3px solid ${accentColor}`,
+        },
+      }}
+    >
       <Stack>
-        <Text c="dimmed">{message}</Text>
-        <Group justify="flex-end" mt="md">
-          <Button variant="subtle" onClick={onCancel}>
+        <Text style={{ color: '#8A8F98' }} size="sm">{message}</Text>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+          <ArcadeButton variant="ghost" onClick={onCancel}>
             {cancelLabel}
-          </Button>
-          <Button color={colorMap[confirmColor]} onClick={onConfirm}>
+          </ArcadeButton>
+          <ArcadeButton variant={confirmVariantMap[confirmColor] || 'primary'} onClick={onConfirm}>
             {confirmLabel}
-          </Button>
-        </Group>
+          </ArcadeButton>
+        </div>
       </Stack>
     </Modal>
   );

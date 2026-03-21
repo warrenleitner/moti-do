@@ -1,4 +1,4 @@
-import { Center, Loader, Text, Stack, Box } from '../../ui';
+import { Center, Loader, Stack, Box } from '../../ui';
 
 interface LoadingSpinnerProps {
   message?: string;
@@ -14,11 +14,14 @@ export default function LoadingSpinner({
   const content = (
     <Center p="xl">
       <Stack align="center" gap="sm">
-        <Loader size={size} role="progressbar" />
+        <Loader size={size} color="#00E5FF" role="progressbar" />
         {message && (
-          <Text size="sm" c="dimmed">
+          <span
+            className="font-data micro-meta"
+            style={{ color: '#5A5E66' }}
+          >
             {message}
-          </Text>
+          </span>
         )}
       </Stack>
     </Center>
@@ -38,7 +41,8 @@ export default function LoadingSpinner({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          backgroundColor: 'rgba(11, 14, 23, 0.85)',
+          backdropFilter: 'blur(20px)',
           zIndex: 9999,
         }}
       >

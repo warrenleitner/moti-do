@@ -4,7 +4,8 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import type { EventClickArg, DateSelectArg, EventDropArg } from '@fullcalendar/core';
-import { Box, Paper, Text, Modal, Button, Select, Badge, CloseButton, Group } from '../../ui';
+import { Box, Text, Modal, Select, Badge, CloseButton, Group } from '../../ui';
+import { ArcadeButton, DataBadge } from '../ui';
 import type { Task } from '../../types';
 
 interface TaskCalendarProps {
@@ -14,14 +15,23 @@ interface TaskCalendarProps {
   onCreateTask?: (date: Date) => void;
 }
 
-// Priority colors for events
+// Kinetic Console priority colors for events
 const priorityColors: Record<string, { bg: string; border: string; text: string }> = {
-  critical: { bg: '#ffebee', border: '#d32f2f', text: '#c62828' },
-  high: { bg: '#fff3e0', border: '#f57c00', text: '#e65100' },
-  medium: { bg: '#e3f2fd', border: '#1976d2', text: '#1565c0' },
-  low: { bg: '#e8f5e9', border: '#388e3c', text: '#2e7d32' },
-  trivial: { bg: '#f5f5f5', border: '#757575', text: '#616161' },
+  'Defcon One': { bg: 'rgba(255, 0, 127, 0.15)', border: '#FF007F', text: '#FF007F' },
+  'High': { bg: 'rgba(255, 199, 117, 0.15)', border: '#FFC775', text: '#FFC775' },
+  'Medium': { bg: 'rgba(0, 229, 255, 0.15)', border: '#00E5FF', text: '#00E5FF' },
+  'Low': { bg: 'rgba(59, 73, 76, 0.2)', border: '#3B494C', text: '#8A8F98' },
+  'Trivial': { bg: 'rgba(59, 73, 76, 0.1)', border: '#32343F', text: '#5A5E66' },
 };
+
+// Legend display (simplified keys for legend)
+const legendItems = [
+  { label: 'Critical', color: '#FF007F' },
+  { label: 'High', color: '#FFC775' },
+  { label: 'Medium', color: '#00E5FF' },
+  { label: 'Low', color: '#3B494C' },
+  { label: 'Complete', color: '#5A5E66' },
+];
 
 // UI component - tested via integration tests
 /* v8 ignore start */
@@ -54,7 +64,7 @@ export default function TaskCalendar({
         return true;
       })
       .map((task) => {
-        const colors = priorityColors[task.priority] || priorityColors.medium;
+        const colors = priorityColors[task.priority] || priorityColors['Medium'];
         const isOverdue = new Date(task.due_date!) < new Date() && !task.is_complete;
 
         return {
@@ -63,9 +73,9 @@ export default function TaskCalendar({
           start: task.due_date,
           end: task.due_date,
           allDay: !task.due_date?.includes('T'),
-          backgroundColor: task.is_complete ? '#e0e0e0' : colors.bg,
-          borderColor: task.is_complete ? '#9e9e9e' : isOverdue ? '#d32f2f' : colors.border,
-          textColor: task.is_complete ? '#757575' : colors.text,
+          backgroundColor: task.is_complete ? '#272A34' : colors.bg,
+          borderColor: task.is_complete ? '#5A5E66' : isOverdue ? '#FF007F' : colors.border,
+          textColor: task.is_complete ? '#5A5E66' : colors.text,
           extendedProps: {
             task,
             isHabit: task.is_habit,
@@ -154,45 +164,30 @@ export default function TaskCalendar({
           </Badge>
         )}
 
-        <Text size="sm" c="dimmed" style={{ marginLeft: 'auto' }}>
-          {events.length} tasks with due dates
-        </Text>
+        <DataBadge value={`${events.length} EVENTS`} color="cyan" size="md" />
       </Group>
 
       {/* Legend */}
       <Group gap="md" mb="md" wrap="wrap">
-        {Object.entries(priorityColors).map(([priority, colors]) => (
-          <Group key={priority} gap={4} align="center">
+        {legendItems.map(({ label, color }) => (
+          <Group key={label} gap={4} align="center">
             <Box
               style={{
                 width: 12,
                 height: 12,
-                borderRadius: 4,
-                backgroundColor: colors.bg,
-                border: `2px solid ${colors.border}`,
+                backgroundColor: `${color}33`,
+                borderLeft: `3px solid ${color}`,
               }}
             />
-            <Text size="xs" style={{ textTransform: 'capitalize' }}>
-              {priority}
+            <Text size="xs" className="font-data" style={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: '#8A8F98' }}>
+              {label}
             </Text>
           </Group>
         ))}
-        <Group gap={4} align="center">
-          <Box
-            style={{
-              width: 12,
-              height: 12,
-              borderRadius: 4,
-              backgroundColor: '#e0e0e0',
-              border: '2px solid #9e9e9e',
-            }}
-          />
-          <Text size="xs">Completed</Text>
-        </Group>
       </Group>
 
-      {/* Calendar */}
-      <Paper p="md">
+      {/* Calendar — Kinetic Console themed via CSS overrides */}
+      <div className="kc-calendar ghost-border" style={{ backgroundColor: '#0B0E17', padding: '1rem', boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5)' }}>
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -220,7 +215,7 @@ export default function TaskCalendar({
             meridiem: 'short',
           }}
         />
-      </Paper>
+      </div>
 
       {/* Task details modal */}
       <Modal
@@ -232,8 +227,10 @@ export default function TaskCalendar({
               {selectedTask.icon && <span>{selectedTask.icon}</span>}
               <Text
                 size="lg"
-                fw={500}
+                fw={600}
+                className="font-display"
                 td={selectedTask.is_complete ? 'line-through' : undefined}
+                style={{ color: '#E0E0E0' }}
               >
                 {selectedTask.title}
               </Text>
@@ -245,69 +242,59 @@ export default function TaskCalendar({
         {selectedTask && (
           <Box>
             {selectedTask.description && (
-              <Text size="sm" mb="md">
+              <Text size="sm" mb="md" style={{ color: '#8A8F98' }}>
                 {selectedTask.description}
               </Text>
             )}
 
             <Group gap="xs" mb="md" wrap="wrap">
-              <Badge
-                size="sm"
-                style={{
-                  backgroundColor: priorityColors[selectedTask.priority]?.bg,
-                  color: priorityColors[selectedTask.priority]?.text,
-                  textTransform: 'capitalize',
-                }}
-              >
-                {selectedTask.priority}
-              </Badge>
-              <Badge size="sm" variant="light" style={{ textTransform: 'capitalize' }}>
-                {selectedTask.difficulty}
-              </Badge>
-              <Badge size="sm" variant="light" style={{ textTransform: 'capitalize' }}>
-                {selectedTask.duration}
-              </Badge>
+              <DataBadge
+                value={selectedTask.priority}
+                color={
+                  selectedTask.priority === 'Defcon One' ? 'magenta' :
+                  selectedTask.priority === 'High' ? 'amber' :
+                  selectedTask.priority === 'Medium' ? 'cyan' : 'muted'
+                }
+              />
+              <DataBadge value={selectedTask.difficulty} color="muted" />
+              <DataBadge value={selectedTask.duration} color="muted" />
               {selectedTask.is_habit && (
-                <Badge size="sm" color="violet">
-                  Habit
-                </Badge>
+                <DataBadge value="HABIT" color="magenta" />
               )}
             </Group>
 
             {selectedTask.due_date && (
-              <Text size="sm" c="dimmed" mb="xs">
-                Due: {selectedTask.due_date.includes('T')
+              <Text size="sm" className="font-data" style={{ color: '#8A8F98' }} mb="xs">
+                DUE: {selectedTask.due_date.includes('T')
                   ? new Date(selectedTask.due_date).toLocaleString()
                   : new Date(selectedTask.due_date + 'T00:00:00').toLocaleDateString()}
               </Text>
             )}
 
             {selectedTask.project && (
-              <Text size="sm" c="dimmed" mb="xs">
-                Project: {selectedTask.project}
+              <Text size="sm" className="font-data" style={{ color: '#8A8F98' }} mb="xs">
+                PROJECT: {selectedTask.project}
               </Text>
             )}
 
             {selectedTask.tags && selectedTask.tags.length > 0 && (
               <Group gap={4} mb="md" wrap="wrap">
                 {selectedTask.tags.map((tag) => (
-                  <Badge key={tag} size="sm" variant="outline">
-                    {tag}
-                  </Badge>
+                  <DataBadge key={tag} value={tag} color="muted" />
                 ))}
               </Group>
             )}
 
             <Group justify="flex-end" mt="lg">
-              <Button variant="subtle" onClick={() => setDetailsOpen(false)}>
+              <ArcadeButton variant="ghost" onClick={() => setDetailsOpen(false)}>
                 Close
-              </Button>
-              <Button
-                color={selectedTask.is_complete ? 'yellow' : 'green'}
+              </ArcadeButton>
+              <ArcadeButton
+                variant={selectedTask.is_complete ? 'secondary' : 'primary'}
                 onClick={handleToggleComplete}
               >
                 {selectedTask.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
-              </Button>
+              </ArcadeButton>
             </Group>
           </Box>
         )}

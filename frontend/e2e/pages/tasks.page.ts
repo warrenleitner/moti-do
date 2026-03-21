@@ -28,7 +28,7 @@ export class TasksPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.newTaskButton = page.getByRole('button', { name: 'New Task' });
+    this.newTaskButton = page.getByRole('button', { name: /NEW TASK/i });
     // View mode toggle - Mantine ActionIcon buttons with aria-label attributes
     this.listViewButton = page.getByRole('button', { name: 'list view' });
     this.tableViewButton = page.getByRole('button', { name: 'table view' });
@@ -38,13 +38,14 @@ export class TasksPage {
 
     // Filter controls - Mantine Select renders <input readonly> with implicit textbox role
     this.searchInput = page.getByPlaceholder('Search tasks...');
-    this.statusFilter = page.getByRole('textbox', { name: 'Status', exact: true });
+    // Status filter is now rendered as tab buttons (ACTIVE, COMPLETED, ALL, etc.)
+    this.statusFilter = page.getByRole('button', { name: /^active$/i });
     this.priorityFilter = page.getByRole('textbox', { name: 'Priority', exact: true });
     this.projectFilter = page.getByRole('textbox', { name: 'Project', exact: true });
 
     // Quick Add Box - the persistent input at the top of TasksPage
-    // Placeholder includes hint text, so use partial match
-    this.quickAddInput = page.getByPlaceholder(/Add a task/);
+    // Placeholder is now terminal-style: "DEPLOY NEW TASK: [TITLE] /PRIORITY /DUE..."
+    this.quickAddInput = page.getByPlaceholder(/DEPLOY NEW TASK/);
 
     // Subtask View Toggle - Mantine SegmentedControl renders labels in order: hidden, inline, top-level
     // Use positional nth selectors scoped to the radiogroup (CSS '+' sibling selectors don't work in Playwright)
@@ -168,8 +169,8 @@ export class TasksPage {
       });
     }
 
-    // Submit the form - button text is "Create Task" for new tasks
-    await dialog.getByRole('button', { name: 'Create Task' }).click();
+    // Submit the form - button text is "CREATE MISSION" for new tasks
+    await dialog.getByRole('button', { name: /CREATE MISSION/i }).click();
 
     // Wait for success snackbar
     await expect(this.page.getByText('Task created successfully')).toBeVisible({ timeout: 5000 });
@@ -225,8 +226,8 @@ export class TasksPage {
       await this.page.getByLabel('Description').fill(updates.description);
     }
 
-    // Submit - button text is "Save Changes" for editing
-    await this.page.getByRole('button', { name: 'Save Changes' }).click();
+    // Submit - button text is "SAVE CHANGES" for editing
+    await this.page.getByRole('button', { name: /SAVE CHANGES/i }).click();
 
     // Wait for success snackbar
     await expect(this.page.getByText('Task updated successfully')).toBeVisible({ timeout: 5000 });
@@ -271,10 +272,11 @@ export class TasksPage {
 
   /**
    * Filter by status.
+   * Status filter is now rendered as tab buttons (ACTIVE, COMPLETED, ALL, etc.)
    */
   async filterByStatus(status: 'Active' | 'Completed' | 'All'): Promise<void> {
-    await this.statusFilter.click();
-    await this.page.getByRole('option', { name: status }).click();
+    // Status tabs are uppercase buttons: ACTIVE, BLOCKED, FUTURE, COMPLETED, ALL
+    await this.page.getByRole('button', { name: new RegExp(`^${status}$`, 'i') }).click();
   }
 
   /**
@@ -293,7 +295,7 @@ export class TasksPage {
    * Close the task form dialog.
    */
   async closeTaskForm(): Promise<void> {
-    await this.page.getByRole('button', { name: 'Cancel' }).click();
+    await this.page.getByRole('button', { name: /CANCEL/i }).click();
     await expect(this.taskFormDialog).not.toBeVisible();
   }
 

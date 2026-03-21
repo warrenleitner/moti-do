@@ -38,7 +38,7 @@ describe('TaskForm', () => {
     const { user } = render(<TaskForm {...defaultProps} onSave={onSave} />);
 
     await user.type(screen.getByLabelText(/title/i), 'New Task');
-    await user.click(screen.getByRole('button', { name: /create task/i }));
+    await user.click(screen.getByRole('button', { name: /create mission/i }));
 
     expect(onSave).toHaveBeenCalled();
   });
@@ -90,7 +90,7 @@ describe('TaskForm', () => {
     render(<TaskForm {...defaultProps} onSave={onSave} />);
 
     // Button should be disabled when title is empty
-    const createButton = screen.getByRole('button', { name: /create task/i });
+    const createButton = screen.getByRole('button', { name: /create mission/i });
     expect(createButton).toBeDisabled();
   });
 
@@ -157,7 +157,7 @@ describe('TaskForm', () => {
     const projectInput = screen.getByLabelText(/project/i);
     await user.type(projectInput, 'Work Project');
 
-    await user.click(screen.getByRole('button', { name: /create task/i }));
+    await user.click(screen.getByRole('button', { name: /create mission/i }));
 
     expect(onSave).toHaveBeenCalled();
     const callArgs = onSave.mock.calls[0][0];
@@ -195,7 +195,7 @@ describe('TaskForm', () => {
     await user.click(habitSwitch);
 
     // The recurrence builder defaults to FREQ=DAILY
-    await user.click(screen.getByRole('button', { name: /create task/i }));
+    await user.click(screen.getByRole('button', { name: /create mission/i }));
 
     expect(onSave).toHaveBeenCalled();
     const callArgs = onSave.mock.calls[0][0];
@@ -220,7 +220,7 @@ describe('TaskForm', () => {
     // Verify tag was added
     expect(screen.getByText('urgent')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /create task/i }));
+    await user.click(screen.getByRole('button', { name: /create mission/i }));
 
     expect(onSave).toHaveBeenCalled();
     const callArgs = onSave.mock.calls[0][0];
@@ -294,7 +294,7 @@ describe('TaskForm', () => {
     // Subtask is displayed with bullet point prefix
     expect(screen.getByText('• First subtask')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /create task/i }));
+    await user.click(screen.getByRole('button', { name: /create mission/i }));
 
     expect(onSave).toHaveBeenCalled();
     const callArgs = onSave.mock.calls[0][0];
@@ -351,12 +351,12 @@ describe('TaskForm', () => {
     };
 
     render(<TaskForm {...defaultProps} task={task} />);
-    expect(screen.getByText('Edit Task')).toBeInTheDocument();
+    expect(screen.getByText('EDIT MISSION')).toBeInTheDocument();
   });
 
   it('displays Create New Task title when creating new task', () => {
     render(<TaskForm {...defaultProps} />);
-    expect(screen.getByText('Create New Task')).toBeInTheDocument();
+    expect(screen.getByText('NEW MISSION')).toBeInTheDocument();
   });
 
   it('prevents submission with whitespace-only title', async () => {
@@ -366,7 +366,7 @@ describe('TaskForm', () => {
     const titleInput = screen.getByLabelText(/title/i);
     await user.type(titleInput, '   ');
 
-    const createButton = screen.getByRole('button', { name: /create task/i });
+    const createButton = screen.getByRole('button', { name: /create mission/i });
     expect(createButton).toBeDisabled();
   });
 
@@ -382,7 +382,7 @@ describe('TaskForm', () => {
     // Should be trimmed
     expect(screen.getByText('urgent')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /create task/i }));
+    await user.click(screen.getByRole('button', { name: /create mission/i }));
 
     expect(onSave).toHaveBeenCalled();
     const callArgs = onSave.mock.calls[0][0];
@@ -400,7 +400,7 @@ describe('TaskForm', () => {
 
     expect(screen.getByText('• Clean whitespace')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /create task/i }));
+    await user.click(screen.getByRole('button', { name: /create mission/i }));
 
     expect(onSave).toHaveBeenCalled();
     const callArgs = onSave.mock.calls[0][0];

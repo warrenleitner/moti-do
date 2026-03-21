@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Box, Text, Select, Group } from '../../ui';
+import { Box, Select, Group } from '../../ui';
 import { IconArrowsSort } from '../../ui/icons';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
 import type { Task, TaskStatus } from '../../types';
@@ -8,6 +8,7 @@ import KanbanColumn, { type KanbanStatus } from './KanbanColumn';
 import { useTaskStore } from '../../store';
 import { useDefinedProjects } from '../../store/userStore';
 import { FilterBar } from '../common';
+import { DataBadge } from '../ui';
 
 interface KanbanBoardProps {
   tasks: Task[];
@@ -15,6 +16,8 @@ interface KanbanBoardProps {
   onEditTask?: (task: Task) => void;
   onCompleteTask?: (taskId: string) => void;
   onUncompleteTask?: (taskId: string) => void;
+  crisisModeActive?: boolean;
+  crisisTaskIds?: Set<string>;
 }
 
 interface Column {
@@ -25,11 +28,11 @@ interface Column {
 }
 
 const columns: Column[] = [
-  { id: 'backlog', title: 'Backlog', color: '#9e9e9e' },
-  { id: 'todo', title: 'To Do', color: '#2196f3' },
-  { id: 'in_progress', title: 'In Progress', color: '#ff9800', wipLimit: 3 },
-  { id: 'blocked', title: 'Blocked', color: '#f44336' },
-  { id: 'done', title: 'Done', color: '#4caf50' },
+  { id: 'backlog', title: 'Backlog', color: '#3B494C' },
+  { id: 'todo', title: 'To Do', color: '#3B494C' },
+  { id: 'in_progress', title: 'In Progress', color: '#00E5FF', wipLimit: 3 },
+  { id: 'blocked', title: 'Blocked', color: '#FFC775' },
+  { id: 'done', title: 'Done', color: '#FF007F' },
 ];
 
 // Map task properties to kanban status
@@ -56,6 +59,8 @@ export default function KanbanBoard({
   onEditTask,
   onCompleteTask,
   onUncompleteTask,
+  crisisModeActive = false,
+  crisisTaskIds,
 }: KanbanBoardProps) {
   const { filters, setFilters, resetFilters, sort, setSort } = useTaskStore();
   const definedProjects = useDefinedProjects();
@@ -268,7 +273,7 @@ export default function KanbanBoard({
 
       {/* Sort controls */}
       <Group gap="md" mb="md" align="center" wrap="wrap">
-        <IconArrowsSort size={20} color="var(--mantine-color-gray-6)" />
+        <IconArrowsSort size={20} color="var(--kc-text-muted)" />
         <Select
           label="Sort by"
           value={sort.field}
@@ -290,9 +295,10 @@ export default function KanbanBoard({
           w={120}
         />
         <Box style={{ flex: 1 }} />
-        <Text size="sm" c="dimmed">
-          {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
-        </Text>
+        <DataBadge
+          value={`${filteredTasks.length} VISIBLE`}
+          color="muted"
+        />
       </Group>
 
       {/* Kanban columns */}
@@ -300,9 +306,9 @@ export default function KanbanBoard({
         <Box
           style={{
             display: 'flex',
-            gap: 'var(--mantine-spacing-md)',
+            gap: '12px',
             overflowX: 'auto',
-            paddingBottom: 'var(--mantine-spacing-md)',
+            paddingBottom: '12px',
           }}
         >
           {columns.map((column) => (
@@ -314,6 +320,8 @@ export default function KanbanBoard({
               color={column.color}
               wipLimit={column.wipLimit}
               onEditTask={onEditTask}
+              crisisModeActive={crisisModeActive}
+              crisisTaskIds={crisisTaskIds}
             />
           ))}
         </Box>

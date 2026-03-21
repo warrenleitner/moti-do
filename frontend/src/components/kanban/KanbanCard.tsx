@@ -1,59 +1,88 @@
-import { Card, Text, Box, Group, Badge, ActionIcon } from '../../ui';
-import { IconEdit, IconClock, IconFlame } from '../../ui/icons';
+import { Box, Text, Group, ActionIcon } from '../../ui';
+import { IconEdit, IconClock, IconFlame, IconGripVertical, IconBolt, IconFolder } from '../../ui/icons';
 import { Draggable } from '@hello-pangea/dnd';
 import type { Task } from '../../types';
-import { PriorityChip, DurationChip } from '../common';
+import { DataBadge } from '../ui';
 
 interface KanbanCardProps {
   task: Task;
   index: number;
   onEdit?: (task: Task) => void;
+  isCrisisTask?: boolean;
 }
 
-const priorityColors: Record<string, string> = {
-  critical: '#d32f2f',
-  high: '#f57c00',
-  medium: '#1976d2',
-  low: '#388e3c',
-  trivial: '#757575',
+/** Priority → left accent color (4px border) */
+const priorityAccentColors: Record<string, string> = {
+  'Defcon One': '#FF007F',   // magenta — critical
+  'High': '#FFC775',         // amber — high
+  'Medium': '#00E5FF',       // cyan — medium
+  'Low': '#3B494C',          // muted — low
+  'Trivial': '#32343F',      // surface-highest — trivial
 };
 
 // UI component - tested via integration tests
 /* v8 ignore start */
-export default function KanbanCard({ task, index, onEdit }: KanbanCardProps) {
+export default function KanbanCard({ task, index, onEdit, isCrisisTask = false }: KanbanCardProps) {
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !task.is_complete;
+  const accentColor = priorityAccentColors[task.priority] || '#00E5FF';
 
   return (
     <Draggable draggableId={task.id} index={index}>
       {(provided, snapshot) => (
-        <Card
+        <div
           ref={provided.innerRef}
           {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          shadow={snapshot.isDragging ? 'md' : 'xs'}
-          padding="sm"
-          radius="sm"
-          mb="xs"
           data-testid="kanban-card"
+          className={isCrisisTask ? 'crisis-card-amber-glow' : undefined}
           style={{
-            borderLeft: `4px solid ${priorityColors[task.priority] || '#1976d2'}`,
+            ...provided.draggableProps.style,
             backgroundColor: snapshot.isDragging
-              ? 'var(--mantine-color-gray-1)'
-              : 'var(--mantine-color-white)',
-            transition: 'box-shadow 0.2s',
+              ? 'var(--kc-surface-high)'
+              : 'var(--kc-surface)',
+            border: '1px solid rgba(59, 73, 76, 0.15)',
+            borderLeft: `4px solid ${accentColor}`,
+            boxShadow: snapshot.isDragging
+              ? '4px 4px 0px rgba(0, 0, 0, 0.5)'
+              : '2px 2px 0px rgba(0, 0, 0, 0.3)',
+            padding: '10px 12px',
+            marginBottom: 8,
+            transition: 'background-color 0.15s ease, box-shadow 0.15s ease',
+            cursor: 'grab',
           }}
         >
-          <Group justify="space-between" align="flex-start" wrap="nowrap">
+          {/* Title row + drag handle */}
+          <Group justify="space-between" align="flex-start" wrap="nowrap" gap={6}>
+            {/* Drag handle */}
+            <Box
+              {...provided.dragHandleProps}
+              style={{
+                color: 'var(--kc-text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                flexShrink: 0,
+                marginTop: 2,
+              }}
+            >
+              <IconGripVertical size={14} />
+            </Box>
+
+            {/* Title */}
             <Text
               size="sm"
-              fw={500}
-              style={{ flex: 1 }}
-              td={task.is_complete ? 'line-through' : undefined}
-              c={task.is_complete ? 'dimmed' : undefined}
+              fw={600}
+              style={{
+                flex: 1,
+                fontFamily: '"Space Grotesk", sans-serif',
+                color: task.is_complete ? 'var(--kc-text-muted)' : 'var(--kc-text-primary)',
+                textDecoration: task.is_complete ? 'line-through' : undefined,
+                lineHeight: 1.3,
+              }}
             >
               {task.icon && <span style={{ marginRight: 4 }}>{task.icon}</span>}
               {task.title}
             </Text>
+
+            {/* Edit button */}
             {onEdit && (
               <ActionIcon
                 size="sm"
@@ -63,70 +92,97 @@ export default function KanbanCard({ task, index, onEdit }: KanbanCardProps) {
                   onEdit(task);
                 }}
                 aria-label="Edit task"
+                style={{ color: 'var(--kc-text-muted)', flexShrink: 0 }}
               >
                 <IconEdit size={14} data-testid="EditIcon" />
               </ActionIcon>
             )}
           </Group>
 
-          {/* Tags */}
-          {task.tags && task.tags.length > 0 && (
-            <Group gap={4} mt="xs" wrap="wrap">
-              {task.tags.slice(0, 3).map((tag) => (
-                <Badge key={tag} size="xs" variant="light">
-                  {tag}
-                </Badge>
-              ))}
-              {task.tags.length > 3 && (
-                <Badge size="xs" variant="light">
-                  +{task.tags.length - 3}
-                </Badge>
-              )}
-            </Group>
-          )}
+          {/* Meta row: due date, project tag, XP badge */}
+          <Group gap={6} mt={8} wrap="wrap" align="center">
+            {/* Due date */}
+            {task.due_date && (
+              <span
+                className="font-data"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  fontSize: '0.6875rem',
+                  color: isOverdue ? 'var(--kc-magenta)' : 'var(--kc-text-muted)',
+                }}
+              >
+                <IconClock size={12} data-testid="ScheduleIcon" />
+                {new Date(task.due_date).toLocaleDateString()}
+              </span>
+            )}
 
-          {/* Meta info */}
-          <Group gap="xs" mt="xs" wrap="wrap">
-            <PriorityChip priority={task.priority} size="small" />
-            <DurationChip duration={task.duration} size="small" />
+            {/* Project tag */}
+            {task.project && (
+              <span
+                className="font-data"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  fontSize: '0.6875rem',
+                  color: 'var(--kc-text-secondary)',
+                }}
+              >
+                <IconFolder size={12} />
+                {task.project}
+              </span>
+            )}
 
             {/* Streak for habits */}
             {task.is_habit && task.streak_current > 0 && (
-              <Group gap={2}>
-                <IconFlame size={14} color="var(--mantine-color-yellow-6)" />
-                <Text size="xs" c="yellow.6">
-                  {task.streak_current}
-                </Text>
-              </Group>
-            )}
-
-            {/* Due date */}
-            {task.due_date && (
-              <Group
-                gap={2}
+              <span
+                className="font-data"
                 style={{
-                  color: isOverdue
-                    ? 'var(--mantine-color-red-6)'
-                    : 'var(--mantine-color-dimmed)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  fontSize: '0.6875rem',
+                  color: 'var(--kc-amber)',
                 }}
               >
-                <IconClock size={14} data-testid="ScheduleIcon" />
-                <Text size="xs">
-                  {new Date(task.due_date).toLocaleDateString()}
-                </Text>
-              </Group>
+                <IconFlame size={12} />
+                {task.streak_current}
+              </span>
+            )}
+
+            {/* Spacer */}
+            <span style={{ flex: 1 }} />
+
+            {/* XP badge */}
+            {task.score > 0 && (
+              <DataBadge
+                value={`${task.score} XP`}
+                color="cyan"
+                icon={<IconBolt size={10} />}
+                size="sm"
+              />
             )}
           </Group>
 
           {/* Subtask progress */}
           {task.subtasks && task.subtasks.length > 0 && (
-            <Box mt="xs">
-              <Text size="xs" c="dimmed">
-                {task.subtasks.filter((s) => s.complete).length}/{task.subtasks.length} subtasks
+            <Box mt={6}>
+              <Text
+                size="xs"
+                style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.625rem',
+                  color: 'var(--kc-text-muted)',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {task.subtasks.filter((s) => s.complete).length}/{task.subtasks.length} SUBTASKS
               </Text>
             </Box>
           )}
-        </Card>
+        </div>
       )}
     </Draggable>
   );

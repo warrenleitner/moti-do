@@ -1,6 +1,7 @@
-import { Box, Paper, Text, Badge, Group } from '../../ui';
+import { Box, Text, Group } from '../../ui';
 import { Droppable } from '@hello-pangea/dnd';
 import type { Task } from '../../types';
+import { DataBadge } from '../ui';
 import KanbanCard from './KanbanCard';
 
 export type KanbanStatus = 'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done';
@@ -12,6 +13,8 @@ interface KanbanColumnProps {
   color: string;
   wipLimit?: number;
   onEditTask?: (task: Task) => void;
+  crisisModeActive?: boolean;
+  crisisTaskIds?: Set<string>;
 }
 
 // UI component - tested via integration tests
@@ -23,46 +26,65 @@ export default function KanbanColumn({
   color,
   wipLimit,
   onEditTask,
+  crisisModeActive = false,
+  crisisTaskIds,
 }: KanbanColumnProps) {
   const isOverWipLimit = wipLimit !== undefined && tasks.length > wipLimit;
 
   return (
-    <Paper
-      radius="sm"
+    <div
       data-testid="kanban-column"
       style={{
         width: 280,
         minWidth: 280,
-        backgroundColor: 'var(--mantine-color-gray-0)',
+        backgroundColor: 'var(--kc-surface)',
         display: 'flex',
         flexDirection: 'column',
         maxHeight: 'calc(100vh - 200px)',
+        border: '1px solid rgba(59, 73, 76, 0.15)',
+        borderTop: `3px solid ${color}`,
       }}
     >
       {/* Column header */}
       <Box
-        p="md"
+        p="sm"
         style={{
-          borderBottom: `3px solid ${color}`,
-          backgroundColor: 'var(--mantine-color-white)',
+          backgroundColor: 'var(--kc-surface)',
+          borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
         }}
       >
         <Group justify="space-between" align="center">
-          <Text fw={700} data-column-title={title}>{title}</Text>
-          <Badge
-            color={isOverWipLimit ? 'red' : 'blue'}
-            variant="filled"
-            size="sm"
+          <Text
+            fw={700}
+            data-column-title={title}
+            style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              fontSize: '0.75rem',
+              color: 'var(--kc-text-primary)',
+            }}
           >
-            {tasks.length}
-          </Badge>
+            {title}
+          </Text>
+          <DataBadge
+            value={tasks.length}
+            color={isOverWipLimit ? 'magenta' : 'muted'}
+            size="sm"
+          />
         </Group>
         {wipLimit !== undefined && (
           <Text
             size="xs"
-            c={isOverWipLimit ? 'red' : 'dimmed'}
+            style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.625rem',
+              letterSpacing: '0.05em',
+              color: isOverWipLimit ? 'var(--kc-magenta)' : 'var(--kc-text-muted)',
+              marginTop: 4,
+            }}
           >
-            WIP Limit: {wipLimit}
+            WIP LIMIT: {wipLimit}
           </Text>
         )}
       </Box>
@@ -79,8 +101,8 @@ export default function KanbanColumn({
               overflowY: 'auto',
               minHeight: 100,
               backgroundColor: snapshot.isDraggingOver
-                ? 'var(--mantine-color-gray-1)'
-                : 'transparent',
+                ? 'var(--kc-surface-high)'
+                : 'var(--kc-surface-low)',
               transition: 'background-color 0.2s',
             }}
           >
@@ -90,6 +112,7 @@ export default function KanbanColumn({
                 task={task}
                 index={index}
                 onEdit={onEditTask}
+                isCrisisTask={crisisModeActive && crisisTaskIds?.has(task.id)}
               />
             ))}
             {provided.placeholder}
@@ -100,12 +123,20 @@ export default function KanbanColumn({
       {/* Empty state */}
       {tasks.length === 0 && (
         <Box p="md" ta="center">
-          <Text size="sm" c="dimmed">
-            No tasks
+          <Text
+            size="xs"
+            style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              color: 'var(--kc-text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+            }}
+          >
+            NO TASKS
           </Text>
         </Box>
       )}
-    </Paper>
+    </div>
   );
 }
 /* v8 ignore stop */

@@ -302,8 +302,8 @@ describe('KanbanBoard', () => {
   it('shows task count', () => {
     render(<KanbanBoard tasks={mockTasks} onUpdateTask={vi.fn()} />);
 
-    // Should show filtered task count
-    expect(screen.getByText(/\d+ tasks?/)).toBeInTheDocument();
+    // Should show filtered task count in DataBadge
+    expect(screen.getByText(/\d+ VISIBLE/)).toBeInTheDocument();
   });
 
   it('calls onUncompleteTask when dragging from done column', () => {

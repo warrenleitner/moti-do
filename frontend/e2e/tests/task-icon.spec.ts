@@ -19,7 +19,7 @@ test.describe('Task Icon Feature', () => {
     // Fill Icon
     await page.getByLabel('Icon').fill(initialIcon);
     
-    await page.getByRole('button', { name: 'Create Task' }).click();
+    await page.getByRole('button', { name: /CREATE MISSION/i }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
 
     // Verify task is in the list (Card View) with the icon
@@ -42,7 +42,7 @@ test.describe('Task Icon Feature', () => {
     
     const updatedIcon = '🎸';
     await page.getByLabel('Icon').fill(updatedIcon);
-    await page.getByRole('button', { name: 'Save Changes' }).click();
+    await page.getByRole('button', { name: /SAVE CHANGES/i }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
     
     // Verify update in Card view

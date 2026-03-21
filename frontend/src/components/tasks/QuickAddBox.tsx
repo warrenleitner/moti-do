@@ -12,21 +12,29 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   TextInput,
   ActionIcon,
-  Paper,
   Tooltip,
   Box,
   Text,
-  Badge,
   Group,
   notifications,
 } from '../../ui';
 import { IconPlus, IconBolt, IconHelp } from '../../ui/icons';
+import { DataBadge } from '../ui';
 import { useTaskStore } from '../../store';
 import { parseQuickAddInput, quickAddResultToTask } from '../../utils/quickAdd';
 import { Priority, Difficulty, Duration, PriorityEmoji } from '../../types';
 
 /** Default tag added to all tasks created via QuickAdd */
 const QUICK_ADD_DEFAULT_TAG = 'inbox';
+
+/** Priority → Kinetic Console DataBadge color */
+const priorityBadgeColor: Record<string, 'magenta' | 'amber' | 'cyan' | 'muted'> = {
+  [Priority.DEFCON_ONE]: 'magenta',
+  [Priority.HIGH]: 'amber',
+  [Priority.MEDIUM]: 'cyan',
+  [Priority.LOW]: 'muted',
+  [Priority.TRIVIAL]: 'muted',
+};
 
 interface QuickAddBoxProps {
   /** Called after a task is successfully created */
@@ -106,93 +114,152 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
   }, []);
 
   return (
-    <Paper p="md" mb="md" withBorder radius="md">
-      <TextInput
-        ref={inputRef}
-        placeholder="Add a task... (try: !high #work @tomorrow ~project)"
-        value={input}
-        onChange={(e) => setInput(e.currentTarget.value)}
-        onKeyDown={handleKeyDown}
-        leftSection={<IconBolt size={16} color="var(--mantine-color-blue-6)" />}
-        rightSection={
-          <Group gap={4}>
-            <Tooltip label="Show syntax help">
-              <ActionIcon
-                variant="subtle"
-                size="sm"
-                onClick={() => setShowHelp(!showHelp)}
-                aria-label="Show syntax help"
-              >
-                <IconHelp size={16} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Add task (Enter)">
-              <ActionIcon
-                variant="subtle"
-                size="sm"
-                onClick={handleSubmit}
-                disabled={!parsed.title.trim()}
-                color="blue"
-                aria-label="Add task"
-              >
-                <IconPlus size={16} />
-              </ActionIcon>
-            </Tooltip>
-          </Group>
-        }
-        rightSectionWidth={70}
-      />
+    <Box
+      className="ghost-border"
+      style={{
+        backgroundColor: '#0B0E17',
+        padding: '12px 16px',
+        boxShadow: '2px 2px 0px rgba(0, 0, 0, 0.3)',
+      }}
+    >
+      <Group gap="sm" wrap="nowrap" align="center">
+        {/* ">" cursor prefix */}
+        <span
+          className="font-data"
+          style={{
+            color: '#00E5FF',
+            fontWeight: 700,
+            fontSize: '1.1rem',
+            lineHeight: 1,
+            flexShrink: 0,
+          }}
+        >
+          &gt;
+        </span>
+
+        {/* Terminal input */}
+        <TextInput
+          ref={inputRef}
+          placeholder='DEPLOY NEW TASK: [TITLE] /PRIORITY /DUE...'
+          value={input}
+          onChange={(e) => setInput(e.currentTarget.value)}
+          onKeyDown={handleKeyDown}
+          variant="unstyled"
+          styles={{
+            root: { flex: 1 },
+            input: {
+              backgroundColor: 'transparent',
+              color: '#E0E0E0',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.875rem',
+              border: 'none',
+              padding: '4px 0',
+              '&::placeholder': {
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: '#5A5E66',
+              },
+            },
+          }}
+        />
+
+        {/* XP potential badge */}
+        <DataBadge
+          value="POTENTIAL +250 XP"
+          color="cyan"
+          icon={<IconBolt size={12} />}
+          size="sm"
+        />
+
+        {/* Help button */}
+        <Tooltip label="Show syntax help">
+          <ActionIcon
+            variant="subtle"
+            size="sm"
+            onClick={() => setShowHelp(!showHelp)}
+            aria-label="Show syntax help"
+            style={{ color: '#8A8F98' }}
+          >
+            <IconHelp size={16} />
+          </ActionIcon>
+        </Tooltip>
+
+        {/* Submit button */}
+        <Tooltip label="Add task (Enter)">
+          <ActionIcon
+            variant="subtle"
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!parsed.title.trim()}
+            aria-label="Add task"
+            style={{
+              color: parsed.title.trim() ? '#00E5FF' : '#5A5E66',
+            }}
+          >
+            <IconPlus size={18} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
 
       {/* Preview of parsed modifiers */}
       {hasModifiers && (
-        <Group gap="xs" mt="xs" wrap="wrap">
+        <Group gap="xs" mt="xs" wrap="wrap" pl={24}>
           {parsed.priority && (
-            <Badge size="sm" variant="outline" color="blue">
-              {PriorityEmoji[parsed.priority]} {parsed.priority}
-            </Badge>
+            <DataBadge
+              value={`${PriorityEmoji[parsed.priority]} ${parsed.priority.toUpperCase()}`}
+              color={priorityBadgeColor[parsed.priority] || 'cyan'}
+            />
           )}
           {parsed.tags.map((tag) => (
-            <Badge key={tag} size="sm" variant="outline">
-              #{tag}
-            </Badge>
+            <DataBadge key={tag} value={`#${tag.toUpperCase()}`} color="muted" />
           ))}
           {parsed.dueDate && (
-            <Badge size="sm" variant="outline" color="violet">
-              Due: {parsed.dueDate.toLocaleDateString()}
-            </Badge>
+            <DataBadge
+              value={`DUE: ${parsed.dueDate.toLocaleDateString()}`}
+              color="amber"
+            />
           )}
           {parsed.project && (
-            <Badge size="sm" variant="outline" color="cyan">
-              ~{parsed.project}
-            </Badge>
+            <DataBadge value={`~${parsed.project.toUpperCase()}`} color="cyan" />
           )}
         </Group>
       )}
 
       {/* Help text */}
       {showHelp && (
-        <Box mt="sm" p="sm" bg="gray.1" style={{ borderRadius: 'var(--mantine-radius-sm)' }}>
-          <Text size="xs" c="dimmed">
-            <strong>Quick-add syntax:</strong>
+        <Box
+          mt="sm"
+          p="sm"
+          style={{
+            backgroundColor: '#181B25',
+            border: '1px solid rgba(59, 73, 76, 0.15)',
+          }}
+        >
+          <Text
+            size="xs"
+            className="font-data"
+            style={{ color: '#8A8F98', lineHeight: 1.8 }}
+          >
+            <strong style={{ color: '#00E5FF' }}>QUICK-ADD SYNTAX:</strong>
             <br />
-            <code>!high</code>, <code>!low</code>, <code>!medium</code>,{' '}
-            <code>!critical</code> - Priority
+            <code style={{ color: '#FFC775' }}>!high</code>, <code style={{ color: '#FFC775' }}>!low</code>, <code style={{ color: '#FFC775' }}>!medium</code>,{' '}
+            <code style={{ color: '#FFC775' }}>!critical</code> — Priority
             <br />
-            <code>#tagname</code> - Add tags (multiple allowed)
+            <code style={{ color: '#FFC775' }}>#tagname</code> — Add tags (multiple allowed)
             <br />
-            <code>@tomorrow</code>, <code>@friday</code>, <code>@next-week</code>,{' '}
-            <code>@dec-25</code> - Due date
+            <code style={{ color: '#FFC775' }}>@tomorrow</code>, <code style={{ color: '#FFC775' }}>@friday</code>, <code style={{ color: '#FFC775' }}>@next-week</code>,{' '}
+            <code style={{ color: '#FFC775' }}>@dec-25</code> — Due date
             <br />
-            <code>~project</code> - Project name
+            <code style={{ color: '#FFC775' }}>~project</code> — Project name
             <br />
             <br />
-            <em>Example: Buy groceries !high #shopping @friday ~home</em>
+            <em style={{ color: '#5A5E66' }}>Example: Buy groceries !high #shopping @friday ~home</em>
             <br />
-            <em>Press Ctrl/Cmd+K to focus this input</em>
+            <em style={{ color: '#5A5E66' }}>Press Ctrl/Cmd+K to focus this input</em>
           </Text>
         </Box>
       )}
-    </Paper>
+    </Box>
   );
 }
 /* v8 ignore stop */

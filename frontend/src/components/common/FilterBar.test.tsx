@@ -68,13 +68,13 @@ describe('FilterBar', () => {
 
   it('shows clear button when filters are active', () => {
     render(<FilterBar {...defaultProps} search="test" />);
-    expect(screen.getByText('Clear filters')).toBeInTheDocument();
+    expect(screen.getByText('CLEAR FILTERS')).toBeInTheDocument();
   });
 
   it('calls onReset when clear button clicked', async () => {
     const onReset = vi.fn();
     const { user } = render(<FilterBar {...defaultProps} search="test" onReset={onReset} />);
-    await user.click(screen.getByText('Clear filters'));
+    await user.click(screen.getByText('CLEAR FILTERS'));
     expect(onReset).toHaveBeenCalled();
   });
 
@@ -201,7 +201,7 @@ describe('FilterBar', () => {
 
   it('does not show clear button with default filters', () => {
     render(<FilterBar {...defaultProps} />);
-    expect(screen.queryByText('Clear filters')).not.toBeInTheDocument();
+    expect(screen.queryByText('CLEAR FILTERS')).not.toBeInTheDocument();
   });
 
   it('hides project filter when no projects', () => {

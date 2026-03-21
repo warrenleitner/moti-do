@@ -18,19 +18,23 @@ function TaskNode({ data }: TaskNodeProps) {
   return (
     <div
       style={{
-        padding: 'var(--mantine-spacing-sm, 10px)',
+        padding: '10px',
         minWidth: 180,
         maxWidth: 220,
         borderLeft: `4px solid ${color}`,
-        borderRadius: 'var(--mantine-radius-sm, 4px)',
-        backgroundColor: isSelected
-          ? 'var(--mantine-color-gray-1, #f1f3f5)'
-          : 'var(--mantine-color-white, #fff)',
+        borderRadius: 0,
+        backgroundColor: isSelected ? '#272A34' : '#10131C',
+        border: isSelected
+          ? `1px solid #00E5FF`
+          : '1px solid rgba(59, 73, 76, 0.15)',
+        borderLeftWidth: 4,
+        borderLeftColor: color,
         boxShadow: isSelected
-          ? '0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.12)'
-          : '0 1px 2px rgba(0,0,0,0.05)',
+          ? '4px 4px 0px rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 229, 255, 0.3)'
+          : '4px 4px 0px rgba(0, 0, 0, 0.5)',
         cursor: 'pointer',
-        transition: 'all 0.2s',
+        transition: 'all 0.15s ease',
+        opacity: task.is_complete ? 0.6 : 1,
       }}
     >
       {/* Input handle */}
@@ -38,9 +42,11 @@ function TaskNode({ data }: TaskNodeProps) {
         type="target"
         position={Position.Left}
         style={{
-          background: '#666',
+          background: '#00E5FF',
           width: 8,
           height: 8,
+          border: '2px solid #10131C',
+          borderRadius: 0,
         }}
       />
 
@@ -49,48 +55,45 @@ function TaskNode({ data }: TaskNodeProps) {
         {task.is_complete ? (
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="var(--mantine-color-green-6, #2b8a3e)"
+            stroke="#00E5FF"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
             style={{ marginTop: 2, flexShrink: 0 }}
           >
-            <path d="M17 3.34a10 10 0 1 1 -14.995 8.984l-.005 -.324l.005 -.324a10 10 0 0 1 14.995 -8.336z" fill="var(--mantine-color-green-6, #2b8a3e)" stroke="none" />
-            <path d="M15 9l-6 6" stroke="white" />
-            <path d="M9 9l6 6" stroke="white" transform="rotate(90 12 12)" />
+            <path d="M5 12l5 5l10 -10" />
           </svg>
         ) : (
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="var(--mantine-color-gray-5, #adb5bd)"
+            stroke="#3B494C"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
             style={{ marginTop: 2, flexShrink: 0 }}
           >
-            <circle cx="12" cy="12" r="10" />
+            <rect x="4" y="4" width="16" height="16" rx="0" />
           </svg>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              fontSize: 'var(--mantine-font-size-sm, 14px)',
+              fontFamily: '"Space Grotesk", sans-serif',
+              fontSize: '0.8125rem',
               fontWeight: 500,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               textDecoration: task.is_complete ? 'line-through' : 'none',
-              color: task.is_complete
-                ? 'var(--mantine-color-dimmed, #868e96)'
-                : 'var(--mantine-color-text, #212529)',
+              color: task.is_complete ? '#5A5E66' : '#E0E0E0',
             }}
           >
             {task.icon && <span style={{ marginRight: 4 }}>{task.icon}</span>}
@@ -99,13 +102,35 @@ function TaskNode({ data }: TaskNodeProps) {
           {task.project && (
             <div
               style={{
-                fontSize: 'var(--mantine-font-size-xs, 12px)',
-                color: 'var(--mantine-color-dimmed, #868e96)',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '0.625rem',
+                color: '#5A5E66',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginTop: 2,
               }}
             >
               {task.project}
             </div>
           )}
+          {/* Status badge */}
+          <div
+            style={{
+              display: 'inline-block',
+              marginTop: 4,
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.5625rem',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: task.is_complete ? '#5A5E66' : color,
+              backgroundColor: task.is_complete ? 'rgba(90, 94, 102, 0.1)' : `${color}1A`,
+              border: `1px solid ${task.is_complete ? 'rgba(90, 94, 102, 0.2)' : `${color}33`}`,
+              padding: '1px 5px',
+            }}
+          >
+            {task.is_complete ? 'DONE' : (task.status || 'TODO').toUpperCase()}
+          </div>
         </div>
       </div>
 
@@ -114,9 +139,11 @@ function TaskNode({ data }: TaskNodeProps) {
         type="source"
         position={Position.Right}
         style={{
-          background: '#666',
+          background: '#00E5FF',
           width: 8,
           height: 8,
+          border: '2px solid #10131C',
+          borderRadius: 0,
         }}
       />
     </div>

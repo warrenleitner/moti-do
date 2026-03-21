@@ -18,18 +18,18 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    // Logo image with alt text "Motodo"
-    this.heading = page.getByRole('img', { name: 'Motodo' });
-    this.subtitle = page.getByText('Task and Habit Tracker');
+    // "MOTI-DO" text logo heading
+    this.heading = page.getByText('MOTI-DO', { exact: true });
+    this.subtitle = page.getByText('SYSTEM ACCESS');
     // Mantine SegmentedControl renders as div[role="radiogroup"] with <label> elements
-    this.loginTab = page.getByRole('radiogroup').getByText('Login');
-    this.registerTab = page.getByRole('radiogroup').getByText('Register');
-    // Form fields - Mantine TextInput uses standard <input> with <label>
-    this.usernameInput = page.getByRole('textbox', { name: 'Username' });
-    // Mantine PasswordInput renders <input type="password">; required adds "*" to label
-    // Use .first() to get "Password *" and not "Confirm Password *"
-    this.passwordInput = page.getByLabel('Password').first();
-    this.confirmPasswordInput = page.getByLabel('Confirm Password');
+    this.loginTab = page.getByRole('radiogroup').getByText('LOGIN');
+    this.registerTab = page.getByRole('radiogroup').getByText('REGISTER');
+    // Form fields - TerminalInput wraps Mantine TextInput with uppercase labels
+    this.usernameInput = page.getByRole('textbox', { name: /USERNAME/i });
+    // Mantine PasswordInput renders <input type="password">
+    // Use .first() to get "PASSWORD" and not "CONFIRM PASSWORD"
+    this.passwordInput = page.getByLabel(/^PASSWORD/i).first();
+    this.confirmPasswordInput = page.getByLabel(/CONFIRM PASSWORD/i);
     // Submit button - the form submit button (type="submit")
     this.submitButton = page.locator('button[type="submit"]');
     this.errorAlert = page.getByRole('alert');

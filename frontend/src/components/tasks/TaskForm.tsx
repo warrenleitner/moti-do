@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   Modal,
-  Button,
   TextInput,
   Textarea,
   Select,
@@ -19,6 +18,7 @@ import {
   DateTimePicker,
 } from '../../ui';
 import { IconPlus, IconTrash, IconInfoCircle } from '../../ui/icons';
+import { ArcadeButton } from '../ui';
 import type { Task, Subtask } from '../../types';
 import {
   Priority,
@@ -57,10 +57,10 @@ function FieldInfoTooltip<T extends string>({
     <Box p={4}>
       {values.map((value) => (
         <Box key={value} mb={4}>
-          <Text size="sm" fw={700}>
+          <Text size="sm" fw={700} style={{ color: '#E0E0E0' }}>
             {emojis[value]} {labels[value]}
           </Text>
-          <Text size="xs" c="dimmed">
+          <Text size="xs" style={{ color: '#8A8F98' }}>
             {descriptions[value]}
           </Text>
         </Box>
@@ -87,6 +87,71 @@ const defaultTask: Partial<Task> = {
   is_habit: false,
   tags: [],
   subtasks: [],
+};
+
+/** Kinetic Console-styled select: void bg, ghost border, 0px radius */
+const kcSelectStyles = {
+  input: {
+    backgroundColor: '#0B0E17',
+    borderColor: 'rgba(59, 73, 76, 0.15)',
+    borderRadius: 0,
+    color: '#E0E0E0',
+    fontFamily: '"JetBrains Mono", monospace',
+    fontSize: '0.8125rem',
+    '&:focus': {
+      borderColor: '#00E5FF',
+      boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+    },
+  },
+  label: {
+    fontFamily: '"JetBrains Mono", monospace',
+    fontSize: '0.6875rem',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.1em',
+    color: '#8A8F98',
+  },
+  dropdown: {
+    backgroundColor: '#181B25',
+    borderColor: 'rgba(59, 73, 76, 0.15)',
+    borderRadius: 0,
+  },
+  option: {
+    fontFamily: '"JetBrains Mono", monospace',
+    fontSize: '0.8125rem',
+    color: '#E0E0E0',
+    '&[data-selected]': {
+      backgroundColor: 'rgba(0, 229, 255, 0.15)',
+      color: '#00E5FF',
+    },
+    '&[data-hovered]': {
+      backgroundColor: '#272A34',
+    },
+  },
+};
+
+/** Kinetic Console-styled text input: void bg, ghost border, 0px radius */
+const kcInputStyles = {
+  input: {
+    backgroundColor: '#0B0E17',
+    borderColor: 'rgba(59, 73, 76, 0.15)',
+    borderRadius: 0,
+    color: '#E0E0E0',
+    fontFamily: '"JetBrains Mono", monospace',
+    '&:focus': {
+      borderColor: '#00E5FF',
+      boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+    },
+    '&::placeholder': {
+      color: '#5A5E66',
+    },
+  },
+  label: {
+    fontFamily: '"JetBrains Mono", monospace',
+    fontSize: '0.6875rem',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.1em',
+    color: '#8A8F98',
+  },
 };
 
 // UI component - tested via integration tests
@@ -132,17 +197,64 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
     onClose();
   };
 
-  const isEditing = !!task;
+  const isEditing = !!task?.id;
 
   return (
     <Modal
       opened={open}
       onClose={onClose}
-      title={isEditing ? 'Edit Task' : 'Create New Task'}
+      title={
+        <Text
+          className="font-display"
+          fw={700}
+          size="lg"
+          style={{
+            color: '#00E5FF',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
+          {isEditing ? 'EDIT MISSION' : 'NEW MISSION'}
+        </Text>
+      }
       size="lg"
       key={task?.id || 'new'}
+      styles={{
+        content: {
+          backgroundColor: '#10131C',
+          border: '1px solid rgba(59, 73, 76, 0.15)',
+          borderRadius: 0,
+          boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5)',
+        },
+        header: {
+          backgroundColor: '#10131C',
+          borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+        },
+        overlay: {
+          backgroundColor: 'rgba(16, 19, 28, 0.80)',
+          backdropFilter: 'blur(12px)',
+        },
+        body: {
+          backgroundColor: '#10131C',
+        },
+        close: {
+          color: '#8A8F98',
+          '&:hover': {
+            backgroundColor: '#272A34',
+          },
+        },
+      }}
     >
       <Stack gap="md">
+        {/* Section header: IDENTIFICATION */}
+        <Text
+          className="font-data micro-meta"
+          mt="xs"
+          style={{ color: '#5A5E66' }}
+        >
+          IDENTIFICATION
+        </Text>
+
         {/* Title & Icon (Emoji) */}
         <Group wrap="nowrap" align="flex-end">
           <TextInput
@@ -153,6 +265,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
             maxLength={5}
             autoComplete="off"
             style={{ width: 80, flex: 'none' }}
+            styles={kcInputStyles}
           />
           <TextInput
             label="Title"
@@ -161,6 +274,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
             required
             autoFocus
             style={{ flex: 1 }}
+            styles={kcInputStyles}
           />
         </Group>
 
@@ -170,7 +284,38 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
           value={formData.text_description || ''}
           onChange={(e) => handleChange('text_description', e.currentTarget.value)}
           rows={3}
+          styles={{
+            input: {
+              backgroundColor: '#0B0E17',
+              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderRadius: 0,
+              color: '#E0E0E0',
+              fontFamily: '"JetBrains Mono", monospace',
+              '&:focus': {
+                borderColor: '#00E5FF',
+                boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+              },
+              '&::placeholder': {
+                color: '#5A5E66',
+              },
+            },
+            label: {
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.6875rem',
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.1em',
+              color: '#8A8F98',
+            },
+          }}
         />
+
+        {/* Section header: PARAMETERS */}
+        <Text
+          className="font-data micro-meta"
+          style={{ color: '#5A5E66' }}
+        >
+          PARAMETERS
+        </Text>
 
         {/* Priority, Difficulty, Duration row */}
         <Group grow>
@@ -192,7 +337,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               <ActionIcon
                 variant="subtle"
                 size="xs"
-                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1 }}
+                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1, color: '#5A5E66' }}
                 aria-label="Priority info"
               >
                 <IconInfoCircle size={14} />
@@ -209,6 +354,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
                 { value: Priority.HIGH, label: `${PriorityEmoji[Priority.HIGH]} High` },
                 { value: Priority.DEFCON_ONE, label: `${PriorityEmoji[Priority.DEFCON_ONE]} Defcon One` },
               ]}
+              styles={kcSelectStyles}
             />
           </Box>
 
@@ -230,7 +376,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               <ActionIcon
                 variant="subtle"
                 size="xs"
-                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1 }}
+                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1, color: '#5A5E66' }}
                 aria-label="Difficulty info"
               >
                 <IconInfoCircle size={14} />
@@ -247,6 +393,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
                 { value: Difficulty.HIGH, label: `${DifficultyEmoji[Difficulty.HIGH]} ${DifficultyLabel[Difficulty.HIGH]}` },
                 { value: Difficulty.HERCULEAN, label: `${DifficultyEmoji[Difficulty.HERCULEAN]} ${DifficultyLabel[Difficulty.HERCULEAN]}` },
               ]}
+              styles={kcSelectStyles}
             />
           </Box>
 
@@ -268,7 +415,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               <ActionIcon
                 variant="subtle"
                 size="xs"
-                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1 }}
+                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1, color: '#5A5E66' }}
                 aria-label="Duration info"
               >
                 <IconInfoCircle size={14} />
@@ -285,9 +432,18 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
                 { value: Duration.LONG, label: `${DurationEmoji[Duration.LONG]} ${DurationLabel[Duration.LONG]}` },
                 { value: Duration.ODYSSEYAN, label: `${DurationEmoji[Duration.ODYSSEYAN]} ${DurationLabel[Duration.ODYSSEYAN]}` },
               ]}
+              styles={kcSelectStyles}
             />
           </Box>
         </Group>
+
+        {/* Section header: SCHEDULE */}
+        <Text
+          className="font-data micro-meta"
+          style={{ color: '#5A5E66' }}
+        >
+          SCHEDULE
+        </Text>
 
         {/* Dates row */}
         <Group grow>
@@ -298,6 +454,22 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               handleChange('start_date', value ? new Date(value).toISOString().split('T')[0] : undefined)
             }
             clearable
+            styles={{
+              input: {
+                backgroundColor: '#0B0E17',
+                borderColor: 'rgba(59, 73, 76, 0.15)',
+                borderRadius: 0,
+                color: '#E0E0E0',
+                fontFamily: '"JetBrains Mono", monospace',
+              },
+              label: {
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '0.6875rem',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.1em',
+                color: '#8A8F98',
+              },
+            }}
           />
           <DateTimePicker
             label="Due Date"
@@ -306,8 +478,32 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               handleChange('due_date', value ? new Date(value).toISOString().split('T')[0] : undefined)
             }
             clearable
+            styles={{
+              input: {
+                backgroundColor: '#0B0E17',
+                borderColor: 'rgba(59, 73, 76, 0.15)',
+                borderRadius: 0,
+                color: '#E0E0E0',
+                fontFamily: '"JetBrains Mono", monospace',
+              },
+              label: {
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '0.6875rem',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.1em',
+                color: '#8A8F98',
+              },
+            }}
           />
         </Group>
+
+        {/* Section header: ORGANIZATION */}
+        <Text
+          className="font-data micro-meta"
+          style={{ color: '#5A5E66' }}
+        >
+          ORGANIZATION
+        </Text>
 
         {/* Project */}
         <TextInput
@@ -316,6 +512,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
           onChange={(e) => handleChange('project', e.currentTarget.value || undefined)}
           placeholder="e.g., Work, Personal, Side Project"
           list="project-suggestions"
+          styles={kcInputStyles}
         />
         {/* Native datalist provides lightweight autocomplete for project names */}
         <datalist id="project-suggestions">
@@ -327,8 +524,12 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
         {/* Dependencies */}
         {allTasks.length > 0 && (
           <Box>
-            <Text size="sm" fw={500} mb="xs">
-              Dependencies (blocked by)
+            <Text
+              className="font-data micro-meta"
+              mb="xs"
+              style={{ color: '#8A8F98' }}
+            >
+              DEPENDENCIES (BLOCKED BY)
             </Text>
             {(formData.dependencies?.length ?? 0) > 0 && (
               <Group gap="xs" mb="xs" wrap="wrap">
@@ -339,6 +540,12 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
                       key={t.id}
                       variant="light"
                       size="sm"
+                      style={{
+                        backgroundColor: 'rgba(0, 229, 255, 0.1)',
+                        color: '#00E5FF',
+                        border: '1px solid rgba(0, 229, 255, 0.3)',
+                        borderRadius: 0,
+                      }}
                       rightSection={
                         <CloseButton
                           size="xs"
@@ -377,12 +584,21 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
                   handleChange('dependencies', [...(formData.dependencies || []), val]);
                 }
               }}
+              styles={kcSelectStyles}
             />
-            <Text size="xs" c="dimmed" mt={4}>
+            <Text size="xs" mt={4} style={{ color: '#5A5E66' }} className="font-data">
               This task will be blocked until all dependencies are complete
             </Text>
           </Box>
         )}
+
+        {/* Section header: RECURRENCE */}
+        <Text
+          className="font-data micro-meta"
+          style={{ color: '#5A5E66' }}
+        >
+          RECURRENCE
+        </Text>
 
         {/* Recurring toggle - enables recurrence for any task */}
         <Switch
@@ -395,14 +611,25 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               recurrence_rule: isRecurring ? (prev.recurrence_rule || 'FREQ=DAILY') : undefined,
             }));
           }}
+          styles={{
+            label: {
+              color: '#E0E0E0',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.8125rem',
+            },
+          }}
         />
 
         {/* Recurrence options (when recurring is enabled) */}
         {formData.recurrence_rule && (
           <>
             <Box>
-              <Text size="sm" fw={500} mb="xs">
-                Recurrence Pattern
+              <Text
+                className="font-data micro-meta"
+                mb="xs"
+                style={{ color: '#8A8F98' }}
+              >
+                RECURRENCE PATTERN
               </Text>
               <RecurrenceRuleBuilder
                 value={formData.recurrence_rule || 'FREQ=DAILY'}
@@ -410,7 +637,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               />
 
               {/* Next occurrence preview */}
-              <Text size="xs" c="dimmed" mt="xs">
+              <Text size="xs" mt="xs" className="font-data" style={{ color: '#5A5E66' }}>
                 {getNextOccurrenceText(
                   formData.recurrence_rule,
                   formData.due_date ? new Date(formData.due_date) : undefined
@@ -436,6 +663,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
                   label: 'Strict - Always recur on schedule regardless of completion',
                 },
               ]}
+              styles={kcSelectStyles}
             />
 
             {/* Habit toggle - adds streak tracking for recurring tasks */}
@@ -443,6 +671,13 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               label="Track as Habit (enables streak tracking)"
               checked={formData.is_habit || false}
               onChange={(e) => handleChange('is_habit', e.currentTarget.checked)}
+              styles={{
+                label: {
+                  color: '#E0E0E0',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.8125rem',
+                },
+              }}
             />
 
             {/* Subtask recurrence mode (when recurring AND has subtasks) */}
@@ -465,12 +700,21 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
                     label: 'Always Copy All - Full subtask list regardless of completion',
                   },
                 ]}
+                styles={kcSelectStyles}
               />
             )}
           </>
         )}
 
-        <Divider />
+        <Divider style={{ borderColor: 'rgba(59, 73, 76, 0.15)' }} />
+
+        {/* Section header: METADATA */}
+        <Text
+          className="font-data micro-meta"
+          style={{ color: '#5A5E66' }}
+        >
+          METADATA
+        </Text>
 
         {/* Tags */}
         <TagsInput
@@ -479,24 +723,67 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
           onChange={(tags) => handleChange('tags', tags)}
           data={tagNames.filter((t) => !formData.tags?.includes(t))}
           placeholder="Add tags..."
+          styles={{
+            input: {
+              backgroundColor: '#0B0E17',
+              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderRadius: 0,
+              color: '#E0E0E0',
+              fontFamily: '"JetBrains Mono", monospace',
+              '&:focus-within': {
+                borderColor: '#00E5FF',
+                boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+              },
+            },
+            label: {
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.6875rem',
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.1em',
+              color: '#8A8F98',
+            },
+            pill: {
+              backgroundColor: 'rgba(0, 229, 255, 0.1)',
+              color: '#00E5FF',
+              borderRadius: 0,
+            },
+          }}
         />
+
+        {/* Section header: SUBTASKS */}
+        <Text
+          className="font-data micro-meta"
+          style={{ color: '#5A5E66' }}
+        >
+          SUBTASKS
+        </Text>
 
         {/* Subtasks */}
         <Box>
-          <Text size="sm" fw={500} mb="xs">
-            Subtasks
-          </Text>
           {formData.subtasks?.map((subtask, index) => (
-            <Group key={index} gap="xs" mb={4}>
-              <Text size="sm" style={{ flex: 1 }}>
+            <Group
+              key={index}
+              gap="xs"
+              mb={4}
+              style={{
+                backgroundColor: '#272A34',
+                border: '1px solid rgba(59, 73, 76, 0.15)',
+                padding: '6px 10px',
+              }}
+            >
+              <Text
+                size="sm"
+                className="font-data"
+                style={{ flex: 1, color: '#E0E0E0' }}
+              >
                 • {subtask.text}
               </Text>
               <ActionIcon
                 size="sm"
                 variant="subtle"
-                color="red"
                 onClick={() => handleRemoveSubtask(index)}
                 aria-label="Remove subtask"
+                style={{ color: '#FF007F' }}
               >
                 <IconTrash size={14} />
               </ActionIcon>
@@ -510,12 +797,19 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               placeholder="Add subtask..."
               onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
               style={{ flex: 1 }}
+              styles={kcInputStyles}
             />
             <ActionIcon
               onClick={handleAddSubtask}
               size="sm"
               variant="light"
               aria-label="Add subtask"
+              style={{
+                backgroundColor: 'rgba(0, 229, 255, 0.1)',
+                color: '#00E5FF',
+                border: '1px solid rgba(0, 229, 255, 0.3)',
+                borderRadius: 0,
+              }}
             >
               <IconPlus size={16} />
             </ActionIcon>
@@ -523,13 +817,13 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
         </Box>
 
         {/* Actions */}
-        <Group justify="flex-end" mt="md">
-          <Button variant="subtle" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={!formData.title?.trim()}>
-            {isEditing ? 'Save Changes' : 'Create Task'}
-          </Button>
+        <Group justify="flex-end" mt="md" gap="sm">
+          <ArcadeButton variant="ghost" onClick={onClose}>
+            CANCEL
+          </ArcadeButton>
+          <ArcadeButton variant="primary" onClick={handleSubmit} disabled={!formData.title?.trim()}>
+            {isEditing ? 'SAVE CHANGES' : 'CREATE MISSION'}
+          </ArcadeButton>
         </Group>
       </Stack>
     </Modal>
