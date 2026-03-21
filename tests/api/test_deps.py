@@ -125,7 +125,7 @@ def test_verify_token_invalid() -> None:
 
 
 def test_verify_token_rejects_unknown_crit_headers() -> None:
-    """Test verify_token rejects tokens with unknown critical headers."""
+    """Test verify_token rejects unknown RFC 7515 critical headers."""
     token = jwt.encode(
         {"sub": "testuser"},
         SECRET_KEY,
