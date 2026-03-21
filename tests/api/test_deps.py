@@ -13,6 +13,8 @@ import pytest
 from fastapi import HTTPException
 
 from motido.api.deps import (
+    ALGORITHM,
+    SECRET_KEY,
     create_access_token,
     get_current_user,
     get_current_user_optional,
@@ -118,6 +120,23 @@ def test_verify_token_invalid() -> None:
     invalid_token = "invalid.token.string"
 
     payload = verify_token(invalid_token)
+
+    assert payload is None
+
+
+def test_verify_token_rejects_unknown_crit_headers() -> None:
+    """Test verify_token rejects unknown RFC 7515 critical headers."""
+    token = jwt.encode(
+        {"sub": "testuser"},
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+        headers={
+            "crit": ["x-custom-policy"],
+            "x-custom-policy": "require-mfa",
+        },
+    )
+
+    payload = verify_token(token)
 
     assert payload is None
 

@@ -176,8 +176,8 @@ jobs:
       - name: Install project
         run: poetry install --no-interaction
 
-      - name: Security scan with Safety
-        run: poetry run safety scan
+      - name: Security scan with pip-audit
+        run: poetry run pip-audit
         continue-on-error: true  # Don't fail PR on security warnings
 
   # ============================================
