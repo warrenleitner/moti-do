@@ -21,7 +21,7 @@ rich = ">=13.9.4"
 python-dateutil = ">=2.8.2"
 fastapi = ">=0.115.0"
 uvicorn = {extras = ["standard"], version = ">=0.32.0"}
-pyjwt = ">=2.9.0"
+pyjwt = ">=2.12.0"
 python-multipart = ">=0.0.12"
 passlib = {extras = ["bcrypt"], version = ">=1.7.4"}
 pydantic = ">=2.10.0"
@@ -39,7 +39,7 @@ black = ">=25.1.0"    # Code formatter
 isort = ">=6.0.1"    # Import sorter
 pylint = ">=3.2.5"    # Linter
 mypy = ">=1.10.1"     # Static type checker
-safety = ">=3.4.0"    # Security checker
+pip-audit = {version = ">=2.10.0", python = "<4.0"}    # Security checker
 poethepoet = ">=0.34.0"
 types-python-dateutil = ">=2.9.0"
 psycopg2-binary = ">=2.9.9"  # PostgreSQL driver for E2E tests with Docker
@@ -145,7 +145,7 @@ lint = "pylint src tests --fail-under=10"
 typecheck = "mypy src tests"
 test = "pytest"
 coverage = "pytest --cov=motido --cov-report=term-missing"
-security = "safety scan"
+security = "pip-audit"
 
 # Frontend tasks
 frontend-lint = { shell = "cd frontend && npm run lint" }
