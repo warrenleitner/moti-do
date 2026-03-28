@@ -18,6 +18,7 @@ from motido.api.schemas import (
     ScoringConfigUpdate,
     TagCreate,
     TagResponse,
+    TimezoneUpdate,
     UserProfile,
     UserStats,
     XPTransactionSchema,
@@ -52,6 +53,7 @@ async def get_profile(user: CurrentUser) -> UserProfile:
         level=calculate_level(user.total_xp),
         last_processed_date=user.last_processed_date,
         vacation_mode=user.vacation_mode,
+        timezone=user.timezone,
     )
 
 
@@ -77,6 +79,39 @@ async def get_stats(user: CurrentUser) -> UserStats:
         badges_earned=len([b for b in user.badges if b.earned_date is not None]),
         current_streak=current_streak,
         best_streak=best_streak,
+    )
+
+
+@router.put("/timezone", response_model=UserProfile)
+async def update_timezone(
+    request: TimezoneUpdate,
+    user: CurrentUser,
+    manager: ManagerDep,
+) -> UserProfile:
+    """Update the user's timezone setting.
+
+    Accepts an IANA timezone name (e.g. "America/New_York").
+    """
+    from zoneinfo import ZoneInfo  # pylint: disable=import-outside-toplevel
+
+    try:
+        ZoneInfo(request.timezone)
+    except (KeyError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid timezone: {request.timezone}",
+        ) from exc
+
+    user.timezone = request.timezone
+    manager.save_user(user)
+
+    return UserProfile(
+        username=user.username,
+        total_xp=user.total_xp,
+        level=calculate_level(user.total_xp),
+        last_processed_date=user.last_processed_date,
+        vacation_mode=user.vacation_mode,
+        timezone=user.timezone,
     )
 
 
@@ -392,6 +427,7 @@ async def export_user_data(user: CurrentUser) -> Response:
         "tasks": tasks_data,
         "last_processed_date": user.last_processed_date.isoformat(),
         "vacation_mode": user.vacation_mode,
+        "timezone": user.timezone,
         "xp_transactions": [
             {
                 "id": trans.id,
