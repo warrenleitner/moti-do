@@ -553,10 +553,10 @@ export default function SettingsPage() {
       <Box mb="xl">
         <Title
           order={1}
+          className="gradient-text"
           style={{
             fontFamily: '"Space Grotesk", sans-serif',
             fontWeight: 700,
-            color: '#e6e7f5',
             letterSpacing: '0.05em',
             fontSize: 'clamp(1.5rem, 4vw, 2rem)',
           }}

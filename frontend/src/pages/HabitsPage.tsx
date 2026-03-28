@@ -132,11 +132,10 @@ export default function HabitsPage() {
         }}
       >
         <h1
-          className="font-display"
+          className="font-display gradient-text"
           style={{
             fontSize: '1.5rem',
             fontWeight: 700,
-            color: '#e6e7f5',
             margin: 0,
             letterSpacing: '-0.02em',
           }}

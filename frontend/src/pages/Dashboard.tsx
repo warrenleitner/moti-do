@@ -663,7 +663,7 @@ export default function Dashboard() {
 
       {/* INITIATE NEW MISSION button */}
       <ArcadeButton
-        variant="primary"
+        variant="gradient"
         fullWidth
         onClick={() => navigate('/tasks')}
         style={{ marginBottom: '1rem' }}

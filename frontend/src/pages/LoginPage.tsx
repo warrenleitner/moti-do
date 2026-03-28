@@ -76,8 +76,8 @@ export default function LoginPage() {
     >
       <div style={{ maxWidth: 400, width: '100%' }}>
         {/* Logo / Title */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <img src="/logo-wordmark.png" alt="Motodo" style={{ width: 280, height: 'auto', objectFit: 'contain' }} />
+        <div style={{ textAlign: 'center', marginBottom: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <img src="/logo-wordmark.png" alt="Motodo" style={{ width: 280, height: 'auto', objectFit: 'contain', display: 'block' }} />
           <p
             className="font-data micro-meta"
             style={{

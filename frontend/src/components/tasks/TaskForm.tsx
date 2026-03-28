@@ -205,11 +205,10 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
       onClose={onClose}
       title={
         <Text
-          className="font-display"
+          className="font-display gradient-text"
           fw={700}
           size="lg"
           style={{
-            color: '#81ecff',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
           }}

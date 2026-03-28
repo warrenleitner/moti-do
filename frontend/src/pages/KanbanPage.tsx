@@ -213,10 +213,10 @@ export default function KanbanPage() {
           <Text
             fw={700}
             size="xl"
+            className="gradient-text"
             style={{
               fontFamily: '"Space Grotesk", sans-serif',
               letterSpacing: '0.05em',
-              color: 'var(--kc-text-primary)',
             }}
           >
             KANBAN_BOARD
@@ -227,7 +227,7 @@ export default function KanbanPage() {
           />
         </Group>
         <ArcadeButton
-          variant="primary"
+          variant="gradient"
           size="sm"
           leftSection={<IconPlus size={16} />}
           onClick={handleNewTask}

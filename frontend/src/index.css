@@ -275,6 +275,28 @@ body.crisis-mode {
 }
 
 /* ===================================================
+   Gradient text utility — cyan → magenta
+   =================================================== */
+.gradient-text {
+  background: linear-gradient(90deg, var(--kc-cyan) 0%, var(--kc-magenta) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Gradient-filled primary button variant */
+.arcade-btn-gradient {
+  background: linear-gradient(90deg, var(--kc-cyan), var(--kc-magenta));
+  color: #0B0E17;
+  border: none;
+  font-weight: 700;
+}
+
+.arcade-btn-gradient:hover {
+  box-shadow: var(--kc-shadow-hard), 0 0 16px rgba(129, 236, 255, 0.35), 0 0 16px rgba(255, 107, 155, 0.25);
+}
+
+/* ===================================================
    Micro-metadata text style
    =================================================== */
 .micro-meta {

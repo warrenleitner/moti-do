@@ -111,7 +111,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         }}
       >
         {/* Logo */}
-        <Box p="md" style={{ borderBottom: '1px solid rgba(69, 71, 82, 0.15)' }}>
+        <Box p="md" style={{ borderBottom: '1px solid rgba(69, 71, 82, 0.15)', display: 'flex', justifyContent: 'center' }}>
           <img src="/logo-wordmark.png" alt="Motodo" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
         </Box>
         {/* Profile Section */}
@@ -186,7 +186,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <Box
               component="button"
               onClick={() => navigate('/tasks')}
-              className="arcade-btn arcade-btn-primary"
+              className="arcade-btn arcade-btn-gradient"
               style={{
                 width: '100%',
                 padding: '8px 16px',

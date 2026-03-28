@@ -134,13 +134,13 @@ export default function HabitList({
                 >
                   <IconPlus size={48} color="#525560" style={{ transition: 'transform 0.15s ease' }} />
                   <span
-                    className="font-data"
+                    className="font-data gradient-text"
                     style={{
                       fontSize: '0.75rem',
-                      color: '#9BA3AF',
                       textTransform: 'uppercase',
                       letterSpacing: '0.1em',
                       marginTop: '0.75rem',
+                      fontWeight: 600,
                     }}
                   >
                     INITIALIZE NEW PROTOCOL
