@@ -132,11 +132,10 @@ export default function HabitsPage() {
         }}
       >
         <h1
-          className="font-display"
+          className="font-display gradient-text"
           style={{
             fontSize: '1.5rem',
             fontWeight: 700,
-            color: '#E0E0E0',
             margin: 0,
             letterSpacing: '-0.02em',
           }}
@@ -156,7 +155,7 @@ export default function HabitsPage() {
       </div>
       <p
         className="micro-meta"
-        style={{ margin: '0 0 1.5rem 0', color: '#5A5E66' }}
+        style={{ margin: '0 0 1.5rem 0', color: '#525560' }}
       >
         SYSTEMATIC BEHAVIOR PROTOCOL MANAGEMENT
       </p>

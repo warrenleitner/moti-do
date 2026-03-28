@@ -13,10 +13,10 @@ interface KanbanCardProps {
 
 /** Priority → left accent color (4px border) */
 const priorityAccentColors: Record<string, string> = {
-  'Defcon One': '#FF007F',   // magenta — critical
+  'Defcon One': '#ff6b9b',   // magenta — critical
   'High': '#FFC775',         // amber — high
-  'Medium': '#00E5FF',       // cyan — medium
-  'Low': '#3B494C',          // muted — low
+  'Medium': '#81ecff',       // cyan — medium
+  'Low': '#454752',          // muted — low
   'Trivial': '#32343F',      // surface-highest — trivial
 };
 
@@ -24,7 +24,7 @@ const priorityAccentColors: Record<string, string> = {
 /* v8 ignore start */
 export default function KanbanCard({ task, index, onEdit, isCrisisTask = false }: KanbanCardProps) {
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !task.is_complete;
-  const accentColor = priorityAccentColors[task.priority] || '#00E5FF';
+  const accentColor = priorityAccentColors[task.priority] || '#81ecff';
 
   return (
     <Draggable draggableId={task.id} index={index}>
@@ -39,7 +39,7 @@ export default function KanbanCard({ task, index, onEdit, isCrisisTask = false }
             backgroundColor: snapshot.isDragging
               ? 'var(--kc-surface-high)'
               : 'var(--kc-surface)',
-            border: '1px solid rgba(59, 73, 76, 0.15)',
+            border: '1px solid rgba(69, 71, 82, 0.15)',
             borderLeft: `4px solid ${accentColor}`,
             boxShadow: snapshot.isDragging
               ? '4px 4px 0px rgba(0, 0, 0, 0.5)'

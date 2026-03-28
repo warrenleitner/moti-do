@@ -23,12 +23,12 @@ const confirmVariantMap: Record<string, 'primary' | 'secondary' | 'ghost'> = {
 };
 
 const accentBorderMap: Record<string, string> = {
-  primary: '#00E5FF',
-  secondary: '#FF007F',
-  error: '#FF007F',
+  primary: '#81ecff',
+  secondary: '#ff6b9b',
+  error: '#ff6b9b',
   warning: '#FFC775',
-  info: '#00E5FF',
-  success: '#00E5FF',
+  info: '#81ecff',
+  success: '#81ecff',
 };
 
 export default function ConfirmDialog({
@@ -42,7 +42,7 @@ export default function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const isDestructive = confirmColor === 'error' || confirmColor === 'warning';
-  const accentColor = accentBorderMap[confirmColor] || '#00E5FF';
+  const accentColor = accentBorderMap[confirmColor] || '#81ecff';
 
   return (
     <Modal
@@ -55,7 +55,7 @@ export default function ConfirmDialog({
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
-            color: isDestructive ? '#FF007F' : '#E0E0E0',
+            color: isDestructive ? '#ff6b9b' : '#e6e7f5',
           }}
         >
           {title}
@@ -71,7 +71,7 @@ export default function ConfirmDialog({
       }}
     >
       <Stack>
-        <Text style={{ color: '#8A8F98' }} size="sm">{message}</Text>
+        <Text style={{ color: '#a8aab7' }} size="sm">{message}</Text>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
           <ArcadeButton variant="ghost" onClick={onCancel}>
             {cancelLabel}

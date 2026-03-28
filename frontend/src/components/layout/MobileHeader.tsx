@@ -1,4 +1,4 @@
-import { Box, Text, Avatar, ActionIcon } from '../../ui';
+import { Box, Avatar, ActionIcon } from '../../ui';
 import { IconRefresh } from '../../ui/icons';
 import { useUserStore } from '../../store';
 
@@ -23,7 +23,7 @@ export function MobileHeader({ onRefresh, isRefreshing }: MobileHeaderProps) {
         right: 0,
         height: 56,
         backgroundColor: '#0B0E17',
-        borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+        borderBottom: '1px solid rgba(69, 71, 82, 0.15)',
         boxShadow: '0 4px 0px rgba(0, 0, 0, 0.3)',
         display: 'flex',
         alignItems: 'center',
@@ -33,18 +33,7 @@ export function MobileHeader({ onRefresh, isRefreshing }: MobileHeaderProps) {
       }}
     >
       {/* Logo */}
-      <Text
-        style={{
-          fontFamily: '"Space Grotesk", sans-serif',
-          fontWeight: 700,
-          fontSize: '1.25rem',
-          color: '#00E5FF',
-          letterSpacing: '0.05em',
-          textTransform: 'uppercase' as const,
-        }}
-      >
-        MOTI-DO
-      </Text>
+      <img src="/logo-wordmark.png" alt="Motodo" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
 
       {/* Right section */}
       <Box style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -54,7 +43,7 @@ export function MobileHeader({ onRefresh, isRefreshing }: MobileHeaderProps) {
           disabled={isRefreshing}
           aria-label="Refresh data"
           size="sm"
-          style={{ color: '#8A8F98' }}
+          style={{ color: '#a8aab7' }}
         >
           <IconRefresh
             size={18}
@@ -69,8 +58,8 @@ export function MobileHeader({ onRefresh, isRefreshing }: MobileHeaderProps) {
             radius={0}
             style={{
               backgroundColor: '#272A34',
-              border: '1px solid #00E5FF',
-              color: '#00E5FF',
+              border: '1px solid #81ecff',
+              color: '#81ecff',
               fontFamily: '"JetBrains Mono", monospace',
               fontWeight: 700,
               fontSize: '0.75rem',

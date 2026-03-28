@@ -3,7 +3,7 @@ import type { ButtonProps } from '@mantine/core';
 import type { ReactNode, MouseEventHandler } from 'react';
 
 interface ArcadeButtonProps extends Omit<ButtonProps, 'variant'> {
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'gradient';
   children: ReactNode;
   onClick?: MouseEventHandler<HTMLButtonElement>;
   type?: 'button' | 'submit' | 'reset';
@@ -12,13 +12,13 @@ interface ArcadeButtonProps extends Omit<ButtonProps, 'variant'> {
 const variantStyles = {
   primary: {
     root: {
-      backgroundColor: '#00E5FF',
+      backgroundColor: '#81ecff',
       color: '#00626E',
       border: 'none',
       boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5)',
       '&:hover': {
         backgroundColor: '#00d1eb',
-        boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 229, 255, 0.4)',
+        boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5), 0 0 12px rgba(129, 236, 255, 0.4)',
       },
       '&:active': {
         transform: 'translate(1px, 1px)',
@@ -28,14 +28,14 @@ const variantStyles = {
   },
   secondary: {
     root: {
-      backgroundColor: '#FF4A8D',
+      backgroundColor: '#ffadc2',
       color: '#ffffff',
       border: 'none',
       borderBottom: '3px solid #8F0044',
       boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5)',
       '&:hover': {
         backgroundColor: '#ff5c9a',
-        boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 0, 127, 0.4)',
+        boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 107, 155, 0.4)',
       },
       '&:active': {
         borderBottomWidth: '0px',
@@ -47,13 +47,29 @@ const variantStyles = {
   ghost: {
     root: {
       backgroundColor: 'transparent',
-      color: '#8A8F98',
-      border: '1px solid rgba(59, 73, 76, 0.15)',
+      color: '#a8aab7',
+      border: '1px solid rgba(69, 71, 82, 0.15)',
       boxShadow: 'none',
       '&:hover': {
-        color: '#00E5FF',
-        borderColor: '#00E5FF',
-        boxShadow: '0 0 8px rgba(0, 229, 255, 0.2)',
+        color: '#81ecff',
+        borderColor: '#81ecff',
+        boxShadow: '0 0 8px rgba(129, 236, 255, 0.2)',
+      },
+    },
+  },
+  gradient: {
+    root: {
+      background: 'linear-gradient(90deg, #81ecff, #ff6b9b)',
+      color: '#0B0E17',
+      border: 'none',
+      fontWeight: 700,
+      boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5)',
+      '&:hover': {
+        boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5), 0 0 16px rgba(129, 236, 255, 0.35), 0 0 16px rgba(255, 107, 155, 0.25)',
+      },
+      '&:active': {
+        transform: 'translate(1px, 1px)',
+        boxShadow: '1px 1px 0px rgba(0, 0, 0, 0.8)',
       },
     },
   },

@@ -99,7 +99,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           width: 256,
           flexShrink: 0,
           backgroundColor: '#181B25',
-          borderRight: '1px solid rgba(59, 73, 76, 0.15)',
+          borderRight: '1px solid rgba(69, 71, 82, 0.15)',
           display: 'flex',
           flexDirection: 'column',
           position: 'fixed',
@@ -110,17 +110,21 @@ export default function MainLayout({ children }: MainLayoutProps) {
           overflowY: 'auto',
         }}
       >
+        {/* Logo */}
+        <Box p="md" style={{ borderBottom: '1px solid rgba(69, 71, 82, 0.15)', display: 'flex', justifyContent: 'center' }}>
+          <img src="/logo-wordmark.png" alt="Motodo" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+        </Box>
         {/* Profile Section */}
         {user && (
-          <Box p="md" className="scanline-subtle" style={{ borderBottom: '1px solid rgba(59, 73, 76, 0.15)', position: 'relative' }}>
+          <Box p="md" className="scanline-subtle" style={{ borderBottom: '1px solid rgba(69, 71, 82, 0.15)', position: 'relative' }}>
             <Box style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <Avatar
                 size={40}
                 radius={0}
                 style={{
                   backgroundColor: '#272A34',
-                  border: '2px solid #00E5FF',
-                  color: '#00E5FF',
+                  border: '2px solid #81ecff',
+                  color: '#81ecff',
                   fontFamily: '"JetBrains Mono", monospace',
                   fontWeight: 700,
                 }}
@@ -134,7 +138,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     fontFamily: '"JetBrains Mono", monospace',
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
-                    color: '#00E5FF',
+                    color: '#81ecff',
                     fontWeight: 600,
                   }}
                 >
@@ -144,7 +148,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   size="xs"
                   style={{
                     fontFamily: '"JetBrains Mono", monospace',
-                    color: '#8A8F98',
+                    color: '#a8aab7',
                     fontSize: '0.625rem',
                   }}
                 >
@@ -159,7 +163,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 size="xs"
                 style={{
                   fontFamily: '"JetBrains Mono", monospace',
-                  color: '#8A8F98',
+                  color: '#a8aab7',
                   fontSize: '0.625rem',
                   marginBottom: 4,
                 }}
@@ -168,12 +172,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
               </Text>
               <Progress
                 value={xpProgress}
-                color="#00E5FF"
+                color="#81ecff"
                 size={4}
                 radius={0}
                 styles={{
                   root: { backgroundColor: '#272A34' },
-                  section: { boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)' },
+                  section: { boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)' },
                 }}
               />
             </Box>
@@ -182,7 +186,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <Box
               component="button"
               onClick={() => navigate('/tasks')}
-              className="arcade-btn arcade-btn-primary"
+              className="arcade-btn arcade-btn-gradient"
               style={{
                 width: '100%',
                 padding: '8px 16px',
@@ -216,9 +220,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   width: '100%',
                   padding: '10px 16px',
                   border: 'none',
-                  borderLeft: isActive ? '4px solid #FF007F' : '4px solid transparent',
+                  borderLeft: isActive ? '4px solid #ff6b9b' : '4px solid transparent',
                   backgroundColor: isActive ? '#10131C' : 'transparent',
-                  color: isActive ? '#E0E0E0' : '#8A8F98',
+                  color: isActive ? '#e6e7f5' : '#a8aab7',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   fontFamily: '"Space Grotesk", sans-serif',
@@ -230,13 +234,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
                   if (!isActive) {
                     e.currentTarget.style.backgroundColor = '#272A34';
-                    e.currentTarget.style.color = '#00E5FF';
+                    e.currentTarget.style.color = '#81ecff';
                   }
                 }}
                 onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
                   if (!isActive) {
                     e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = '#8A8F98';
+                    e.currentTarget.style.color = '#a8aab7';
                   }
                 }}
               >
@@ -250,7 +254,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         {/* Footer */}
         <Box
           style={{
-            borderTop: '1px solid rgba(59, 73, 76, 0.15)',
+            borderTop: '1px solid rgba(69, 71, 82, 0.15)',
             padding: '12px 16px',
           }}
         >
@@ -266,7 +270,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               padding: '6px 0',
               border: 'none',
               backgroundColor: 'transparent',
-              color: '#8A8F98',
+              color: '#a8aab7',
               cursor: 'pointer',
               fontFamily: '"Space Grotesk", sans-serif',
               fontSize: '0.75rem',
@@ -293,7 +297,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               padding: '6px 0',
               border: 'none',
               backgroundColor: 'transparent',
-              color: '#8A8F98',
+              color: '#a8aab7',
               cursor: 'pointer',
               fontFamily: '"Space Grotesk", sans-serif',
               fontSize: '0.75rem',
@@ -310,7 +314,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             style={{
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: '0.5625rem',
-              color: '#5A5E66',
+              color: '#525560',
               letterSpacing: '0.1em',
             }}
           >

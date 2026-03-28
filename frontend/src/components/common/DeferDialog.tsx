@@ -108,7 +108,7 @@ export default function DeferDialog({ open, tasks, onConfirm, onCancel }: DeferD
         )}
 
         {mode === 'next_recurrence' && !allRecurring && hasRecurringTasks && (
-          <Text size="sm" style={{ color: '#5A5E66' }} mt="xs">
+          <Text size="sm" style={{ color: '#525560' }} mt="xs">
             Some selected tasks are not recurring. Only recurring tasks can be deferred to their
             next recurrence.
           </Text>

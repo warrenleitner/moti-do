@@ -12,8 +12,8 @@ interface GlowCardProps {
 }
 
 const accentColorMap = {
-  cyan: '#00E5FF',
-  magenta: '#FF007F',
+  cyan: '#81ecff',
+  magenta: '#ff6b9b',
   amber: '#FFC775',
   none: 'transparent',
 };

@@ -18,8 +18,8 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    // "MOTI-DO" text logo heading
-    this.heading = page.getByText('MOTI-DO', { exact: true });
+    // "Motodo" logo image
+    this.heading = page.getByRole('img', { name: 'Motodo' });
     this.subtitle = page.getByText('SYSTEM ACCESS');
     // Mantine SegmentedControl renders as div[role="radiogroup"] with <label> elements
     this.loginTab = page.getByRole('radiogroup').getByText('LOGIN');

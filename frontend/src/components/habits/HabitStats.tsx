@@ -43,14 +43,14 @@ export default function HabitStats({ habits }: HabitStatsProps) {
           value={totalStreakDays}
           accentColor="magenta"
           progress={Math.min((totalStreakDays / Math.max(activeHabits.length * 30, 1)) * 100, 100)}
-          icon={<IconFlame size={20} color="#FF007F" />}
+          icon={<IconFlame size={20} color="#ff6b9b" />}
         />
         <StatCard
           label="Average Streak"
           value={`${avgStreak} days`}
           accentColor="cyan"
           progress={Math.min((avgStreak / 30) * 100, 100)}
-          icon={<IconTrendingUp size={20} color="#00E5FF" />}
+          icon={<IconTrendingUp size={20} color="#81ecff" />}
         />
         <StatCard
           label="Best Ever Streak"
@@ -63,7 +63,7 @@ export default function HabitStats({ habits }: HabitStatsProps) {
           label="Active Habits"
           value={`${activeHabits.length}`}
           accentColor="cyan"
-          icon={<IconCalendar size={20} color="#00E5FF" />}
+          icon={<IconCalendar size={20} color="#81ecff" />}
         />
       </SimpleGrid>
 
@@ -72,21 +72,21 @@ export default function HabitStats({ habits }: HabitStatsProps) {
         <div
           style={{
             backgroundColor: '#10131C',
-            border: '1px solid rgba(59, 73, 76, 0.15)',
-            borderLeft: '4px solid #FF007F',
+            border: '1px solid rgba(69, 71, 82, 0.15)',
+            borderLeft: '4px solid #ff6b9b',
             padding: '0.75rem 1rem',
             marginBottom: '1rem',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <IconFlame size={16} color="#FF007F" />
+            <IconFlame size={16} color="#ff6b9b" />
             <span
               className="font-data"
               style={{
                 fontSize: '0.6875rem',
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
-                color: '#FF007F',
+                color: '#ff6b9b',
                 fontWeight: 600,
               }}
             >
@@ -103,9 +103,9 @@ export default function HabitStats({ habits }: HabitStatsProps) {
                   alignItems: 'center',
                   gap: '4px',
                   padding: '2px 8px',
-                  backgroundColor: 'rgba(255, 0, 127, 0.1)',
-                  border: '1px solid rgba(255, 0, 127, 0.3)',
-                  color: '#FF007F',
+                  backgroundColor: 'rgba(255, 107, 155, 0.1)',
+                  border: '1px solid rgba(255, 107, 155, 0.3)',
+                  color: '#ff6b9b',
                   fontSize: '0.6875rem',
                   fontWeight: 600,
                   letterSpacing: '0.05em',

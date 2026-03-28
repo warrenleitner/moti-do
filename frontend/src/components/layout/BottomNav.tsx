@@ -67,7 +67,7 @@ export function BottomNav({ currentPath, onNavigate }: BottomNavProps) {
               left: 0,
               right: 0,
               backgroundColor: '#181B25',
-              borderTop: '1px solid rgba(59, 73, 76, 0.15)',
+              borderTop: '1px solid rgba(69, 71, 82, 0.15)',
               boxShadow: '0 -4px 0px rgba(0, 0, 0, 0.3)',
               zIndex: 300,
               padding: '8px 0',
@@ -87,9 +87,9 @@ export function BottomNav({ currentPath, onNavigate }: BottomNavProps) {
                     width: '100%',
                     padding: '12px 20px',
                     border: 'none',
-                    borderLeft: isActive ? '3px solid #FF007F' : '3px solid transparent',
+                    borderLeft: isActive ? '3px solid #ff6b9b' : '3px solid transparent',
                     backgroundColor: isActive ? '#10131C' : 'transparent',
-                    color: isActive ? '#E0E0E0' : '#8A8F98',
+                    color: isActive ? '#e6e7f5' : '#a8aab7',
                     cursor: 'pointer',
                     fontFamily: '"Space Grotesk", sans-serif',
                     fontSize: '0.8125rem',
@@ -119,7 +119,7 @@ export function BottomNav({ currentPath, onNavigate }: BottomNavProps) {
           right: 0,
           height: 64,
           backgroundColor: '#272A34',
-          borderTop: '1px solid rgba(59, 73, 76, 0.15)',
+          borderTop: '1px solid rgba(69, 71, 82, 0.15)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-around',
@@ -150,7 +150,7 @@ export function BottomNav({ currentPath, onNavigate }: BottomNavProps) {
             backgroundColor: isHome ? '#10131C' : 'transparent',
             cursor: 'pointer',
             position: 'relative',
-            borderTop: isHome ? '2px solid #FF007F' : '2px solid transparent',
+            borderTop: isHome ? '2px solid #ff6b9b' : '2px solid transparent',
             transition: 'all 0.15s ease',
             marginTop: -8,
           }}
@@ -162,10 +162,10 @@ export function BottomNav({ currentPath, onNavigate }: BottomNavProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: isHome ? '#00E5FF' : '#272A34',
-              border: isHome ? 'none' : '1px solid rgba(59, 73, 76, 0.3)',
-              color: isHome ? '#00626E' : '#8A8F98',
-              boxShadow: isHome ? '0 0 12px rgba(0, 229, 255, 0.5)' : 'none',
+              backgroundColor: isHome ? '#81ecff' : '#272A34',
+              border: isHome ? 'none' : '1px solid rgba(69, 71, 82, 0.3)',
+              color: isHome ? '#00626E' : '#a8aab7',
+              boxShadow: isHome ? '0 0 12px rgba(129, 236, 255, 0.5)' : 'none',
               transition: 'all 0.15s ease',
             }}
           >
@@ -175,7 +175,7 @@ export function BottomNav({ currentPath, onNavigate }: BottomNavProps) {
             style={{
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: '0.5625rem',
-              color: isHome ? '#00E5FF' : '#8A8F98',
+              color: isHome ? '#81ecff' : '#a8aab7',
               textTransform: 'uppercase' as const,
               letterSpacing: '0.1em',
             }}
@@ -219,9 +219,9 @@ function NavButton({
         gap: 2,
         padding: '8px 16px',
         border: 'none',
-        borderTop: isActive ? '2px solid #FF007F' : '2px solid transparent',
+        borderTop: isActive ? '2px solid #ff6b9b' : '2px solid transparent',
         backgroundColor: isActive ? '#10131C' : 'transparent',
-        color: isActive ? '#E0E0E0' : '#8A8F98',
+        color: isActive ? '#e6e7f5' : '#a8aab7',
         cursor: 'pointer',
         transition: 'all 0.15s ease',
       }}
@@ -231,7 +231,7 @@ function NavButton({
         style={{
           fontFamily: '"JetBrains Mono", monospace',
           fontSize: '0.5625rem',
-          color: isActive ? '#FF007F' : '#8A8F98',
+          color: isActive ? '#ff6b9b' : '#a8aab7',
           textTransform: 'uppercase' as const,
           letterSpacing: '0.1em',
         }}

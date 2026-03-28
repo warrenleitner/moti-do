@@ -112,7 +112,7 @@ export default function HabitList({
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onCreateNew(); }}
                   style={{
-                    border: '2px dashed #3B494C',
+                    border: '2px dashed #454752',
                     backgroundColor: 'transparent',
                     display: 'flex',
                     flexDirection: 'column',
@@ -124,23 +124,23 @@ export default function HabitList({
                     minHeight: '200px',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#00E5FF';
-                    e.currentTarget.style.boxShadow = '0 0 12px rgba(0, 229, 255, 0.3)';
+                    e.currentTarget.style.borderColor = '#81ecff';
+                    e.currentTarget.style.boxShadow = '0 0 12px rgba(129, 236, 255, 0.3)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#3B494C';
+                    e.currentTarget.style.borderColor = '#454752';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
-                  <IconPlus size={48} color="#5A5E66" style={{ transition: 'transform 0.15s ease' }} />
+                  <IconPlus size={48} color="#525560" style={{ transition: 'transform 0.15s ease' }} />
                   <span
-                    className="font-data"
+                    className="font-data gradient-text"
                     style={{
                       fontSize: '0.75rem',
-                      color: '#9BA3AF',
                       textTransform: 'uppercase',
                       letterSpacing: '0.1em',
                       marginTop: '0.75rem',
+                      fontWeight: 600,
                     }}
                   >
                     INITIALIZE NEW PROTOCOL

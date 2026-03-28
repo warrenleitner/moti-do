@@ -41,7 +41,7 @@ export default function KanbanColumn({
         display: 'flex',
         flexDirection: 'column',
         maxHeight: 'calc(100vh - 200px)',
-        border: '1px solid rgba(59, 73, 76, 0.15)',
+        border: '1px solid rgba(69, 71, 82, 0.15)',
         borderTop: `3px solid ${color}`,
       }}
     >
@@ -50,7 +50,7 @@ export default function KanbanColumn({
         p="sm"
         style={{
           backgroundColor: 'var(--kc-surface)',
-          borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+          borderBottom: '1px solid rgba(69, 71, 82, 0.15)',
         }}
       >
         <Group justify="space-between" align="center">

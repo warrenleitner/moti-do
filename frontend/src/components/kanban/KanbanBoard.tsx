@@ -28,11 +28,11 @@ interface Column {
 }
 
 const columns: Column[] = [
-  { id: 'backlog', title: 'Backlog', color: '#3B494C' },
-  { id: 'todo', title: 'To Do', color: '#3B494C' },
-  { id: 'in_progress', title: 'In Progress', color: '#00E5FF', wipLimit: 3 },
+  { id: 'backlog', title: 'Backlog', color: '#454752' },
+  { id: 'todo', title: 'To Do', color: '#454752' },
+  { id: 'in_progress', title: 'In Progress', color: '#81ecff', wipLimit: 3 },
   { id: 'blocked', title: 'Blocked', color: '#FFC775' },
-  { id: 'done', title: 'Done', color: '#FF007F' },
+  { id: 'done', title: 'Done', color: '#ff6b9b' },
 ];
 
 // Map task properties to kanban status

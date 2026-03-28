@@ -96,14 +96,14 @@ function toggleArrayValue<T>(arr: T[], value: T): T[] {
 const kcSelectStyles = {
   input: {
     backgroundColor: '#0B0E17',
-    borderColor: 'rgba(59, 73, 76, 0.15)',
+    borderColor: 'rgba(69, 71, 82, 0.15)',
     borderRadius: 0,
-    color: '#E0E0E0',
+    color: '#e6e7f5',
     fontFamily: '"JetBrains Mono", monospace',
     fontSize: '0.8125rem',
     '&:focus': {
-      borderColor: '#00E5FF',
-      boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+      borderColor: '#81ecff',
+      boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)',
     },
   },
   label: {
@@ -111,20 +111,20 @@ const kcSelectStyles = {
     fontSize: '0.6875rem',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.1em',
-    color: '#8A8F98',
+    color: '#a8aab7',
   },
   dropdown: {
     backgroundColor: '#181B25',
-    borderColor: 'rgba(59, 73, 76, 0.15)',
+    borderColor: 'rgba(69, 71, 82, 0.15)',
     borderRadius: 0,
   },
   option: {
     fontFamily: '"JetBrains Mono", monospace',
     fontSize: '0.8125rem',
-    color: '#E0E0E0',
+    color: '#e6e7f5',
     '&[data-selected]': {
-      backgroundColor: 'rgba(0, 229, 255, 0.15)',
-      color: '#00E5FF',
+      backgroundColor: 'rgba(129, 236, 255, 0.15)',
+      color: '#81ecff',
     },
     '&[data-hovered]': {
       backgroundColor: '#272A34',
@@ -338,9 +338,9 @@ export default function FilterBar({
         styles={{
           input: {
             backgroundColor: '#0B0E17',
-            borderColor: 'rgba(59, 73, 76, 0.15)',
+            borderColor: 'rgba(69, 71, 82, 0.15)',
             borderRadius: 0,
-            color: '#E0E0E0',
+            color: '#e6e7f5',
             fontFamily: '"JetBrains Mono", monospace',
             fontSize: '0.8125rem',
           },
@@ -349,7 +349,7 @@ export default function FilterBar({
             fontSize: '0.6875rem',
             textTransform: 'uppercase' as const,
             letterSpacing: '0.1em',
-            color: '#8A8F98',
+            color: '#a8aab7',
           },
         }}
       />
@@ -373,12 +373,12 @@ export default function FilterBar({
   // Active filter chips - shown in both mobile and desktop
   const activeFilterChips = hasActiveFilters && (
     <Group gap="xs" mt="sm" wrap="wrap">
-      <IconFilter size={18} color="#5A5E66" style={{ marginRight: 4 }} />
+      <IconFilter size={18} color="#525560" style={{ marginRight: 4 }} />
       {search && (
         <Badge
           variant="light"
           size="sm"
-          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          style={{ backgroundColor: 'rgba(129, 236, 255, 0.1)', color: '#81ecff', border: '1px solid rgba(129, 236, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onSearchChange('')} aria-label="Clear search filter" data-testid="CancelIcon" />
           }
@@ -390,7 +390,7 @@ export default function FilterBar({
         <Badge
           variant="light"
           size="sm"
-          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          style={{ backgroundColor: 'rgba(129, 236, 255, 0.1)', color: '#81ecff', border: '1px solid rgba(129, 236, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onStatusChange('active')} aria-label="Clear status filter" data-testid="CancelIcon" />
           }
@@ -403,7 +403,7 @@ export default function FilterBar({
           key={p}
           variant="light"
           size="sm"
-          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          style={{ backgroundColor: 'rgba(129, 236, 255, 0.1)', color: '#81ecff', border: '1px solid rgba(129, 236, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onPrioritiesChange(priorities.filter((x) => x !== p))} aria-label="Clear priority filter" data-testid="CancelIcon" />
           }
@@ -416,7 +416,7 @@ export default function FilterBar({
           key={d}
           variant="light"
           size="sm"
-          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          style={{ backgroundColor: 'rgba(129, 236, 255, 0.1)', color: '#81ecff', border: '1px solid rgba(129, 236, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onDifficultiesChange(difficulties.filter((x) => x !== d))} aria-label="Clear difficulty filter" data-testid="CancelIcon" />
           }
@@ -429,7 +429,7 @@ export default function FilterBar({
           key={d}
           variant="light"
           size="sm"
-          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          style={{ backgroundColor: 'rgba(129, 236, 255, 0.1)', color: '#81ecff', border: '1px solid rgba(129, 236, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onDurationsChange(durations.filter((x) => x !== d))} aria-label="Clear duration filter" data-testid="CancelIcon" />
           }
@@ -442,7 +442,7 @@ export default function FilterBar({
           key={p}
           variant="light"
           size="sm"
-          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          style={{ backgroundColor: 'rgba(129, 236, 255, 0.1)', color: '#81ecff', border: '1px solid rgba(129, 236, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onProjectsChange(selectedProjects.filter((x) => x !== p))} aria-label="Clear project filter" data-testid="CancelIcon" />
           }
@@ -455,7 +455,7 @@ export default function FilterBar({
           key={t}
           variant="light"
           size="sm"
-          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          style={{ backgroundColor: 'rgba(129, 236, 255, 0.1)', color: '#81ecff', border: '1px solid rgba(129, 236, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onTagsChange(selectedTags.filter((x) => x !== t))} aria-label="Clear tag filter" data-testid="CancelIcon" />
           }
@@ -467,7 +467,7 @@ export default function FilterBar({
         <Badge
           variant="light"
           size="sm"
-          style={{ backgroundColor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: 0 }}
+          style={{ backgroundColor: 'rgba(129, 236, 255, 0.1)', color: '#81ecff', border: '1px solid rgba(129, 236, 255, 0.3)', borderRadius: 0 }}
           rightSection={
             <CloseButton size="xs" onClick={() => onMaxDueDateChange(undefined)} aria-label="Clear due date filter" data-testid="CancelIcon" />
           }
@@ -487,7 +487,7 @@ export default function FilterBar({
           style={{
             display: 'flex',
             gap: 0,
-            borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+            borderBottom: '1px solid rgba(69, 71, 82, 0.15)',
             marginBottom: 12,
             overflowX: 'auto',
           }}
@@ -499,13 +499,13 @@ export default function FilterBar({
               style={{
                 background: 'none',
                 border: 'none',
-                borderBottom: status === tab.value ? '2px solid #00E5FF' : '2px solid transparent',
+                borderBottom: status === tab.value ? '2px solid #81ecff' : '2px solid transparent',
                 padding: '8px 16px',
                 fontFamily: '"Space Grotesk", sans-serif',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 letterSpacing: '0.05em',
-                color: status === tab.value ? '#00E5FF' : '#9BA3AF',
+                color: status === tab.value ? '#81ecff' : '#9BA3AF',
                 cursor: 'pointer',
                 transition: 'color 0.15s ease, border-color 0.15s ease',
                 whiteSpace: 'nowrap',
@@ -566,7 +566,7 @@ export default function FilterBar({
               borderTopRightRadius: 0,
               maxHeight: '80vh',
               backgroundColor: '#181B25',
-              borderTop: '1px solid rgba(59, 73, 76, 0.15)',
+              borderTop: '1px solid rgba(69, 71, 82, 0.15)',
             },
           }}
         >
@@ -577,13 +577,13 @@ export default function FilterBar({
                 fw={700}
                 size="lg"
                 className="font-display"
-                style={{ color: '#00E5FF', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                style={{ color: '#81ecff', textTransform: 'uppercase', letterSpacing: '0.05em' }}
               >
                 FILTER TASKS
               </Text>
-              <CloseButton onClick={() => setDrawerOpen(false)} style={{ color: '#8A8F98' }} />
+              <CloseButton onClick={() => setDrawerOpen(false)} style={{ color: '#a8aab7' }} />
             </Group>
-            <Divider mb="md" style={{ borderColor: 'rgba(59, 73, 76, 0.15)' }} />
+            <Divider mb="md" style={{ borderColor: 'rgba(69, 71, 82, 0.15)' }} />
 
             {/* Filter controls in vertical stack */}
             <Stack gap="sm">
@@ -614,7 +614,7 @@ export default function FilterBar({
         style={{
           display: 'flex',
           gap: 0,
-          borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+          borderBottom: '1px solid rgba(69, 71, 82, 0.15)',
           marginBottom: 16,
         }}
       >
@@ -625,18 +625,18 @@ export default function FilterBar({
             style={{
               background: 'none',
               border: 'none',
-              borderBottom: status === tab.value ? '2px solid #00E5FF' : '2px solid transparent',
+              borderBottom: status === tab.value ? '2px solid #81ecff' : '2px solid transparent',
               padding: '8px 20px',
               fontFamily: '"Space Grotesk", sans-serif',
               fontSize: '0.8125rem',
               fontWeight: 600,
               letterSpacing: '0.05em',
-              color: status === tab.value ? '#00E5FF' : '#9BA3AF',
+              color: status === tab.value ? '#81ecff' : '#9BA3AF',
               cursor: 'pointer',
               transition: 'color 0.15s ease, border-color 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              if (status !== tab.value) (e.currentTarget.style.color = '#E0E0E0');
+              if (status !== tab.value) (e.currentTarget.style.color = '#e6e7f5');
             }}
             onMouseLeave={(e) => {
               if (status !== tab.value) (e.currentTarget.style.color = '#9BA3AF');
