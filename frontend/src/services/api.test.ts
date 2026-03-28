@@ -654,6 +654,7 @@ describe('API Tests', () => {
           level: 2,
           last_processed_date: '2024-01-01',
           vacation_mode: false,
+          timezone: null,
         };
 
         mockAxiosInstance.get.mockResolvedValue({ data: mockProfile });
@@ -1023,6 +1024,7 @@ describe('API Tests', () => {
           current_date: '2024-01-02',
           vacation_mode: false,
           pending_days: 1,
+          timezone: null,
         };
 
         mockAxiosInstance.get.mockResolvedValue({ data: mockStatus });
@@ -1041,6 +1043,7 @@ describe('API Tests', () => {
           current_date: '2024-01-02',
           vacation_mode: false,
           pending_days: 0,
+          timezone: null,
         };
 
         mockAxiosInstance.post.mockResolvedValue({ data: mockStatus });
@@ -1074,6 +1077,7 @@ describe('API Tests', () => {
           current_date: '2024-01-09',
           vacation_mode: false,
           pending_days: 0,
+          timezone: null,
         };
 
         mockAxiosInstance.post.mockResolvedValue({ data: mockStatus });
