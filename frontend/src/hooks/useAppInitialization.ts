@@ -7,6 +7,11 @@ import { useLocation } from 'react-router-dom';
 import { useTaskStore } from '../store/taskStore';
 import { useUserStore } from '../store/userStore';
 import { authApi } from '../services/api';
+import {
+  getNotificationEnabled,
+  startNotificationScheduler,
+  stopNotificationScheduler,
+} from '../services/notifications';
 
 interface InitializationState {
   isInitialized: boolean;
@@ -56,6 +61,11 @@ export function useAppInitialization(): InitializationState {
       ]);
 
       setIsInitialized(true);
+
+      // Start notification scheduler if enabled
+      if (getNotificationEnabled()) {
+        startNotificationScheduler();
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to initialize app';
       setError(message);
@@ -81,6 +91,11 @@ export function useAppInitialization(): InitializationState {
       setIsLoading(false);
     }
   }, [location.pathname, isInitialized, initialize]);
+
+  // Clean up notification scheduler on unmount
+  useEffect(() => {
+    return () => stopNotificationScheduler();
+  }, []);
 
   const retry = useCallback(() => {
     initializingRef.current = false;

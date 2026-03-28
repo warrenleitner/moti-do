@@ -67,8 +67,8 @@ test.describe('Settings Page', () => {
       await page.goto('/settings');
 
       // Find vacation mode toggle - Mantine Switch component
-      // The label starts with "Enable vacation mode" or "Vacation mode is active"
-      const vacationToggle = page.getByRole('switch');
+      // The label is "ENABLE VACATION MODE" or "VACATION MODE ACTIVE"
+      const vacationToggle = page.getByRole('switch', { name: /vacation mode/i });
       await expect(vacationToggle).toBeVisible();
 
       // Wait for the switch to be enabled (loading to complete)
@@ -99,7 +99,7 @@ test.describe('Settings Page', () => {
       await expect(page.getByText('VACATION_MODE')).toBeVisible();
 
       // Check for vacation mode switch and label using the form control
-      const vacationSwitch = page.getByRole('switch');
+      const vacationSwitch = page.getByRole('switch', { name: /vacation mode/i });
       await expect(vacationSwitch).toBeVisible();
 
       // Verify the vacation mode toggle or label is present

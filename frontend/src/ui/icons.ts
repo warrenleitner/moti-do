@@ -8,6 +8,7 @@ export {
   IconArrowsSort,
   IconBan,
   IconBeach,
+  IconBell,
   IconBinaryTree2,
   IconBolt,
   IconCalendar,

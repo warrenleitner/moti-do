@@ -446,3 +446,16 @@ class ScoringConfigUpdate(BaseModel):
     dependency_chain: DependencyChainConfig | None = None
     habit_streak_bonus: HabitStreakBonusConfig | None = None
     penalty_invert_weights: PenaltyInvertWeightsConfig | None = None
+
+
+# === Notification Schemas ===
+class NotificationSummary(BaseModel):
+    """Schema for daily notification summary data."""
+
+    completed_today: int
+    tasks_due_today: int
+    xp_gained_today: int
+    points_at_risk: int
+    processing_date: date
+    current_date: date
+    days_behind: int

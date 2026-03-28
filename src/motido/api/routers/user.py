@@ -13,6 +13,7 @@ from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 from motido.api.deps import CurrentUser, ManagerDep
 from motido.api.schemas import (
     BadgeSchema,
+    NotificationSummary,
     ProjectCreate,
     ProjectResponse,
     ScoringConfigResponse,
@@ -111,6 +112,78 @@ async def update_timezone(
         last_processed_date=user.last_processed_date,
         vacation_mode=user.vacation_mode,
         timezone=user.timezone,
+    )
+
+
+# === Notification Endpoints ===
+
+
+@router.get("/notification-summary", response_model=NotificationSummary)
+async def get_notification_summary(user: CurrentUser) -> NotificationSummary:
+    """Get a summary of the user's current day for notification display.
+
+    Returns task completion counts, XP gained, and points at risk
+    based on the user's processing date.
+    """
+    from motido.core.scoring import (
+        build_scoring_config_with_user_multipliers,
+        calculate_penalty_score,
+        load_scoring_config,
+    )
+    from motido.core.utils import get_today_for_timezone
+
+    current_date = get_today_for_timezone(user.timezone)
+    processing_date = user.last_processed_date
+
+    # The "game day" the user is currently working on
+    game_day = processing_date
+
+    # Count tasks completed on the game day (via XP transactions)
+    completed_today = sum(
+        1
+        for t in user.xp_transactions
+        if getattr(t, "game_date", None) == game_day and t.source == "task_completion"
+    )
+
+    # Count tasks still due on the game day (incomplete, due today or overdue)
+    tasks_due_today = sum(
+        1
+        for t in user.tasks
+        if not t.is_complete
+        and t.due_date is not None
+        and (t.due_date.date() if hasattr(t.due_date, "date") else t.due_date)
+        <= game_day
+    )
+
+    # XP gained today (from daily_earned aggregates)
+    xp_gained_today = sum(
+        t.amount
+        for t in user.xp_transactions
+        if getattr(t, "game_date", None) == game_day and t.source == "daily_earned"
+    )
+
+    # Points at risk (penalty scores for due but uncompleted tasks)
+    config = load_scoring_config()
+    config = build_scoring_config_with_user_multipliers(config, user)
+    points_at_risk = sum(
+        int(round(calculate_penalty_score(t, config, game_day)))
+        for t in user.tasks
+        if not t.is_complete
+        and t.due_date is not None
+        and (t.due_date.date() if hasattr(t.due_date, "date") else t.due_date)
+        <= game_day
+    )
+
+    days_behind = max(0, (current_date - processing_date).days - 1)
+
+    return NotificationSummary(
+        completed_today=completed_today,
+        tasks_due_today=tasks_due_today,
+        xp_gained_today=xp_gained_today,
+        points_at_risk=points_at_risk,
+        processing_date=processing_date,
+        current_date=current_date,
+        days_behind=days_behind,
     )
 
 

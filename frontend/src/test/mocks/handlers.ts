@@ -90,7 +90,7 @@ const API_BASE = 'http://localhost:8000/api';
 export const handlers = [
   // Health check
   http.get(`${API_BASE}/health`, () => {
-    return HttpResponse.json({ status: 'healthy', version: '0.5.0' });
+    return HttpResponse.json({ status: 'healthy', version: '0.6.0' });
   }),
 
   // Task endpoints
@@ -270,6 +270,18 @@ export const handlers = [
 
   http.get(`${API_BASE}/user/xp`, () => {
     return HttpResponse.json([]);
+  }),
+
+  http.get(`${API_BASE}/user/notification-summary`, () => {
+    return HttpResponse.json({
+      completed_today: 1,
+      tasks_due_today: 2,
+      xp_gained_today: 50,
+      points_at_risk: 25,
+      processing_date: '2025-01-08',
+      current_date: '2025-01-09',
+      days_behind: 0,
+    });
   }),
 
   // System endpoints

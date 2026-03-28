@@ -135,6 +135,16 @@ export interface SystemStatus {
   timezone: string | null;
 }
 
+export interface NotificationSummary {
+  completed_today: number;
+  tasks_due_today: number;
+  xp_gained_today: number;
+  points_at_risk: number;
+  processing_date: string;
+  current_date: string;
+  days_behind: number;
+}
+
 export interface JumpToCurrentInstancePreview {
   task_id: string;
   title: string;
@@ -541,6 +551,12 @@ export const userApi = {
   // Update timezone
   updateTimezone: async (timezone: string): Promise<UserProfile> => {
     const response = await apiClient.put<UserProfile>('/user/timezone', { timezone });
+    return response.data;
+  },
+
+  // Notification summary
+  getNotificationSummary: async (): Promise<NotificationSummary> => {
+    const response = await apiClient.get<NotificationSummary>('/user/notification-summary');
     return response.data;
   },
 };
