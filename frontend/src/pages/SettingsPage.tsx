@@ -23,6 +23,7 @@ import {
   IconUpload,
   IconLock,
   IconBeach,
+  IconBell,
   IconHistory,
   IconTag,
   IconFolder,
@@ -50,6 +51,17 @@ import {
 } from '../services/api';
 import { useUserStore, useSystemStatus, useUserStats } from '../store/userStore';
 import { GlowCard, ArcadeButton, DataBadge } from '../components/ui';
+import {
+  getNotificationEnabled,
+  setNotificationEnabled,
+  getNotificationTime,
+  setNotificationTime,
+  isNotificationSupported,
+  getNotificationPermission,
+  requestNotificationPermission,
+  startNotificationScheduler,
+  stopNotificationScheduler,
+} from '../services/notifications';
 
 // Pre-compute the list of IANA timezone identifiers
 const TIMEZONE_OPTIONS = Intl.supportedValuesOf('timeZone');
@@ -105,6 +117,11 @@ export default function SettingsPage() {
   // Backend version state
   const [backendVersion, setBackendVersion] = useState<string | null>(null);
 
+  // Notification state
+  const [notificationsEnabled, setNotificationsEnabled] = useState(getNotificationEnabled());
+  const [notificationTime, setNotifTime] = useState(getNotificationTime());
+  const [notificationPermission, setNotificationPermission] = useState<string>(getNotificationPermission());
+
   // Collapsible section states (mobile accordion)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     xpLedger: true,
@@ -113,6 +130,7 @@ export default function SettingsPage() {
     projects: true,
     dateProcessing: true,
     xpWithdraw: true,
+    notifications: true,
     vacation: true,
     backup: true,
     security: true,
@@ -1487,6 +1505,105 @@ export default function SettingsPage() {
           <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginTop: '0.5rem' }}>
             You can go into XP debt if you withdraw more than your current balance.
           </Text>
+        </Collapse>
+      </GlowCard>
+
+      {/* ═══════════════════════════════════════════════
+          Notifications
+          ═══════════════════════════════════════════════ */}
+      <GlowCard accentColor="amber" accentPosition="left" className="settings-section" style={{ marginBottom: '1.5rem' }}>
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => toggleSection('notifications')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleSection('notifications')}
+        >
+          {expandedSections.notifications ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          <IconBell size={14} style={{ color: '#FFC775' }} />
+          NOTIFICATIONS
+        </div>
+
+        <Collapse in={expandedSections.notifications}>
+          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '0.75rem' }}>
+            Get a daily browser notification reminding you to complete your check-in.
+          </Text>
+
+          {!isNotificationSupported() ? (
+            <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(255, 199, 117, 0.3)', padding: '0.75rem' }}>
+              <Text className="font-data" size="xs" style={{ color: '#FFC775' }}>
+                ⚠ Your browser does not support notifications.
+              </Text>
+            </Box>
+          ) : (
+            <Stack gap="md">
+              {notificationPermission === 'denied' && (
+                <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(255, 0, 127, 0.3)', padding: '0.75rem' }}>
+                  <Text className="font-data" size="xs" style={{ color: '#FF007F' }}>
+                    ⚠ Notification permission was denied. Please enable it in your browser settings.
+                  </Text>
+                </Box>
+              )}
+
+              <Switch
+                checked={notificationsEnabled}
+                onChange={async (e) => {
+                  const enabled = e.currentTarget.checked;
+                  if (enabled && notificationPermission !== 'granted') {
+                    const result = await requestNotificationPermission();
+                    setNotificationPermission(result);
+                    if (result !== 'granted') {
+                      return;
+                    }
+                  }
+                  setNotificationEnabled(enabled);
+                  setNotificationsEnabled(enabled);
+                  if (enabled) {
+                    startNotificationScheduler();
+                  } else {
+                    stopNotificationScheduler();
+                  }
+                }}
+                label={notificationsEnabled ? 'DAILY REMINDER ACTIVE' : 'ENABLE DAILY REMINDER'}
+                aria-label="Daily Notification Reminder"
+                color="yellow"
+                styles={{ label: { fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', letterSpacing: '0.05em' } }}
+              />
+
+              {notificationsEnabled && (
+                <Group gap="sm" align="flex-end">
+                  <TextInput
+                    label="Reminder Time"
+                    type="time"
+                    value={notificationTime}
+                    onChange={(e) => {
+                      const time = e.target.value;
+                      setNotifTime(time);
+                      setNotificationTime(time);
+                      // Restart scheduler with new time
+                      startNotificationScheduler();
+                    }}
+                    styles={{
+                      label: { fontFamily: '"JetBrains Mono", monospace', fontSize: '0.6875rem', letterSpacing: '0.05em', color: '#B0B3B8' },
+                      input: { fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8125rem' },
+                    }}
+                    style={{ maxWidth: '140px' }}
+                  />
+                  <Text className="font-data" size="xs" style={{ color: '#5A5E66', paddingBottom: '0.5rem' }}>
+                    (local time)
+                  </Text>
+                </Group>
+              )}
+
+              {notificationsEnabled && (
+                <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(255, 199, 117, 0.2)', padding: '0.75rem' }}>
+                  <Text className="font-data" size="xs" style={{ color: '#FFC775' }}>
+                    ✓ You&apos;ll get a daily notification at {notificationTime} with your task summary.
+                  </Text>
+                </Box>
+              )}
+            </Stack>
+          )}
         </Collapse>
       </GlowCard>
 

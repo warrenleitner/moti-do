@@ -3,6 +3,8 @@
 Tests for the user API endpoints.
 """
 
+from datetime import datetime as dt
+
 from fastapi.testclient import TestClient
 
 from motido.core.models import User
@@ -270,3 +272,101 @@ class TestProjects:
         """Test deleting non-existent project."""
         response = client.delete("/api/user/projects/nonexistent")
         assert response.status_code == 404
+
+
+class TestNotificationSummary:
+    """Tests for GET /api/user/notification-summary endpoint."""
+
+    def test_get_notification_summary_empty(
+        self, empty_client: TestClient
+    ) -> None:
+        """Test notification summary for user with no tasks."""
+        response = empty_client.get("/api/user/notification-summary")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["completed_today"] == 0
+        assert data["tasks_due_today"] == 0
+        assert data["xp_gained_today"] == 0
+        assert data["points_at_risk"] == 0
+        assert "processing_date" in data
+        assert "current_date" in data
+        assert data["days_behind"] >= 0
+
+    def test_get_notification_summary_with_due_tasks(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Test notification summary counts tasks due today."""
+        from datetime import datetime as dt
+
+        # Set a task's due date to processing date (game day)
+        game_day = test_user.last_processed_date
+        test_user.tasks[0].due_date = dt.combine(
+            game_day, dt.min.time()
+        )
+        test_user.tasks[0].is_complete = False
+
+        response = client.get("/api/user/notification-summary")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["tasks_due_today"] >= 1
+
+    def test_get_notification_summary_with_completed_tasks(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Test notification summary counts completed tasks via XP transactions."""
+        from motido.core.models import XPTransaction as XPTx
+
+        game_day = test_user.last_processed_date
+        # Add a task_completion transaction for today's game day
+        test_user.xp_transactions.append(
+            XPTx(
+                amount=50,
+                source="task_completion",
+                timestamp=dt.now(),
+                task_id="task-1",
+                description="Completed: Test Task",
+                game_date=game_day,
+            )
+        )
+
+        response = client.get("/api/user/notification-summary")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["completed_today"] == 1
+
+    def test_get_notification_summary_xp_gained(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Test notification summary tracks XP gained today."""
+        from motido.core.models import XPTransaction as XPTx
+
+        game_day = test_user.last_processed_date
+        test_user.xp_transactions.append(
+            XPTx(
+                amount=75,
+                source="daily_earned",
+                timestamp=dt.now(),
+                description="Earned 75 XP",
+                game_date=game_day,
+            )
+        )
+
+        response = client.get("/api/user/notification-summary")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["xp_gained_today"] == 75
+
+    def test_get_notification_summary_days_behind(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Test notification summary reports days behind."""
+        from datetime import date, timedelta
+
+        # Set processing date 3 days behind real date
+        test_user.last_processed_date = date.today() - timedelta(days=4)
+
+        response = client.get("/api/user/notification-summary")
+        assert response.status_code == 200
+        data = response.json()
+        # days_behind = max(0, (current - processing).days - 1) = 3
+        assert data["days_behind"] == 3
