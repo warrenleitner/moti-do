@@ -343,6 +343,7 @@ class JsonDataManager(DataManager):
                 tasks=tasks,
                 last_processed_date=last_processed,
                 vacation_mode=user_data.get("vacation_mode", False),
+                timezone=user_data.get("timezone"),
                 xp_transactions=xp_transactions,
                 badges=badges,
                 defined_tags=defined_tags,
@@ -433,6 +434,7 @@ class JsonDataManager(DataManager):
             "tasks": tasks_data,
             "last_processed_date": user.last_processed_date.isoformat(),
             "vacation_mode": user.vacation_mode,
+            "timezone": user.timezone,
             "xp_transactions": [
                 {
                     "id": trans.id,

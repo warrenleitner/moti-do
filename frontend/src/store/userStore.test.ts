@@ -18,6 +18,7 @@ vi.mock('../services/api', () => ({
     getTags: vi.fn(),
     getProjects: vi.fn(),
     withdrawXP: vi.fn(),
+    updateTimezone: vi.fn(),
   },
   systemApi: {
     getStatus: vi.fn(),
@@ -506,6 +507,7 @@ describe('userStore', () => {
         level: 3,
         last_processed_date: '2024-01-01',
         vacation_mode: false,
+        timezone: null,
       };
 
       vi.mocked(userApi.getProfile).mockResolvedValue(profile);
@@ -630,6 +632,7 @@ describe('userStore', () => {
         current_date: '2024-01-02',
         vacation_mode: false,
         pending_days: 1,
+        timezone: null,
       };
 
       vi.mocked(systemApi.getStatus).mockResolvedValue(status);
@@ -752,6 +755,7 @@ describe('userStore', () => {
         current_date: '2024-01-02',
         vacation_mode: false,
         pending_days: 0,
+        timezone: null,
       };
 
       vi.mocked(systemApi.advanceDate).mockResolvedValue(status);
@@ -774,6 +778,7 @@ describe('userStore', () => {
             current_date: '2024-01-03',
             vacation_mode: false,
             pending_days: 2,
+            timezone: null,
           },
         });
       });
@@ -784,12 +789,14 @@ describe('userStore', () => {
           current_date: '2024-01-03',
           vacation_mode: false,
           pending_days: 1,
+          timezone: null,
         })
         .mockResolvedValueOnce({
           last_processed_date: '2024-01-03',
           current_date: '2024-01-03',
           vacation_mode: false,
           pending_days: 0,
+          timezone: null,
         });
 
       await act(async () => {
@@ -833,6 +840,7 @@ describe('userStore', () => {
         current_date: '2024-01-01',
         vacation_mode: false,
         pending_days: 0,
+        timezone: null,
       };
 
       act(() => {
@@ -874,6 +882,7 @@ describe('userStore', () => {
         level: 1,
         last_processed_date: '2024-01-09',
         vacation_mode: false,
+        timezone: null,
       };
       const stats: UserStats = {
         total_tasks: 3,
@@ -891,6 +900,7 @@ describe('userStore', () => {
         current_date: '2024-01-09',
         vacation_mode: false,
         pending_days: 0,
+        timezone: null,
       };
 
       vi.mocked(systemApi.resetScoreTracking).mockResolvedValue(status);
@@ -940,6 +950,7 @@ describe('userStore', () => {
         level: 2,
         last_processed_date: '2024-01-01',
         vacation_mode: false,
+        timezone: null,
       };
 
       vi.mocked(userApi.withdrawXP).mockResolvedValue({
@@ -985,6 +996,7 @@ describe('userStore', () => {
         level: 3,
         last_processed_date: '2024-01-01',
         vacation_mode: false,
+        timezone: null,
       };
 
       const stats: UserStats = {
@@ -1017,6 +1029,15 @@ describe('userStore', () => {
         current_date: '2024-01-02',
         vacation_mode: false,
         pending_days: 1,
+        timezone: null,
+      };
+
+      const refreshedStatus: SystemStatus = {
+        last_processed_date: '2024-01-01',
+        current_date: '2024-01-02',
+        vacation_mode: false,
+        pending_days: 1,
+        timezone: 'UTC',
       };
 
       vi.mocked(userApi.getProfile).mockResolvedValue(profile);
@@ -1024,7 +1045,13 @@ describe('userStore', () => {
       vi.mocked(userApi.getBadges).mockResolvedValue(badges);
       vi.mocked(userApi.getTags).mockResolvedValue(tags);
       vi.mocked(userApi.getProjects).mockResolvedValue(projects);
-      vi.mocked(systemApi.getStatus).mockResolvedValue(systemStatus);
+      vi.mocked(systemApi.getStatus)
+        .mockResolvedValueOnce(systemStatus)
+        .mockResolvedValueOnce(refreshedStatus);
+      vi.mocked(userApi.updateTimezone).mockResolvedValue({
+        ...profile,
+        timezone: 'UTC',
+      });
 
       await act(async () => {
         await useUserStore.getState().initializeUser();
@@ -1038,7 +1065,7 @@ describe('userStore', () => {
       expect(state.user?.defined_tags).toHaveLength(1);
       expect(state.user?.defined_projects).toHaveLength(1);
       expect(state.stats).toEqual(stats);
-      expect(state.systemStatus).toEqual(systemStatus);
+      expect(state.systemStatus).toEqual(refreshedStatus);
       expect(state.isAuthenticated).toBe(true);
       expect(state.isLoading).toBe(false);
       expect(state.error).toBeNull();
