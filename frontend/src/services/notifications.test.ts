@@ -73,6 +73,12 @@ describe('notification support detection', () => {
     expect(getNotificationPermission()).toBe('unsupported');
     window.Notification = original;
   });
+
+  it('returns current permission when Notification API exists', () => {
+    // @ts-expect-error - mock
+    window.Notification = class { static permission = 'granted'; };
+    expect(getNotificationPermission()).toBe('granted');
+  });
 });
 
 describe('requestNotificationPermission', () => {
@@ -227,6 +233,7 @@ describe('showDailyNotification', () => {
 describe('notification scheduler', () => {
   beforeEach(() => {
     localStorageMock.clear();
+    vi.clearAllMocks();
     vi.useFakeTimers();
   });
 
@@ -248,5 +255,150 @@ describe('notification scheduler', () => {
 
   it('stopping when not started is safe', () => {
     stopNotificationScheduler();
+  });
+
+  it('does not notify when notifications are disabled', async () => {
+    const mockConstructor = vi.fn();
+    // @ts-expect-error - mock
+    window.Notification = class {
+      static permission = 'granted';
+      constructor(...args: unknown[]) { mockConstructor(...args); }
+    };
+
+    setNotificationEnabled(false);
+    startNotificationScheduler();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(mockConstructor).not.toHaveBeenCalled();
+  });
+
+  it('does not notify when permission is not granted', async () => {
+    const mockConstructor = vi.fn();
+    // @ts-expect-error - mock
+    window.Notification = class {
+      static permission = 'denied';
+      constructor(...args: unknown[]) { mockConstructor(...args); }
+    };
+
+    setNotificationEnabled(true);
+    startNotificationScheduler();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(mockConstructor).not.toHaveBeenCalled();
+  });
+
+  it('does not notify before scheduled time', async () => {
+    const mockConstructor = vi.fn();
+    // @ts-expect-error - mock
+    window.Notification = class {
+      static permission = 'granted';
+      constructor(...args: unknown[]) { mockConstructor(...args); }
+    };
+
+    setNotificationEnabled(true);
+    setNotificationTime('23:59');
+    vi.setSystemTime(new Date(2025, 0, 8, 8, 0, 0));
+    startNotificationScheduler();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(mockConstructor).not.toHaveBeenCalled();
+  });
+
+  it('notifies when past scheduled time and not yet shown today', async () => {
+    const mockConstructor = vi.fn();
+    // @ts-expect-error - mock
+    window.Notification = class {
+      static permission = 'granted';
+      constructor(...args: unknown[]) { mockConstructor(...args); }
+    };
+
+    const { userApi } = await import('./api');
+    vi.spyOn(userApi, 'getNotificationSummary').mockResolvedValue({
+      completed_today: 1,
+      tasks_due_today: 2,
+      xp_gained_today: 30,
+      points_at_risk: 0,
+      processing_date: '2025-01-08',
+      current_date: '2025-01-08',
+      days_behind: 0,
+    });
+
+    setNotificationEnabled(true);
+    setNotificationTime('09:00');
+    vi.setSystemTime(new Date(2025, 0, 8, 10, 0, 0));
+    startNotificationScheduler();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(mockConstructor).toHaveBeenCalledWith('Moti-Do Daily Check-in', expect.objectContaining({
+      tag: 'motido-daily-checkin',
+    }));
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('motido-notifications-last-shown', '2025-01-08');
+  });
+
+  it('does not notify twice on the same day', async () => {
+    const mockConstructor = vi.fn();
+    // @ts-expect-error - mock
+    window.Notification = class {
+      static permission = 'granted';
+      constructor(...args: unknown[]) { mockConstructor(...args); }
+    };
+
+    const { userApi } = await import('./api');
+    vi.spyOn(userApi, 'getNotificationSummary').mockResolvedValue({
+      completed_today: 0,
+      tasks_due_today: 0,
+      xp_gained_today: 0,
+      points_at_risk: 0,
+      processing_date: '2025-01-08',
+      current_date: '2025-01-08',
+      days_behind: 0,
+    });
+
+    setNotificationEnabled(true);
+    setNotificationTime('09:00');
+    vi.setSystemTime(new Date(2025, 0, 8, 10, 0, 0));
+
+    startNotificationScheduler();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(mockConstructor).toHaveBeenCalledTimes(1);
+
+    // Advance past check interval — should NOT fire again
+    mockConstructor.mockClear();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(mockConstructor).not.toHaveBeenCalled();
+  });
+
+  it('does not record last-shown when notification fails', async () => {
+    // @ts-expect-error - mock
+    window.Notification = class {
+      static permission = 'granted';
+      constructor() { throw new Error('Notification blocked'); }
+    };
+
+    const { userApi } = await import('./api');
+    vi.spyOn(userApi, 'getNotificationSummary').mockRejectedValue(new Error('Network error'));
+
+    setNotificationEnabled(true);
+    setNotificationTime('09:00');
+    vi.setSystemTime(new Date(2025, 0, 8, 10, 0, 0));
+
+    startNotificationScheduler();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(localStorageMock.setItem).not.toHaveBeenCalledWith(
+      'motido-notifications-last-shown',
+      expect.anything(),
+    );
+  });
+
+  it('does not notify when Notification API is missing', async () => {
+    const original = window.Notification;
+    // @ts-expect-error - intentionally removing for test
+    delete window.Notification;
+
+    setNotificationEnabled(true);
+    startNotificationScheduler();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(localStorageMock.setItem).not.toHaveBeenCalledWith(
+      'motido-notifications-last-shown',
+      expect.anything(),
+    );
+
+    window.Notification = original;
   });
 });
