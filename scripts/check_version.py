@@ -132,7 +132,15 @@ def _resolve_merge_base() -> str:
         pass
 
     # origin/main may not have been fetched yet (shallow clone, CI, etc.)
-    _git("fetch", "origin", "main:refs/remotes/origin/main")
+    try:
+        _git("fetch", "origin", "main:refs/remotes/origin/main")
+    except subprocess.CalledProcessError as exc:
+        raise subprocess.CalledProcessError(
+            exc.returncode,
+            exc.cmd,
+            output=exc.output,
+            stderr=f"Failed to fetch origin/main – ensure the git remote is configured: {exc.stderr or ''}",
+        ) from exc
     return _git("merge-base", "HEAD", "origin/main")
 
 
@@ -157,7 +165,7 @@ def main() -> int:
             print(f"   {label}: {ver}")
         errors.append("Version files are out of sync")
     else:
-        print(f"   All files: {unique.copy().pop()} ✓")
+        print(f"   All files: {next(iter(unique))} ✓")
 
     # Use pyproject.toml as the reference version for the bump check.
     current_version = versions.get("pyproject.toml", "")
