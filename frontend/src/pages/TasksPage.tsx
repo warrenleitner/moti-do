@@ -493,8 +493,8 @@ export default function TasksPage() {
     <Box>
       {/* Processing date indicator */}
       <Group gap="xs" mb="sm" wrap="wrap">
-        <IconCalendar size={16} color="#00E5FF" />
-        <Text size="sm" className="font-data" style={{ color: '#8A8F98', letterSpacing: '0.05em' }}>
+        <IconCalendar size={16} color="#81ecff" />
+        <Text size="sm" className="font-data" style={{ color: '#a8aab7', letterSpacing: '0.05em' }}>
           PROCESSING:
         </Text>
         <DataBadge
@@ -521,7 +521,7 @@ export default function TasksPage() {
         <Group
           gap={0}
           style={{
-            border: '1px solid rgba(59, 73, 76, 0.15)',
+            border: '1px solid rgba(69, 71, 82, 0.15)',
           }}
         >
           <ActionIcon
@@ -531,10 +531,10 @@ export default function TasksPage() {
             aria-pressed={viewMode === 'list'}
             style={{
               backgroundColor: viewMode === 'list' ? '#272A34' : 'transparent',
-              color: viewMode === 'list' ? '#00E5FF' : '#8A8F98',
+              color: viewMode === 'list' ? '#81ecff' : '#a8aab7',
               border: 'none',
               borderRadius: 0,
-              boxShadow: viewMode === 'list' ? '0 0 6px rgba(0, 229, 255, 0.2)' : 'none',
+              boxShadow: viewMode === 'list' ? '0 0 6px rgba(129, 236, 255, 0.2)' : 'none',
             }}
           >
             <IconList size={16} />
@@ -546,10 +546,10 @@ export default function TasksPage() {
             aria-pressed={viewMode === 'table'}
             style={{
               backgroundColor: viewMode === 'table' ? '#272A34' : 'transparent',
-              color: viewMode === 'table' ? '#00E5FF' : '#8A8F98',
+              color: viewMode === 'table' ? '#81ecff' : '#a8aab7',
               border: 'none',
               borderRadius: 0,
-              boxShadow: viewMode === 'table' ? '0 0 6px rgba(0, 229, 255, 0.2)' : 'none',
+              boxShadow: viewMode === 'table' ? '0 0 6px rgba(129, 236, 255, 0.2)' : 'none',
             }}
           >
             <IconTable size={16} />
@@ -635,7 +635,7 @@ export default function TasksPage() {
             onActivateCrisisMode={handleActivateCrisisModeClick}
           />
           <Group justify="space-between" mt="sm">
-            <Text size="xs" className="font-data" style={{ color: '#5A5E66', letterSpacing: '0.05em' }}>
+            <Text size="xs" className="font-data" style={{ color: '#525560', letterSpacing: '0.05em' }}>
               SHOWING {visibleTasks.length} OF {filteredTasks.length} TASKS
             </Text>
             <ArcadeButton variant="ghost" size="xs" onClick={handleLoadMore} disabled={!hasMoreTasks}>

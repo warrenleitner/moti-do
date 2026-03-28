@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MOTI-DO | Tasks Console</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-fixed": "#ffc1d0",
+              "on-tertiary-fixed-variant": "#4700a7",
+              "secondary-dim": "#e30071",
+              "surface-container": "#161924",
+              "tertiary-fixed": "#bda1ff",
+              "surface-container-lowest": "#000000",
+              "on-tertiary": "#290067",
+              "surface-variant": "#212533",
+              "on-error": "#490006",
+              "secondary": "#ff6b9b",
+              "on-tertiary-fixed": "#1f0052",
+              "primary-container": "#00e3fd",
+              "tertiary": "#ac89ff",
+              "surface-container-highest": "#212533",
+              "inverse-primary": "#006976",
+              "on-surface-variant": "#a8aab7",
+              "outline": "#737581",
+              "inverse-on-surface": "#525560",
+              "error": "#ff716c",
+              "surface-tint": "#81ecff",
+              "background": "#0b0e17",
+              "primary-fixed-dim": "#00d4ec",
+              "on-surface": "#e6e7f5",
+              "on-primary-fixed": "#003840",
+              "on-secondary-fixed-variant": "#a1004e",
+              "tertiary-fixed-dim": "#b190ff",
+              "primary-dim": "#00d4ec",
+              "error-dim": "#d7383b",
+              "on-primary": "#005762",
+              "outline-variant": "#454752",
+              "secondary-fixed-dim": "#ffadc2",
+              "on-error-container": "#ffa8a3",
+              "on-secondary-fixed": "#6c0032",
+              "on-tertiary-container": "#f8f1ff",
+              "on-primary-container": "#004d57",
+              "surface": "#0b0e17",
+              "inverse-surface": "#faf8ff",
+              "surface-bright": "#272c3a",
+              "secondary-container": "#ba005b",
+              "on-primary-fixed-variant": "#005762",
+              "primary-fixed": "#00e3fd",
+              "surface-container-low": "#10131d",
+              "surface-container-high": "#1b1f2b",
+              "primary": "#81ecff",
+              "on-background": "#e6e7f5",
+              "surface-dim": "#0b0e17",
+              "on-secondary": "#47001f",
+              "tertiary-dim": "#874cff",
+              "tertiary-container": "#7000ff",
+              "error-container": "#9f0519",
+              "on-secondary-container": "#fff5f6"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["JetBrains Mono"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(22, 25, 36, 0.7);
+            backdrop-filter: blur(12px);
+        }
+        .task-glow {
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
+        }
+        .magenta-glow {
+            box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0b0e17; }
+        ::-webkit-scrollbar-thumb { background: #212533; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00e3fd; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
+<!-- Shell Container -->
+<div class="flex h-screen w-full overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="hidden lg:flex flex-col h-full py-8 px-4 bg-[#0B0E17] border-r border-cyan-500/10 w-64 shrink-0 transition-transform duration-200 ease-in-out">
+<div class="mb-10 px-4">
+<div class="flex items-center gap-3 mb-6">
+<img alt="Logo" class="w-10 h-10" data-alt="high-tech crystalline logo with neon cyan and magenta geometric shards forming an M shape on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6npcCZxCBVTYDg39F0aPbq4ecmyghQDnoJUWQ_kxCbiMuMWTiLYgoMpPDPtbX0ut0x6trS0o2W8d-zTeGXIT9qyVtTrb7aCtHtrAXVgUX6dzb2T83kXj9WSESJyJSAStxnAsM0oaYBcEhyyesD2TcyKiC6yl2MVs7QLkyoMkfErGZjoDuGn7DIsuOSh0SBCAF5oKO7qahZZ14kdR8-H6tyzED2r8z-zHUiGEn-4goxT-AzplRh5Mvrznlu0lpDqcyFU25v54yw4SV"/>
+<div>
+<p class="font-headline font-bold text-sm tracking-widest text-on-surface uppercase">OPERATOR_01</p>
+<p class="font-mono text-[10px] text-primary">LVL 42 | 2500 XP</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Dashboard -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-all font-headline text-sm font-medium uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<!-- Tasks (ACTIVE) -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-cyan-400 bg-cyan-500/5 border-r-2 border-cyan-400 transition-all font-headline text-sm font-medium uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+<span>Tasks</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-all font-headline text-sm font-medium uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="repeat">repeat</span>
+<span>Habits</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-all font-headline text-sm font-medium uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="view_kanban">view_kanban</span>
+<span>Kanban</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-all font-headline text-sm font-medium uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_month">calendar_month</span>
+<span>Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-all font-headline text-sm font-medium uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="monitoring">monitoring</span>
+<span>Graph</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-all font-headline text-sm font-medium uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="pt-6 border-t border-cyan-500/10 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:text-slate-300 transition-all font-headline text-sm font-medium uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+<span>System Status</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:text-slate-300 transition-all font-headline text-sm font-medium uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="flex-1 flex flex-col min-w-0 bg-background relative overflow-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full lg:static z-50 flex justify-between items-center px-6 h-16 bg-[#0B0E17] border-b border-cyan-500/20">
+<div class="flex items-center gap-4">
+<h1 class="font-headline font-black text-xl bg-gradient-to-r from-[#00E5FF] to-[#FF007F] bg-clip-text text-transparent">MOTI-DO</h1>
+<div class="hidden md:flex items-center px-3 py-1 bg-surface-container rounded-lg border border-outline-variant/20">
+<span class="material-symbols-outlined text-sm text-cyan-400 mr-2">terminal</span>
+<span class="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest">Console.active_tasks</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-slate-400 hover:text-cyan-400 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full border border-cyan-500/30 p-0.5 overflow-hidden">
+<img alt="Avatar" class="w-full h-full rounded-full object-cover" data-alt="professional portrait of a young male tech operator with neutral expression and soft studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtBnuclsYbr4xk2VUpA_qGvPzraKUi7e7S-30lZauGKcTH24HFdiyIBKX_0RAGVPzaRDBvcXuXRzIkUk4lxBNSUbYQc09L-waj9H4C7DfV2u4Gg_8r1t_Sav3hwJZXCMs03UXvcTlcnW8xGzhlZxrQXfnhP4q31G8R6TMwNyKekAj-VE3CfZX3BYTDlhA8lOvrJxuESyit6e-Q295CYmhzr6LBIUYYfD_OYiahOiezpZ_12S1OLjsB9TEQI5dzx7AaAUE84ha-m0As"/>
+</div>
+</div>
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto pt-20 lg:pt-0 pb-24 lg:pb-8 px-6 lg:px-10">
+<!-- Page Title -->
+<div class="mt-8 mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h2 class="font-headline text-4xl lg:text-6xl font-bold tracking-tighter text-on-surface">Mission <span class="text-primary-dim italic font-light">Control</span></h2>
+<p class="font-body text-on-surface-variant mt-2 max-w-md">Orchestrate your workflow with kinetic precision. High priority tasks emit magenta signals.</p>
+</div>
+<div class="flex items-center gap-2 font-mono text-xs">
+<span class="px-2 py-1 bg-surface-container-high text-cyan-400 rounded">OPEN: 12</span>
+<span class="px-2 py-1 bg-surface-container-high text-secondary-dim rounded">OVERDUE: 02</span>
+</div>
+</div>
+<!-- CLI Quick Add Bar -->
+<div class="mb-8 group">
+<div class="relative flex items-center bg-[#151A28] border border-cyan-500/10 rounded-xl overflow-hidden focus-within:border-cyan-400/50 transition-all duration-300">
+<div class="pl-5 pr-3 py-4 text-cyan-400 font-mono text-xl">&gt;</div>
+<input class="flex-1 bg-transparent border-none text-on-surface placeholder:text-slate-600 font-mono focus:ring-0 text-sm py-4" placeholder="Add a new objective... (e.g. Finish UI Audit /today #work !!3)" type="text"/>
+<div class="pr-5 hidden md:flex items-center gap-2">
+<span class="px-2 py-0.5 bg-surface-container rounded text-[10px] text-slate-500 font-mono">ENTER to execute</span>
+</div>
+</div>
+</div>
+<!-- Filter Row -->
+<div class="flex flex-wrap items-center gap-3 mb-10">
+<button class="px-4 py-2 rounded-full bg-cyan-400/20 text-cyan-400 text-xs font-bold uppercase tracking-widest border border-cyan-400/30">All Tasks</button>
+<button class="px-4 py-2 rounded-full bg-surface-container-high text-slate-400 hover:text-on-surface transition-colors text-xs font-bold uppercase tracking-widest border border-outline-variant/10">Priority</button>
+<button class="px-4 py-2 rounded-full bg-surface-container-high text-slate-400 hover:text-on-surface transition-colors text-xs font-bold uppercase tracking-widest border border-outline-variant/10">Projects</button>
+<button class="px-4 py-2 rounded-full bg-surface-container-high text-slate-400 hover:text-on-surface transition-colors text-xs font-bold uppercase tracking-widest border border-outline-variant/10">Status</button>
+<div class="ml-auto flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-500 cursor-pointer hover:text-cyan-400 transition-colors">sort</span>
+<span class="material-symbols-outlined text-slate-500 cursor-pointer hover:text-cyan-400 transition-colors">view_agenda</span>
+</div>
+</div>
+<!-- Task List (Bento-ish List View) -->
+<div class="space-y-3">
+<!-- High Priority Task -->
+<div class="group relative flex items-center bg-[#151A28] border-l-4 border-[#FF007F] rounded-r-xl p-4 md:p-5 hover:bg-surface-container-high transition-all duration-300 magenta-glow">
+<div class="mr-4">
+<div class="w-6 h-6 rounded border-2 border-cyan-500/30 group-hover:border-cyan-400 cursor-pointer flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[16px] text-cyan-400 opacity-0 group-hover:opacity-100">check</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-3 mb-1">
+<h3 class="font-headline font-bold text-lg text-on-surface truncate">Complete System UI Audit</h3>
+<span class="px-2 py-0.5 bg-secondary-container/20 text-secondary text-[10px] font-mono font-bold uppercase tracking-tighter">Critical</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined text-xs">calendar_today</span>
+<span class="text-[10px] font-mono uppercase">Today, 17:00</span>
+</div>
+<div class="flex items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined text-xs">folder</span>
+<span class="text-[10px] font-mono uppercase">Core_System</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<!-- Score Badge -->
+<div class="hidden sm:flex flex-col items-end">
+<span class="font-mono text-cyan-400 font-bold task-glow">+500 XP</span>
+<span class="text-[9px] text-slate-500 uppercase font-mono">Mission Reward</span>
+</div>
+<!-- Actions (Hover Only) -->
+<div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
+<button class="p-2 text-slate-400 hover:text-cyan-400 transition-colors"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-2 text-slate-400 hover:text-secondary transition-colors"><span class="material-symbols-outlined text-lg">schedule</span></button>
+<button class="p-2 text-slate-400 hover:text-error transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</div>
+</div>
+<!-- Medium Priority Task -->
+<div class="group relative flex items-center bg-[#151A28] border-l-4 border-cyan-400/20 rounded-r-xl p-4 md:p-5 hover:bg-surface-container-high transition-all duration-300">
+<div class="mr-4">
+<div class="w-6 h-6 rounded border-2 border-outline-variant/30 group-hover:border-cyan-400 cursor-pointer flex items-center justify-center transition-colors"></div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-3 mb-1">
+<h3 class="font-headline font-bold text-lg text-on-surface truncate">Refactor Navigation Shell</h3>
+<span class="px-2 py-0.5 bg-cyan-400/10 text-cyan-400 text-[10px] font-mono font-bold uppercase tracking-tighter">High</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined text-xs text-error">warning</span>
+<span class="text-[10px] font-mono uppercase text-error">Tomorrow</span>
+</div>
+<div class="flex items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined text-xs">folder</span>
+<span class="text-[10px] font-mono uppercase">Frontend</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex flex-col items-end">
+<span class="font-mono text-cyan-400/70 font-bold">+250 XP</span>
+<span class="text-[9px] text-slate-500 uppercase font-mono">Routine Task</span>
+</div>
+<div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
+<button class="p-2 text-slate-400 hover:text-cyan-400 transition-colors"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-2 text-slate-400 hover:text-secondary transition-colors"><span class="material-symbols-outlined text-lg">schedule</span></button>
+<button class="p-2 text-slate-400 hover:text-error transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</div>
+</div>
+<!-- Completed Task -->
+<div class="group relative flex items-center bg-[#151A28]/40 border-l-4 border-slate-700 rounded-r-xl p-4 md:p-5 opacity-50 grayscale transition-all duration-300">
+<div class="mr-4">
+<div class="w-6 h-6 rounded bg-cyan-400 flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px] text-on-primary-container" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-3 mb-1">
+<h3 class="font-headline font-bold text-lg text-on-surface line-through">Draft design system documentation</h3>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined text-xs">check_circle</span>
+<span class="text-[10px] font-mono uppercase">Completed 2h ago</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex flex-col items-end">
+<span class="font-mono text-slate-500 font-bold line-through">+150 XP</span>
+</div>
+<div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-slate-400 hover:text-error transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</div>
+</div>
+<!-- More Tasks... -->
+<div class="group relative flex items-center bg-[#151A28] border-l-4 border-cyan-400/20 rounded-r-xl p-4 md:p-5 hover:bg-surface-container-high transition-all duration-300">
+<div class="mr-4">
+<div class="w-6 h-6 rounded border-2 border-outline-variant/30 group-hover:border-cyan-400 cursor-pointer flex items-center justify-center transition-colors"></div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-3 mb-1">
+<h3 class="font-headline font-bold text-lg text-on-surface truncate">Prepare Quarterly Growth Graph</h3>
+<span class="px-2 py-0.5 bg-surface-container text-slate-500 text-[10px] font-mono font-bold uppercase tracking-tighter">Normal</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined text-xs">event</span>
+<span class="text-[10px] font-mono uppercase">Oct 24, 09:00</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex flex-col items-end">
+<span class="font-mono text-cyan-400/70 font-bold">+100 XP</span>
+</div>
+<div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
+<button class="p-2 text-slate-400 hover:text-cyan-400 transition-colors"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-2 text-slate-400 hover:text-secondary transition-colors"><span class="material-symbols-outlined text-lg">schedule</span></button>
+<button class="p-2 text-slate-400 hover:text-error transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer / Status Block -->
+<div class="mt-12 pt-8 border-t border-outline-variant/10 grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/5">
+<p class="font-mono text-[10px] text-slate-500 uppercase mb-2">Network Load</p>
+<div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full w-[65%] bg-gradient-to-r from-cyan-400 to-secondary-dim"></div>
+</div>
+<p class="font-mono text-[10px] text-cyan-400 mt-2 text-right">65% Capacity</p>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/5">
+<p class="font-mono text-[10px] text-slate-500 uppercase mb-2">Sync Status</p>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+<p class="font-mono text-xs text-on-surface">UPLINK_ESTABLISHED</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/5">
+<p class="font-mono text-[10px] text-slate-500 uppercase mb-2">Operator ID</p>
+<p class="font-mono text-xs text-on-surface-variant italic">#MOTI-BETA-VX-091</p>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 bg-[#0B0E17]/90 backdrop-blur-md pb-safe px-4 border-t border-cyan-500/20 shadow-[0_-4px_20px_rgba(0,229,255,0.1)]">
+<a class="flex flex-col items-center text-slate-500" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-headline text-[10px] font-bold uppercase mt-1">Home</span>
+</a>
+<!-- ACTIVE TAB -->
+<a class="flex flex-col items-center text-cyan-400 relative after:content-[''] after:absolute after:-top-2 after:w-8 after:h-1 after:bg-[#FF007F] after:rounded-full" href="#">
+<span class="material-symbols-outlined">task_alt</span>
+<span class="font-headline text-[10px] font-bold uppercase mt-1">Tasks</span>
+</a>
+<a class="flex flex-col items-center text-slate-500" href="#">
+<span class="material-symbols-outlined">event</span>
+<span class="font-headline text-[10px] font-bold uppercase mt-1">Calendar</span>
+</a>
+<a class="flex flex-col items-center text-slate-500" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-headline text-[10px] font-bold uppercase mt-1">Graph</span>
+</a>
+<a class="flex flex-col items-center text-slate-500" href="#">
+<span class="material-symbols-outlined">menu</span>
+<span class="font-headline text-[10px] font-bold uppercase mt-1">More</span>
+</a>
+</nav>
+<!-- Floating Action Button (Suppressed on focused detail views, but relevant here) -->
+<button class="fixed bottom-24 lg:bottom-10 right-6 lg:right-10 w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-400 to-secondary-dim text-[#0B0E17] flex items-center justify-center shadow-lg shadow-cyan-500/20 hover:scale-105 active:scale-95 transition-all z-40 group">
+<span class="material-symbols-outlined font-black text-2xl group-hover:rotate-90 transition-transform">add</span>
+</button>
+</body></html>

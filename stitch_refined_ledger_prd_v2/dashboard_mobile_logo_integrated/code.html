@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MOTI-DO | Kinetic Console</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary-fixed": "#ffc1d0",
+                        "on-tertiary-fixed-variant": "#4700a7",
+                        "secondary-dim": "#e30071",
+                        "surface-container": "#161924",
+                        "tertiary-fixed": "#bda1ff",
+                        "surface-container-lowest": "#000000",
+                        "on-tertiary": "#290067",
+                        "surface-variant": "#212533",
+                        "on-error": "#490006",
+                        "secondary": "#ff6b9b",
+                        "on-tertiary-fixed": "#1f0052",
+                        "primary-container": "#00e3fd",
+                        "tertiary": "#ac89ff",
+                        "surface-container-highest": "#212533",
+                        "inverse-primary": "#006976",
+                        "on-surface-variant": "#a8aab7",
+                        "outline": "#737581",
+                        "inverse-on-surface": "#525560",
+                        "error": "#ff716c",
+                        "surface-tint": "#81ecff",
+                        "background": "#0b0e17",
+                        "primary-fixed-dim": "#00d4ec",
+                        "on-surface": "#e6e7f5",
+                        "on-primary-fixed": "#003840",
+                        "on-secondary-fixed-variant": "#a1004e",
+                        "tertiary-fixed-dim": "#b190ff",
+                        "primary-dim": "#00d4ec",
+                        "error-dim": "#d7383b",
+                        "on-primary": "#005762",
+                        "outline-variant": "#454752",
+                        "secondary-fixed-dim": "#ffadc2",
+                        "on-error-container": "#ffa8a3",
+                        "on-secondary-fixed": "#6c0032",
+                        "on-tertiary-container": "#f8f1ff",
+                        "on-primary-container": "#004d57",
+                        "surface": "#0b0e17",
+                        "inverse-surface": "#faf8ff",
+                        "surface-bright": "#272c3a",
+                        "secondary-container": "#ba005b",
+                        "on-primary-fixed-variant": "#005762",
+                        "primary-fixed": "#00e3fd",
+                        "surface-container-low": "#10131d",
+                        "surface-container-high": "#1b1f2b",
+                        "primary": "#81ecff",
+                        "on-background": "#e6e7f5",
+                        "surface-dim": "#0b0e17",
+                        "on-secondary": "#47001f",
+                        "tertiary-dim": "#874cff",
+                        "tertiary-container": "#7000ff",
+                        "error-container": "#9f0519",
+                        "on-secondary-container": "#fff5f6"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .kinetic-ring {
+            background: conic-gradient(from 0deg, #00E5FF 0%, #FF007F 75%, transparent 75%);
+        }
+        .crisis-pattern {
+            background-image: repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(255, 0, 127, 0.1) 10px, rgba(255, 0, 127, 0.1) 20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#0B0E17] border-b border-cyan-500/20">
+<div class="flex items-center gap-3">
+<span class="text-xl font-black bg-gradient-to-r from-[#00E5FF] to-[#FF007F] bg-clip-text text-transparent font-headline tracking-tight">MOTI-DO</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 flex items-center justify-center text-cyan-400 hover:text-cyan-300 transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-9 h-9 rounded-lg border border-cyan-500/30 overflow-hidden bg-surface-container-high">
+<img alt="User Operator Avatar" class="w-full h-full object-cover" data-alt="Close up portrait of a cyberpunk operator with neon highlights on clothing and reflective eyewear in high contrast lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDJbDa8tREa1ddnsFD21382QPutN1qtWu-Rlvu5nU17AYj2BRcC9xc8X9WqlymMtHht75c3QtwoKT6_nqra2H0C3B0DXXJgRBvn6Q3XJGGBoloPH1geRK61gr75ILX8dJ-ZQUm1uHRid_W8lZ3JrjdQEXdRdW6TMd1H5GrLGCLfdzyh8q1kZEvt-XHXUYf3ptZ8r3VH0grvqg7uxmQHLT3l1VbN626bDqeD1cqu5-2IAZCt2mqBAumLniPGOtHWh_CenJnvD09_0Rj"/>
+</div>
+</div>
+</header>
+<main class="pt-20 pb-24 px-6 max-w-md mx-auto space-y-8">
+<!-- Header Section -->
+<section class="space-y-1">
+<p class="font-label text-xs uppercase tracking-[0.2em] text-cyan-400/70">System Status: Active</p>
+<h1 class="font-headline text-3xl font-bold tracking-tight text-on-surface">OPERATOR_01</h1>
+</section>
+<!-- Central XP Progress Ring -->
+<section class="flex justify-center py-4">
+<div class="relative w-[160px] h-[160px] flex items-center justify-center">
+<!-- Shadow/Glow Background -->
+<div class="absolute inset-0 rounded-full border-[8px] border-surface-container-highest"></div>
+<!-- Progress Arc -->
+<div class="absolute inset-0 rounded-full border-[8px] border-transparent kinetic-ring rotate-[225deg] opacity-90 blur-[1px]"></div>
+<!-- Inner Dashboard -->
+<div class="absolute inset-4 rounded-full bg-surface-container-low flex flex-col items-center justify-center border border-outline-variant/20 shadow-[0_0_30px_rgba(0,229,255,0.15)]">
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Level 42</span>
+<span class="font-headline text-4xl font-black text-on-surface">2.5K</span>
+<span class="font-label text-[10px] uppercase tracking-widest text-primary">XP TOTAL</span>
+</div>
+<!-- Dynamic Indicators -->
+<div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-6 bg-primary rounded-full blur-[4px] opacity-50"></div>
+</div>
+</section>
+<!-- Vertical Stat Card Grid -->
+<section class="grid grid-cols-2 gap-3">
+<div class="bg-surface-container-high p-4 rounded-lg border-l-2 border-cyan-400">
+<span class="material-symbols-outlined text-primary text-xl mb-2">bolt</span>
+<p class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Daily Streak</p>
+<h3 class="font-headline text-xl font-bold">14 DAYS</h3>
+</div>
+<div class="bg-surface-container-high p-4 rounded-lg border-l-2 border-secondary">
+<span class="material-symbols-outlined text-secondary text-xl mb-2">task_alt</span>
+<p class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Completed</p>
+<h3 class="font-headline text-xl font-bold">128 TASKS</h3>
+</div>
+</section>
+<!-- Priority Missions (Crisis Mode) -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h2 class="font-headline text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+<span class="w-1.5 h-1.5 bg-secondary rounded-full animate-pulse"></span>
+                    Priority Missions
+                </h2>
+<span class="text-[10px] font-label text-secondary font-bold uppercase border border-secondary/30 px-2 py-0.5 rounded">Crisis Mode</span>
+</div>
+<div class="space-y-3">
+<!-- Mission Card 1 -->
+<div class="relative bg-surface-container-low border border-secondary/20 rounded-lg p-4 overflow-hidden group">
+<div class="absolute top-0 right-0 crisis-pattern w-24 h-full opacity-30"></div>
+<div class="relative flex justify-between items-start">
+<div class="space-y-1">
+<p class="font-label text-[10px] text-secondary font-bold uppercase">Critical Target</p>
+<h4 class="font-headline text-lg font-bold leading-tight">Finalize Neural Interface Specs</h4>
+</div>
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-label text-[10px] text-on-surface-variant">ETA: 2H 45M</span>
+</div>
+<button class="bg-secondary text-on-secondary px-4 py-1.5 rounded-full text-xs font-bold font-headline uppercase tracking-wider active:scale-95 transition-transform">Execute</button>
+</div>
+</div>
+<!-- Mission Card 2 -->
+<div class="bg-surface-container p-4 rounded-lg border border-outline-variant/10">
+<div class="flex justify-between items-start">
+<div class="space-y-1">
+<p class="font-label text-[10px] text-primary font-bold uppercase">Deep Work</p>
+<h4 class="font-headline text-lg font-bold leading-tight text-on-surface/90">Refactor Core Logic Engine</h4>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">schedule</span>
+</div>
+<div class="mt-4">
+<div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-secondary w-[65%]"></div>
+</div>
+<div class="flex justify-between mt-1.5">
+<span class="font-label text-[9px] text-on-surface-variant uppercase">Progress</span>
+<span class="font-label text-[9px] text-primary uppercase">65%</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Bottom Spacing for Nav -->
+<div class="h-12"></div>
+</main>
+<!-- BottomNavBar -->
+<nav class="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 pb-safe px-4 bg-[#0B0E17]/90 backdrop-blur-md border-t border-cyan-500/20 shadow-[0_-4px_20px_rgba(0,229,255,0.1)]">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center text-cyan-400 relative after:content-[''] after:absolute after:-top-2 after:w-8 after:h-1 after:bg-[#FF007F] after:rounded-full tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase mt-1">Home</span>
+</a>
+<!-- Tasks -->
+<a class="flex flex-col items-center text-slate-500 active:bg-slate-800 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">task_alt</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase mt-1">Tasks</span>
+</a>
+<!-- Calendar -->
+<a class="flex flex-col items-center text-slate-500 active:bg-slate-800 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">event</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase mt-1">Calendar</span>
+</a>
+<!-- Graph -->
+<a class="flex flex-col items-center text-slate-500 active:bg-slate-800 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase mt-1">Graph</span>
+</a>
+<!-- More -->
+<a class="flex flex-col items-center text-slate-500 active:bg-slate-800 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">menu</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase mt-1">More</span>
+</a>
+</nav>
+<!-- Tactical Overlay Element (Decorative) -->
+<div class="fixed bottom-24 right-6 pointer-events-none opacity-20 hidden md:block">
+<div class="border-t border-r border-cyan-500 w-12 h-12"></div>
+</div>
+<div class="fixed top-24 left-6 pointer-events-none opacity-20 hidden md:block">
+<div class="border-b border-l border-cyan-500 w-12 h-12"></div>
+</div>
+</body></html>

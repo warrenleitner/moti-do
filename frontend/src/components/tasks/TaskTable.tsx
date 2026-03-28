@@ -504,7 +504,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
             className="font-display"
             style={{
               textDecoration: task.is_complete ? 'line-through' : 'none',
-              color: task.is_complete ? '#5A5E66' : '#E0E0E0',
+              color: task.is_complete ? '#525560' : '#e6e7f5',
             }}
           >
             {task.title}
@@ -623,7 +623,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
           const startDate = new Date(year, month - 1, day);
           const isFuture = startDate > currentProcessingDate;
           return (
-            <span className="font-data" style={{ color: isFuture ? '#5A5E66' : '#E0E0E0', fontSize: '0.8125rem' }}>
+            <span className="font-data" style={{ color: isFuture ? '#525560' : '#e6e7f5', fontSize: '0.8125rem' }}>
               {format(startDate, 'MMM d, yyyy')}
             </span>
           );
@@ -660,7 +660,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
           const dueDate = new Date(year, month - 1, day);
           const isOverdue = dueDate < currentProcessingDate;
           return (
-            <span className="font-data" style={{ color: isOverdue ? '#FF007F' : '#E0E0E0', fontSize: '0.8125rem' }}>
+            <span className="font-data" style={{ color: isOverdue ? '#ff6b9b' : '#e6e7f5', fontSize: '0.8125rem' }}>
               {format(dueDate, 'MMM d, yyyy')}
             </span>
           );
@@ -690,7 +690,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
 
       case 'creation_date':
         return (
-          <span className="font-data" style={{ color: '#8A8F98', fontSize: '0.8125rem' }}>
+          <span className="font-data" style={{ color: '#a8aab7', fontSize: '0.8125rem' }}>
             {format(new Date(task.creation_date), 'MMM d, yyyy')}
           </span>
         );
@@ -827,7 +827,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
                 variant="subtle"
                 onClick={() => onComplete(task.id)}
                 aria-label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
-                style={{ color: task.is_complete ? '#00E5FF' : '#8A8F98' }}
+                style={{ color: task.is_complete ? '#81ecff' : '#a8aab7' }}
               >
                 {task.is_complete ? (
                   <IconCircle size={16} />
@@ -837,19 +837,19 @@ const TaskTable: React.FC<TaskTableProps> = ({
               </ActionIcon>
             </Tooltip>
             <Tooltip label="Edit">
-              <ActionIcon size="sm" variant="subtle" onClick={() => onEdit(task)} aria-label="Edit" style={{ color: '#8A8F98' }}>
+              <ActionIcon size="sm" variant="subtle" onClick={() => onEdit(task)} aria-label="Edit" style={{ color: '#a8aab7' }}>
                 <IconEdit size={16} />
               </ActionIcon>
             </Tooltip>
             {onDuplicate && (
               <Tooltip label="Duplicate">
-                <ActionIcon size="sm" variant="subtle" onClick={() => onDuplicate(task.id)} aria-label="Duplicate" style={{ color: '#8A8F98' }}>
+                <ActionIcon size="sm" variant="subtle" onClick={() => onDuplicate(task.id)} aria-label="Duplicate" style={{ color: '#a8aab7' }}>
                   <IconCopy size={16} />
                 </ActionIcon>
               </Tooltip>
             )}
             <Tooltip label="Delete">
-              <ActionIcon size="sm" variant="subtle" onClick={() => onDelete(task.id)} aria-label="Delete" style={{ color: '#FF007F' }}>
+              <ActionIcon size="sm" variant="subtle" onClick={() => onDelete(task.id)} aria-label="Delete" style={{ color: '#ff6b9b' }}>
                 <IconTrash size={16} />
               </ActionIcon>
             </Tooltip>
@@ -886,7 +886,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
           className="ghost-border"
           style={{
             backgroundColor: '#272A34',
-            borderTop: '2px solid #00E5FF',
+            borderTop: '2px solid #81ecff',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
@@ -896,7 +896,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
           <Text
             fw={700}
             className="font-data"
-            style={{ flex: '1 1 auto', color: '#00E5FF', letterSpacing: '0.05em' }}
+            style={{ flex: '1 1 auto', color: '#81ecff', letterSpacing: '0.05em' }}
           >
             {numSelected} TASK{numSelected > 1 ? 'S' : ''} SELECTED
           </Text>
@@ -995,7 +995,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
         <Table highlightOnHover withTableBorder verticalSpacing="xs" stickyHeader
           styles={{
             table: {
-              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderColor: 'rgba(69, 71, 82, 0.15)',
             },
             thead: {
               backgroundColor: '#181B25',
@@ -1005,14 +1005,14 @@ const TaskTable: React.FC<TaskTableProps> = ({
               textTransform: 'uppercase',
               letterSpacing: '0.1em',
               fontSize: '0.6875rem',
-              color: '#8A8F98',
+              color: '#a8aab7',
               fontWeight: 600,
               backgroundColor: '#181B25',
-              borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+              borderBottom: '1px solid rgba(69, 71, 82, 0.15)',
               padding: '6px 8px',
             },
             td: {
-              borderBottom: '1px solid rgba(59, 73, 76, 0.08)',
+              borderBottom: '1px solid rgba(69, 71, 82, 0.08)',
               padding: '4px 8px',
               backgroundColor: '#10131C',
               transition: 'background-color 0.1s ease',
@@ -1049,19 +1049,19 @@ const TaskTable: React.FC<TaskTableProps> = ({
                         size="xs"
                         fw={600}
                         className="font-data"
-                        style={{ textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8F98' }}
+                        style={{ textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a8aab7' }}
                       >
                         {col.label}
                       </Text>
                       {getSortLabel(col.id)?.active && (
                         <>
                           {getSortLabel(col.id)?.direction === 'asc' ? (
-                            <IconChevronUp size={14} color="#00E5FF" />
+                            <IconChevronUp size={14} color="#81ecff" />
                           ) : (
-                            <IconChevronDown size={14} color="#00E5FF" />
+                            <IconChevronDown size={14} color="#81ecff" />
                           )}
                           {getSortLabel(col.id)?.index && (
-                            <Text size="xs" fw={700} style={{ color: '#00E5FF' }}>
+                            <Text size="xs" fw={700} style={{ color: '#81ecff' }}>
                               {getSortLabel(col.id)?.index}
                             </Text>
                           )}

@@ -48,7 +48,7 @@ export default function GraphPage() {
           style={{
             fontSize: '1.5rem',
             fontWeight: 700,
-            color: '#E0E0E0',
+            color: '#e6e7f5',
             margin: 0,
             letterSpacing: '0.05em',
             textTransform: 'uppercase',
@@ -91,7 +91,7 @@ export default function GraphPage() {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '0.75rem 1rem',
-                borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+                borderBottom: '1px solid rgba(69, 71, 82, 0.15)',
                 backgroundColor: '#181B25',
               }}
             >
@@ -103,7 +103,7 @@ export default function GraphPage() {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#8A8F98',
+                  color: '#a8aab7',
                   padding: 2,
                   lineHeight: 1,
                 }}
@@ -120,7 +120,7 @@ export default function GraphPage() {
                 fw={600}
                 size="sm"
                 style={{
-                  color: '#E0E0E0',
+                  color: '#e6e7f5',
                   textDecoration: selectedTask.is_complete ? 'line-through' : undefined,
                   opacity: selectedTask.is_complete ? 0.6 : 1,
                 }}
@@ -164,7 +164,7 @@ export default function GraphPage() {
                     const depTask = tasks.find((t) => t.id === depId);
                     return depTask ? (
                       <GlowCard key={depId} style={{ padding: '0.5rem', marginBottom: '0.25rem' }}>
-                        <Text size="xs" className="font-display" style={{ color: '#E0E0E0' }}>
+                        <Text size="xs" className="font-display" style={{ color: '#e6e7f5' }}>
                           {depTask.icon && <span style={{ marginRight: 4 }}>{depTask.icon}</span>}
                           {depTask.title}
                         </Text>
@@ -185,7 +185,7 @@ export default function GraphPage() {
                     </span>
                     {dependents.map((depTask) => (
                       <GlowCard key={depTask.id} style={{ padding: '0.5rem', marginBottom: '0.25rem' }}>
-                        <Text size="xs" className="font-display" style={{ color: '#E0E0E0' }}>
+                        <Text size="xs" className="font-display" style={{ color: '#e6e7f5' }}>
                           {depTask.icon && <span style={{ marginRight: 4 }}>{depTask.icon}</span>}
                           {depTask.title}
                         </Text>

@@ -95,7 +95,7 @@ export default function TaskList({
 
       {/* Sort controls */}
       <Group gap="md" align="center" mb="md" wrap="wrap">
-        <IconArrowsSort size={20} color="#8A8F98" />
+        <IconArrowsSort size={20} color="#a8aab7" />
         <Select
           value={sort.field}
           onChange={(value) => {
@@ -114,21 +114,21 @@ export default function TaskList({
           styles={{
             input: {
               backgroundColor: '#0B0E17',
-              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderColor: 'rgba(69, 71, 82, 0.15)',
               borderRadius: 0,
-              color: '#E0E0E0',
+              color: '#e6e7f5',
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: '0.8125rem',
             },
             dropdown: {
               backgroundColor: '#181B25',
-              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderColor: 'rgba(69, 71, 82, 0.15)',
               borderRadius: 0,
             },
             option: {
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: '0.8125rem',
-              color: '#E0E0E0',
+              color: '#e6e7f5',
             },
           }}
         />
@@ -147,21 +147,21 @@ export default function TaskList({
           styles={{
             input: {
               backgroundColor: '#0B0E17',
-              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderColor: 'rgba(69, 71, 82, 0.15)',
               borderRadius: 0,
-              color: '#E0E0E0',
+              color: '#e6e7f5',
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: '0.8125rem',
             },
             dropdown: {
               backgroundColor: '#181B25',
-              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderColor: 'rgba(69, 71, 82, 0.15)',
               borderRadius: 0,
             },
             option: {
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: '0.8125rem',
-              color: '#E0E0E0',
+              color: '#e6e7f5',
             },
           }}
         />
@@ -178,12 +178,12 @@ export default function TaskList({
             indicator: {
               backgroundColor: '#10131C',
               borderRadius: 0,
-              boxShadow: '0 0 6px rgba(0, 229, 255, 0.2)',
+              boxShadow: '0 0 6px rgba(129, 236, 255, 0.2)',
             },
             label: {
-              color: '#8A8F98',
+              color: '#a8aab7',
               '&[data-active]': {
-                color: '#00E5FF',
+                color: '#81ecff',
               },
             },
           }}
@@ -215,7 +215,7 @@ export default function TaskList({
           ]}
         />
         <Box style={{ flex: 1 }} />
-        <Text size="sm" className="font-data" style={{ color: '#5A5E66', letterSpacing: '0.05em' }}>
+        <Text size="sm" className="font-data" style={{ color: '#525560', letterSpacing: '0.05em' }}>
           {filteredTasks.length} TASK{filteredTasks.length !== 1 ? 'S' : ''}
         </Text>
       </Group>

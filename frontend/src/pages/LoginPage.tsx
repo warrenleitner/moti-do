@@ -71,30 +71,18 @@ export default function LoginPage() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '1rem',
-        background: 'radial-gradient(ellipse at 50% 30%, rgba(0, 229, 255, 0.04) 0%, #0B0E17 70%)',
+        background: 'radial-gradient(ellipse at 50% 30%, rgba(129, 236, 255, 0.04) 0%, #0B0E17 70%)',
       }}
     >
       <div style={{ maxWidth: 400, width: '100%' }}>
         {/* Logo / Title */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1
-            className="font-display"
-            style={{
-              fontSize: '2.5rem',
-              fontWeight: 700,
-              color: '#00E5FF',
-              margin: 0,
-              letterSpacing: '0.1em',
-              textShadow: '0 0 24px rgba(0, 229, 255, 0.4)',
-            }}
-          >
-            MOTI-DO
-          </h1>
+          <img src="/logo-wordmark.png" alt="Motodo" style={{ width: 280, height: 'auto', objectFit: 'contain' }} />
           <p
             className="font-data micro-meta"
             style={{
               margin: '0.5rem 0 0',
-              color: '#5A5E66',
+              color: '#525560',
             }}
           >
             SYSTEM ACCESS
@@ -119,12 +107,12 @@ export default function LoginPage() {
               mb="md"
               styles={{
                 root: {
-                  backgroundColor: 'rgba(255, 0, 127, 0.08)',
-                  borderColor: 'rgba(255, 0, 127, 0.3)',
-                  borderLeft: '3px solid #FF007F',
+                  backgroundColor: 'rgba(255, 107, 155, 0.08)',
+                  borderColor: 'rgba(255, 107, 155, 0.3)',
+                  borderLeft: '3px solid #ff6b9b',
                 },
                 message: {
-                  color: '#FF007F',
+                  color: '#ff6b9b',
                   fontFamily: '"JetBrains Mono", monospace',
                   fontSize: '0.75rem',
                 },
@@ -146,7 +134,7 @@ export default function LoginPage() {
               />
               <span
                 className="font-data"
-                style={{ fontSize: '0.625rem', color: '#5A5E66', display: 'block', marginTop: 4 }}
+                style={{ fontSize: '0.625rem', color: '#525560', display: 'block', marginTop: 4 }}
               >
                 Single-user mode: use &apos;default_user&apos;
               </span>
@@ -164,7 +152,7 @@ export default function LoginPage() {
               />
               <span
                 className="font-data"
-                style={{ fontSize: '0.625rem', color: '#5A5E66', display: 'block', marginTop: 4 }}
+                style={{ fontSize: '0.625rem', color: '#525560', display: 'block', marginTop: 4 }}
               >
                 Minimum 8 characters
               </span>

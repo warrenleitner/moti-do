@@ -32,10 +32,10 @@ const nodeTypes: Record<string, any> = {
 
 // Kinetic Console priority colors for nodes
 const priorityColors: Record<string, string> = {
-  'Defcon One': '#FF007F',
+  'Defcon One': '#ff6b9b',
   'High': '#FFC775',
-  'Medium': '#00E5FF',
-  'Low': '#3B494C',
+  'Medium': '#81ecff',
+  'Low': '#454752',
   'Trivial': '#32343F',
 };
 
@@ -144,7 +144,7 @@ function buildGraph(
         data: {
           task,
           isSelected: task.id === selectedTaskId,
-          color: priorityColors[task.priority] || '#00E5FF',
+          color: priorityColors[task.priority] || '#81ecff',
         },
       });
     });
@@ -159,7 +159,7 @@ function buildGraph(
       if (includedTasks.has(depId)) {
         const depTask = taskMap.get(depId);
         const isCriticalPath = task.priority === 'Defcon One' || task.priority === 'High';
-        const edgeColor = isCriticalPath ? '#00E5FF' : '#3B494C';
+        const edgeColor = isCriticalPath ? '#81ecff' : '#454752';
 
         edges.push({
           id: `${depId}-${taskId}`,
@@ -225,7 +225,7 @@ export default function DependencyGraph({ tasks, onSelectTask }: DependencyGraph
 
   const getNodeColor = useCallback((node: Node): string => {
     const data = node.data as { color?: string } | undefined;
-    return data?.color || '#00E5FF';
+    return data?.color || '#81ecff';
   }, []);
 
   if (tasksWithDeps.length === 0) {
@@ -239,15 +239,15 @@ export default function DependencyGraph({ tasks, onSelectTask }: DependencyGraph
           boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5)',
         }}
       >
-        <IconBinaryTree2 size={64} color="#3B494C" style={{ marginBottom: 16 }} />
+        <IconBinaryTree2 size={64} color="#454752" style={{ marginBottom: 16 }} />
         <Text
           className="font-data"
           size="sm"
-          style={{ color: '#5A5E66', textTransform: 'uppercase', letterSpacing: '0.15em' }}
+          style={{ color: '#525560', textTransform: 'uppercase', letterSpacing: '0.15em' }}
         >
           NO DEPENDENCIES DETECTED
         </Text>
-        <Text size="xs" style={{ color: '#5A5E66', marginTop: 4 }}>
+        <Text size="xs" style={{ color: '#525560', marginTop: 4 }}>
           Add dependencies between tasks to activate the dependency matrix.
         </Text>
       </div>
@@ -364,7 +364,7 @@ export default function DependencyGraph({ tasks, onSelectTask }: DependencyGraph
             maskColor="rgba(0, 0, 0, 0.3)"
             style={{
               backgroundColor: '#10131C',
-              border: '1px solid rgba(59, 73, 76, 0.15)',
+              border: '1px solid rgba(69, 71, 82, 0.15)',
               borderRadius: 0,
             }}
           />
@@ -390,7 +390,7 @@ export default function DependencyGraph({ tasks, onSelectTask }: DependencyGraph
               style={{
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
-                color: '#8A8F98',
+                color: '#a8aab7',
               }}
             >
               {priority}

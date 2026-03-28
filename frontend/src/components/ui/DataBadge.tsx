@@ -10,14 +10,14 @@ interface DataBadgeProps {
 
 const colorMap = {
   cyan: {
-    bg: 'rgba(0, 229, 255, 0.1)',
-    border: 'rgba(0, 229, 255, 0.3)',
-    text: '#00E5FF',
+    bg: 'rgba(129, 236, 255, 0.1)',
+    border: 'rgba(129, 236, 255, 0.3)',
+    text: '#81ecff',
   },
   magenta: {
-    bg: 'rgba(255, 0, 127, 0.1)',
-    border: 'rgba(255, 0, 127, 0.3)',
-    text: '#FF007F',
+    bg: 'rgba(255, 107, 155, 0.1)',
+    border: 'rgba(255, 107, 155, 0.3)',
+    text: '#ff6b9b',
   },
   amber: {
     bg: 'rgba(255, 199, 117, 0.1)',
@@ -25,9 +25,9 @@ const colorMap = {
     text: '#FFC775',
   },
   muted: {
-    bg: 'rgba(59, 73, 76, 0.1)',
-    border: 'rgba(59, 73, 76, 0.3)',
-    text: '#8A8F98',
+    bg: 'rgba(69, 71, 82, 0.1)',
+    border: 'rgba(69, 71, 82, 0.3)',
+    text: '#a8aab7',
   },
 };
 

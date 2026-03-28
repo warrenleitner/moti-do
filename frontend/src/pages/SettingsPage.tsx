@@ -528,7 +528,7 @@ export default function SettingsPage() {
     fontSize: '0.6875rem',
     textTransform: 'uppercase',
     letterSpacing: '0.15em',
-    color: '#8A8F98',
+    color: '#a8aab7',
     marginBottom: '0.75rem',
     cursor: 'pointer',
     display: 'flex',
@@ -539,8 +539,8 @@ export default function SettingsPage() {
 
   const terminalNumberStyle: React.CSSProperties = {
     backgroundColor: '#0B0E17',
-    border: '1px solid rgba(59, 73, 76, 0.15)',
-    color: '#E0E0E0',
+    border: '1px solid rgba(69, 71, 82, 0.15)',
+    color: '#e6e7f5',
     fontFamily: '"JetBrains Mono", monospace',
     padding: '0.25rem 0.5rem',
     fontSize: '0.8125rem',
@@ -556,7 +556,7 @@ export default function SettingsPage() {
           style={{
             fontFamily: '"Space Grotesk", sans-serif',
             fontWeight: 700,
-            color: '#E0E0E0',
+            color: '#e6e7f5',
             letterSpacing: '0.05em',
             fontSize: 'clamp(1.5rem, 4vw, 2rem)',
           }}
@@ -566,7 +566,7 @@ export default function SettingsPage() {
         <Text
           className="font-data"
           size="sm"
-          style={{ color: '#8A8F98', letterSpacing: '0.1em', marginTop: 4 }}
+          style={{ color: '#a8aab7', letterSpacing: '0.1em', marginTop: 4 }}
         >
           CONFIGURATION &amp; DATA MANAGEMENT
         </Text>
@@ -598,7 +598,7 @@ export default function SettingsPage() {
           onKeyDown={(e) => e.key === 'Enter' && toggleSection('xpLedger')}
         >
           {expandedSections.xpLedger ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
-          <IconHistory size={14} style={{ color: '#00E5FF' }} />
+          <IconHistory size={14} style={{ color: '#81ecff' }} />
           XP_TRANSACTION_LEDGER
         </div>
 
@@ -611,12 +611,12 @@ export default function SettingsPage() {
             <Box
               style={{
                 backgroundColor: '#0B0E17',
-                border: '1px solid rgba(59, 73, 76, 0.15)',
+                border: '1px solid rgba(69, 71, 82, 0.15)',
                 padding: '1.5rem',
                 textAlign: 'center',
               }}
             >
-              <Text className="font-data" size="sm" style={{ color: '#5A5E66', letterSpacing: '0.1em' }}>
+              <Text className="font-data" size="sm" style={{ color: '#525560', letterSpacing: '0.1em' }}>
                 NO TRANSACTIONS RECORDED
               </Text>
             </Box>
@@ -634,13 +634,13 @@ export default function SettingsPage() {
                   <tr
                     style={{
                       backgroundColor: '#181B25',
-                      borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+                      borderBottom: '1px solid rgba(69, 71, 82, 0.15)',
                     }}
                   >
-                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#8A8F98', letterSpacing: '0.15em', fontSize: '0.6875rem', fontWeight: 500 }}>DATE</th>
-                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#8A8F98', letterSpacing: '0.15em', fontSize: '0.6875rem', fontWeight: 500 }}>ACTION</th>
-                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#8A8F98', letterSpacing: '0.15em', fontSize: '0.6875rem', fontWeight: 500 }}>XP_GAINED</th>
-                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#8A8F98', letterSpacing: '0.15em', fontSize: '0.6875rem', fontWeight: 500 }}>SOURCE</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#a8aab7', letterSpacing: '0.15em', fontSize: '0.6875rem', fontWeight: 500 }}>DATE</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#a8aab7', letterSpacing: '0.15em', fontSize: '0.6875rem', fontWeight: 500 }}>ACTION</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#a8aab7', letterSpacing: '0.15em', fontSize: '0.6875rem', fontWeight: 500 }}>XP_GAINED</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#a8aab7', letterSpacing: '0.15em', fontSize: '0.6875rem', fontWeight: 500 }}>SOURCE</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -649,14 +649,14 @@ export default function SettingsPage() {
                       key={tx.id}
                       style={{
                         backgroundColor: '#10131C',
-                        borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+                        borderBottom: '1px solid rgba(69, 71, 82, 0.15)',
                         transition: 'background-color 0.15s ease',
                       }}
                     >
-                      <td style={{ padding: '0.5rem 0.75rem', color: '#8A8F98', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '0.5rem 0.75rem', color: '#a8aab7', whiteSpace: 'nowrap' }}>
                         {new Date(tx.timestamp).toLocaleDateString()}
                       </td>
-                      <td style={{ padding: '0.5rem 0.75rem', color: '#E0E0E0' }}>
+                      <td style={{ padding: '0.5rem 0.75rem', color: '#e6e7f5' }}>
                         {tx.description}
                       </td>
                       <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>
@@ -666,7 +666,7 @@ export default function SettingsPage() {
                           size="sm"
                         />
                       </td>
-                      <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#8A8F98' }}>
+                      <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#a8aab7' }}>
                         {tx.source}
                       </td>
                     </tr>
@@ -693,7 +693,7 @@ export default function SettingsPage() {
           <IconHistory size={14} style={{ color: '#FFC775' }} />
           SCORING_PARAMETERS
         </div>
-        <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '0.75rem' }}>
+        <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '0.75rem' }}>
           Configure how task scores are calculated. Higher scores mean higher priority.
         </Text>
 
@@ -722,7 +722,7 @@ export default function SettingsPage() {
               {/* Priority Multipliers */}
               <Box>
                 <Text className="micro-meta" mb="xs">PRIORITY_MULTIPLIERS</Text>
-                <Text size="xs" style={{ color: '#5A5E66' }} mb="sm">
+                <Text size="xs" style={{ color: '#525560' }} mb="sm">
                   Recommended: 1.0–2.5
                 </Text>
                 <Group gap="md" wrap="wrap">
@@ -749,7 +749,7 @@ export default function SettingsPage() {
               {/* Difficulty Multipliers */}
               <Box>
                 <Text className="micro-meta" mb="xs">DIFFICULTY_MULTIPLIERS</Text>
-                <Text size="xs" style={{ color: '#5A5E66' }} mb="sm">
+                <Text size="xs" style={{ color: '#525560' }} mb="sm">
                   Recommended: 1.0–2.5
                 </Text>
                 <Group gap="md" wrap="wrap">
@@ -776,7 +776,7 @@ export default function SettingsPage() {
               {/* Duration Multipliers */}
               <Box>
                 <Text className="micro-meta" mb="xs">DURATION_MULTIPLIERS</Text>
-                <Text size="xs" style={{ color: '#5A5E66' }} mb="sm">
+                <Text size="xs" style={{ color: '#525560' }} mb="sm">
                   Recommended: 1.0–2.5
                 </Text>
                 <Group gap="md" wrap="wrap">
@@ -816,7 +816,7 @@ export default function SettingsPage() {
                 />
                 {scoringConfig.age_factor.enabled && (
                   <Stack gap="sm" mt="xs">
-                    <Text size="xs" style={{ color: '#5A5E66' }}>
+                    <Text size="xs" style={{ color: '#525560' }}>
                       Defaults: 0.025 per unit (days), max multiplier 1.5
                     </Text>
                     <Group gap="md" wrap="wrap">
@@ -852,7 +852,7 @@ export default function SettingsPage() {
                 />
                 {scoringConfig.due_date_proximity.enabled && (
                   <Stack gap="sm" mt="xs">
-                    <Text size="xs" style={{ color: '#5A5E66' }}>
+                    <Text size="xs" style={{ color: '#525560' }}>
                       Defaults: 0.02 per unit (days), max multiplier 1.5
                     </Text>
                     <Group gap="md" wrap="wrap">
@@ -875,7 +875,7 @@ export default function SettingsPage() {
               {/* Penalty Weight Inversion */}
               <Box>
                 <Text className="micro-meta" mb="xs">PENALTY_WEIGHTING</Text>
-                <Text size="xs" style={{ color: '#5A5E66' }} mb="sm">
+                <Text size="xs" style={{ color: '#525560' }} mb="sm">
                   Choose which components use inverted weights for penalties.
                 </Text>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem' }}>
@@ -913,7 +913,7 @@ export default function SettingsPage() {
                 />
                 {scoringConfig.habit_streak_bonus.enabled && (
                   <Stack gap="sm" mt="xs">
-                    <Text size="xs" style={{ color: '#5A5E66' }}>
+                    <Text size="xs" style={{ color: '#525560' }}>
                       Defaults: 1.2/streak day, max 25 bonus
                     </Text>
                     <Group gap="md" wrap="wrap">
@@ -969,13 +969,13 @@ export default function SettingsPage() {
           onKeyDown={(e) => e.key === 'Enter' && toggleSection('tags')}
         >
           {expandedSections.tags ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
-          <IconTag size={14} style={{ color: '#00E5FF' }} />
+          <IconTag size={14} style={{ color: '#81ecff' }} />
           TAG_DEFINITIONS
         </div>
 
         <Collapse in={expandedSections.tags}>
           <Group justify="space-between" mb="md">
-            <Text className="font-data" size="xs" style={{ color: '#5A5E66' }}>
+            <Text className="font-data" size="xs" style={{ color: '#525560' }}>
               Manage tags and set XP multipliers. Multiplier {'>'} 1.0 = bonus XP.
             </Text>
             <ArcadeButton
@@ -1003,7 +1003,7 @@ export default function SettingsPage() {
                 <Box
                   style={{
                     backgroundColor: '#0B0E17',
-                    border: '1px dashed rgba(0, 229, 255, 0.3)',
+                    border: '1px dashed rgba(129, 236, 255, 0.3)',
                     padding: '0.75rem',
                   }}
                 >
@@ -1097,7 +1097,7 @@ export default function SettingsPage() {
                     <Group justify="space-between" wrap="wrap">
                       <Group gap="sm">
                         <Box style={{ width: 16, height: 16, backgroundColor: tag.color, border: '1px solid rgba(59,73,76,0.3)' }} />
-                        <Text className="font-data" size="sm" style={{ color: '#E0E0E0' }}>{tag.name}</Text>
+                        <Text className="font-data" size="sm" style={{ color: '#e6e7f5' }}>{tag.name}</Text>
                         <DataBadge
                           value={`${tag.multiplier}x`}
                           color={tag.multiplier > 1 ? 'cyan' : tag.multiplier < 1 ? 'amber' : 'muted'}
@@ -1106,10 +1106,10 @@ export default function SettingsPage() {
                       </Group>
                       <Group gap={4}>
                         <ActionIcon size="md" variant="subtle" onClick={() => handleStartEditTag(tag)} style={{ minWidth: 44, minHeight: 44 }}>
-                          <IconPencil size={16} style={{ color: '#8A8F98' }} />
+                          <IconPencil size={16} style={{ color: '#a8aab7' }} />
                         </ActionIcon>
                         <ActionIcon size="md" variant="subtle" onClick={() => handleDeleteTag(tag.id)} style={{ minWidth: 44, minHeight: 44 }}>
-                          <IconTrash size={16} style={{ color: '#FF007F' }} />
+                          <IconTrash size={16} style={{ color: '#ff6b9b' }} />
                         </ActionIcon>
                       </Group>
                     </Group>
@@ -1119,7 +1119,7 @@ export default function SettingsPage() {
 
               {tags.length === 0 && !showAddTag && (
                 <Box style={{ backgroundColor: '#0B0E17', border: '1px dashed rgba(59,73,76,0.15)', padding: '1.5rem', textAlign: 'center' }}>
-                  <Text className="font-data" size="sm" style={{ color: '#5A5E66' }}>
+                  <Text className="font-data" size="sm" style={{ color: '#525560' }}>
                     NO TAGS DEFINED — CLICK &quot;ADD TAG&quot; TO CREATE ONE
                   </Text>
                 </Box>
@@ -1141,13 +1141,13 @@ export default function SettingsPage() {
           onKeyDown={(e) => e.key === 'Enter' && toggleSection('projects')}
         >
           {expandedSections.projects ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
-          <IconFolder size={14} style={{ color: '#FF007F' }} />
+          <IconFolder size={14} style={{ color: '#ff6b9b' }} />
           PROJECT_DEFINITIONS
         </div>
 
         <Collapse in={expandedSections.projects}>
           <Group justify="space-between" mb="md">
-            <Text className="font-data" size="xs" style={{ color: '#5A5E66' }}>
+            <Text className="font-data" size="xs" style={{ color: '#525560' }}>
               Manage projects and XP multipliers.
             </Text>
             <ArcadeButton
@@ -1175,7 +1175,7 @@ export default function SettingsPage() {
                 <Box
                   style={{
                     backgroundColor: '#0B0E17',
-                    border: '1px dashed rgba(255, 0, 127, 0.3)',
+                    border: '1px dashed rgba(255, 107, 155, 0.3)',
                     padding: '0.75rem',
                   }}
                 >
@@ -1252,7 +1252,7 @@ export default function SettingsPage() {
                     <Group justify="space-between" wrap="wrap">
                       <Group gap="sm">
                         <Box style={{ width: 16, height: 16, backgroundColor: project.color, border: '1px solid rgba(59,73,76,0.3)' }} />
-                        <Text className="font-data" size="sm" style={{ color: '#E0E0E0' }}>{project.name}</Text>
+                        <Text className="font-data" size="sm" style={{ color: '#e6e7f5' }}>{project.name}</Text>
                         <DataBadge
                           value={`${project.multiplier}x`}
                           color={project.multiplier > 1 ? 'cyan' : project.multiplier < 1 ? 'amber' : 'muted'}
@@ -1261,10 +1261,10 @@ export default function SettingsPage() {
                       </Group>
                       <Group gap={4}>
                         <ActionIcon size="md" variant="subtle" onClick={() => handleStartEditProject(project)} style={{ minWidth: 44, minHeight: 44 }}>
-                          <IconPencil size={16} style={{ color: '#8A8F98' }} />
+                          <IconPencil size={16} style={{ color: '#a8aab7' }} />
                         </ActionIcon>
                         <ActionIcon size="md" variant="subtle" onClick={() => handleDeleteProject(project.id)} style={{ minWidth: 44, minHeight: 44 }}>
-                          <IconTrash size={16} style={{ color: '#FF007F' }} />
+                          <IconTrash size={16} style={{ color: '#ff6b9b' }} />
                         </ActionIcon>
                       </Group>
                     </Group>
@@ -1274,7 +1274,7 @@ export default function SettingsPage() {
 
               {projects.length === 0 && !showAddProject && (
                 <Box style={{ backgroundColor: '#0B0E17', border: '1px dashed rgba(59,73,76,0.15)', padding: '1.5rem', textAlign: 'center' }}>
-                  <Text className="font-data" size="sm" style={{ color: '#5A5E66' }}>
+                  <Text className="font-data" size="sm" style={{ color: '#525560' }}>
                     NO PROJECTS DEFINED — CLICK &quot;ADD PROJECT&quot; TO CREATE ONE
                   </Text>
                 </Box>
@@ -1301,15 +1301,15 @@ export default function SettingsPage() {
         </div>
 
         <Collapse in={expandedSections.dateProcessing}>
-          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '1rem' }}>
+          <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '1rem' }}>
             Process pending days to apply overdue penalties and generate recurring tasks.
           </Text>
 
-          <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(59, 73, 76, 0.15)', padding: '0.75rem', marginBottom: '1rem' }}>
+          <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(69, 71, 82, 0.15)', padding: '0.75rem', marginBottom: '1rem' }}>
             <Stack gap={6}>
               <Group gap="xs">
-                <Text className="font-data" size="xs" style={{ color: '#8A8F98', width: 180 }}>CURRENT_PROCESSING_DATE:</Text>
-                <Text className="font-data" size="xs" style={{ color: '#00E5FF' }}>
+                <Text className="font-data" size="xs" style={{ color: '#a8aab7', width: 180 }}>CURRENT_PROCESSING_DATE:</Text>
+                <Text className="font-data" size="xs" style={{ color: '#81ecff' }}>
                   {systemStatus?.last_processed_date
                     ? (() => {
                         const [year, month, day] = systemStatus.last_processed_date.split('-').map(Number);
@@ -1320,15 +1320,15 @@ export default function SettingsPage() {
                 </Text>
               </Group>
               <Group gap="xs">
-                <Text className="font-data" size="xs" style={{ color: '#8A8F98', width: 180 }}>REAL_DATE:</Text>
-                <Text className="font-data" size="xs" style={{ color: '#E0E0E0' }}>{new Date().toLocaleDateString()}</Text>
+                <Text className="font-data" size="xs" style={{ color: '#a8aab7', width: 180 }}>REAL_DATE:</Text>
+                <Text className="font-data" size="xs" style={{ color: '#e6e7f5' }}>{new Date().toLocaleDateString()}</Text>
               </Group>
               <Group gap="xs">
-                <Text className="font-data" size="xs" style={{ color: '#8A8F98', width: 180 }}>LAST_COMPLETED:</Text>
-                <Text className="font-data" size="xs" style={{ color: '#E0E0E0' }}>{systemStatus?.last_processed_date || 'NEVER'}</Text>
+                <Text className="font-data" size="xs" style={{ color: '#a8aab7', width: 180 }}>LAST_COMPLETED:</Text>
+                <Text className="font-data" size="xs" style={{ color: '#e6e7f5' }}>{systemStatus?.last_processed_date || 'NEVER'}</Text>
               </Group>
               <Group gap="xs">
-                <Text className="font-data" size="xs" style={{ color: '#8A8F98', width: 180 }}>DAYS_BEHIND:</Text>
+                <Text className="font-data" size="xs" style={{ color: '#a8aab7', width: 180 }}>DAYS_BEHIND:</Text>
                 <DataBadge
                   value={`${systemStatus?.pending_days ?? 0} day${(systemStatus?.pending_days ?? 0) !== 1 ? 's' : ''}`}
                   color={systemStatus?.pending_days && systemStatus.pending_days > 0 ? 'magenta' : 'cyan'}
@@ -1371,8 +1371,8 @@ export default function SettingsPage() {
               )}
             </Group>
           ) : (
-            <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(0, 229, 255, 0.2)', padding: '0.75rem' }}>
-              <Text className="font-data" size="xs" style={{ color: '#00E5FF' }}>
+            <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(129, 236, 255, 0.2)', padding: '0.75rem' }}>
+              <Text className="font-data" size="xs" style={{ color: '#81ecff' }}>
                 ✓ ALL CAUGHT UP — NO PENDING DAYS
               </Text>
             </Box>
@@ -1400,12 +1400,12 @@ export default function SettingsPage() {
           onKeyDown={(e) => e.key === 'Enter' && toggleSection('xpWithdraw')}
         >
           {expandedSections.xpWithdraw ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
-          <IconTrophy size={14} style={{ color: '#FF007F' }} />
+          <IconTrophy size={14} style={{ color: '#ff6b9b' }} />
           XP_WITHDRAWAL
         </div>
 
         <Collapse in={expandedSections.xpWithdraw}>
-          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '0.75rem' }}>
+          <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '0.75rem' }}>
             Spend earned XP on rewards. Current balance:{' '}
             <DataBadge value={`${stats?.total_xp ?? 0} XP`} color="cyan" size="sm" />
           </Text>
@@ -1440,7 +1440,7 @@ export default function SettingsPage() {
             </ArcadeButton>
           </Group>
 
-          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginTop: '0.5rem' }}>
+          <Text className="font-data" size="xs" style={{ color: '#525560', marginTop: '0.5rem' }}>
             You can go into XP debt if you withdraw more than your current balance.
           </Text>
         </Collapse>
@@ -1458,12 +1458,12 @@ export default function SettingsPage() {
           onKeyDown={(e) => e.key === 'Enter' && toggleSection('vacation')}
         >
           {expandedSections.vacation ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
-          <IconBeach size={14} style={{ color: '#00E5FF' }} />
+          <IconBeach size={14} style={{ color: '#81ecff' }} />
           VACATION_MODE
         </div>
 
         <Collapse in={expandedSections.vacation}>
-          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '0.75rem' }}>
+          <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '0.75rem' }}>
             Pause streak penalties and due date enforcement while away.
           </Text>
 
@@ -1478,8 +1478,8 @@ export default function SettingsPage() {
           />
 
           {systemStatus?.vacation_mode && (
-            <Box mt="md" style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(0, 229, 255, 0.2)', padding: '0.75rem' }}>
-              <Text className="font-data" size="xs" style={{ color: '#00E5FF' }}>
+            <Box mt="md" style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(129, 236, 255, 0.2)', padding: '0.75rem' }}>
+              <Text className="font-data" size="xs" style={{ color: '#81ecff' }}>
                 ✓ VACATION MODE ACTIVE — NO PENALTIES APPLIED
               </Text>
             </Box>
@@ -1504,7 +1504,7 @@ export default function SettingsPage() {
         </div>
 
         <Collapse in={expandedSections.backup}>
-          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '1rem' }}>
+          <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '1rem' }}>
             Export data as JSON backup or restore from a previous backup.
           </Text>
 
@@ -1559,12 +1559,12 @@ export default function SettingsPage() {
           onKeyDown={(e) => e.key === 'Enter' && toggleSection('security')}
         >
           {expandedSections.security ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
-          <IconLock size={14} style={{ color: '#FF007F' }} />
+          <IconLock size={14} style={{ color: '#ff6b9b' }} />
           SECURITY_CONFIG
         </div>
 
         <Collapse in={expandedSections.security}>
-          <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '0.75rem' }}>
+          <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '0.75rem' }}>
             Manage account security settings.
           </Text>
 
@@ -1591,12 +1591,12 @@ export default function SettingsPage() {
           onKeyDown={(e) => e.key === 'Enter' && toggleSection('about')}
         >
           {expandedSections.about ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
-          <IconInfoCircle size={14} style={{ color: '#8A8F98' }} />
+          <IconInfoCircle size={14} style={{ color: '#a8aab7' }} />
           SYSTEM_INFO
         </div>
 
         <Collapse in={expandedSections.about}>
-          <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(59, 73, 76, 0.15)', overflow: 'hidden' }}>
+          <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(69, 71, 82, 0.15)', overflow: 'hidden' }}>
             <table
               style={{
                 width: '100%',
@@ -1613,11 +1613,11 @@ export default function SettingsPage() {
                   { key: 'ENVIRONMENT', val: import.meta.env.MODE, badge: true },
                   { key: 'API_URL', val: import.meta.env.VITE_API_URL || window.location.origin },
                 ].map((row) => (
-                  <tr key={row.key} style={{ borderBottom: '1px solid rgba(59, 73, 76, 0.15)' }}>
-                    <td style={{ padding: '0.5rem 0.75rem', color: '#8A8F98', whiteSpace: 'nowrap', width: 200, backgroundColor: '#181B25', letterSpacing: '0.1em', fontSize: '0.6875rem' }}>
+                  <tr key={row.key} style={{ borderBottom: '1px solid rgba(69, 71, 82, 0.15)' }}>
+                    <td style={{ padding: '0.5rem 0.75rem', color: '#a8aab7', whiteSpace: 'nowrap', width: 200, backgroundColor: '#181B25', letterSpacing: '0.1em', fontSize: '0.6875rem' }}>
                       {row.key}
                     </td>
-                    <td style={{ padding: '0.5rem 0.75rem', color: '#E0E0E0' }}>
+                    <td style={{ padding: '0.5rem 0.75rem', color: '#e6e7f5' }}>
                       {row.badge ? (
                         <DataBadge
                           value={row.val}
@@ -1643,7 +1643,7 @@ export default function SettingsPage() {
         opened={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
         title={
-          <Text className="font-data" style={{ color: '#FF007F', letterSpacing: '0.1em', fontSize: '0.8125rem' }}>
+          <Text className="font-data" style={{ color: '#ff6b9b', letterSpacing: '0.1em', fontSize: '0.8125rem' }}>
             CONFIRM_DATA_IMPORT
           </Text>
         }
@@ -1651,18 +1651,18 @@ export default function SettingsPage() {
           content: {
             backgroundColor: 'rgba(16, 19, 28, 0.95)',
             backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 0, 127, 0.3)',
+            border: '1px solid rgba(255, 107, 155, 0.3)',
           },
           header: {
             backgroundColor: 'transparent',
           },
         }}
       >
-        <Text className="font-data" size="sm" mb="md" style={{ color: '#E0E0E0' }}>
+        <Text className="font-data" size="sm" mb="md" style={{ color: '#e6e7f5' }}>
           Replace all data from <strong style={{ color: '#FFC775' }}>{selectedFile?.name}</strong>?
         </Text>
-        <Box mb="lg" style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(255, 0, 127, 0.3)', padding: '0.75rem' }}>
-          <Text className="font-data" size="xs" style={{ color: '#FF007F' }}>
+        <Box mb="lg" style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(255, 107, 155, 0.3)', padding: '0.75rem' }}>
+          <Text className="font-data" size="xs" style={{ color: '#ff6b9b' }}>
             ⚠ THIS WILL REPLACE ALL DATA. THIS ACTION CANNOT BE UNDONE.
           </Text>
         </Box>
@@ -1683,7 +1683,7 @@ export default function SettingsPage() {
         opened={changePasswordOpen}
         onClose={() => setChangePasswordOpen(false)}
         title={
-          <Text className="font-data" style={{ color: '#00E5FF', letterSpacing: '0.1em', fontSize: '0.8125rem' }}>
+          <Text className="font-data" style={{ color: '#81ecff', letterSpacing: '0.1em', fontSize: '0.8125rem' }}>
             CHANGE_PASSWORD
           </Text>
         }
@@ -1691,7 +1691,7 @@ export default function SettingsPage() {
           content: {
             backgroundColor: 'rgba(16, 19, 28, 0.95)',
             backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(0, 229, 255, 0.3)',
+            border: '1px solid rgba(129, 236, 255, 0.3)',
           },
           header: {
             backgroundColor: 'transparent',

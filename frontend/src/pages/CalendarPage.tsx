@@ -142,7 +142,7 @@ export default function CalendarPage() {
           style={{
             fontSize: '1.5rem',
             fontWeight: 700,
-            color: '#E0E0E0',
+            color: '#e6e7f5',
             margin: 0,
             letterSpacing: '0.05em',
             textTransform: 'uppercase',

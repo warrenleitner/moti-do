@@ -340,10 +340,10 @@ export default function Dashboard() {
               <XPProgressRing
                 size={192}
                 progress={levelProgress}
-                color="#00E5FF"
+                color="#81ecff"
                 label={`LVL ${currentLevel}`}
                 sublabel={`${xpInLevel} / ${xpNeeded} XP`}
-                glowColor="rgba(0, 229, 255, 0.25)"
+                glowColor="rgba(129, 236, 255, 0.25)"
               />
               <span
                 className="micro-meta"
@@ -540,10 +540,10 @@ export default function Dashboard() {
         <XPProgressRing
           size={200}
           progress={levelProgress}
-          color="#00E5FF"
+          color="#81ecff"
           label={`LVL ${currentLevel}`}
           sublabel={`${xpInLevel} / ${xpNeeded} XP`}
-          glowColor="rgba(0, 229, 255, 0.25)"
+          glowColor="rgba(129, 236, 255, 0.25)"
         />
         <span className="micro-meta" style={{ marginTop: '0.75rem', color: 'var(--kc-text-muted)' }}>
           CORE_SYSTEM_XP_LOADER

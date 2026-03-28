@@ -20,7 +20,7 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <Stack align="center" justify="center" ta="center" py="xl" px="lg">
-      <Box mb="sm" style={{ color: '#3B494C' }}>
+      <Box mb="sm" style={{ color: '#454752' }}>
         {icon || <IconInbox size={64} stroke={1.5} data-testid="InboxOutlinedIcon" />}
       </Box>
       <span
@@ -30,7 +30,7 @@ export default function EmptyState({
           fontWeight: 600,
           textTransform: 'uppercase',
           letterSpacing: '0.15em',
-          color: '#5A5E66',
+          color: '#525560',
         }}
       >
         {title}
@@ -39,7 +39,7 @@ export default function EmptyState({
         <span
           style={{
             fontSize: '0.8125rem',
-            color: '#5A5E66',
+            color: '#525560',
             maxWidth: 400,
           }}
         >

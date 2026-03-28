@@ -58,10 +58,10 @@ const SWIPE_THRESHOLD = 100;
 
 /** Map priority → left accent border color (Kinetic Console palette) */
 const priorityAccentColor: Record<string, string> = {
-  [Priority.DEFCON_ONE]: '#FF007F',
+  [Priority.DEFCON_ONE]: '#ff6b9b',
   [Priority.HIGH]: '#FFC775',
-  [Priority.MEDIUM]: '#00E5FF',
-  [Priority.LOW]: '#3B494C',
+  [Priority.MEDIUM]: '#81ecff',
+  [Priority.LOW]: '#454752',
   [Priority.TRIVIAL]: '#32343F',
 };
 
@@ -147,8 +147,8 @@ export default function TaskCard({
   const hasDetails = isMobile || task.text_description || showSubtasksInline || task.tags.length > 0;
 
   const accentColor = task.is_complete
-    ? '#3B494C'
-    : priorityAccentColor[task.priority] || '#3B494C';
+    ? '#454752'
+    : priorityAccentColor[task.priority] || '#454752';
 
   return (
     <Box
@@ -170,8 +170,8 @@ export default function TaskCard({
             width: swipeOffset,
             backgroundColor:
               swipeProgress >= 1
-                ? '#00E5FF'
-                : 'rgba(0, 229, 255, 0.4)',
+                ? '#81ecff'
+                : 'rgba(129, 236, 255, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-start',
@@ -219,8 +219,8 @@ export default function TaskCard({
                 disabled={isBlocked}
                 aria-label={task.is_complete ? 'Mark Incomplete' : 'Mark Complete'}
                 style={{
-                  color: task.is_complete ? '#00E5FF' : '#5A5E66',
-                  border: task.is_complete ? '1px solid #00E5FF' : '1px solid #3B494C',
+                  color: task.is_complete ? '#81ecff' : '#525560',
+                  border: task.is_complete ? '1px solid #81ecff' : '1px solid #454752',
                   borderRadius: 0,
                   width: 22,
                   height: 22,
@@ -228,7 +228,7 @@ export default function TaskCard({
                   minHeight: 22,
                   marginTop: 2,
                   transition: 'all 0.15s ease',
-                  boxShadow: task.is_complete ? '0 0 6px rgba(0, 229, 255, 0.3)' : 'none',
+                  boxShadow: task.is_complete ? '0 0 6px rgba(129, 236, 255, 0.3)' : 'none',
                 }}
               >
                 {task.is_complete ? (
@@ -250,19 +250,19 @@ export default function TaskCard({
                 fw={500}
                 style={{
                   textDecoration: task.is_complete ? 'line-through' : 'none',
-                  color: task.is_complete ? '#5A5E66' : '#E0E0E0',
+                  color: task.is_complete ? '#525560' : '#e6e7f5',
                 }}
               >
                 {task.title}
               </Text>
               {task.is_habit && (
                 <Tooltip label="Recurring habit">
-                  <IconRepeat size={16} color="#00E5FF" />
+                  <IconRepeat size={16} color="#81ecff" />
                 </Tooltip>
               )}
               {task.dependencies.length > 0 && (
                 <Tooltip label={`${task.dependencies.length} dependencies`}>
-                  <IconLink size={16} color="#5A5E66" />
+                  <IconLink size={16} color="#525560" />
                 </Tooltip>
               )}
               {isBlocked && (
@@ -277,7 +277,7 @@ export default function TaskCard({
                 className="font-data"
                 style={{
                   fontSize: '0.6875rem',
-                  color: '#5A5E66',
+                  color: '#525560',
                   letterSpacing: '0.05em',
                 }}
               >
@@ -297,7 +297,7 @@ export default function TaskCard({
                           onDecrement?.(task.id);
                         }}
                         disabled={task.current_count <= 0 || task.is_complete}
-                        style={{ color: '#8A8F98' }}
+                        style={{ color: '#a8aab7' }}
                       >
                         <IconMinus size={14} />
                       </ActionIcon>
@@ -318,7 +318,7 @@ export default function TaskCard({
                           onIncrement?.(task.id);
                         }}
                         disabled={task.is_complete}
-                        style={{ color: '#8A8F98' }}
+                        style={{ color: '#a8aab7' }}
                       >
                         <IconPlus size={14} />
                       </ActionIcon>
@@ -349,7 +349,7 @@ export default function TaskCard({
                 size="xs"
                 mt="xs"
                 className="font-data"
-                style={{ color: '#5A5E66', fontSize: '0.6875rem', letterSpacing: '0.05em' }}
+                style={{ color: '#525560', fontSize: '0.6875rem', letterSpacing: '0.05em' }}
               >
                 SUBTASKS: {completedSubtasks}/{task.subtasks.length}
               </Text>
@@ -371,7 +371,7 @@ export default function TaskCard({
               variant="subtle"
               onClick={() => setExpanded(!expanded)}
               aria-label={expanded ? 'Collapse details' : 'Expand details'}
-              style={{ color: '#8A8F98' }}
+              style={{ color: '#a8aab7' }}
             >
               {expanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
             </ActionIcon>
@@ -400,14 +400,14 @@ export default function TaskCard({
                 size="xs"
                 mb="sm"
                 className="font-data"
-                style={{ color: '#5A5E66', fontSize: '0.6875rem', letterSpacing: '0.05em' }}
+                style={{ color: '#525560', fontSize: '0.6875rem', letterSpacing: '0.05em' }}
               >
                 SUBTASKS: {completedSubtasks}/{task.subtasks.length}
               </Text>
             )}
 
             {task.text_description && (
-              <Text size="sm" mb="sm" style={{ color: '#8A8F98' }}>
+              <Text size="sm" mb="sm" style={{ color: '#a8aab7' }}>
                 {task.text_description}
               </Text>
             )}
@@ -442,7 +442,7 @@ export default function TaskCard({
                 variant="subtle"
                 onClick={() => onUndo(task.id)}
                 aria-label="Undo last change"
-                style={{ color: '#00E5FF' }}
+                style={{ color: '#81ecff' }}
               >
                 <IconArrowBackUp size={16} />
               </ActionIcon>
@@ -454,7 +454,7 @@ export default function TaskCard({
             onClick={() => onEdit(task)}
             title="Edit task"
             aria-label="Edit task"
-            style={{ color: '#8A8F98' }}
+            style={{ color: '#a8aab7' }}
           >
             <IconEdit size={16} />
           </ActionIcon>
@@ -465,7 +465,7 @@ export default function TaskCard({
               onClick={() => onDuplicate(task.id)}
               title="Duplicate task"
               aria-label="Duplicate task"
-              style={{ color: '#8A8F98' }}
+              style={{ color: '#a8aab7' }}
             >
               <IconCopy size={16} />
             </ActionIcon>
@@ -476,7 +476,7 @@ export default function TaskCard({
             onClick={() => onDelete(task.id)}
             title="Delete task"
             aria-label="Delete task"
-            style={{ color: '#FF007F' }}
+            style={{ color: '#ff6b9b' }}
           >
             <IconTrash size={16} />
           </ActionIcon>

@@ -14,11 +14,11 @@ export default function LoadingSpinner({
   const content = (
     <Center p="xl">
       <Stack align="center" gap="sm">
-        <Loader size={size} color="#00E5FF" role="progressbar" />
+        <Loader size={size} color="#81ecff" role="progressbar" />
         {message && (
           <span
             className="font-data micro-meta"
-            style={{ color: '#5A5E66' }}
+            style={{ color: '#525560' }}
           >
             {message}
           </span>

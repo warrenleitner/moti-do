@@ -2,13 +2,13 @@ import { createTheme, type MantineColorsTuple, rem } from '@mantine/core';
 
 // Kinetic Console neon palette
 const neonCyan: MantineColorsTuple = [
-  '#e0feff', '#c3f5ff', '#87ecff', '#47e2ff', '#00d9ff',
+  '#e0feff', '#c3f5ff', '#87ecff', '#81ecff', '#00d9ff',
   '#00c8f0', '#00b5d9', '#009bb8', '#007d94', '#00626e',
 ];
 
 const neonMagenta: MantineColorsTuple = [
   '#ffe0f0', '#ffc2e0', '#ff85c0', '#ff47a0', '#ff007f',
-  '#e60072', '#cc0066', '#b3005a', '#99004d', '#800040',
+  '#e60072', '#e30071', '#b3005a', '#99004d', '#800040',
 ];
 
 const neonAmber: MantineColorsTuple = [
@@ -29,14 +29,14 @@ export const theme = createTheme({
     fontFamily: '"Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     fontWeight: '700',
   },
-  defaultRadius: 0,
+  defaultRadius: 2,
   cursorType: 'pointer',
-  black: '#E0E0E0',
+  black: '#e6e7f5',
   white: '#0B0E17',
   components: {
     Button: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         root: {
@@ -55,20 +55,20 @@ export const theme = createTheme({
     },
     Card: {
       defaultProps: {
-        radius: 0,
+        radius: 4,
         shadow: 'none',
       },
       styles: {
         root: {
           backgroundColor: '#10131C',
-          border: '1px solid rgba(59, 73, 76, 0.15)',
+          border: '1px solid rgba(69, 71, 82, 0.15)',
           boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5)',
         },
       },
     },
     Badge: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         root: {
@@ -81,7 +81,7 @@ export const theme = createTheme({
     },
     Modal: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
         centered: true,
         overlayProps: {
           backgroundOpacity: 0.7,
@@ -91,7 +91,7 @@ export const theme = createTheme({
       styles: {
         content: {
           backgroundColor: '#10131C',
-          border: '1px solid rgba(59, 73, 76, 0.15)',
+          border: '1px solid rgba(69, 71, 82, 0.15)',
         },
         header: {
           backgroundColor: '#10131C',
@@ -116,17 +116,17 @@ export const theme = createTheme({
     },
     TextInput: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         input: {
           backgroundColor: '#0B0E17',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
-          color: '#E0E0E0',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
+          color: '#e6e7f5',
           fontFamily: '"JetBrains Mono", monospace',
           '&:focus': {
-            borderColor: '#00E5FF',
-            boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+            borderColor: '#81ecff',
+            boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)',
           },
         },
         label: {
@@ -134,22 +134,22 @@ export const theme = createTheme({
           fontSize: rem(11),
           textTransform: 'uppercase' as const,
           letterSpacing: '0.1em',
-          color: '#8A8F98',
+          color: '#a8aab7',
         },
       },
     },
     Textarea: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         input: {
           backgroundColor: '#0B0E17',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
-          color: '#E0E0E0',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
+          color: '#e6e7f5',
           '&:focus': {
-            borderColor: '#00E5FF',
-            boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+            borderColor: '#81ecff',
+            boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)',
           },
         },
         label: {
@@ -157,23 +157,23 @@ export const theme = createTheme({
           fontSize: rem(11),
           textTransform: 'uppercase' as const,
           letterSpacing: '0.1em',
-          color: '#8A8F98',
+          color: '#a8aab7',
         },
       },
     },
     NumberInput: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         input: {
           backgroundColor: '#0B0E17',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
-          color: '#E0E0E0',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
+          color: '#e6e7f5',
           fontFamily: '"JetBrains Mono", monospace',
           '&:focus': {
-            borderColor: '#00E5FF',
-            boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+            borderColor: '#81ecff',
+            boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)',
           },
         },
         label: {
@@ -181,22 +181,22 @@ export const theme = createTheme({
           fontSize: rem(11),
           textTransform: 'uppercase' as const,
           letterSpacing: '0.1em',
-          color: '#8A8F98',
+          color: '#a8aab7',
         },
       },
     },
     PasswordInput: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         input: {
           backgroundColor: '#0B0E17',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
-          color: '#E0E0E0',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
+          color: '#e6e7f5',
           '&:focus': {
-            borderColor: '#00E5FF',
-            boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+            borderColor: '#81ecff',
+            boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)',
           },
         },
         label: {
@@ -204,30 +204,30 @@ export const theme = createTheme({
           fontSize: rem(11),
           textTransform: 'uppercase' as const,
           letterSpacing: '0.1em',
-          color: '#8A8F98',
+          color: '#a8aab7',
         },
       },
     },
     Select: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         input: {
           backgroundColor: '#0B0E17',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
-          color: '#E0E0E0',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
+          color: '#e6e7f5',
           '&:focus': {
-            borderColor: '#00E5FF',
-            boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+            borderColor: '#81ecff',
+            boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)',
           },
         },
         dropdown: {
           backgroundColor: '#181B25',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
         },
         option: {
-          color: '#E0E0E0',
+          color: '#e6e7f5',
           '&[data-combobox-selected]': {
             backgroundColor: '#272A34',
           },
@@ -240,13 +240,13 @@ export const theme = createTheme({
           fontSize: rem(11),
           textTransform: 'uppercase' as const,
           letterSpacing: '0.1em',
-          color: '#8A8F98',
+          color: '#a8aab7',
         },
       },
     },
     ActionIcon: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         root: {
@@ -256,7 +256,7 @@ export const theme = createTheme({
     },
     Paper: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         root: {
@@ -266,7 +266,7 @@ export const theme = createTheme({
     },
     NavLink: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
     },
     Tabs: {
@@ -277,22 +277,22 @@ export const theme = createTheme({
           letterSpacing: '0.1em',
           fontSize: rem(12),
           fontWeight: 500,
-          color: '#8A8F98',
+          color: '#a8aab7',
           borderColor: 'transparent',
           '&[data-active]': {
-            color: '#00E5FF',
-            borderColor: '#00E5FF',
+            color: '#81ecff',
+            borderColor: '#81ecff',
           },
         },
         tabsList: {
-          borderColor: 'rgba(59, 73, 76, 0.15)',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
         },
       },
     },
     Table: {
       styles: {
         table: {
-          borderColor: 'rgba(59, 73, 76, 0.15)',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
         },
         th: {
           fontFamily: '"JetBrains Mono", monospace',
@@ -300,13 +300,13 @@ export const theme = createTheme({
           letterSpacing: '0.15em',
           fontSize: rem(11),
           fontWeight: 500,
-          color: '#8A8F98',
+          color: '#a8aab7',
           backgroundColor: '#181B25',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
         },
         td: {
-          borderColor: 'rgba(59, 73, 76, 0.15)',
-          color: '#E0E0E0',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
+          color: '#e6e7f5',
         },
         tr: {
           transition: 'background-color 0.15s ease',
@@ -318,34 +318,34 @@ export const theme = createTheme({
     },
     Switch: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
     },
     Tooltip: {
       styles: {
         tooltip: {
           backgroundColor: '#272A34',
-          color: '#E0E0E0',
+          color: '#e6e7f5',
           fontFamily: '"JetBrains Mono", monospace',
           fontSize: rem(11),
-          border: '1px solid rgba(59, 73, 76, 0.15)',
+          border: '1px solid rgba(69, 71, 82, 0.15)',
         },
       },
     },
     Alert: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         root: {
           backgroundColor: '#181B25',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
         },
       },
     },
     Progress: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         root: {
@@ -355,7 +355,7 @@ export const theme = createTheme({
     },
     SegmentedControl: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         root: {
@@ -372,58 +372,58 @@ export const theme = createTheme({
     },
     Accordion: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
     },
     ColorInput: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         input: {
           backgroundColor: '#0B0E17',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
-          color: '#E0E0E0',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
+          color: '#e6e7f5',
         },
       },
     },
     TagsInput: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         input: {
           backgroundColor: '#0B0E17',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
-          color: '#E0E0E0',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
+          color: '#e6e7f5',
         },
       },
     },
     Autocomplete: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         input: {
           backgroundColor: '#0B0E17',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
-          color: '#E0E0E0',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
+          color: '#e6e7f5',
         },
         dropdown: {
           backgroundColor: '#181B25',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
         },
       },
     },
     DatePickerInput: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
       styles: {
         input: {
           backgroundColor: '#0B0E17',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
-          color: '#E0E0E0',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
+          color: '#e6e7f5',
         },
       },
     },
@@ -431,10 +431,10 @@ export const theme = createTheme({
       styles: {
         dropdown: {
           backgroundColor: '#181B25',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
         },
         item: {
-          color: '#E0E0E0',
+          color: '#e6e7f5',
           '&:hover': {
             backgroundColor: '#272A34',
           },
@@ -445,30 +445,30 @@ export const theme = createTheme({
       styles: {
         dropdown: {
           backgroundColor: '#181B25',
-          borderColor: 'rgba(59, 73, 76, 0.15)',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
         },
       },
     },
     Divider: {
       styles: {
         root: {
-          borderColor: 'rgba(59, 73, 76, 0.15)',
+          borderColor: 'rgba(69, 71, 82, 0.15)',
         },
       },
     },
     Checkbox: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
     },
     Radio: {
       defaultProps: {
-        radius: 0,
+        radius: 2,
       },
     },
     Loader: {
       defaultProps: {
-        color: '#00E5FF',
+        color: '#81ecff',
       },
     },
     Skeleton: {
