@@ -42,6 +42,9 @@ import { Priority, Difficulty, Duration, PriorityEmoji } from '../../types';
 /** Default tag added to all tasks created via QuickAdd */
 const QUICK_ADD_DEFAULT_TAG = 'inbox';
 
+/** Max characters shown in the description preview badge */
+const MAX_DESCRIPTION_PREVIEW_LENGTH = 30;
+
 /** Priority → Kinetic Console DataBadge color */
 const priorityBadgeColor: Record<string, 'magenta' | 'amber' | 'cyan' | 'muted'> = {
   [Priority.DEFCON_ONE]: 'magenta',
@@ -349,7 +352,7 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
             )}
             {parsed.description && (
               <DataBadge
-                value={`📝 ${parsed.description.length > 30 ? parsed.description.slice(0, 30) + '…' : parsed.description}`}
+                value={`📝 ${parsed.description.length > MAX_DESCRIPTION_PREVIEW_LENGTH ? parsed.description.slice(0, MAX_DESCRIPTION_PREVIEW_LENGTH) + '…' : parsed.description}`}
                 color="muted"
               />
             )}
