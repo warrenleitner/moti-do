@@ -25,12 +25,12 @@ function TaskNode({ data }: TaskNodeProps) {
         borderRadius: 0,
         backgroundColor: isSelected ? '#272A34' : '#10131C',
         border: isSelected
-          ? `1px solid #00E5FF`
-          : '1px solid rgba(59, 73, 76, 0.15)',
+          ? `1px solid #81ecff`
+          : '1px solid rgba(69, 71, 82, 0.15)',
         borderLeftWidth: 4,
         borderLeftColor: color,
         boxShadow: isSelected
-          ? '4px 4px 0px rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 229, 255, 0.3)'
+          ? '4px 4px 0px rgba(0, 0, 0, 0.5), 0 0 12px rgba(129, 236, 255, 0.3)'
           : '4px 4px 0px rgba(0, 0, 0, 0.5)',
         cursor: 'pointer',
         transition: 'all 0.15s ease',
@@ -42,7 +42,7 @@ function TaskNode({ data }: TaskNodeProps) {
         type="target"
         position={Position.Left}
         style={{
-          background: '#00E5FF',
+          background: '#81ecff',
           width: 8,
           height: 8,
           border: '2px solid #10131C',
@@ -59,7 +59,7 @@ function TaskNode({ data }: TaskNodeProps) {
             height="16"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#00E5FF"
+            stroke="#81ecff"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -74,7 +74,7 @@ function TaskNode({ data }: TaskNodeProps) {
             height="16"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#3B494C"
+            stroke="#454752"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -93,7 +93,7 @@ function TaskNode({ data }: TaskNodeProps) {
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               textDecoration: task.is_complete ? 'line-through' : 'none',
-              color: task.is_complete ? '#5A5E66' : '#E0E0E0',
+              color: task.is_complete ? '#525560' : '#e6e7f5',
             }}
           >
             {task.icon && <span style={{ marginRight: 4 }}>{task.icon}</span>}
@@ -104,7 +104,7 @@ function TaskNode({ data }: TaskNodeProps) {
               style={{
                 fontFamily: '"JetBrains Mono", monospace',
                 fontSize: '0.625rem',
-                color: '#5A5E66',
+                color: '#525560',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
                 marginTop: 2,
@@ -123,7 +123,7 @@ function TaskNode({ data }: TaskNodeProps) {
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: '0.1em',
-              color: task.is_complete ? '#5A5E66' : color,
+              color: task.is_complete ? '#525560' : color,
               backgroundColor: task.is_complete ? 'rgba(90, 94, 102, 0.1)' : `${color}1A`,
               border: `1px solid ${task.is_complete ? 'rgba(90, 94, 102, 0.2)' : `${color}33`}`,
               padding: '1px 5px',
@@ -139,7 +139,7 @@ function TaskNode({ data }: TaskNodeProps) {
         type="source"
         position={Position.Right}
         style={{
-          background: '#00E5FF',
+          background: '#81ecff',
           width: 8,
           height: 8,
           border: '2px solid #10131C',

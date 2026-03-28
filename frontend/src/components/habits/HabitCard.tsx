@@ -33,8 +33,8 @@ export default function HabitCard({ habit, onComplete, onEdit, onDelete }: Habit
   const statusColorHex = hasMilestone
     ? '#FFC775'
     : hasActiveStreak
-      ? '#FF007F'
-      : '#00E5FF';
+      ? '#ff6b9b'
+      : '#81ecff';
 
   // Progress ring: streak relative to best or 30-day goal
   const target = Math.max(habit.streak_best, 30);
@@ -98,7 +98,7 @@ export default function HabitCard({ habit, onComplete, onEdit, onDelete }: Habit
           style={{
             fontSize: '1.125rem',
             fontWeight: 700,
-            color: '#E0E0E0',
+            color: '#e6e7f5',
             textDecoration: isCompletedToday ? 'line-through' : undefined,
           }}
         >
@@ -111,11 +111,11 @@ export default function HabitCard({ habit, onComplete, onEdit, onDelete }: Habit
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <IconFlame
             size={24}
-            color={habit.streak_current > 0 ? '#FF007F' : '#5A5E66'}
+            color={habit.streak_current > 0 ? '#ff6b9b' : '#525560'}
           />
           <span
             className="font-data"
-            style={{ fontSize: '1.5rem', fontWeight: 700, color: '#E0E0E0' }}
+            style={{ fontSize: '1.5rem', fontWeight: 700, color: '#e6e7f5' }}
           >
             {habit.streak_current}D
           </span>
@@ -160,7 +160,7 @@ export default function HabitCard({ habit, onComplete, onEdit, onDelete }: Habit
         className="font-data"
         style={{
           fontSize: '0.625rem',
-          color: '#5A5E66',
+          color: '#525560',
           textTransform: 'uppercase',
           letterSpacing: '0.1em',
         }}

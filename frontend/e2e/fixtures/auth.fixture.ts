@@ -27,8 +27,8 @@ export async function login(
 ): Promise<void> {
   await page.goto('/login');
 
-  // Wait for login page to load - text logo "MOTI-DO"
-  await page.getByText('MOTI-DO', { exact: true }).waitFor({ timeout: 10000 });
+  // Wait for login page to load - logo image "Motodo"
+  await page.getByRole('img', { name: 'Motodo' }).waitFor({ timeout: 10000 });
 
   // Fill credentials - TerminalInput wraps Mantine TextInput with uppercase labels
   await page.getByRole('textbox', { name: /USERNAME/i }).fill(username);
@@ -55,7 +55,7 @@ export async function register(
   await page.goto('/login');
 
   // Wait for login page to load
-  await page.getByText('MOTI-DO', { exact: true }).waitFor({ timeout: 10000 });
+  await page.getByRole('img', { name: 'Motodo' }).waitFor({ timeout: 10000 });
 
   // Switch to register mode using Mantine SegmentedControl (renders as radiogroup)
   await page.getByRole('radiogroup').getByText('REGISTER').click();
@@ -91,7 +91,7 @@ export async function logout(page: Page): Promise<void> {
   await page.goto('/login');
 
   // Wait for login page
-  await page.getByText('MOTI-DO', { exact: true }).waitFor({ timeout: 10000 });
+  await page.getByRole('img', { name: 'Motodo' }).waitFor({ timeout: 10000 });
 }
 
 /**

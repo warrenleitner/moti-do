@@ -127,7 +127,7 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
         <span
           className="font-data"
           style={{
-            color: '#00E5FF',
+            color: '#81ecff',
             fontWeight: 700,
             fontSize: '1.1rem',
             lineHeight: 1,
@@ -149,7 +149,7 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
             root: { flex: 1 },
             input: {
               backgroundColor: 'transparent',
-              color: '#E0E0E0',
+              color: '#e6e7f5',
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: '0.875rem',
               border: 'none',
@@ -157,7 +157,7 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
               '&::placeholder': {
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
-                color: '#5A5E66',
+                color: '#525560',
               },
             },
           }}
@@ -178,7 +178,7 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
             size="sm"
             onClick={() => setShowHelp(!showHelp)}
             aria-label="Show syntax help"
-            style={{ color: '#8A8F98' }}
+            style={{ color: '#a8aab7' }}
           >
             <IconHelp size={16} />
           </ActionIcon>
@@ -193,7 +193,7 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
             disabled={!parsed.title.trim()}
             aria-label="Add task"
             style={{
-              color: parsed.title.trim() ? '#00E5FF' : '#5A5E66',
+              color: parsed.title.trim() ? '#81ecff' : '#525560',
             }}
           >
             <IconPlus size={18} />
@@ -232,15 +232,15 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
           p="sm"
           style={{
             backgroundColor: '#181B25',
-            border: '1px solid rgba(59, 73, 76, 0.15)',
+            border: '1px solid rgba(69, 71, 82, 0.15)',
           }}
         >
           <Text
             size="xs"
             className="font-data"
-            style={{ color: '#8A8F98', lineHeight: 1.8 }}
+            style={{ color: '#a8aab7', lineHeight: 1.8 }}
           >
-            <strong style={{ color: '#00E5FF' }}>QUICK-ADD SYNTAX:</strong>
+            <strong style={{ color: '#81ecff' }}>QUICK-ADD SYNTAX:</strong>
             <br />
             <code style={{ color: '#FFC775' }}>!high</code>, <code style={{ color: '#FFC775' }}>!low</code>, <code style={{ color: '#FFC775' }}>!medium</code>,{' '}
             <code style={{ color: '#FFC775' }}>!critical</code> — Priority
@@ -253,9 +253,9 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
             <code style={{ color: '#FFC775' }}>~project</code> — Project name
             <br />
             <br />
-            <em style={{ color: '#5A5E66' }}>Example: Buy groceries !high #shopping @friday ~home</em>
+            <em style={{ color: '#525560' }}>Example: Buy groceries !high #shopping @friday ~home</em>
             <br />
-            <em style={{ color: '#5A5E66' }}>Press Ctrl/Cmd+K to focus this input</em>
+            <em style={{ color: '#525560' }}>Press Ctrl/Cmd+K to focus this input</em>
           </Text>
         </Box>
       )}

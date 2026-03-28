@@ -138,11 +138,10 @@ export default function CalendarPage() {
       {/* Page header */}
       <div style={{ marginBottom: '1.5rem' }}>
         <h1
-          className="font-display"
+          className="font-display gradient-text"
           style={{
             fontSize: '1.5rem',
             fontWeight: 700,
-            color: '#E0E0E0',
             margin: 0,
             letterSpacing: '0.05em',
             textTransform: 'uppercase',

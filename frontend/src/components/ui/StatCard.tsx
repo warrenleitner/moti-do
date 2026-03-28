@@ -11,8 +11,8 @@ interface StatCardProps {
 }
 
 const colorMap = {
-  cyan: { accent: '#00E5FF', glow: 'rgba(0, 229, 255, 0.3)' },
-  magenta: { accent: '#FF007F', glow: 'rgba(255, 0, 127, 0.3)' },
+  cyan: { accent: '#81ecff', glow: 'rgba(129, 236, 255, 0.3)' },
+  magenta: { accent: '#ff6b9b', glow: 'rgba(255, 107, 155, 0.3)' },
   amber: { accent: '#FFC775', glow: 'rgba(255, 199, 117, 0.3)' },
 };
 
@@ -51,7 +51,7 @@ export function StatCard({
           style={{
             fontSize: '1.875rem',
             fontWeight: 700,
-            color: '#E0E0E0',
+            color: '#e6e7f5',
             lineHeight: 1,
           }}
         >

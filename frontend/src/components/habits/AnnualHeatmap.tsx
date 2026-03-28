@@ -42,7 +42,7 @@ const INTENSITY_COLORS = [
   '#004D5E', // 1 — dim cyan
   '#007799', // 2 — medium cyan
   '#00B5D9', // 3 — bright cyan
-  '#00E5FF', // 4 — max cyan
+  '#81ecff', // 4 — max cyan
 ];
 
 function getIntensityIndex(count: number, maxCount: number): number {
@@ -124,7 +124,7 @@ export default function AnnualHeatmap({ habits, allTasks }: AnnualHeatmapProps) 
     <div
       style={{
         backgroundColor: '#10131C',
-        border: '1px solid rgba(59, 73, 76, 0.15)',
+        border: '1px solid rgba(69, 71, 82, 0.15)',
         padding: isMobile ? '0.75rem' : '1rem',
         marginBottom: '1.5rem',
       }}
@@ -193,7 +193,7 @@ export default function AnnualHeatmap({ habits, allTasks }: AnnualHeatmapProps) 
                           cursor: day.isFuture ? 'default' : 'pointer',
                           transition: 'opacity 0.1s',
                           boxShadow: hasGlow
-                            ? '0 0 4px rgba(0, 229, 255, 0.5)'
+                            ? '0 0 4px rgba(129, 236, 255, 0.5)'
                             : 'none',
                         }}
                       />

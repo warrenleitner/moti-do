@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MOTI-DO | Tasks</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-fixed": "#ffc1d0",
+              "on-tertiary-fixed-variant": "#4700a7",
+              "secondary-dim": "#e30071",
+              "surface-container": "#161924",
+              "tertiary-fixed": "#bda1ff",
+              "surface-container-lowest": "#000000",
+              "on-tertiary": "#290067",
+              "surface-variant": "#212533",
+              "on-error": "#490006",
+              "secondary": "#ff6b9b",
+              "on-tertiary-fixed": "#1f0052",
+              "primary-container": "#00e3fd",
+              "tertiary": "#ac89ff",
+              "surface-container-highest": "#212533",
+              "inverse-primary": "#006976",
+              "on-surface-variant": "#a8aab7",
+              "outline": "#737581",
+              "inverse-on-surface": "#525560",
+              "error": "#ff716c",
+              "surface-tint": "#81ecff",
+              "background": "#0b0e17",
+              "primary-fixed-dim": "#00d4ec",
+              "on-surface": "#e6e7f5",
+              "on-primary-fixed": "#003840",
+              "on-secondary-fixed-variant": "#a1004e",
+              "tertiary-fixed-dim": "#b190ff",
+              "primary-dim": "#00d4ec",
+              "error-dim": "#d7383b",
+              "on-primary": "#005762",
+              "outline-variant": "#454752",
+              "secondary-fixed-dim": "#ffadc2",
+              "on-error-container": "#ffa8a3",
+              "on-secondary-fixed": "#6c0032",
+              "on-tertiary-container": "#f8f1ff",
+              "on-primary-container": "#004d57",
+              "surface": "#0b0e17",
+              "inverse-surface": "#faf8ff",
+              "surface-bright": "#272c3a",
+              "secondary-container": "#ba005b",
+              "on-primary-fixed-variant": "#005762",
+              "primary-fixed": "#00e3fd",
+              "surface-container-low": "#10131d",
+              "surface-container-high": "#1b1f2b",
+              "primary": "#81ecff",
+              "on-background": "#e6e7f5",
+              "surface-dim": "#0b0e17",
+              "on-secondary": "#47001f",
+              "tertiary-dim": "#874cff",
+              "tertiary-container": "#7000ff",
+              "error-container": "#9f0519",
+              "on-secondary-container": "#fff5f6"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(22, 25, 36, 0.7);
+            backdrop-filter: blur(12px);
+        }
+        .kinetic-glow-primary {
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+        }
+        .kinetic-glow-secondary {
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.2);
+        }
+        body {
+            background-color: #0B0E17;
+            color: #e6e7f5;
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar (JSON implementation) -->
+<nav class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#0B0E17] dark:bg-[#0B0E17] border-b border-cyan-500/20">
+<div class="flex items-center gap-3">
+<span class="text-xl font-black bg-gradient-to-r from-[#00E5FF] to-[#FF007F] bg-clip-text text-transparent font-['Space_Grotesk'] tracking-tight">MOTI-DO</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-cyan-400 hover:text-cyan-300 transition-colors scale-95 active:duration-100">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full border border-cyan-500/30 overflow-hidden">
+<img alt="User Operator Avatar" class="w-full h-full object-cover" data-alt="User operator avatar with a futuristic digital glow and professional profile aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAox7kQtQr4EGlde85TpBBbYHLUEWoGj0AfJeMnhdqmjAiSMRnOReVeQQF37HFS0oGottWr2COPsOH2LitC-5QCCIBtEWgyK1Hk5E0JUc2D6rlgM-Pz1EMOUmcpSkQXv_5G0EYgDaF4lQ8BFs3Ae6eQX1eICKjJGJO-lpSGbDs9yrL26ynPN1UKYzwVBh-6JXy55xgnP7v-4laqAEBDu3G6ki-fpaDOZKJ4hoTvnJYw6X9Tdvm_BplCQ0R2-SbYBcOZqfXSLuvk3j1i"/>
+</div>
+</div>
+</nav>
+<!-- Main Canvas -->
+<main class="pt-20 pb-24 px-4 min-h-screen max-w-md mx-auto">
+<!-- Header Section -->
+<header class="mb-8">
+<div class="flex items-baseline justify-between mb-2">
+<h1 class="font-headline text-4xl font-bold tracking-tight text-on-surface">Tasks</h1>
+<span class="font-label text-xs uppercase tracking-[0.2em] text-on-surface-variant">Active Sync: 100%</span>
+</div>
+<div class="h-1 w-24 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
+</header>
+<!-- Search & Quick Add Bar -->
+<section class="mb-8 flex gap-2">
+<div class="relative flex-grow">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm" data-icon="search">search</span>
+<input class="w-full bg-surface-container-lowest border-none rounded-lg py-3 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-outline-variant font-body" placeholder="Initiate new protocol..." type="text"/>
+</div>
+<button class="bg-surface-container-high p-3 rounded-lg text-primary border border-primary/10 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+</button>
+</section>
+<!-- Status Summary (Tactical Data Readout) -->
+<div class="grid grid-cols-2 gap-3 mb-8">
+<div class="bg-surface-container-low p-4 rounded-lg border-l-2 border-primary">
+<div class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Queue Status</div>
+<div class="font-headline text-xl font-bold text-on-surface">12 <span class="text-sm font-normal text-primary-dim">Pending</span></div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg border-l-2 border-secondary">
+<div class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Urgency Level</div>
+<div class="font-headline text-xl font-bold text-on-surface">03 <span class="text-sm font-normal text-secondary-dim">Critical</span></div>
+</div>
+</div>
+<!-- Task Feed -->
+<section class="space-y-4">
+<!-- URGENT TASK -->
+<div class="bg-surface-container rounded-lg p-1 border-r-4 border-secondary/50 shadow-lg shadow-secondary/5">
+<div class="flex items-center p-4 gap-4">
+<button class="w-10 h-10 rounded-full border-2 border-secondary flex items-center justify-center shrink-0 bg-secondary/5 active:bg-secondary/20 transition-colors">
+<!-- Pill-shaped check intent -->
+</button>
+<div class="flex-grow">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-body font-semibold text-on-surface leading-tight">Defragment Core Database</h3>
+<span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded border border-primary/20">+450 XP</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="flex items-center gap-1 font-label text-[10px] text-secondary font-medium uppercase tracking-tighter">
+<span class="material-symbols-outlined text-[12px]" data-icon="bolt">bolt</span> Critical Priority
+                            </span>
+<span class="text-[10px] text-on-surface-variant font-label uppercase">02:45 PM</span>
+</div>
+</div>
+</div>
+</div>
+<!-- STANDARD TASK -->
+<div class="bg-surface-container-low rounded-lg p-1 border-r-4 border-primary/20">
+<div class="flex items-center p-4 gap-4">
+<button class="w-10 h-10 rounded-full border-2 border-primary/30 flex items-center justify-center shrink-0 bg-primary/5 active:bg-primary/20 transition-colors">
+</button>
+<div class="flex-grow">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-body font-semibold text-on-surface/80 leading-tight">Sync Cloud Nodes</h3>
+<span class="bg-primary/5 text-primary/60 text-[10px] font-bold px-2 py-0.5 rounded border border-primary/10">+120 XP</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="flex items-center gap-1 font-label text-[10px] text-on-surface-variant font-medium uppercase tracking-tighter">
+<span class="material-symbols-outlined text-[12px]" data-icon="schedule">schedule</span> Backlog
+                            </span>
+<span class="text-[10px] text-on-surface-variant/60 font-label uppercase">Tom. 09:00 AM</span>
+</div>
+</div>
+</div>
+</div>
+<!-- URGENT TASK -->
+<div class="bg-surface-container rounded-lg p-1 border-r-4 border-secondary/50 shadow-lg shadow-secondary/5">
+<div class="flex items-center p-4 gap-4">
+<button class="w-10 h-10 rounded-full border-2 border-secondary flex items-center justify-center shrink-0 bg-secondary/5 active:bg-secondary/20 transition-colors">
+</button>
+<div class="flex-grow">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-body font-semibold text-on-surface leading-tight">Deploy Security Patch 4.2</h3>
+<span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded border border-primary/20">+600 XP</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="flex items-center gap-1 font-label text-[10px] text-secondary font-medium uppercase tracking-tighter">
+<span class="material-symbols-outlined text-[12px]" data-icon="security">security</span> Protocol Alpha
+                            </span>
+<span class="text-[10px] text-on-surface-variant font-label uppercase">EXP 12H</span>
+</div>
+</div>
+</div>
+</div>
+<!-- STANDARD TASK -->
+<div class="bg-surface-container-low rounded-lg p-1 border-r-4 border-primary/20">
+<div class="flex items-center p-4 gap-4">
+<button class="w-10 h-10 rounded-full border-2 border-primary/30 flex items-center justify-center shrink-0 bg-primary/5 active:bg-primary/20 transition-colors">
+</button>
+<div class="flex-grow">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-body font-semibold text-on-surface/80 leading-tight">Update System Manifest</h3>
+<span class="bg-primary/5 text-primary/60 text-[10px] font-bold px-2 py-0.5 rounded border border-primary/10">+50 XP</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="flex items-center gap-1 font-label text-[10px] text-on-surface-variant font-medium uppercase tracking-tighter">
+<span class="material-symbols-outlined text-[12px]" data-icon="inventory">inventory</span> Routine
+                            </span>
+<span class="text-[10px] text-on-surface-variant/60 font-label uppercase">No Deadline</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Floating Action Button -->
+<button class="fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-on-primary shadow-[0_0_20px_rgba(0,229,255,0.4)] active:scale-90 transition-all z-40">
+<span class="material-symbols-outlined text-3xl font-bold" data-icon="add">add</span>
+</button>
+<!-- BottomNavBar (JSON implementation) -->
+<nav class="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 pb-safe px-4 bg-[#0B0E17]/90 backdrop-blur-md border-t border-cyan-500/20 shadow-[0_-4px_20px_rgba(0,229,255,0.1)] rounded-t-xl">
+<a class="flex flex-col items-center text-slate-500 active:bg-slate-800 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="home">home</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase">Home</span>
+</a>
+<a class="flex flex-col items-center text-cyan-400 relative after:content-[''] after:absolute after:-top-2 after:w-8 after:h-1 after:bg-[#FF007F] after:rounded-full tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="task_alt">task_alt</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase">Tasks</span>
+</a>
+<a class="flex flex-col items-center text-slate-500 active:bg-slate-800 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="event">event</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase">Calendar</span>
+</a>
+<a class="flex flex-col items-center text-slate-500 active:bg-slate-800 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="insights">insights</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase">Graph</span>
+</a>
+<a class="flex flex-col items-center text-slate-500 active:bg-slate-800 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="menu">menu</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase">More</span>
+</a>
+</nav>
+</body></html>

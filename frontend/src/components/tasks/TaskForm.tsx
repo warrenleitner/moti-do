@@ -57,10 +57,10 @@ function FieldInfoTooltip<T extends string>({
     <Box p={4}>
       {values.map((value) => (
         <Box key={value} mb={4}>
-          <Text size="sm" fw={700} style={{ color: '#E0E0E0' }}>
+          <Text size="sm" fw={700} style={{ color: '#e6e7f5' }}>
             {emojis[value]} {labels[value]}
           </Text>
-          <Text size="xs" style={{ color: '#8A8F98' }}>
+          <Text size="xs" style={{ color: '#a8aab7' }}>
             {descriptions[value]}
           </Text>
         </Box>
@@ -93,14 +93,14 @@ const defaultTask: Partial<Task> = {
 const kcSelectStyles = {
   input: {
     backgroundColor: '#0B0E17',
-    borderColor: 'rgba(59, 73, 76, 0.15)',
+    borderColor: 'rgba(69, 71, 82, 0.15)',
     borderRadius: 0,
-    color: '#E0E0E0',
+    color: '#e6e7f5',
     fontFamily: '"JetBrains Mono", monospace',
     fontSize: '0.8125rem',
     '&:focus': {
-      borderColor: '#00E5FF',
-      boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+      borderColor: '#81ecff',
+      boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)',
     },
   },
   label: {
@@ -108,20 +108,20 @@ const kcSelectStyles = {
     fontSize: '0.6875rem',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.1em',
-    color: '#8A8F98',
+    color: '#a8aab7',
   },
   dropdown: {
     backgroundColor: '#181B25',
-    borderColor: 'rgba(59, 73, 76, 0.15)',
+    borderColor: 'rgba(69, 71, 82, 0.15)',
     borderRadius: 0,
   },
   option: {
     fontFamily: '"JetBrains Mono", monospace',
     fontSize: '0.8125rem',
-    color: '#E0E0E0',
+    color: '#e6e7f5',
     '&[data-selected]': {
-      backgroundColor: 'rgba(0, 229, 255, 0.15)',
-      color: '#00E5FF',
+      backgroundColor: 'rgba(129, 236, 255, 0.15)',
+      color: '#81ecff',
     },
     '&[data-hovered]': {
       backgroundColor: '#272A34',
@@ -133,16 +133,16 @@ const kcSelectStyles = {
 const kcInputStyles = {
   input: {
     backgroundColor: '#0B0E17',
-    borderColor: 'rgba(59, 73, 76, 0.15)',
+    borderColor: 'rgba(69, 71, 82, 0.15)',
     borderRadius: 0,
-    color: '#E0E0E0',
+    color: '#e6e7f5',
     fontFamily: '"JetBrains Mono", monospace',
     '&:focus': {
-      borderColor: '#00E5FF',
-      boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+      borderColor: '#81ecff',
+      boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)',
     },
     '&::placeholder': {
-      color: '#5A5E66',
+      color: '#525560',
     },
   },
   label: {
@@ -150,7 +150,7 @@ const kcInputStyles = {
     fontSize: '0.6875rem',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.1em',
-    color: '#8A8F98',
+    color: '#a8aab7',
   },
 };
 
@@ -205,11 +205,10 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
       onClose={onClose}
       title={
         <Text
-          className="font-display"
+          className="font-display gradient-text"
           fw={700}
           size="lg"
           style={{
-            color: '#00E5FF',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
           }}
@@ -222,13 +221,13 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
       styles={{
         content: {
           backgroundColor: '#10131C',
-          border: '1px solid rgba(59, 73, 76, 0.15)',
+          border: '1px solid rgba(69, 71, 82, 0.15)',
           borderRadius: 0,
           boxShadow: '4px 4px 0px rgba(0, 0, 0, 0.5)',
         },
         header: {
           backgroundColor: '#10131C',
-          borderBottom: '1px solid rgba(59, 73, 76, 0.15)',
+          borderBottom: '1px solid rgba(69, 71, 82, 0.15)',
         },
         overlay: {
           backgroundColor: 'rgba(16, 19, 28, 0.80)',
@@ -238,7 +237,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
           backgroundColor: '#10131C',
         },
         close: {
-          color: '#8A8F98',
+          color: '#a8aab7',
           '&:hover': {
             backgroundColor: '#272A34',
           },
@@ -250,7 +249,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
         <Text
           className="font-data micro-meta"
           mt="xs"
-          style={{ color: '#5A5E66' }}
+          style={{ color: '#525560' }}
         >
           IDENTIFICATION
         </Text>
@@ -287,16 +286,16 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
           styles={{
             input: {
               backgroundColor: '#0B0E17',
-              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderColor: 'rgba(69, 71, 82, 0.15)',
               borderRadius: 0,
-              color: '#E0E0E0',
+              color: '#e6e7f5',
               fontFamily: '"JetBrains Mono", monospace',
               '&:focus': {
-                borderColor: '#00E5FF',
-                boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+                borderColor: '#81ecff',
+                boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)',
               },
               '&::placeholder': {
-                color: '#5A5E66',
+                color: '#525560',
               },
             },
             label: {
@@ -304,7 +303,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               fontSize: '0.6875rem',
               textTransform: 'uppercase' as const,
               letterSpacing: '0.1em',
-              color: '#8A8F98',
+              color: '#a8aab7',
             },
           }}
         />
@@ -312,7 +311,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
         {/* Section header: PARAMETERS */}
         <Text
           className="font-data micro-meta"
-          style={{ color: '#5A5E66' }}
+          style={{ color: '#525560' }}
         >
           PARAMETERS
         </Text>
@@ -337,7 +336,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               <ActionIcon
                 variant="subtle"
                 size="xs"
-                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1, color: '#5A5E66' }}
+                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1, color: '#525560' }}
                 aria-label="Priority info"
               >
                 <IconInfoCircle size={14} />
@@ -376,7 +375,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               <ActionIcon
                 variant="subtle"
                 size="xs"
-                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1, color: '#5A5E66' }}
+                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1, color: '#525560' }}
                 aria-label="Difficulty info"
               >
                 <IconInfoCircle size={14} />
@@ -415,7 +414,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               <ActionIcon
                 variant="subtle"
                 size="xs"
-                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1, color: '#5A5E66' }}
+                style={{ position: 'absolute', right: 0, top: 0, zIndex: 1, color: '#525560' }}
                 aria-label="Duration info"
               >
                 <IconInfoCircle size={14} />
@@ -440,7 +439,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
         {/* Section header: SCHEDULE */}
         <Text
           className="font-data micro-meta"
-          style={{ color: '#5A5E66' }}
+          style={{ color: '#525560' }}
         >
           SCHEDULE
         </Text>
@@ -457,9 +456,9 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
             styles={{
               input: {
                 backgroundColor: '#0B0E17',
-                borderColor: 'rgba(59, 73, 76, 0.15)',
+                borderColor: 'rgba(69, 71, 82, 0.15)',
                 borderRadius: 0,
-                color: '#E0E0E0',
+                color: '#e6e7f5',
                 fontFamily: '"JetBrains Mono", monospace',
               },
               label: {
@@ -467,7 +466,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
                 fontSize: '0.6875rem',
                 textTransform: 'uppercase' as const,
                 letterSpacing: '0.1em',
-                color: '#8A8F98',
+                color: '#a8aab7',
               },
             }}
           />
@@ -481,9 +480,9 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
             styles={{
               input: {
                 backgroundColor: '#0B0E17',
-                borderColor: 'rgba(59, 73, 76, 0.15)',
+                borderColor: 'rgba(69, 71, 82, 0.15)',
                 borderRadius: 0,
-                color: '#E0E0E0',
+                color: '#e6e7f5',
                 fontFamily: '"JetBrains Mono", monospace',
               },
               label: {
@@ -491,7 +490,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
                 fontSize: '0.6875rem',
                 textTransform: 'uppercase' as const,
                 letterSpacing: '0.1em',
-                color: '#8A8F98',
+                color: '#a8aab7',
               },
             }}
           />
@@ -500,7 +499,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
         {/* Section header: ORGANIZATION */}
         <Text
           className="font-data micro-meta"
-          style={{ color: '#5A5E66' }}
+          style={{ color: '#525560' }}
         >
           ORGANIZATION
         </Text>
@@ -527,7 +526,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
             <Text
               className="font-data micro-meta"
               mb="xs"
-              style={{ color: '#8A8F98' }}
+              style={{ color: '#a8aab7' }}
             >
               DEPENDENCIES (BLOCKED BY)
             </Text>
@@ -541,9 +540,9 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
                       variant="light"
                       size="sm"
                       style={{
-                        backgroundColor: 'rgba(0, 229, 255, 0.1)',
-                        color: '#00E5FF',
-                        border: '1px solid rgba(0, 229, 255, 0.3)',
+                        backgroundColor: 'rgba(129, 236, 255, 0.1)',
+                        color: '#81ecff',
+                        border: '1px solid rgba(129, 236, 255, 0.3)',
                         borderRadius: 0,
                       }}
                       rightSection={
@@ -586,7 +585,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               }}
               styles={kcSelectStyles}
             />
-            <Text size="xs" mt={4} style={{ color: '#5A5E66' }} className="font-data">
+            <Text size="xs" mt={4} style={{ color: '#525560' }} className="font-data">
               This task will be blocked until all dependencies are complete
             </Text>
           </Box>
@@ -595,7 +594,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
         {/* Section header: RECURRENCE */}
         <Text
           className="font-data micro-meta"
-          style={{ color: '#5A5E66' }}
+          style={{ color: '#525560' }}
         >
           RECURRENCE
         </Text>
@@ -613,7 +612,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
           }}
           styles={{
             label: {
-              color: '#E0E0E0',
+              color: '#e6e7f5',
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: '0.8125rem',
             },
@@ -627,7 +626,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               <Text
                 className="font-data micro-meta"
                 mb="xs"
-                style={{ color: '#8A8F98' }}
+                style={{ color: '#a8aab7' }}
               >
                 RECURRENCE PATTERN
               </Text>
@@ -637,7 +636,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               />
 
               {/* Next occurrence preview */}
-              <Text size="xs" mt="xs" className="font-data" style={{ color: '#5A5E66' }}>
+              <Text size="xs" mt="xs" className="font-data" style={{ color: '#525560' }}>
                 {getNextOccurrenceText(
                   formData.recurrence_rule,
                   formData.due_date ? new Date(formData.due_date) : undefined
@@ -673,7 +672,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               onChange={(e) => handleChange('is_habit', e.currentTarget.checked)}
               styles={{
                 label: {
-                  color: '#E0E0E0',
+                  color: '#e6e7f5',
                   fontFamily: '"JetBrains Mono", monospace',
                   fontSize: '0.8125rem',
                 },
@@ -706,12 +705,12 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
           </>
         )}
 
-        <Divider style={{ borderColor: 'rgba(59, 73, 76, 0.15)' }} />
+        <Divider style={{ borderColor: 'rgba(69, 71, 82, 0.15)' }} />
 
         {/* Section header: METADATA */}
         <Text
           className="font-data micro-meta"
-          style={{ color: '#5A5E66' }}
+          style={{ color: '#525560' }}
         >
           METADATA
         </Text>
@@ -726,13 +725,13 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
           styles={{
             input: {
               backgroundColor: '#0B0E17',
-              borderColor: 'rgba(59, 73, 76, 0.15)',
+              borderColor: 'rgba(69, 71, 82, 0.15)',
               borderRadius: 0,
-              color: '#E0E0E0',
+              color: '#e6e7f5',
               fontFamily: '"JetBrains Mono", monospace',
               '&:focus-within': {
-                borderColor: '#00E5FF',
-                boxShadow: '0 0 8px rgba(0, 229, 255, 0.3)',
+                borderColor: '#81ecff',
+                boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)',
               },
             },
             label: {
@@ -740,11 +739,11 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               fontSize: '0.6875rem',
               textTransform: 'uppercase' as const,
               letterSpacing: '0.1em',
-              color: '#8A8F98',
+              color: '#a8aab7',
             },
             pill: {
-              backgroundColor: 'rgba(0, 229, 255, 0.1)',
-              color: '#00E5FF',
+              backgroundColor: 'rgba(129, 236, 255, 0.1)',
+              color: '#81ecff',
               borderRadius: 0,
             },
           }}
@@ -753,7 +752,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
         {/* Section header: SUBTASKS */}
         <Text
           className="font-data micro-meta"
-          style={{ color: '#5A5E66' }}
+          style={{ color: '#525560' }}
         >
           SUBTASKS
         </Text>
@@ -767,14 +766,14 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               mb={4}
               style={{
                 backgroundColor: '#272A34',
-                border: '1px solid rgba(59, 73, 76, 0.15)',
+                border: '1px solid rgba(69, 71, 82, 0.15)',
                 padding: '6px 10px',
               }}
             >
               <Text
                 size="sm"
                 className="font-data"
-                style={{ flex: 1, color: '#E0E0E0' }}
+                style={{ flex: 1, color: '#e6e7f5' }}
               >
                 • {subtask.text}
               </Text>
@@ -783,7 +782,7 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
                 variant="subtle"
                 onClick={() => handleRemoveSubtask(index)}
                 aria-label="Remove subtask"
-                style={{ color: '#FF007F' }}
+                style={{ color: '#ff6b9b' }}
               >
                 <IconTrash size={14} />
               </ActionIcon>
@@ -805,9 +804,9 @@ export default function TaskForm({ open, task, onSave, onClose, allTasks = [] }:
               variant="light"
               aria-label="Add subtask"
               style={{
-                backgroundColor: 'rgba(0, 229, 255, 0.1)',
-                color: '#00E5FF',
-                border: '1px solid rgba(0, 229, 255, 0.3)',
+                backgroundColor: 'rgba(129, 236, 255, 0.1)',
+                color: '#81ecff',
+                border: '1px solid rgba(129, 236, 255, 0.3)',
                 borderRadius: 0,
               }}
             >

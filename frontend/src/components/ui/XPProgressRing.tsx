@@ -15,7 +15,7 @@ export function XPProgressRing({
   size = 192,
   strokeWidth = 8,
   progress,
-  color = '#00E5FF',
+  color = '#81ecff',
   trackColor = '#272A34',
   label,
   sublabel,
@@ -78,7 +78,7 @@ export function XPProgressRing({
               style={{
                 fontSize: size * 0.18,
                 fontWeight: 700,
-                color: '#E0E0E0',
+                color: '#e6e7f5',
                 lineHeight: 1.2,
               }}
             >

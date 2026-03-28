@@ -17,20 +17,20 @@ interface TaskCalendarProps {
 
 // Kinetic Console priority colors for events
 const priorityColors: Record<string, { bg: string; border: string; text: string }> = {
-  'Defcon One': { bg: 'rgba(255, 0, 127, 0.15)', border: '#FF007F', text: '#FF007F' },
+  'Defcon One': { bg: 'rgba(255, 107, 155, 0.15)', border: '#ff6b9b', text: '#ff6b9b' },
   'High': { bg: 'rgba(255, 199, 117, 0.15)', border: '#FFC775', text: '#FFC775' },
-  'Medium': { bg: 'rgba(0, 229, 255, 0.15)', border: '#00E5FF', text: '#00E5FF' },
-  'Low': { bg: 'rgba(59, 73, 76, 0.2)', border: '#3B494C', text: '#8A8F98' },
-  'Trivial': { bg: 'rgba(59, 73, 76, 0.1)', border: '#32343F', text: '#5A5E66' },
+  'Medium': { bg: 'rgba(129, 236, 255, 0.15)', border: '#81ecff', text: '#81ecff' },
+  'Low': { bg: 'rgba(69, 71, 82, 0.2)', border: '#454752', text: '#a8aab7' },
+  'Trivial': { bg: 'rgba(69, 71, 82, 0.1)', border: '#32343F', text: '#525560' },
 };
 
 // Legend display (simplified keys for legend)
 const legendItems = [
-  { label: 'Critical', color: '#FF007F' },
+  { label: 'Critical', color: '#ff6b9b' },
   { label: 'High', color: '#FFC775' },
-  { label: 'Medium', color: '#00E5FF' },
-  { label: 'Low', color: '#3B494C' },
-  { label: 'Complete', color: '#5A5E66' },
+  { label: 'Medium', color: '#81ecff' },
+  { label: 'Low', color: '#454752' },
+  { label: 'Complete', color: '#525560' },
 ];
 
 // UI component - tested via integration tests
@@ -74,8 +74,8 @@ export default function TaskCalendar({
           end: task.due_date,
           allDay: !task.due_date?.includes('T'),
           backgroundColor: task.is_complete ? '#272A34' : colors.bg,
-          borderColor: task.is_complete ? '#5A5E66' : isOverdue ? '#FF007F' : colors.border,
-          textColor: task.is_complete ? '#5A5E66' : colors.text,
+          borderColor: task.is_complete ? '#525560' : isOverdue ? '#ff6b9b' : colors.border,
+          textColor: task.is_complete ? '#525560' : colors.text,
           extendedProps: {
             task,
             isHabit: task.is_habit,
@@ -179,7 +179,7 @@ export default function TaskCalendar({
                 borderLeft: `3px solid ${color}`,
               }}
             />
-            <Text size="xs" className="font-data" style={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: '#8A8F98' }}>
+            <Text size="xs" className="font-data" style={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: '#a8aab7' }}>
               {label}
             </Text>
           </Group>
@@ -230,7 +230,7 @@ export default function TaskCalendar({
                 fw={600}
                 className="font-display"
                 td={selectedTask.is_complete ? 'line-through' : undefined}
-                style={{ color: '#E0E0E0' }}
+                style={{ color: '#e6e7f5' }}
               >
                 {selectedTask.title}
               </Text>
@@ -242,7 +242,7 @@ export default function TaskCalendar({
         {selectedTask && (
           <Box>
             {selectedTask.description && (
-              <Text size="sm" mb="md" style={{ color: '#8A8F98' }}>
+              <Text size="sm" mb="md" style={{ color: '#a8aab7' }}>
                 {selectedTask.description}
               </Text>
             )}
@@ -264,7 +264,7 @@ export default function TaskCalendar({
             </Group>
 
             {selectedTask.due_date && (
-              <Text size="sm" className="font-data" style={{ color: '#8A8F98' }} mb="xs">
+              <Text size="sm" className="font-data" style={{ color: '#a8aab7' }} mb="xs">
                 DUE: {selectedTask.due_date.includes('T')
                   ? new Date(selectedTask.due_date).toLocaleString()
                   : new Date(selectedTask.due_date + 'T00:00:00').toLocaleDateString()}
@@ -272,7 +272,7 @@ export default function TaskCalendar({
             )}
 
             {selectedTask.project && (
-              <Text size="sm" className="font-data" style={{ color: '#8A8F98' }} mb="xs">
+              <Text size="sm" className="font-data" style={{ color: '#a8aab7' }} mb="xs">
                 PROJECT: {selectedTask.project}
               </Text>
             )}
