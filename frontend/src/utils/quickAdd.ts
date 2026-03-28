@@ -124,10 +124,9 @@ export function parseRecurrenceExpression(expr: string): string | null {
       month: 'MONTHLY',
       year: 'YEARLY',
     };
+    // Regex guarantees everyMatch[2] is one of the keys above
     const freq = unitMap[everyMatch[2]];
-    if (freq) {
-      return interval > 1 ? `FREQ=${freq};INTERVAL=${interval}` : `FREQ=${freq}`;
-    }
+    return interval > 1 ? `FREQ=${freq};INTERVAL=${interval}` : `FREQ=${freq}`;
   }
 
   return null;

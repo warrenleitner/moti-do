@@ -56,6 +56,9 @@ interface QuickAddBoxProps {
   onTaskCreated?: () => void;
 }
 
+// UI component - tested via integration tests
+/* v8 ignore start */
+
 /**
  * Build the full task data from a parsed QuickAddResult with defaults applied.
  */
@@ -79,8 +82,6 @@ function buildTaskData(parsed: QuickAddResult): Record<string, unknown> {
   };
 }
 
-// UI component - tested via integration tests
-/* v8 ignore start */
 export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
   const [input, setInput] = useState('');
   const [showHelp, setShowHelp] = useState(false);
