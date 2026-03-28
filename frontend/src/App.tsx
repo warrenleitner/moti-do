@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Center, Loader, Text, Button, Alert, Stack } from './ui';
 import MainLayout from './components/layout/MainLayout';
 import { InstallPrompt } from './components/common/InstallPrompt';
@@ -53,32 +54,35 @@ function App() {
   }
 
   return (
-    <Routes>
-      {/* Public route - Login page */}
-      <Route path="/login" element={<LoginPage />} />
+    <>
+      <Routes>
+        {/* Public route - Login page */}
+        <Route path="/login" element={<LoginPage />} />
 
-      {/* Protected routes - require authentication */}
-      <Route
-        path="/*"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <CrisisModeBanner />
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/tasks" element={<TasksPage />} />
-                <Route path="/habits" element={<HabitsPage />} />
-                <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/kanban" element={<KanbanPage />} />
-                <Route path="/graph" element={<GraphPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-              </Routes>
-              <InstallPrompt />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+        {/* Protected routes - require authentication */}
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <CrisisModeBanner />
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/tasks" element={<TasksPage />} />
+                  <Route path="/habits" element={<HabitsPage />} />
+                  <Route path="/calendar" element={<CalendarPage />} />
+                  <Route path="/kanban" element={<KanbanPage />} />
+                  <Route path="/graph" element={<GraphPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                </Routes>
+                <InstallPrompt />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+      <SpeedInsights />
+    </>
   );
 }
 
