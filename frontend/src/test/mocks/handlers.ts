@@ -69,6 +69,7 @@ export const mockUserProfile = {
   level: 5,
   last_processed_date: '2025-01-07',
   vacation_mode: false,
+  timezone: 'UTC',
 };
 
 export const mockUserStats = {
@@ -278,6 +279,7 @@ export const handlers = [
       current_date: '2025-01-09',
       vacation_mode: false,
       pending_days: 0,
+      timezone: 'UTC',
     });
   }),
 
@@ -287,6 +289,7 @@ export const handlers = [
       current_date: '2025-01-09',
       vacation_mode: false,
       pending_days: 0,
+      timezone: 'UTC',
     });
   }),
 

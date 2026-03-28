@@ -57,6 +57,7 @@ export interface UserProfile {
   level: number;
   last_processed_date: string;
   vacation_mode: boolean;
+  timezone: string | null;
 }
 
 export interface UserStats {
@@ -131,6 +132,7 @@ export interface SystemStatus {
   current_date: string;
   vacation_mode: boolean;
   pending_days: number;
+  timezone: string | null;
 }
 
 export interface JumpToCurrentInstancePreview {
@@ -533,6 +535,12 @@ export const userApi = {
 
   resetScoringConfig: async (): Promise<ScoringConfig> => {
     const response = await apiClient.post<ScoringConfig>('/user/scoring-config/reset');
+    return response.data;
+  },
+
+  // Update timezone
+  updateTimezone: async (timezone: string): Promise<UserProfile> => {
+    const response = await apiClient.put<UserProfile>('/user/timezone', { timezone });
     return response.data;
   },
 };

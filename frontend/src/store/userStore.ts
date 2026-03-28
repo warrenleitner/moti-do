@@ -42,6 +42,7 @@ interface UserState {
   toggleVacation: (enable: boolean) => Promise<void>;
   resetScoreTracking: () => Promise<void>;
   withdrawXP: (amount: number, description?: string) => Promise<void>;
+  updateTimezone: (timezone: string) => Promise<void>;
   initializeUser: () => Promise<void>;
 }
 
@@ -365,6 +366,20 @@ export const useUserStore = create<UserState>()(
           }
         },
 
+        updateTimezone: async (timezone) => {
+          set({ isLoading: true, error: null });
+          try {
+            await userApi.updateTimezone(timezone);
+            // Refetch system status so current_date and pending_days reflect the new timezone
+            await get().fetchSystemStatus();
+            set({ isLoading: false });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to update timezone';
+            set({ error: message, isLoading: false });
+            throw error;
+          }
+        },
+
         initializeUser: async () => {
           set({ isLoading: true, error: null });
           try {
@@ -411,6 +426,20 @@ export const useUserStore = create<UserState>()(
               isLoading: false,
               error: null,
             });
+
+            // Auto-sync browser timezone when the user has no timezone configured
+            if (!profile.timezone) {
+              const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+              if (browserTz) {
+                try {
+                  await userApi.updateTimezone(browserTz);
+                  const refreshedStatus = await systemApi.getStatus();
+                  set({ systemStatus: refreshedStatus });
+                } catch {
+                  // Non-critical – proceed without timezone sync
+                }
+              }
+            }
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to initialize user';
             set({ error: message, isLoading: false });

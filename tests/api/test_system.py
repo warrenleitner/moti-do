@@ -118,6 +118,27 @@ class TestSystemStatusEndpoint:
         assert data["pending_days"] == 0
 
 
+    def test_system_status_includes_timezone(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Test that system status response includes user timezone."""
+        test_user.timezone = "America/New_York"
+
+        response = client.get("/api/system/status")
+        data = response.json()
+        assert data["timezone"] == "America/New_York"
+
+    def test_system_status_timezone_null_when_not_set(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Test that timezone is null when not configured."""
+        test_user.timezone = None
+
+        response = client.get("/api/system/status")
+        data = response.json()
+        assert data["timezone"] is None
+
+
 class TestAdvanceDateEndpoint:
     """Tests for POST /api/system/advance endpoint."""
 

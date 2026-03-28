@@ -63,11 +63,14 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toggleVacation, advanceDate, withdrawXP } = useUserStore();
+  const { toggleVacation, advanceDate, withdrawXP, updateTimezone, fetchSystemStatus } = useUserStore();
   const systemStatus = useSystemStatus();
   const stats = useUserStats();
   const [xpHistory, setXPHistory] = useState<XPTransaction[]>([]);
   const [loadingXP, setLoadingXP] = useState(false);
+
+  // Timezone state
+  const [savingTimezone, setSavingTimezone] = useState(false);
 
   // Advance Date state
   const [advancingDate, setAdvancingDate] = useState(false);
@@ -1321,7 +1324,14 @@ export default function SettingsPage() {
               </Group>
               <Group gap="xs">
                 <Text className="font-data" size="xs" style={{ color: '#8A8F98', width: 180 }}>REAL_DATE:</Text>
-                <Text className="font-data" size="xs" style={{ color: '#E0E0E0' }}>{new Date().toLocaleDateString()}</Text>
+                <Text className="font-data" size="xs" style={{ color: '#E0E0E0' }}>
+                  {systemStatus?.current_date
+                    ? (() => {
+                        const [year, month, day] = systemStatus.current_date.split('-').map(Number);
+                        return new Date(year, month - 1, day).toLocaleDateString();
+                      })()
+                    : new Date().toLocaleDateString()}
+                </Text>
               </Group>
               <Group gap="xs">
                 <Text className="font-data" size="xs" style={{ color: '#8A8F98', width: 180 }}>LAST_COMPLETED:</Text>
@@ -1336,6 +1346,36 @@ export default function SettingsPage() {
                 />
               </Group>
             </Stack>
+          </Box>
+
+          <Box style={{ marginBottom: '1rem' }}>
+            <Select
+              label="Timezone"
+              description="Dates and processing use this timezone"
+              placeholder="Select timezone"
+              data={Intl.supportedValuesOf('timeZone')}
+              value={systemStatus?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone}
+              onChange={async (value) => {
+                if (!value) return;
+                setSavingTimezone(true);
+                try {
+                  await updateTimezone(value);
+                  await fetchSystemStatus();
+                  setMessage({ type: 'success', text: `Timezone updated to ${value}` });
+                } catch {
+                  setMessage({ type: 'error', text: 'Failed to update timezone' });
+                } finally {
+                  setSavingTimezone(false);
+                }
+              }}
+              searchable
+              disabled={savingTimezone}
+              size="sm"
+              styles={{
+                label: { color: '#8A8F98', fontSize: '0.75rem', fontFamily: 'var(--font-data)' },
+                description: { color: '#5A5E66', fontSize: '0.7rem' },
+              }}
+            />
           </Box>
 
           {systemStatus?.pending_days && systemStatus.pending_days > 0 ? (
