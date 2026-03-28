@@ -1,13 +1,17 @@
 # tests/api/test_user.py
+# pylint: disable=redefined-outer-name
 """
 Tests for the user API endpoints.
 """
 
+from datetime import date
 from datetime import datetime as dt
+from datetime import timedelta
 
 from fastapi.testclient import TestClient
 
 from motido.core.models import User
+from motido.core.models import XPTransaction as XPTx
 
 
 class TestUserProfile:
@@ -277,9 +281,7 @@ class TestProjects:
 class TestNotificationSummary:
     """Tests for GET /api/user/notification-summary endpoint."""
 
-    def test_get_notification_summary_empty(
-        self, empty_client: TestClient
-    ) -> None:
+    def test_get_notification_summary_empty(self, empty_client: TestClient) -> None:
         """Test notification summary for user with no tasks."""
         response = empty_client.get("/api/user/notification-summary")
         assert response.status_code == 200
@@ -296,13 +298,9 @@ class TestNotificationSummary:
         self, client: TestClient, test_user: User
     ) -> None:
         """Test notification summary counts tasks due today."""
-        from datetime import datetime as dt
-
         # Set a task's due date to processing date (game day)
         game_day = test_user.last_processed_date
-        test_user.tasks[0].due_date = dt.combine(
-            game_day, dt.min.time()
-        )
+        test_user.tasks[0].due_date = dt.combine(game_day, dt.min.time())
         test_user.tasks[0].is_complete = False
 
         response = client.get("/api/user/notification-summary")
@@ -314,8 +312,6 @@ class TestNotificationSummary:
         self, client: TestClient, test_user: User
     ) -> None:
         """Test notification summary counts completed tasks via XP transactions."""
-        from motido.core.models import XPTransaction as XPTx
-
         game_day = test_user.last_processed_date
         # Add a task_completion transaction for today's game day
         test_user.xp_transactions.append(
@@ -338,8 +334,6 @@ class TestNotificationSummary:
         self, client: TestClient, test_user: User
     ) -> None:
         """Test notification summary tracks XP gained today."""
-        from motido.core.models import XPTransaction as XPTx
-
         game_day = test_user.last_processed_date
         test_user.xp_transactions.append(
             XPTx(
@@ -360,8 +354,6 @@ class TestNotificationSummary:
         self, client: TestClient, test_user: User
     ) -> None:
         """Test notification summary reports days behind."""
-        from datetime import date, timedelta
-
         # Set processing date 3 days behind real date
         test_user.last_processed_date = date.today() - timedelta(days=4)
 

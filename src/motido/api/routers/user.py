@@ -142,8 +142,7 @@ async def get_notification_summary(user: CurrentUser) -> NotificationSummary:
     completed_today = sum(
         1
         for t in user.xp_transactions
-        if getattr(t, "game_date", None) == game_day
-        and t.source == "task_completion"
+        if getattr(t, "game_date", None) == game_day and t.source == "task_completion"
     )
 
     # Count tasks still due on the game day (incomplete, due today or overdue)
@@ -152,9 +151,7 @@ async def get_notification_summary(user: CurrentUser) -> NotificationSummary:
         for t in user.tasks
         if not t.is_complete
         and t.due_date is not None
-        and (
-            t.due_date.date() if hasattr(t.due_date, "date") else t.due_date
-        )
+        and (t.due_date.date() if hasattr(t.due_date, "date") else t.due_date)
         <= game_day
     )
 
@@ -162,8 +159,7 @@ async def get_notification_summary(user: CurrentUser) -> NotificationSummary:
     xp_gained_today = sum(
         t.amount
         for t in user.xp_transactions
-        if getattr(t, "game_date", None) == game_day
-        and t.source == "daily_earned"
+        if getattr(t, "game_date", None) == game_day and t.source == "daily_earned"
     )
 
     # Points at risk (penalty scores for due but uncompleted tasks)
@@ -174,9 +170,7 @@ async def get_notification_summary(user: CurrentUser) -> NotificationSummary:
         for t in user.tasks
         if not t.is_complete
         and t.due_date is not None
-        and (
-            t.due_date.date() if hasattr(t.due_date, "date") else t.due_date
-        )
+        and (t.due_date.date() if hasattr(t.due_date, "date") else t.due_date)
         <= game_day
     )
 
