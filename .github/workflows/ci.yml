@@ -14,6 +14,30 @@ concurrency:
 
 jobs:
   # ============================================
+  # Version Check
+  # ============================================
+  version-check:
+    name: Version Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch main branch for merge-base
+        run: git fetch origin main:refs/remotes/origin/main || true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Check version bump and sync
+        run: python3 scripts/check_version.py
+
+  # ============================================
   # Python Backend Tests
   # ============================================
   python-lint:
@@ -402,6 +426,7 @@ jobs:
   ci-success:
     name: CI Success
     needs:
+      - version-check
       - python-lint
       - python-typecheck
       - python-test
@@ -419,7 +444,8 @@ jobs:
         run: |
           # Security job is allowed to fail (continue-on-error: true)
           # Check only required jobs for success
-          if [[ "${{ needs.python-lint.result }}" != "success" ]] || \
+          if [[ "${{ needs.version-check.result }}" != "success" ]] || \
+             [[ "${{ needs.python-lint.result }}" != "success" ]] || \
              [[ "${{ needs.python-typecheck.result }}" != "success" ]] || \
              [[ "${{ needs.python-test.result }}" != "success" ]] || \
              [[ "${{ needs.frontend-lint.result }}" != "success" ]] || \
