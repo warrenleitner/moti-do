@@ -54,7 +54,7 @@ class TestTimezone:
         assert test_user.timezone == "America/New_York"
 
     def test_update_timezone_utc(
-        self, client: TestClient, test_user: User
+        self, client: TestClient, test_user: User  # pylint: disable=unused-argument
     ) -> None:
         """Test setting timezone to UTC."""
         response = client.put("/api/user/timezone", json={"timezone": "UTC"})
@@ -63,14 +63,12 @@ class TestTimezone:
 
     def test_update_timezone_invalid(self, client: TestClient) -> None:
         """Test that an invalid timezone is rejected."""
-        response = client.put(
-            "/api/user/timezone", json={"timezone": "Invalid/Zone"}
-        )
+        response = client.put("/api/user/timezone", json={"timezone": "Invalid/Zone"})
         assert response.status_code == 400
         assert "Invalid timezone" in response.json()["detail"]
 
     def test_timezone_persists_in_profile(
-        self, client: TestClient, test_user: User
+        self, client: TestClient, test_user: User  # pylint: disable=unused-argument
     ) -> None:
         """Test that a saved timezone is reflected in the profile."""
         client.put("/api/user/timezone", json={"timezone": "Asia/Tokyo"})

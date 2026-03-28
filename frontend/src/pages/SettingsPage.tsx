@@ -51,6 +51,9 @@ import {
 import { useUserStore, useSystemStatus, useUserStats } from '../store/userStore';
 import { GlowCard, ArcadeButton, DataBadge } from '../components/ui';
 
+// Pre-compute the list of IANA timezone identifiers
+const TIMEZONE_OPTIONS = Intl.supportedValuesOf('timeZone');
+
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
 export default function SettingsPage() {
@@ -1353,7 +1356,7 @@ export default function SettingsPage() {
               label="Timezone"
               description="Dates and processing use this timezone"
               placeholder="Select timezone"
-              data={Intl.supportedValuesOf('timeZone')}
+              data={TIMEZONE_OPTIONS}
               value={systemStatus?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone}
               onChange={async (value) => {
                 if (!value) return;
@@ -1369,6 +1372,7 @@ export default function SettingsPage() {
                 }
               }}
               searchable
+              limit={50}
               disabled={savingTimezone}
               size="sm"
               styles={{

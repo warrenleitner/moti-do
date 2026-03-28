@@ -117,7 +117,6 @@ class TestSystemStatusEndpoint:
         data = response.json()
         assert data["pending_days"] == 0
 
-
     def test_system_status_includes_timezone(
         self, client: TestClient, test_user: User
     ) -> None:

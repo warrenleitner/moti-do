@@ -5,7 +5,7 @@ Main FastAPI application for Moti-Do.
 """
 
 import os
-from datetime import date, timedelta
+from datetime import timedelta
 from time import perf_counter
 
 from dotenv import load_dotenv

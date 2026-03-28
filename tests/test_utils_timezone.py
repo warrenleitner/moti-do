@@ -48,9 +48,12 @@ def test_get_today_for_timezone_different_date_at_boundary() -> None:
     # 2025-01-15 00:30 UTC -> still Jan 14 in US Pacific (UTC-8)
     fake_utc_now = datetime(2025, 1, 15, 0, 30, 0, tzinfo=ZoneInfo("UTC"))
 
+    def _fake_now(tz: object) -> datetime:
+        return fake_utc_now.astimezone(tz)  # type: ignore[arg-type]
+
     with patch("motido.core.utils.datetime") as mock_dt:
-        mock_dt.now = lambda tz: fake_utc_now.astimezone(tz)
-        mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
+        mock_dt.now = _fake_now
+        mock_dt.side_effect = datetime
 
         utc_date = get_today_for_timezone("UTC")
         pacific_date = get_today_for_timezone("America/Los_Angeles")
