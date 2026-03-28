@@ -1598,7 +1598,7 @@ export default function SettingsPage() {
               {notificationsEnabled && (
                 <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(255, 199, 117, 0.2)', padding: '0.75rem' }}>
                   <Text className="font-data" size="xs" style={{ color: '#FFC775' }}>
-                    ✓ You&apos;ll get a daily notification at {notificationTime} with your task summary.
+                    ✓ You&apos;ll get a daily notification at <time aria-label={`Scheduled time: ${notificationTime}`}>{notificationTime}</time> with your task summary.
                   </Text>
                 </Box>
               )}

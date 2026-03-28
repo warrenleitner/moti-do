@@ -118,15 +118,18 @@ export async function showDailyNotification(): Promise<boolean> {
 
 let schedulerInterval: ReturnType<typeof setInterval> | null = null;
 
+function getLocalDateString(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 function shouldShowNotification(): boolean {
   if (!getNotificationEnabled()) return false;
   if (!isNotificationSupported() || Notification.permission !== 'granted') return false;
 
   const now = new Date();
-  const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   // Already shown today?
-  if (getLastShownDate() === localDate) return false;
+  if (getLastShownDate() === getLocalDateString(now)) return false;
 
   // Is it past the scheduled time?
   const scheduledTime = getNotificationTime(); // "HH:MM"
@@ -140,12 +143,9 @@ function shouldShowNotification(): boolean {
 async function checkAndNotify(): Promise<void> {
   if (!shouldShowNotification()) return;
 
-  const now = new Date();
-  const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
   const shown = await showDailyNotification();
   if (shown) {
-    setLastShownDate(localDate);
+    setLastShownDate(getLocalDateString());
   }
 }
 
