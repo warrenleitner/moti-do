@@ -6,6 +6,7 @@ User profile, XP, and badges API endpoints.
 
 import json
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 
@@ -92,8 +93,6 @@ async def update_timezone(
 
     Accepts an IANA timezone name (e.g. "America/New_York").
     """
-    from zoneinfo import ZoneInfo  # pylint: disable=import-outside-toplevel
-
     try:
         ZoneInfo(request.timezone)
     except (KeyError, ValueError) as exc:
