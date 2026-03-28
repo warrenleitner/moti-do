@@ -47,6 +47,7 @@ export {
   IconLock,
   IconLogout,
   IconMinus,
+  IconNotes,
   IconPencil,
   IconPlayerSkipForward,
   IconPlus,

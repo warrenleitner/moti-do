@@ -6,11 +6,14 @@
  * - Tags: #tagname (multiple allowed)
  * - Due date: @tomorrow, @friday, @next-week, @dec-25
  * - Project: ~projectname
+ * - Recurrence: &daily, &weekly, &monthly, &yearly, &every-2-weeks
+ *   - Optional style: &daily:strict, &weekly:completion, &monthly:due
+ * - Description: "quoted description text"
  *
- * Example: "Buy groceries !high #personal @friday ~home"
+ * Example: "Buy groceries !high #personal @friday ~home &weekly"
  */
 
-import { Priority } from '../types';
+import { Priority, RecurrenceType } from '../types';
 import type { Task } from '../types';
 import { addDays, nextDay, parse, isValid } from 'date-fns';
 
@@ -77,6 +80,58 @@ const MONTH_MAP: Record<string, number> = {
   dec: 11,
   december: 11,
 };
+
+/** Simple recurrence keywords → rrule strings */
+const RECURRENCE_MAP: Record<string, string> = {
+  daily: 'FREQ=DAILY',
+  weekly: 'FREQ=WEEKLY',
+  monthly: 'FREQ=MONTHLY',
+  yearly: 'FREQ=YEARLY',
+};
+
+/** Recurrence type aliases → RecurrenceType values */
+const RECURRENCE_TYPE_MAP: Record<string, string> = {
+  strict: RecurrenceType.STRICT,
+  completion: RecurrenceType.FROM_COMPLETION,
+  'from-completion': RecurrenceType.FROM_COMPLETION,
+  due: RecurrenceType.FROM_DUE_DATE,
+  'from-due': RecurrenceType.FROM_DUE_DATE,
+};
+
+/**
+ * Parse a recurrence expression into an rrule string.
+ * Supports:
+ * - Simple keywords: daily, weekly, monthly, yearly
+ * - Interval format: every-2-weeks, every-3-days
+ *
+ * @returns The rrule string, or null if not recognized
+ */
+export function parseRecurrenceExpression(expr: string): string | null {
+  const lower = expr.toLowerCase();
+
+  // Simple keyword
+  if (RECURRENCE_MAP[lower]) {
+    return RECURRENCE_MAP[lower];
+  }
+
+  // "every-N-unit(s)" format: every-2-weeks, every-3-days
+  const everyMatch = lower.match(/^every-(\d+)-(day|week|month|year)s?$/);
+  if (everyMatch) {
+    const interval = parseInt(everyMatch[1], 10);
+    const unitMap: Record<string, string> = {
+      day: 'DAILY',
+      week: 'WEEKLY',
+      month: 'MONTHLY',
+      year: 'YEARLY',
+    };
+    const freq = unitMap[everyMatch[2]];
+    if (freq) {
+      return interval > 1 ? `FREQ=${freq};INTERVAL=${interval}` : `FREQ=${freq}`;
+    }
+  }
+
+  return null;
+}
 
 /**
  * Parse a date expression into a Date object.
@@ -165,6 +220,12 @@ export interface QuickAddResult {
   dueDate?: Date;
   /** Extracted project name */
   project?: string;
+  /** Recurrence rule (rrule string), if specified */
+  recurrenceRule?: string;
+  /** Recurrence type (Strict, From Completion, From Due Date) */
+  recurrenceType?: string;
+  /** Description text (from double-quoted string) */
+  description?: string;
 }
 
 /**
@@ -185,6 +246,14 @@ export function parseQuickAddInput(input: string): QuickAddResult {
 
   // Clone input for processing
   let remaining = input;
+
+  // Extract description (double-quoted text) - must be done first to avoid
+  // modifiers inside quotes being parsed
+  const descMatch = remaining.match(/"([^"]+)"/);
+  if (descMatch) {
+    result.description = descMatch[1];
+    remaining = remaining.replace(descMatch[0], ' ');
+  }
 
   // Extract priority (!word or !number) - only remove if recognized
   const priorityMatch = remaining.match(/\s*!([\w]+)/);
@@ -224,6 +293,24 @@ export function parseQuickAddInput(input: string): QuickAddResult {
     remaining = remaining.replace(projectMatch[0], ' ');
   }
 
+  // Extract recurrence (&expression, optional :type suffix)
+  const recurrenceMatch = remaining.match(/\s*&([\w-]+(?::[\w-]+)?)/);
+  if (recurrenceMatch) {
+    const fullExpr = recurrenceMatch[1];
+    const colonIdx = fullExpr.indexOf(':');
+    const recExpr = colonIdx >= 0 ? fullExpr.substring(0, colonIdx) : fullExpr;
+    const typeExpr = colonIdx >= 0 ? fullExpr.substring(colonIdx + 1) : undefined;
+
+    const rrule = parseRecurrenceExpression(recExpr);
+    if (rrule) {
+      result.recurrenceRule = rrule;
+      if (typeExpr && RECURRENCE_TYPE_MAP[typeExpr.toLowerCase()]) {
+        result.recurrenceType = RECURRENCE_TYPE_MAP[typeExpr.toLowerCase()];
+      }
+      remaining = remaining.replace(recurrenceMatch[0], ' ');
+    }
+  }
+
   // Clean up remaining text as title
   result.title = remaining.trim().replace(/\s+/g, ' ');
 
@@ -254,5 +341,29 @@ export function quickAddResultToTask(result: QuickAddResult): Partial<Task> {
     task.project = result.project;
   }
 
+  if (result.recurrenceRule) {
+    task.recurrence_rule = result.recurrenceRule;
+    task.is_habit = true;
+    task.recurrence_type = (result.recurrenceType as Task['recurrence_type']) || RecurrenceType.STRICT;
+  }
+
+  if (result.description) {
+    task.text_description = result.description;
+  }
+
   return task;
+}
+
+/**
+ * Parse bulk quick-add input (multiple lines, one task per line).
+ * Empty lines and whitespace-only lines are skipped.
+ *
+ * @param input - Multi-line input string
+ * @returns Array of parsed results (only those with valid titles)
+ */
+export function parseBulkQuickAddInput(input: string): QuickAddResult[] {
+  return input
+    .split('\n')
+    .map((line) => parseQuickAddInput(line))
+    .filter((result) => result.title.trim().length > 0);
 }
