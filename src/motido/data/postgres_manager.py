@@ -131,6 +131,19 @@ class PostgresDataManager(DataManager):
                     END $$;
                     """)
 
+                # Migration: Add timezone column to users
+                cursor.execute("""
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'users' AND column_name = 'timezone'
+                        ) THEN
+                            ALTER TABLE users ADD COLUMN timezone TEXT;
+                        END IF;
+                    END $$;
+                    """)
+
                 # Task table
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS tasks (
@@ -280,7 +293,7 @@ class PostgresDataManager(DataManager):
                     cursor.execute(
                         """
                         SELECT username, total_xp, password_hash, last_processed_date, vacation_mode,
-                               defined_tags, defined_projects
+                               defined_tags, defined_projects, timezone
                         FROM users WHERE username = %s
                         """,
                         (username,),
@@ -362,6 +375,7 @@ class PostgresDataManager(DataManager):
                         tasks=tasks,
                         last_processed_date=last_processed,
                         vacation_mode=vacation_mode,
+                        timezone=user_row.get("timezone"),
                         defined_tags=defined_tags,
                         defined_projects=defined_projects,
                         xp_transactions=xp_transactions,
@@ -585,15 +599,16 @@ class PostgresDataManager(DataManager):
         cursor.execute(
             """
             INSERT INTO users (username, total_xp, password_hash, last_processed_date,
-                              vacation_mode, defined_tags, defined_projects)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                              vacation_mode, defined_tags, defined_projects, timezone)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (username) DO UPDATE SET
                 total_xp = EXCLUDED.total_xp,
                 password_hash = EXCLUDED.password_hash,
                 last_processed_date = EXCLUDED.last_processed_date,
                 vacation_mode = EXCLUDED.vacation_mode,
                 defined_tags = EXCLUDED.defined_tags,
-                defined_projects = EXCLUDED.defined_projects
+                defined_projects = EXCLUDED.defined_projects,
+                timezone = EXCLUDED.timezone
             """,
             (
                 user.username,
@@ -603,6 +618,7 @@ class PostgresDataManager(DataManager):
                 user.vacation_mode,
                 defined_tags_json,
                 defined_projects_json,
+                user.timezone,
             ),
         )
 

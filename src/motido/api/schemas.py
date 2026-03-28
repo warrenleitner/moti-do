@@ -264,6 +264,7 @@ class UserProfile(BaseModel):
     level: int
     last_processed_date: date
     vacation_mode: bool
+    timezone: str | None = None
 
 
 class UserStats(BaseModel):
@@ -307,6 +308,14 @@ class PasswordChangeRequest(BaseModel):
 
     current_password: str
     new_password: str = Field(min_length=8)
+
+
+class TimezoneUpdate(BaseModel):
+    """Schema for updating user timezone."""
+
+    timezone: str = Field(
+        ..., description="IANA timezone name (e.g., 'America/New_York')"
+    )
 
 
 # === View Schemas ===
@@ -354,6 +363,7 @@ class SystemStatus(BaseModel):
     current_date: date
     vacation_mode: bool
     pending_days: int
+    timezone: str | None = None
 
 
 # === Scoring Configuration Schemas ===

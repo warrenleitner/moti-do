@@ -148,6 +148,7 @@ def test_save_user_update_existing(
         "tasks": expected_tasks_data,
         "last_processed_date": updated_user.last_processed_date.isoformat(),
         "vacation_mode": False,
+        "timezone": None,
         "xp_transactions": [],
         "badges": [],
         "defined_tags": [],

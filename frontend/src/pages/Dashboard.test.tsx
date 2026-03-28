@@ -42,6 +42,7 @@ describe('Dashboard', () => {
       pending_days: 0,
       last_processed_date: '2024-01-01',
       current_date: '2024-01-02',
+      timezone: null,
     });
   });
 
@@ -102,6 +103,7 @@ describe('Dashboard', () => {
       pending_days: 3,
       last_processed_date: '2024-01-01',
       current_date: '2024-01-04',
+      timezone: null,
     });
 
     render(<Dashboard />);

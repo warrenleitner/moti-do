@@ -85,6 +85,7 @@ describe('KanbanPage', () => {
     vi.mocked(userStore.useSystemStatus).mockReturnValue({
       last_processed_date: '2024-01-15',
       pending_days: 0,
+      timezone: null,
     });
   });
 
