@@ -5,14 +5,37 @@ Could include things like validation, formatting, etc. later.
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from motido.core.models import Difficulty, Duration, Priority, RecurrenceType, Task
 from motido.core.recurrence import create_next_habit_instance
 
 # This file is intentionally simple for now.
 # We could add helper functions here as the application grows.
+
+
+def get_today_for_timezone(timezone_str: str | None) -> date:
+    """
+    Get today's date in the specified IANA timezone.
+
+    Falls back to the server's local date when the timezone is ``None``
+    or cannot be resolved.
+
+    Args:
+        timezone_str: IANA timezone name (e.g. "America/New_York"), or None.
+
+    Returns:
+        Today's date in the given timezone.
+    """
+    if timezone_str:
+        try:
+            tz = ZoneInfo(timezone_str)
+            return datetime.now(tz).date()
+        except (KeyError, ValueError):
+            pass
+    return date.today()
 
 
 def generate_uuid() -> str:

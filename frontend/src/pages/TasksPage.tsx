@@ -556,7 +556,7 @@ export default function TasksPage() {
           </ActionIcon>
         </Group>
         <ArcadeButton
-          variant="primary"
+          variant="gradient"
           onClick={handleCreateNew}
           disabled={isLoading}
           data-testid="add-task-fab"

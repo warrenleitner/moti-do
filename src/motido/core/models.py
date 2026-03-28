@@ -305,6 +305,7 @@ class User:  # pylint: disable=too-many-instance-attributes
     tasks: List[Task] = field(default_factory=list)
     last_processed_date: date = field(default_factory=date.today)
     vacation_mode: bool = False
+    timezone: str | None = None  # IANA timezone name (e.g., "America/New_York")
     xp_transactions: List[XPTransaction] = field(default_factory=list)
     badges: List[Badge] = field(default_factory=list)
     defined_tags: List[Tag] = field(default_factory=list)  # Global tag registry

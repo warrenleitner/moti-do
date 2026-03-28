@@ -633,6 +633,12 @@ def build_steps(config: VerifyConfig) -> List[Step]:
 
     steps: List[Step] = [
         CommandStep(
+            step_id="version:check",
+            label="Version check",
+            command=[sys.executable, "scripts/check_version.py"],
+            cwd=PROJECT_ROOT,
+        ),
+        CommandStep(
             step_id="backend:isort",
             label="Formatting (isort)",
             command=python_run + ["isort", "."],

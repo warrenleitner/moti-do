@@ -5,7 +5,7 @@ Main FastAPI application for Moti-Do.
 """
 
 import os
-from datetime import date, timedelta
+from datetime import timedelta
 from time import perf_counter
 
 from dotenv import load_dotenv
@@ -21,13 +21,13 @@ from motido.api.middleware.rate_limit import RateLimitMiddleware
 from motido.api.routers import auth, tasks, user, views
 from motido.api.schemas import AdvanceRequest, SystemStatus
 from motido.core import scoring
-from motido.core.utils import process_day
+from motido.core.utils import get_today_for_timezone, process_day
 
 # Create FastAPI app
 app = FastAPI(
     title="Moti-Do API",
     description="Backend API for the Moti-Do task and habit tracker",
-    version="0.4.0",
+    version="0.5.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
@@ -76,7 +76,7 @@ app.include_router(views.router, prefix="/api")
 @app.get("/api/health")
 async def health_check() -> dict:
     """Health check endpoint."""
-    return {"status": "healthy", "version": "0.4.0"}
+    return {"status": "healthy", "version": "0.5.0"}
 
 
 @app.get("/api/health/db")
@@ -94,7 +94,7 @@ async def db_health_check(manager: ManagerDep) -> dict:
 @app.get("/api/system/status", response_model=SystemStatus)
 async def get_system_status(user: CurrentUser) -> SystemStatus:
     """Get system status including date processing state."""
-    current = date.today()
+    current = get_today_for_timezone(user.timezone)
     # pending_days = 0 means "up to date" (last_processed_date is yesterday or today)
     # You can't process today until it's over, so yesterday is the max processable date
     pending_days = max(0, (current - user.last_processed_date).days - 1)
@@ -104,6 +104,7 @@ async def get_system_status(user: CurrentUser) -> SystemStatus:
         current_date=current,
         vacation_mode=user.vacation_mode,
         pending_days=pending_days,
+        timezone=user.timezone,
     )
 
 
@@ -116,7 +117,7 @@ async def advance_date(
     """
     Advance the processed date, running any pending operations.
     """
-    current = date.today()
+    current = get_today_for_timezone(user.timezone)
 
     if request.to_date:
         target_date = request.to_date
@@ -177,6 +178,7 @@ async def advance_date(
         current_date=current,
         vacation_mode=user.vacation_mode,
         pending_days=pending_days,
+        timezone=user.timezone,
     )
 
 
@@ -200,7 +202,7 @@ async def reset_score_tracking(
     """
     Reset score-oriented progress and align processing with the real date.
     """
-    current = date.today()
+    current = get_today_for_timezone(user.timezone)
     user.total_xp = 0
     user.xp_transactions.clear()
     user.badges.clear()
@@ -217,6 +219,7 @@ async def reset_score_tracking(
         current_date=current,
         vacation_mode=user.vacation_mode,
         pending_days=0,
+        timezone=user.timezone,
     )
 
 
