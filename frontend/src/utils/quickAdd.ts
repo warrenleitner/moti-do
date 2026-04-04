@@ -6,8 +6,9 @@
  * - Tags: #tagname (multiple allowed)
  * - Due date: @tomorrow, @friday, @next-week, @dec-25
  * - Project: ~projectname
- * - Recurrence: &daily, &weekly, &monthly, &yearly, &every-2-weeks
- *   - Optional style: &daily:strict, &weekly:completion, &monthly:due
+ * - Recurrence: &daily, &weekly, &weekly-wed, &weekly-mon,wed,fri,
+ *   &monthly, &yearly, &every-2-weeks
+ *   - Optional style: &daily:strict, &weekly-wed:completion, &monthly:due
  * - Description: "quoted description text"
  *
  * Example: "Buy groceries !high #personal @friday ~home &weekly"
@@ -89,6 +90,31 @@ const RECURRENCE_MAP: Record<string, string> = {
   yearly: 'FREQ=YEARLY',
 };
 
+/** Weekday aliases for weekly quick-add recurrence syntax */
+const RECURRENCE_WEEKDAY_MAP: Record<string, string> = {
+  mo: 'MO',
+  mon: 'MO',
+  monday: 'MO',
+  tu: 'TU',
+  tue: 'TU',
+  tuesday: 'TU',
+  we: 'WE',
+  wed: 'WE',
+  wednesday: 'WE',
+  th: 'TH',
+  thu: 'TH',
+  thursday: 'TH',
+  fr: 'FR',
+  fri: 'FR',
+  friday: 'FR',
+  sa: 'SA',
+  sat: 'SA',
+  saturday: 'SA',
+  su: 'SU',
+  sun: 'SU',
+  sunday: 'SU',
+};
+
 /** Recurrence type aliases → RecurrenceType values */
 const RECURRENCE_TYPE_MAP: Record<string, string> = {
   strict: RecurrenceType.STRICT,
@@ -114,6 +140,28 @@ export function parseRecurrenceExpression(expr: string): string | null {
     return RECURRENCE_MAP[lower];
   }
 
+  // Weekly with explicit weekday list:
+  // weekly-wed, weekly-mon,wed,fri, weekly-weekdays, weekly-weekends
+  const weeklyByDayMatch = lower.match(/^weekly-(.+)$/);
+  if (weeklyByDayMatch) {
+    const byDay = parseWeeklyByDayExpression(weeklyByDayMatch[1]);
+    if (byDay) {
+      return `FREQ=WEEKLY;BYDAY=${byDay}`;
+    }
+  }
+
+  // Every N weeks with explicit weekday list:
+  // every-2-weeks-wed, every-2-weeks-mon,thu
+  const everyWeeksByDayMatch = lower.match(/^every-(\d+)-weeks?-(.+)$/);
+  if (everyWeeksByDayMatch) {
+    const interval = parseInt(everyWeeksByDayMatch[1], 10);
+    const byDay = parseWeeklyByDayExpression(everyWeeksByDayMatch[2]);
+    if (byDay) {
+      const intervalPart = interval > 1 ? `;INTERVAL=${interval}` : '';
+      return `FREQ=WEEKLY${intervalPart};BYDAY=${byDay}`;
+    }
+  }
+
   // "every-N-unit(s)" format: every-2-weeks, every-3-days
   const everyMatch = lower.match(/^every-(\d+)-(day|week|month|year)s?$/);
   if (everyMatch) {
@@ -130,6 +178,30 @@ export function parseRecurrenceExpression(expr: string): string | null {
   }
 
   return null;
+}
+
+/**
+ * Parse a weekly day expression into an RFC 5545 BYDAY list.
+ */
+function parseWeeklyByDayExpression(expr: string): string | null {
+  if (expr === 'weekdays') {
+    return 'MO,TU,WE,TH,FR';
+  }
+
+  if (expr === 'weekends') {
+    return 'SA,SU';
+  }
+
+  const dayCodes = expr
+    .split(',')
+    .map((part) => RECURRENCE_WEEKDAY_MAP[part.trim()])
+    .filter((part): part is string => Boolean(part));
+
+  if (dayCodes.length === 0 || dayCodes.length !== expr.split(',').length) {
+    return null;
+  }
+
+  return dayCodes.join(',');
 }
 
 /**
@@ -293,7 +365,7 @@ export function parseQuickAddInput(input: string): QuickAddResult {
   }
 
   // Extract recurrence (&expression, optional :type suffix)
-  const recurrenceMatch = remaining.match(/\s*&([\w-]+(?::[\w-]+)?)/);
+  const recurrenceMatch = remaining.match(/\s*&([\w,-]+(?::[\w-]+)?)/);
   if (recurrenceMatch) {
     const fullExpr = recurrenceMatch[1];
     const colonIdx = fullExpr.indexOf(':');

@@ -392,6 +392,40 @@ describe('parseRecurrenceExpression', () => {
     expect(parseRecurrenceExpression('weekly')).toBe('FREQ=WEEKLY');
   });
 
+  it('parses weekly with a single weekday', () => {
+    expect(parseRecurrenceExpression('weekly-wed')).toBe('FREQ=WEEKLY;BYDAY=WE');
+  });
+
+  it('parses weekly with multiple weekdays', () => {
+    expect(parseRecurrenceExpression('weekly-mon,wed,fri')).toBe(
+      'FREQ=WEEKLY;BYDAY=MO,WE,FR'
+    );
+  });
+
+  it('parses weekly weekdays shorthand', () => {
+    expect(parseRecurrenceExpression('weekly-weekdays')).toBe(
+      'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR'
+    );
+  });
+
+  it('parses weekly weekends shorthand', () => {
+    expect(parseRecurrenceExpression('weekly-weekends')).toBe(
+      'FREQ=WEEKLY;BYDAY=SA,SU'
+    );
+  });
+
+  it('parses every-2-weeks with weekdays', () => {
+    expect(parseRecurrenceExpression('every-2-weeks-mon,thu')).toBe(
+      'FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,TH'
+    );
+  });
+
+  it('parses every-1-week with weekdays without interval', () => {
+    expect(parseRecurrenceExpression('every-1-week-wed')).toBe(
+      'FREQ=WEEKLY;BYDAY=WE'
+    );
+  });
+
   it('parses monthly', () => {
     expect(parseRecurrenceExpression('monthly')).toBe('FREQ=MONTHLY');
   });
@@ -420,6 +454,14 @@ describe('parseRecurrenceExpression', () => {
     expect(parseRecurrenceExpression('invalid')).toBeNull();
   });
 
+  it('returns null for invalid weekly weekday expression', () => {
+    expect(parseRecurrenceExpression('weekly-funday')).toBeNull();
+  });
+
+  it('returns null for invalid every-n-weeks weekday expression', () => {
+    expect(parseRecurrenceExpression('every-2-weeks-funday')).toBeNull();
+  });
+
   it('is case insensitive', () => {
     expect(parseRecurrenceExpression('DAILY')).toBe('FREQ=DAILY');
   });
@@ -435,6 +477,28 @@ describe('parseQuickAddInput - recurrence', () => {
   it('parses &weekly recurrence', () => {
     const result = parseQuickAddInput('Task &weekly');
     expect(result.recurrenceRule).toBe('FREQ=WEEKLY');
+  });
+
+  it('parses weekday-qualified weekly recurrence', () => {
+    const result = parseQuickAddInput('Dermaroll &weekly-wed:completion');
+    expect(result.recurrenceRule).toBe('FREQ=WEEKLY;BYDAY=WE');
+    expect(result.recurrenceType).toBe(RecurrenceType.FROM_COMPLETION);
+    expect(result.title).toBe('Dermaroll');
+  });
+
+  it('parses multi-day weekly recurrence', () => {
+    const result = parseQuickAddInput(
+      'Time Tracking &weekly-mon,tue,wed,thu,fri:completion'
+    );
+    expect(result.recurrenceRule).toBe('FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR');
+    expect(result.recurrenceType).toBe(RecurrenceType.FROM_COMPLETION);
+    expect(result.title).toBe('Time Tracking');
+  });
+
+  it('parses weekly weekdays shorthand recurrence', () => {
+    const result = parseQuickAddInput('Time Tracking &weekly-weekdays:completion');
+    expect(result.recurrenceRule).toBe('FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR');
+    expect(result.recurrenceType).toBe(RecurrenceType.FROM_COMPLETION);
   });
 
   it('parses &every-2-weeks recurrence', () => {

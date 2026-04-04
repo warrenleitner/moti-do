@@ -6,8 +6,9 @@
  * - Tags: #tagname
  * - Due date: @tomorrow, @friday, @next-week
  * - Project: ~projectname
- * - Recurrence: &daily, &weekly, &monthly, &every-2-weeks
- *   - Style: &daily:strict, &weekly:completion, &monthly:due
+ * - Recurrence: &daily, &weekly, &weekly-wed, &weekly-mon,wed,fri,
+ *   &monthly, &every-2-weeks
+ *   - Style: &daily:strict, &weekly-wed:completion, &monthly:due
  * - Description: "quoted text"
  *
  * Bulk mode: toggle to multi-line input, one task per line.
@@ -386,16 +387,16 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
               <br />
               <code style={{ color: '#FFC775' }}>~project</code> — Project name
               <br />
-              <code style={{ color: '#FFC775' }}>&amp;daily</code>, <code style={{ color: '#FFC775' }}>&amp;weekly</code>, <code style={{ color: '#FFC775' }}>&amp;monthly</code>,{' '}
-              <code style={{ color: '#FFC775' }}>&amp;every-2-weeks</code> — Recurrence
+              <code style={{ color: '#FFC775' }}>&amp;daily</code>, <code style={{ color: '#FFC775' }}>&amp;weekly</code>, <code style={{ color: '#FFC775' }}>&amp;weekly-wed</code>,{' '}
+              <code style={{ color: '#FFC775' }}>&amp;weekly-mon,wed,fri</code> — Recurrence
               <br />
-              <code style={{ color: '#FFC775' }}>&amp;daily:strict</code>, <code style={{ color: '#FFC775' }}>&amp;weekly:completion</code>,{' '}
+              <code style={{ color: '#FFC775' }}>&amp;daily:strict</code>, <code style={{ color: '#FFC775' }}>&amp;weekly-wed:completion</code>,{' '}
               <code style={{ color: '#FFC775' }}>&amp;monthly:due</code> — Recurrence with style
               <br />
               <code style={{ color: '#FFC775' }}>&quot;description text&quot;</code> — Add a description
               <br />
               <br />
-              <em style={{ color: '#525560' }}>Example: Buy groceries !high #shopping @friday ~home &amp;weekly</em>
+              <em style={{ color: '#525560' }}>Example: Dermaroll &amp;weekly-wed:completion</em>
               <br />
               <em style={{ color: '#525560' }}>Bulk mode: click the list icon to add multiple tasks (one per line)</em>
               <br />
