@@ -4,13 +4,18 @@
  * Supports:
  * - Priority: !trivial, !low, !medium, !high, !critical (or !1-5)
  * - Tags: #tagname (multiple allowed)
- * - Due date: @tomorrow, @friday, @next-week, @dec-25
+ * - Due date: @today, @tomorrow, @friday, @next-week, @dec-25
+ * - Start date: ^today, ^tomorrow, ^friday, ^next-week, ^dec-25
  * - Project: ~projectname
+ * - Recurrence: &daily, &weekly, &weekly-wed, &weekly-mon,wed,fri,
+ *   &monthly, &yearly, &every-2-weeks
+ *   - Optional style: &daily:strict, &weekly-wed:completion, &monthly:due
+ * - Description: "quoted description text"
  *
- * Example: "Buy groceries !high #personal @friday ~home"
+ * Example: "Buy groceries !high #personal ^today @friday ~home &weekly"
  */
 
-import { Priority } from '../types';
+import { Priority, RecurrenceType } from '../types';
 import type { Task } from '../types';
 import { addDays, nextDay, parse, isValid } from 'date-fns';
 
@@ -77,6 +82,128 @@ const MONTH_MAP: Record<string, number> = {
   dec: 11,
   december: 11,
 };
+
+/** Simple recurrence keywords → rrule strings */
+const RECURRENCE_MAP: Record<string, string> = {
+  daily: 'FREQ=DAILY',
+  weekly: 'FREQ=WEEKLY',
+  monthly: 'FREQ=MONTHLY',
+  yearly: 'FREQ=YEARLY',
+};
+
+/** Weekday aliases for weekly quick-add recurrence syntax */
+const RECURRENCE_WEEKDAY_MAP: Record<string, string> = {
+  mo: 'MO',
+  mon: 'MO',
+  monday: 'MO',
+  tu: 'TU',
+  tue: 'TU',
+  tuesday: 'TU',
+  we: 'WE',
+  wed: 'WE',
+  wednesday: 'WE',
+  th: 'TH',
+  thu: 'TH',
+  thursday: 'TH',
+  fr: 'FR',
+  fri: 'FR',
+  friday: 'FR',
+  sa: 'SA',
+  sat: 'SA',
+  saturday: 'SA',
+  su: 'SU',
+  sun: 'SU',
+  sunday: 'SU',
+};
+
+/** Recurrence type aliases → RecurrenceType values */
+const RECURRENCE_TYPE_MAP: Record<string, string> = {
+  strict: RecurrenceType.STRICT,
+  completion: RecurrenceType.FROM_COMPLETION,
+  'from-completion': RecurrenceType.FROM_COMPLETION,
+  due: RecurrenceType.FROM_DUE_DATE,
+  'from-due': RecurrenceType.FROM_DUE_DATE,
+};
+
+/**
+ * Parse a recurrence expression into an rrule string.
+ * Supports:
+ * - Simple keywords: daily, weekly, monthly, yearly
+ * - Interval format: every-2-weeks, every-3-days
+ *
+ * @returns The rrule string, or null if not recognized
+ */
+export function parseRecurrenceExpression(expr: string): string | null {
+  const lower = expr.toLowerCase();
+
+  // Simple keyword
+  if (RECURRENCE_MAP[lower]) {
+    return RECURRENCE_MAP[lower];
+  }
+
+  // Weekly with explicit weekday list:
+  // weekly-wed, weekly-mon,wed,fri, weekly-weekdays, weekly-weekends
+  const weeklyByDayMatch = lower.match(/^weekly-(.+)$/);
+  if (weeklyByDayMatch) {
+    const byDay = parseWeeklyByDayExpression(weeklyByDayMatch[1]);
+    if (byDay) {
+      return `FREQ=WEEKLY;BYDAY=${byDay}`;
+    }
+  }
+
+  // Every N weeks with explicit weekday list:
+  // every-2-weeks-wed, every-2-weeks-mon,thu
+  const everyWeeksByDayMatch = lower.match(/^every-(\d+)-weeks?-(.+)$/);
+  if (everyWeeksByDayMatch) {
+    const interval = parseInt(everyWeeksByDayMatch[1], 10);
+    const byDay = parseWeeklyByDayExpression(everyWeeksByDayMatch[2]);
+    if (byDay) {
+      const intervalPart = interval > 1 ? `;INTERVAL=${interval}` : '';
+      return `FREQ=WEEKLY${intervalPart};BYDAY=${byDay}`;
+    }
+  }
+
+  // "every-N-unit(s)" format: every-2-weeks, every-3-days
+  const everyMatch = lower.match(/^every-(\d+)-(day|week|month|year)s?$/);
+  if (everyMatch) {
+    const interval = parseInt(everyMatch[1], 10);
+    const unitMap: Record<string, string> = {
+      day: 'DAILY',
+      week: 'WEEKLY',
+      month: 'MONTHLY',
+      year: 'YEARLY',
+    };
+    // Regex guarantees everyMatch[2] is one of the keys above
+    const freq = unitMap[everyMatch[2]];
+    return interval > 1 ? `FREQ=${freq};INTERVAL=${interval}` : `FREQ=${freq}`;
+  }
+
+  return null;
+}
+
+/**
+ * Parse a weekly day expression into an RFC 5545 BYDAY list.
+ */
+function parseWeeklyByDayExpression(expr: string): string | null {
+  if (expr === 'weekdays') {
+    return 'MO,TU,WE,TH,FR';
+  }
+
+  if (expr === 'weekends') {
+    return 'SA,SU';
+  }
+
+  const dayCodes = expr
+    .split(',')
+    .map((part) => RECURRENCE_WEEKDAY_MAP[part.trim()])
+    .filter((part): part is string => Boolean(part));
+
+  if (dayCodes.length === 0 || dayCodes.length !== expr.split(',').length) {
+    return null;
+  }
+
+  return dayCodes.join(',');
+}
 
 /**
  * Parse a date expression into a Date object.
@@ -163,8 +290,16 @@ export interface QuickAddResult {
   tags: string[];
   /** Parsed due date, if specified */
   dueDate?: Date;
+  /** Parsed start date, if specified */
+  startDate?: Date;
   /** Extracted project name */
   project?: string;
+  /** Recurrence rule (rrule string), if specified */
+  recurrenceRule?: string;
+  /** Recurrence type (Strict, From Completion, From Due Date) */
+  recurrenceType?: string;
+  /** Description text (from double-quoted string) */
+  description?: string;
 }
 
 /**
@@ -185,6 +320,14 @@ export function parseQuickAddInput(input: string): QuickAddResult {
 
   // Clone input for processing
   let remaining = input;
+
+  // Extract description (double-quoted text) - must be done first to avoid
+  // modifiers inside quotes being parsed
+  const descMatch = remaining.match(/"([^"]+)"/);
+  if (descMatch) {
+    result.description = descMatch[1];
+    remaining = remaining.replace(descMatch[0], ' ');
+  }
 
   // Extract priority (!word or !number) - only remove if recognized
   const priorityMatch = remaining.match(/\s*!([\w]+)/);
@@ -217,11 +360,40 @@ export function parseQuickAddInput(input: string): QuickAddResult {
     }
   }
 
+  // Extract start date (^expression) - only remove if parsed successfully
+  const startDateMatch = remaining.match(/\s*\^([\w-]+)/);
+  if (startDateMatch) {
+    const startDateExpr = startDateMatch[1];
+    const parsedStartDate = parseDateExpression(startDateExpr);
+    if (parsedStartDate) {
+      result.startDate = parsedStartDate;
+      remaining = remaining.replace(startDateMatch[0], ' ');
+    }
+  }
+
   // Extract project (~word)
   const projectMatch = remaining.match(/\s*~([\w-]+)/);
   if (projectMatch) {
     result.project = projectMatch[1];
     remaining = remaining.replace(projectMatch[0], ' ');
+  }
+
+  // Extract recurrence (&expression, optional :type suffix)
+  const recurrenceMatch = remaining.match(/\s*&([\w,-]+(?::[\w-]+)?)/);
+  if (recurrenceMatch) {
+    const fullExpr = recurrenceMatch[1];
+    const colonIdx = fullExpr.indexOf(':');
+    const recExpr = colonIdx >= 0 ? fullExpr.substring(0, colonIdx) : fullExpr;
+    const typeExpr = colonIdx >= 0 ? fullExpr.substring(colonIdx + 1) : undefined;
+
+    const rrule = parseRecurrenceExpression(recExpr);
+    if (rrule) {
+      result.recurrenceRule = rrule;
+      if (typeExpr && RECURRENCE_TYPE_MAP[typeExpr.toLowerCase()]) {
+        result.recurrenceType = RECURRENCE_TYPE_MAP[typeExpr.toLowerCase()];
+      }
+      remaining = remaining.replace(recurrenceMatch[0], ' ');
+    }
   }
 
   // Clean up remaining text as title
@@ -250,9 +422,37 @@ export function quickAddResultToTask(result: QuickAddResult): Partial<Task> {
     task.due_date = result.dueDate.toISOString();
   }
 
+  if (result.startDate) {
+    task.start_date = result.startDate.toISOString();
+  }
+
   if (result.project) {
     task.project = result.project;
   }
 
+  if (result.recurrenceRule) {
+    task.recurrence_rule = result.recurrenceRule;
+    task.is_habit = true;
+    task.recurrence_type = (result.recurrenceType as Task['recurrence_type']) || RecurrenceType.STRICT;
+  }
+
+  if (result.description) {
+    task.text_description = result.description;
+  }
+
   return task;
+}
+
+/**
+ * Parse bulk quick-add input (multiple lines, one task per line).
+ * Empty lines and whitespace-only lines are skipped.
+ *
+ * @param input - Multi-line input string
+ * @returns Array of parsed results (only those with valid titles)
+ */
+export function parseBulkQuickAddInput(input: string): QuickAddResult[] {
+  return input
+    .split('\n')
+    .map((line) => parseQuickAddInput(line))
+    .filter((result) => result.title.trim().length > 0);
 }

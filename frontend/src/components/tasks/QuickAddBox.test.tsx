@@ -128,6 +128,8 @@ describe('QuickAddBox', () => {
     await user.click(helpButton);
 
     expect(screen.getByText(/quick-add syntax/i)).toBeInTheDocument();
+    expect(screen.getByText('@today')).toBeInTheDocument();
+    expect(screen.getByText('^today')).toBeInTheDocument();
   });
 
   it('shows priority chip when priority modifier used', async () => {
@@ -206,6 +208,22 @@ describe('QuickAddBox', () => {
     });
   });
 
+  it('parses start date and passes to createTask', async () => {
+    const { user } = render(<QuickAddBox />);
+
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
+    await user.type(input, 'Test task ^2025-01-15{Enter}');
+
+    await waitFor(() => {
+      expect(mockCreateTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Test task',
+          start_date: new Date(2025, 0, 15).toISOString(),
+        })
+      );
+    });
+  });
+
   it('applies default values for missing fields including inbox tag', async () => {
     const { user } = render(<QuickAddBox />);
 
@@ -244,5 +262,44 @@ describe('QuickAddBox', () => {
     await user.type(input, '!high #tag{Enter}');
 
     expect(mockCreateTask).not.toHaveBeenCalled();
+  });
+
+  it('parses recurrence and passes to createTask with is_habit true', async () => {
+    const { user } = render(<QuickAddBox />);
+
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
+    await user.type(input, 'Morning run &daily{Enter}');
+
+    await waitFor(() => {
+      expect(mockCreateTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Morning run',
+          recurrence_rule: 'FREQ=DAILY',
+          recurrence_type: 'Strict',
+          is_habit: true,
+        })
+      );
+    });
+  });
+
+  it('parses description and passes to createTask', async () => {
+    const { user } = render(<QuickAddBox />);
+
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
+    await user.type(input, 'Task "some details"{Enter}');
+
+    await waitFor(() => {
+      expect(mockCreateTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Task',
+          text_description: 'some details',
+        })
+      );
+    });
+  });
+
+  it('renders bulk mode toggle button', () => {
+    render(<QuickAddBox />);
+    expect(screen.getByRole('button', { name: /switch to bulk mode/i })).toBeInTheDocument();
   });
 });
