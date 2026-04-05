@@ -34,14 +34,13 @@ Object.defineProperty(window, 'localStorage', {
 });
 
 const defaultFilters = {
-  status: 'active' as const,
+  statuses: ['active'] as ('all' | 'active' | 'completed' | 'blocked' | 'future')[],
   search: undefined,
   priorities: [] as Priority[],
   difficulties: [] as Difficulty[],
   durations: [] as Duration[],
   projects: [] as string[],
   tags: [] as string[],
-  includeBlocked: false,
 };
 
 describe('TasksPage', () => {

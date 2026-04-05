@@ -48,14 +48,13 @@ describe('KanbanPage', () => {
   const mockSetSort = vi.fn();
 
   const defaultFilters = {
-    status: 'active' as const,
+    statuses: ['active'] as ('all' | 'active' | 'completed' | 'blocked' | 'future')[],
     priorities: [] as Priority[],
     difficulties: [] as Difficulty[],
     durations: [] as Duration[],
     projects: [] as string[],
     tags: [] as string[],
     search: '',
-    includeBlocked: false,
   };
 
   const defaultSort = {

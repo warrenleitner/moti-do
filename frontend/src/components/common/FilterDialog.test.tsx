@@ -7,8 +7,8 @@ describe('FilterDialog', () => {
   const defaultProps = {
     search: '',
     onSearchChange: vi.fn(),
-    status: 'active' as const,
-    onStatusChange: vi.fn(),
+    statuses: ['active'] as ('all' | 'active' | 'completed' | 'blocked' | 'future')[],
+    onStatusesChange: vi.fn(),
     priorities: [] as Priority[],
     onPrioritiesChange: vi.fn(),
     difficulties: [] as Difficulty[],
@@ -21,8 +21,14 @@ describe('FilterDialog', () => {
     onTagsChange: vi.fn(),
     projects: [],
     tags: [],
+    minDueDate: undefined as string | undefined,
     maxDueDate: undefined as string | undefined,
+    onMinDueDateChange: vi.fn(),
     onMaxDueDateChange: vi.fn(),
+    minStartDate: undefined as string | undefined,
+    maxStartDate: undefined as string | undefined,
+    onMinStartDateChange: vi.fn(),
+    onMaxStartDateChange: vi.fn(),
     onReset: vi.fn(),
   };
 
@@ -38,7 +44,7 @@ describe('FilterDialog', () => {
     expect(await screen.findByText('FILTER TASKS')).toBeInTheDocument();
   });
 
-  it('shows status tabs in dialog', async () => {
+  it('shows status checkboxes in dialog', async () => {
     const { user } = render(<FilterDialog {...defaultProps} />);
     await user.click(screen.getByLabelText('Open filters'));
     expect(await screen.findByText('ACTIVE')).toBeInTheDocument();
@@ -119,11 +125,11 @@ describe('FilterDialog', () => {
     render(
       <FilterDialog
         {...defaultProps}
-        status="completed"
+        statuses={['completed']}
         priorities={[Priority.HIGH]}
       />
     );
-    // Badge should show count of 2 (1 for non-active status + 1 priority)
+    // Badge should show count of 2 (1 for non-default status + 1 priority)
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
@@ -133,16 +139,29 @@ describe('FilterDialog', () => {
   });
 
   it('applies status filter when APPLY FILTERS clicked', async () => {
-    const onStatusChange = vi.fn();
-    const { user } = render(<FilterDialog {...defaultProps} onStatusChange={onStatusChange} />);
+    const onStatusesChange = vi.fn();
+    const { user } = render(<FilterDialog {...defaultProps} onStatusesChange={onStatusesChange} />);
     await user.click(screen.getByLabelText('Open filters'));
     // Wait for dialog to render
     await screen.findByText('COMPLETED');
-    // Click on COMPLETED segment
+    // Toggle COMPLETED status checkbox
     await user.click(screen.getByText('COMPLETED'));
     // Click APPLY FILTERS
     await user.click(screen.getByText('APPLY FILTERS'));
-    expect(onStatusChange).toHaveBeenCalledWith('completed');
+    // Should have both 'active' (default) and 'completed'
+    expect(onStatusesChange).toHaveBeenCalledWith(['active', 'completed']);
+  });
+
+  it('supports multi-select statuses', async () => {
+    const onStatusesChange = vi.fn();
+    const { user } = render(<FilterDialog {...defaultProps} onStatusesChange={onStatusesChange} />);
+    await user.click(screen.getByLabelText('Open filters'));
+    await screen.findByText('COMPLETED');
+    // Select multiple statuses
+    await user.click(screen.getByText('COMPLETED'));
+    await user.click(screen.getByText('FUTURE'));
+    await user.click(screen.getByText('APPLY FILTERS'));
+    expect(onStatusesChange).toHaveBeenCalledWith(['active', 'completed', 'future']);
   });
 
   it('applies priority filter when checkbox toggled and APPLY clicked', async () => {
@@ -170,10 +189,16 @@ describe('FilterDialog', () => {
     expect(onPrioritiesChange).toHaveBeenCalledWith([]);
   });
 
-  it('displays due date filter section', async () => {
+  it('displays due date filter section with range inputs', async () => {
     const { user } = render(<FilterDialog {...defaultProps} />);
     await user.click(screen.getByLabelText('Open filters'));
-    expect(await screen.findByText('Due Before')).toBeInTheDocument();
+    expect(await screen.findByText('Due Date')).toBeInTheDocument();
+  });
+
+  it('displays start date filter section with range inputs', async () => {
+    const { user } = render(<FilterDialog {...defaultProps} />);
+    await user.click(screen.getByLabelText('Open filters'));
+    expect(await screen.findByText('Start Date')).toBeInTheDocument();
   });
 
   it('applies maxDueDate when set and APPLY clicked', async () => {
@@ -232,13 +257,43 @@ describe('FilterDialog', () => {
   });
 
   it('closes dialog without applying when modal close is triggered', async () => {
-    const onStatusChange = vi.fn();
-    const { user } = render(<FilterDialog {...defaultProps} onStatusChange={onStatusChange} />);
+    const onStatusesChange = vi.fn();
+    const { user } = render(<FilterDialog {...defaultProps} onStatusesChange={onStatusesChange} />);
     await user.click(screen.getByLabelText('Open filters'));
     await screen.findByText('FILTER TASKS');
     // Press Escape to close the modal
     await user.keyboard('{Escape}');
-    // onStatusChange should not have been called
-    expect(onStatusChange).not.toHaveBeenCalled();
+    // onStatusesChange should not have been called
+    expect(onStatusesChange).not.toHaveBeenCalled();
+  });
+
+  it('counts date filters in badge', () => {
+    render(
+      <FilterDialog
+        {...defaultProps}
+        minDueDate="2025-01-01"
+        maxDueDate="2025-12-31"
+        minStartDate="2025-03-01"
+        maxStartDate="2025-06-30"
+      />
+    );
+    // Badge should show count of 4 (minDueDate + maxDueDate + minStartDate + maxStartDate)
+    expect(screen.getByText('4')).toBeInTheDocument();
+  });
+
+  it('preserves date range values when dialog opens', async () => {
+    const { user } = render(
+      <FilterDialog
+        {...defaultProps}
+        minDueDate="2025-01-01"
+        maxDueDate="2025-12-31"
+        minStartDate="2025-03-01"
+        maxStartDate="2025-06-30"
+      />
+    );
+    await user.click(screen.getByLabelText('Open filters'));
+    // Verify date sections are visible
+    expect(await screen.findByText('Due Date')).toBeInTheDocument();
+    expect(screen.getByText('Start Date')).toBeInTheDocument();
   });
 });

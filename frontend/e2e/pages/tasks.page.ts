@@ -272,15 +272,15 @@ export class TasksPage {
 
   /**
    * Filter by status.
-   * Status filter is now inside the FilterDialog modal, using a SegmentedControl.
+   * Status filter is now inside the FilterDialog modal, using multi-select checkboxes.
    */
   async filterByStatus(status: 'Active' | 'Completed' | 'All'): Promise<void> {
     // Open the filter dialog
     await this.page.getByRole('button', { name: 'Open filters' }).click();
     // Wait for dialog to appear
     await this.page.getByText('FILTER TASKS').waitFor({ timeout: 5000 });
-    // Click the status segment (Mantine SegmentedControl renders each option as role="radio")
-    await this.page.getByRole('radio', { name: new RegExp(`^${status}$`, 'i') }).click();
+    // Status checkboxes use uppercase labels — click the matching checkbox label
+    await this.page.getByText(status.toUpperCase(), { exact: true }).click();
     // Apply filters
     await this.page.getByRole('button', { name: /APPLY FILTERS/i }).click();
   }

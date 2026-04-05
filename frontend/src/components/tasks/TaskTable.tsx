@@ -10,7 +10,6 @@ import {
   Text,
   Popover,
   Stack,
-  Radio,
   DatePickerInput,
 } from '../../ui';
 import {
@@ -130,7 +129,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
 ];
 
 // Columns that support filtering (module-scope to avoid re-creation on every render)
-const FILTERABLE_COLUMNS = new Set<ColumnId>(['priority', 'difficulty', 'duration', 'project', 'tags', 'due_date', 'status']);
+const FILTERABLE_COLUMNS = new Set<ColumnId>(['priority', 'difficulty', 'duration', 'project', 'tags', 'due_date', 'start_date', 'status']);
 
 // UI component - tested via integration tests
 /* v8 ignore start */
@@ -904,8 +903,9 @@ const TaskTable: React.FC<TaskTableProps> = ({
       case 'duration': return filters.durations.length > 0;
       case 'project': return filters.projects.length > 0;
       case 'tags': return filters.tags.length > 0;
-      case 'due_date': return !!filters.maxDueDate;
-      case 'status': return filters.status !== 'active';
+      case 'due_date': return !!(filters.minDueDate || filters.maxDueDate);
+      case 'start_date': return !!(filters.minStartDate || filters.maxStartDate);
+      case 'status': return !(filters.statuses.length === 1 && filters.statuses[0] === 'active');
       default: return false;
     }
   };
@@ -1006,7 +1006,32 @@ const TaskTable: React.FC<TaskTableProps> = ({
       case 'due_date':
         return (
           <Stack gap={4}>
-            <Text size="xs" style={{ color: '#a8aab7', fontFamily: '"JetBrains Mono", monospace' }}>Due on or before</Text>
+            <Text size="xs" style={{ color: '#a8aab7', fontFamily: '"JetBrains Mono", monospace' }}>From</Text>
+            <DatePickerInput
+              size="xs"
+              value={filters.minDueDate ? new Date(filters.minDueDate + 'T00:00:00') : null}
+              onChange={(date: string | Date | null) => {
+                const d = date ? new Date(date) : null;
+                if (d && !isNaN(d.getTime())) {
+                  onFiltersChange({ minDueDate: format(d, 'yyyy-MM-dd') });
+                } else {
+                  onFiltersChange({ minDueDate: undefined });
+                }
+              }}
+              clearable
+              placeholder="Start date"
+              styles={{
+                input: {
+                  backgroundColor: '#0B0E17',
+                  borderColor: 'rgba(69, 71, 82, 0.15)',
+                  borderRadius: 0,
+                  color: '#e6e7f5',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.75rem',
+                },
+              }}
+            />
+            <Text size="xs" style={{ color: '#a8aab7', fontFamily: '"JetBrains Mono", monospace' }}>To</Text>
             <DatePickerInput
               size="xs"
               value={filters.maxDueDate ? new Date(filters.maxDueDate + 'T00:00:00') : null}
@@ -1019,7 +1044,62 @@ const TaskTable: React.FC<TaskTableProps> = ({
                 }
               }}
               clearable
-              placeholder="Pick a date"
+              placeholder="End date"
+              styles={{
+                input: {
+                  backgroundColor: '#0B0E17',
+                  borderColor: 'rgba(69, 71, 82, 0.15)',
+                  borderRadius: 0,
+                  color: '#e6e7f5',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.75rem',
+                },
+              }}
+            />
+          </Stack>
+        );
+      case 'start_date':
+        return (
+          <Stack gap={4}>
+            <Text size="xs" style={{ color: '#a8aab7', fontFamily: '"JetBrains Mono", monospace' }}>From</Text>
+            <DatePickerInput
+              size="xs"
+              value={filters.minStartDate ? new Date(filters.minStartDate + 'T00:00:00') : null}
+              onChange={(date: string | Date | null) => {
+                const d = date ? new Date(date) : null;
+                if (d && !isNaN(d.getTime())) {
+                  onFiltersChange({ minStartDate: format(d, 'yyyy-MM-dd') });
+                } else {
+                  onFiltersChange({ minStartDate: undefined });
+                }
+              }}
+              clearable
+              placeholder="Start date"
+              styles={{
+                input: {
+                  backgroundColor: '#0B0E17',
+                  borderColor: 'rgba(69, 71, 82, 0.15)',
+                  borderRadius: 0,
+                  color: '#e6e7f5',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.75rem',
+                },
+              }}
+            />
+            <Text size="xs" style={{ color: '#a8aab7', fontFamily: '"JetBrains Mono", monospace' }}>To</Text>
+            <DatePickerInput
+              size="xs"
+              value={filters.maxStartDate ? new Date(filters.maxStartDate + 'T00:00:00') : null}
+              onChange={(date: string | Date | null) => {
+                const d = date ? new Date(date) : null;
+                if (d && !isNaN(d.getTime())) {
+                  onFiltersChange({ maxStartDate: format(d, 'yyyy-MM-dd') });
+                } else {
+                  onFiltersChange({ maxStartDate: undefined });
+                }
+              }}
+              clearable
+              placeholder="End date"
               styles={{
                 input: {
                   backgroundColor: '#0B0E17',
@@ -1037,11 +1117,11 @@ const TaskTable: React.FC<TaskTableProps> = ({
         return (
           <Stack gap={4}>
             {(['active', 'blocked', 'future', 'completed', 'all'] as StatusFilter[]).map((s) => (
-              <Radio
+              <Checkbox
                 key={s}
                 label={s.toUpperCase()}
-                checked={filters.status === s}
-                onChange={() => onFiltersChange({ status: s })}
+                checked={filters.statuses.includes(s)}
+                onChange={() => onFiltersChange({ statuses: toggleArrayValue(filters.statuses, s) })}
                 size="xs"
                 styles={{ label: checkboxLabelStyle }}
               />

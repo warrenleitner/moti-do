@@ -74,8 +74,8 @@ export default function TaskList({
       <FilterDialog
         search={filters.search || ''}
         onSearchChange={(search) => setFilters({ search: search || undefined })}
-        status={filters.status}
-        onStatusChange={(status) => setFilters({ status })}
+        statuses={filters.statuses}
+        onStatusesChange={(statuses) => setFilters({ statuses })}
         priorities={filters.priorities}
         onPrioritiesChange={(priorities) => setFilters({ priorities })}
         difficulties={filters.difficulties}
@@ -88,8 +88,14 @@ export default function TaskList({
         onTagsChange={(tags) => setFilters({ tags })}
         projects={projects}
         tags={tags}
+        minDueDate={filters.minDueDate}
         maxDueDate={filters.maxDueDate}
+        onMinDueDateChange={(minDueDate) => setFilters({ minDueDate })}
         onMaxDueDateChange={(maxDueDate) => setFilters({ maxDueDate })}
+        minStartDate={filters.minStartDate}
+        maxStartDate={filters.maxStartDate}
+        onMinStartDateChange={(minStartDate) => setFilters({ minStartDate })}
+        onMaxStartDateChange={(maxStartDate) => setFilters({ maxStartDate })}
         onReset={resetFilters}
       />
 

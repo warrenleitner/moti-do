@@ -122,12 +122,12 @@ export default function TasksPage() {
   );
 
   useEffect(() => {
-    if ((filters.status === 'completed' || filters.status === 'all') && !hasCompletedData) {
+    if ((filters.statuses.includes('completed') || filters.statuses.includes('all')) && !hasCompletedData) {
       fetchTasks({ includeCompleted: true }).catch(() => {
         // Errors surface via store error state/snackbar elsewhere
       });
     }
-  }, [fetchTasks, filters.status, hasCompletedData]);
+  }, [fetchTasks, filters.statuses, hasCompletedData]);
 
   // Update visible row count when filtered tasks change
   useEffect(() => {

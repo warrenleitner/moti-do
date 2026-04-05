@@ -74,7 +74,7 @@ interface TaskState {
 }
 
 const defaultFilters: TaskFilters = {
-  status: 'active',
+  statuses: ['active'],
   priorities: [],
   difficulties: [],
   durations: [],
@@ -478,7 +478,7 @@ export const useTaskStore = create<TaskState>()(
       }),
       {
         name: 'motido-task-store',
-        version: 4,
+        version: 5,
         partialize: (state) => ({
           filters: state.filters,
           sort: state.sort,
@@ -493,31 +493,45 @@ export const useTaskStore = create<TaskState>()(
             // Reset to default filters since structure changed (merged availability into status)
             state.filters = { ...defaultFilters };
           }
+          if (version < 5 && state.filters) {
+            // Migrate single status to multi-select statuses array
+            const oldStatus = state.filters.status as string | undefined;
+            const validStatuses = ['all', 'active', 'completed', 'blocked', 'future'];
+            if (oldStatus && validStatuses.includes(oldStatus)) {
+              (state.filters as Record<string, unknown>).statuses = [oldStatus];
+            } else {
+              (state.filters as Record<string, unknown>).statuses = defaultFilters.statuses;
+            }
+            delete state.filters.status;
+          }
           return persistedState as TaskState;
         },
         // Merge persisted state with defaults to ensure all required fields exist
         merge: (persistedState, currentState) => {
           const persisted = persistedState as Partial<TaskState>;
-          // Validate that status is one of the valid options
+          // Validate statuses array
           const validStatuses = ['all', 'active', 'completed', 'blocked', 'future'];
-          const persistedStatus = persisted.filters?.status;
-          const status = validStatuses.includes(persistedStatus as string)
-            ? persistedStatus
-            : defaultFilters.status;
+          const persistedStatuses = persisted.filters?.statuses;
+          const statuses = Array.isArray(persistedStatuses)
+            ? persistedStatuses.filter((s: string) => validStatuses.includes(s))
+            : defaultFilters.statuses;
           return {
             ...currentState,
             ...persisted,
             // Ensure filters has all required fields with defaults
             filters: {
               ...defaultFilters,
-              status: status as TaskFilters['status'],
+              statuses: statuses.length > 0 ? statuses : defaultFilters.statuses,
               priorities: persisted.filters?.priorities ?? defaultFilters.priorities,
               difficulties: persisted.filters?.difficulties ?? defaultFilters.difficulties,
               durations: persisted.filters?.durations ?? defaultFilters.durations,
               projects: persisted.filters?.projects ?? defaultFilters.projects,
               tags: persisted.filters?.tags ?? defaultFilters.tags,
               search: persisted.filters?.search,
+              minDueDate: persisted.filters?.minDueDate,
               maxDueDate: persisted.filters?.maxDueDate,
+              minStartDate: persisted.filters?.minStartDate,
+              maxStartDate: persisted.filters?.maxStartDate,
             },
             crisisModeActive:
               typeof persisted.crisisModeActive === 'boolean'
@@ -542,21 +556,9 @@ export const useFilteredTasks = (lastProcessedDate?: string) => {
   const filtered = tasks.filter((task) => {
     const lifecycleStatus = deriveLifecycleStatus(task, { allTasks: tasks, lastProcessedDate });
 
-    // Status filter (unified: active, completed, blocked, future, all)
-    switch (filters.status) {
-      case 'completed':
-        if (lifecycleStatus !== 'completed') return false;
-        break;
-      case 'blocked':
-        if (lifecycleStatus !== 'blocked') return false;
-        break;
-      case 'future':
-        if (lifecycleStatus !== 'future') return false;
-        break;
-      case 'active':
-        if (lifecycleStatus !== 'active') return false;
-        break;
-      // 'all' shows everything
+    // Status filter (multi-select: active, completed, blocked, future, all)
+    if (filters.statuses.length > 0 && !filters.statuses.includes('all')) {
+      if (!filters.statuses.includes(lifecycleStatus as TaskFilters['statuses'][number])) return false;
     }
 
     // Priority filter (multi-select)
@@ -598,12 +600,32 @@ export const useFilteredTasks = (lastProcessedDate?: string) => {
       }
     }
 
-    // Max due date filter - show tasks due on or before this date
+    // Due date range filter
+    if (filters.minDueDate) {
+      if (!task.due_date) return false;
+      const taskDueDate = new Date(task.due_date.split('T')[0]);
+      const minDate = new Date(filters.minDueDate);
+      if (taskDueDate < minDate) return false;
+    }
     if (filters.maxDueDate) {
-      if (!task.due_date) return false; // Tasks without due date are excluded
+      if (!task.due_date) return false;
       const taskDueDate = new Date(task.due_date.split('T')[0]);
       const maxDate = new Date(filters.maxDueDate);
       if (taskDueDate > maxDate) return false;
+    }
+
+    // Start date range filter
+    if (filters.minStartDate) {
+      if (!task.start_date) return false;
+      const taskStartDate = new Date(task.start_date.split('T')[0]);
+      const minDate = new Date(filters.minStartDate);
+      if (taskStartDate < minDate) return false;
+    }
+    if (filters.maxStartDate) {
+      if (!task.start_date) return false;
+      const taskStartDate = new Date(task.start_date.split('T')[0]);
+      const maxDate = new Date(filters.maxStartDate);
+      if (taskStartDate > maxDate) return false;
     }
 
     return true;
