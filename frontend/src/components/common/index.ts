@@ -10,6 +10,7 @@ export { default as TagChip } from './TagChip';
 export { default as ProjectChip } from './ProjectChip';
 export { default as SearchInput } from './SearchInput';
 export { default as FilterBar } from './FilterBar';
+export { default as FilterDialog } from './FilterDialog';
 export { default as XPDisplay } from './XPDisplay';
 export { default as StreakBadge } from './StreakBadge';
 export { default as DateDisplay } from './DateDisplay';

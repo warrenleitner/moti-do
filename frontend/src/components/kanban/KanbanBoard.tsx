@@ -252,8 +252,8 @@ export default function KanbanBoard({
       <FilterBar
         search={filters.search || ''}
         onSearchChange={(search) => setFilters({ search: search || undefined })}
-        status={filters.status}
-        onStatusChange={(status) => setFilters({ status })}
+        statuses={filters.statuses}
+        onStatusesChange={(statuses) => setFilters({ statuses })}
         priorities={filters.priorities}
         onPrioritiesChange={(priorities) => setFilters({ priorities })}
         difficulties={filters.difficulties}

@@ -13,7 +13,7 @@ vi.mock('../../store', () => ({
 }));
 
 const defaultFilters = {
-  status: 'active' as const,
+  statuses: ['active'] as ('all' | 'active' | 'completed' | 'blocked' | 'future')[],
   search: undefined,
   priorities: [] as Priority[],
   difficulties: [] as ('low' | 'medium' | 'high')[],

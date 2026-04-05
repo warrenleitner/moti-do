@@ -131,10 +131,10 @@ describe('TaskStore', () => {
       const { result } = renderHook(() => useTaskStore());
 
       act(() => {
-        result.current.setFilters({ status: 'completed', priorities: [Priority.HIGH] });
+        result.current.setFilters({ statuses: ['completed'], priorities: [Priority.HIGH] });
       });
 
-      expect(result.current.filters.status).toBe('completed');
+      expect(result.current.filters.statuses).toEqual(['completed']);
       expect(result.current.filters.priorities).toEqual([Priority.HIGH]);
     });
 
@@ -142,11 +142,11 @@ describe('TaskStore', () => {
       const { result } = renderHook(() => useTaskStore());
 
       act(() => {
-        result.current.setFilters({ status: 'completed', priorities: [Priority.HIGH] });
+        result.current.setFilters({ statuses: ['completed'], priorities: [Priority.HIGH] });
         result.current.resetFilters();
       });
 
-      expect(result.current.filters.status).toBe('active');
+      expect(result.current.filters.statuses).toEqual(['active']);
       expect(result.current.filters.priorities).toEqual([]);
     });
 
@@ -465,7 +465,7 @@ describe('useFilteredTasks', () => {
 
   it('should filter by status all', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all' });
+    store.setFilters({ statuses: ['all'] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current.length).toBe(3);
@@ -473,7 +473,7 @@ describe('useFilteredTasks', () => {
 
   it('should filter by completed status', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'completed' });
+    store.setFilters({ statuses: ['completed'] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current).toHaveLength(1);
@@ -482,7 +482,7 @@ describe('useFilteredTasks', () => {
 
   it('should filter by tag', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all', tags: ['work'] });
+    store.setFilters({ statuses: ['all'], tags: ['work'] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current).toHaveLength(1);
@@ -497,7 +497,7 @@ describe('useFilteredTasks', () => {
       text_description: 'Contains #focus tag',
     };
     store.setTasks([implicitTask]);
-    store.setFilters({ status: 'all', tags: ['focus'] });
+    store.setFilters({ statuses: ['all'], tags: ['focus'] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current).toHaveLength(1);
@@ -506,7 +506,7 @@ describe('useFilteredTasks', () => {
 
   it('should filter by search term', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all', search: 'habit' });
+    store.setFilters({ statuses: ['all'], search: 'habit' });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current).toHaveLength(1);
@@ -515,7 +515,7 @@ describe('useFilteredTasks', () => {
 
   it('should sort by priority', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all' });
+    store.setFilters({ statuses: ['all'] });
     store.setSort({ field: 'priority', order: 'desc' });
 
     const { result } = renderHook(() => useFilteredTasks());
@@ -564,7 +564,7 @@ describe('useFilteredTasks', () => {
       },
     ];
     store.setTasks(tasksWithDueDates);
-    store.setFilters({ status: 'all' });
+    store.setFilters({ statuses: ['all'] });
     store.setSort({ field: 'due_date', order: 'asc' });
 
     const { result } = renderHook(() => useFilteredTasks());
@@ -610,7 +610,7 @@ describe('useFilteredTasks', () => {
       },
     ];
     store.setTasks(tasksNoDates);
-    store.setFilters({ status: 'all' });
+    store.setFilters({ statuses: ['all'] });
     store.setSort({ field: 'due_date', order: 'asc' });
 
     const { result } = renderHook(() => useFilteredTasks());
@@ -621,7 +621,7 @@ describe('useFilteredTasks', () => {
   it('should handle default case in sort', () => {
     const store = useTaskStore.getState();
     store.setTasks(mockTasks);
-    store.setFilters({ status: 'all' });
+    store.setFilters({ statuses: ['all'] });
     // Use an invalid sort field to trigger default case
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     store.setSort({ field: 'invalid' as any, order: 'asc' });
@@ -632,7 +632,7 @@ describe('useFilteredTasks', () => {
 
   it('should sort by creation_date', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all' });
+    store.setFilters({ statuses: ['all'] });
     store.setSort({ field: 'creation_date', order: 'asc' });
 
     const { result } = renderHook(() => useFilteredTasks());
@@ -641,7 +641,7 @@ describe('useFilteredTasks', () => {
 
   it('should sort by title', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all' });
+    store.setFilters({ statuses: ['all'] });
     store.setSort({ field: 'title', order: 'asc' });
 
     const { result } = renderHook(() => useFilteredTasks());
@@ -650,7 +650,7 @@ describe('useFilteredTasks', () => {
 
   it('should sort by score', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all' });
+    store.setFilters({ statuses: ['all'] });
     store.setSort({ field: 'score', order: 'desc' });
 
     const { result } = renderHook(() => useFilteredTasks());
@@ -659,7 +659,7 @@ describe('useFilteredTasks', () => {
 
   it('should filter by priority', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all', priorities: [Priority.HIGH] });
+    store.setFilters({ statuses: ['all'], priorities: [Priority.HIGH] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current.every((t) => t.priority === Priority.HIGH)).toBe(true);
@@ -689,7 +689,7 @@ describe('useFilteredTasks', () => {
     ];
     const store = useTaskStore.getState();
     store.setTasks(tasksWithProjects);
-    store.setFilters({ status: 'all', projects: ['work'] });
+    store.setFilters({ statuses: ['all'], projects: ['work'] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current.every((t) => t.project === 'work')).toBe(true);
@@ -697,7 +697,7 @@ describe('useFilteredTasks', () => {
 
   it('should filter by difficulty', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all', difficulties: [Difficulty.HIGH] });
+    store.setFilters({ statuses: ['all'], difficulties: [Difficulty.HIGH] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current.every((t) => t.difficulty === Difficulty.HIGH)).toBe(true);
@@ -705,7 +705,7 @@ describe('useFilteredTasks', () => {
 
   it('should filter by duration', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all', durations: [Duration.LONG] });
+    store.setFilters({ statuses: ['all'], durations: [Duration.LONG] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current.every((t) => t.duration === Duration.LONG)).toBe(true);
@@ -713,7 +713,7 @@ describe('useFilteredTasks', () => {
 
   it('should filter by multiple priorities', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all', priorities: [Priority.HIGH, Priority.MEDIUM] });
+    store.setFilters({ statuses: ['all'], priorities: [Priority.HIGH, Priority.MEDIUM] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(
@@ -723,7 +723,7 @@ describe('useFilteredTasks', () => {
 
   it('should filter by multiple tags', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all', tags: ['work', 'urgent'] });
+    store.setFilters({ statuses: ['all'], tags: ['work', 'urgent'] });
 
     const { result } = renderHook(() => useFilteredTasks());
     // Each task must have at least one of the selected tags
@@ -739,7 +739,7 @@ describe('useFilteredTasks', () => {
     }));
     const store = useTaskStore.getState();
     store.setTasks(tasksWithDesc);
-    store.setFilters({ status: 'all', search: 'description' });
+    store.setFilters({ statuses: ['all'], search: 'description' });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current.length).toBe(1);
@@ -769,7 +769,7 @@ describe('useFilteredTasks', () => {
     ];
     const store = useTaskStore.getState();
     store.setTasks(tasksWithDeps);
-    store.setFilters({ status: 'active' });
+    store.setFilters({ statuses: ['active'] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current.find((t) => t.id === 'task-blocked')).toBeUndefined();
@@ -798,7 +798,7 @@ describe('useFilteredTasks', () => {
     ];
     const store = useTaskStore.getState();
     store.setTasks(tasksWithDeps);
-    store.setFilters({ status: 'blocked' });
+    store.setFilters({ statuses: ['blocked'] });
 
     const { result } = renderHook(() => useFilteredTasks());
     // Only the blocked task should be shown
@@ -829,7 +829,7 @@ describe('useFilteredTasks', () => {
     ];
     const store = useTaskStore.getState();
     store.setTasks(tasksWithDeps);
-    store.setFilters({ status: 'all' });
+    store.setFilters({ statuses: ['all'] });
 
     const { result } = renderHook(() => useFilteredTasks());
     expect(result.current.find((t) => t.id === 'task-blocked')).toBeDefined();
@@ -861,7 +861,7 @@ describe('useFilteredTasks', () => {
     ];
     const store = useTaskStore.getState();
     store.setTasks(tasksWithFuture);
-    store.setFilters({ status: 'future' });
+    store.setFilters({ statuses: ['future'] });
 
     // Pass a lastProcessedDate that's before the future task's start_date
     const lastProcessedDate = new Date().toISOString().split('T')[0];
@@ -895,7 +895,7 @@ describe('useFilteredTasks', () => {
     ];
     const store = useTaskStore.getState();
     store.setTasks(tasksWithFuture);
-    store.setFilters({ status: 'active' });
+    store.setFilters({ statuses: ['active'] });
 
     // Pass a lastProcessedDate that's before the future task's start_date
     const lastProcessedDate = new Date().toISOString().split('T')[0];
@@ -962,7 +962,7 @@ describe('useFilteredTasks', () => {
     ];
     const store = useTaskStore.getState();
     store.setTasks(tasksWithDueDates);
-    store.setFilters({ status: 'all', maxDueDate: '2024-01-31' });
+    store.setFilters({ statuses: ['all'], maxDueDate: '2024-01-31' });
 
     const { result } = renderHook(() => useFilteredTasks());
     // Should include task due on 2024-01-15, exclude task due 2024-02-15 and task with no due date
@@ -993,7 +993,7 @@ describe('useFilteredTasks', () => {
     ];
     const store = useTaskStore.getState();
     store.setTasks(tasksWithDueDates);
-    store.setFilters({ status: 'all', maxDueDate: '2024-01-31' });
+    store.setFilters({ statuses: ['all'], maxDueDate: '2024-01-31' });
 
     const { result } = renderHook(() => useFilteredTasks());
     // Should include task due exactly on maxDueDate
@@ -1003,7 +1003,7 @@ describe('useFilteredTasks', () => {
 
   it('should apply crisis mode visibility after regular filters', () => {
     const store = useTaskStore.getState();
-    store.setFilters({ status: 'all' });
+    store.setFilters({ statuses: ['all'] });
     store.activateCrisisMode(['habit-1']);
 
     const { result } = renderHook(() => useFilteredTasks());

@@ -32,8 +32,8 @@ type StatusFilter = 'all' | 'active' | 'completed' | 'blocked' | 'future';
 interface FilterBarProps {
   search: string;
   onSearchChange: (value: string) => void;
-  status: StatusFilter;
-  onStatusChange: (status: StatusFilter) => void;
+  statuses: StatusFilter[];
+  onStatusesChange: (statuses: StatusFilter[]) => void;
   priorities: Priority[];
   onPrioritiesChange: (priorities: Priority[]) => void;
   difficulties: Difficulty[];
@@ -137,8 +137,8 @@ const kcSelectStyles = {
 export default function FilterBar({
   search,
   onSearchChange,
-  status,
-  onStatusChange,
+  statuses,
+  onStatusesChange,
   priorities,
   onPrioritiesChange,
   difficulties,
@@ -158,9 +158,11 @@ export default function FilterBar({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 48em)');
 
+  const isNonDefaultStatus = !(statuses.length === 1 && statuses[0] === 'active');
+
   const hasActiveFilters =
     search ||
-    status !== 'active' ||
+    isNonDefaultStatus ||
     priorities.length > 0 ||
     difficulties.length > 0 ||
     durations.length > 0 ||
@@ -170,7 +172,7 @@ export default function FilterBar({
 
   // Count active filters for badge (excluding search and status=active)
   const activeFilterCount =
-    (status !== 'active' ? 1 : 0) +
+    (isNonDefaultStatus ? 1 : 0) +
     priorities.length +
     difficulties.length +
     durations.length +
@@ -386,16 +388,16 @@ export default function FilterBar({
           Search: &quot;{search}&quot;
         </Badge>
       )}
-      {status !== 'active' && (
+      {!(statuses.length === 1 && statuses[0] === 'active') && (
         <Badge
           variant="light"
           size="sm"
           style={{ backgroundColor: 'rgba(129, 236, 255, 0.1)', color: '#81ecff', border: '1px solid rgba(129, 236, 255, 0.3)', borderRadius: 0 }}
           rightSection={
-            <CloseButton size="xs" onClick={() => onStatusChange('active')} aria-label="Clear status filter" data-testid="CancelIcon" />
+            <CloseButton size="xs" onClick={() => onStatusesChange(['active'])} aria-label="Clear status filter" data-testid="CancelIcon" />
           }
         >
-          Status: {status}
+          Statuses: {statuses.join(', ')}
         </Badge>
       )}
       {priorities.map((p) => (
@@ -495,17 +497,17 @@ export default function FilterBar({
           {statusTabs.map((tab) => (
             <button
               key={tab.value}
-              onClick={() => onStatusChange(tab.value)}
+              onClick={() => onStatusesChange(toggleArrayValue(statuses, tab.value))}
               style={{
                 background: 'none',
                 border: 'none',
-                borderBottom: status === tab.value ? '2px solid #81ecff' : '2px solid transparent',
+                borderBottom: statuses.includes(tab.value) ? '2px solid #81ecff' : '2px solid transparent',
                 padding: '8px 16px',
                 fontFamily: '"Space Grotesk", sans-serif',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 letterSpacing: '0.05em',
-                color: status === tab.value ? '#81ecff' : '#9BA3AF',
+                color: statuses.includes(tab.value) ? '#81ecff' : '#9BA3AF',
                 cursor: 'pointer',
                 transition: 'color 0.15s ease, border-color 0.15s ease',
                 whiteSpace: 'nowrap',
@@ -621,25 +623,25 @@ export default function FilterBar({
         {statusTabs.map((tab) => (
           <button
             key={tab.value}
-            onClick={() => onStatusChange(tab.value)}
+            onClick={() => onStatusesChange(toggleArrayValue(statuses, tab.value))}
             style={{
               background: 'none',
               border: 'none',
-              borderBottom: status === tab.value ? '2px solid #81ecff' : '2px solid transparent',
+              borderBottom: statuses.includes(tab.value) ? '2px solid #81ecff' : '2px solid transparent',
               padding: '8px 20px',
               fontFamily: '"Space Grotesk", sans-serif',
               fontSize: '0.8125rem',
               fontWeight: 600,
               letterSpacing: '0.05em',
-              color: status === tab.value ? '#81ecff' : '#9BA3AF',
+              color: statuses.includes(tab.value) ? '#81ecff' : '#9BA3AF',
               cursor: 'pointer',
               transition: 'color 0.15s ease, border-color 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              if (status !== tab.value) (e.currentTarget.style.color = '#e6e7f5');
+              if (!statuses.includes(tab.value)) (e.currentTarget.style.color = '#e6e7f5');
             }}
             onMouseLeave={(e) => {
-              if (status !== tab.value) (e.currentTarget.style.color = '#9BA3AF');
+              if (!statuses.includes(tab.value)) (e.currentTarget.style.color = '#9BA3AF');
             }}
           >
             {tab.label}

@@ -7,8 +7,8 @@ describe('FilterBar', () => {
   const defaultProps = {
     search: '',
     onSearchChange: vi.fn(),
-    status: 'active' as const,
-    onStatusChange: vi.fn(),
+    statuses: ['active'] as ('all' | 'active' | 'completed' | 'blocked' | 'future')[],
+    onStatusesChange: vi.fn(),
     priorities: [] as Priority[],
     onPrioritiesChange: vi.fn(),
     difficulties: [] as Difficulty[],
@@ -83,7 +83,7 @@ describe('FilterBar', () => {
       <FilterBar
         {...defaultProps}
         search="test"
-        status="completed"
+        statuses={['completed']}
         priorities={[Priority.HIGH]}
         difficulties={[Difficulty.HIGH]}
         durations={[Duration.LONG]}
@@ -94,7 +94,7 @@ describe('FilterBar', () => {
       />
     );
     expect(screen.getByText(/Search: "test"/)).toBeInTheDocument();
-    expect(screen.getByText(/Status: completed/)).toBeInTheDocument();
+    expect(screen.getByText(/statuses: completed/i)).toBeInTheDocument();
     expect(screen.getByText(/Priority:/)).toBeInTheDocument();
     expect(screen.getByText(/Difficulty:/)).toBeInTheDocument();
     expect(screen.getByText(/Duration:/)).toBeInTheDocument();
@@ -120,18 +120,18 @@ describe('FilterBar', () => {
   });
 
   it('removes status chip when delete clicked', async () => {
-    const onStatusChange = vi.fn();
+    const onStatusesChange = vi.fn();
     const { user } = render(
-      <FilterBar {...defaultProps} status="completed" onStatusChange={onStatusChange} />
+      <FilterBar {...defaultProps} statuses={['completed']} onStatusesChange={onStatusesChange} />
     );
-    const chip = screen.getByText(/Status: completed/);
+    const chip = screen.getByText(/statuses: completed/i);
     expect(chip).toBeInTheDocument();
 
     const deleteButton = chip.parentElement?.querySelector('[data-testid="CancelIcon"]');
     if (deleteButton) {
       await user.click(deleteButton as HTMLElement);
     }
-    expect(onStatusChange).toHaveBeenCalledWith('active');
+    expect(onStatusesChange).toHaveBeenCalledWith(['active']);
   });
 
   it('removes priority chip when delete clicked', async () => {
