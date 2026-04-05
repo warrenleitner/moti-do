@@ -1,9 +1,9 @@
-# Docker Compose configuration for E2E testing
-# Provides a temporary PostgreSQL database for integration/E2E tests
+# Docker Compose configuration for local and E2E PostgreSQL
+# Provides a temporary PostgreSQL database for development and integration/E2E tests
 #
 # Usage:
-#   docker compose -f docker-compose.test.yml up -d    # Start
-#   docker compose -f docker-compose.test.yml down -v  # Stop and remove data
+#   docker compose -f docker-compose.yml up -d    # Start
+#   docker compose -f docker-compose.yml down -v  # Stop and remove data
 
 services:
   postgres-test:

@@ -521,7 +521,7 @@ moti-do/
 │   └── workflows/           # CI/CD pipelines
 ├── pyproject.toml           # Python config (Poetry)
 ├── vercel.json              # Vercel deployment
-├── docker-compose.test.yml  # Test database
+├── docker-compose.yml       # Test database
 ├── README.md                # Project overview
 └── AGENTS.md                # Agent development guidelines
 ```
@@ -535,7 +535,7 @@ moti-do/
 | `frontend/vite.config.ts` | Build configuration |
 | `frontend/playwright.config.ts` | E2E test configuration |
 | `vercel.json` | Production deployment |
-| `docker-compose.test.yml` | Test database |
+| `docker-compose.yml` | Test database |
 | `.env.example` | Environment template |
 
 ## Design Decisions
