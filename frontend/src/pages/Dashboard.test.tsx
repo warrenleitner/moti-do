@@ -109,7 +109,12 @@ describe('Dashboard', () => {
 
     render(<Dashboard />);
 
-    expect(screen.getByText('Jan 9')).toBeInTheDocument();
+    const expectedDate = new Date(2025, 0, 9).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+
+    expect(screen.getByText(expectedDate)).toBeInTheDocument();
     expect(screen.queryByText('Invalid Date')).not.toBeInTheDocument();
   });
 
@@ -127,6 +132,49 @@ describe('Dashboard', () => {
 
     render(<Dashboard />);
 
+    expect(screen.getByText('Active task')).toBeInTheDocument();
+    expect(screen.queryByText('Future task')).not.toBeInTheDocument();
+    expect(screen.queryByText('Deferred task')).not.toBeInTheDocument();
+  });
+
+  it('ignores invalid due dates for rendering and sorting', () => {
+    vi.mocked(stores.useTaskStore).mockReturnValue({
+      tasks: [
+        createTask({ id: 'invalid', title: 'Invalid due task', due_date: 'not-a-date' }),
+        createTask({ id: 'undated', title: 'Undated task', due_date: undefined }),
+        createTask({ id: 'valid', title: 'Valid due task', due_date: '2025-01-09T00:00:00Z' }),
+      ],
+      fetchTasks: vi.fn(),
+      completeTask: vi.fn().mockResolvedValue({ xp_earned: 10 }),
+      createTask: vi.fn().mockResolvedValue({}),
+    } as unknown as ReturnType<typeof stores.useTaskStore>);
+
+    render(<Dashboard />);
+
+    const validTask = screen.getByText('Valid due task');
+    const invalidTask = screen.getByText('Invalid due task');
+
+    expect(validTask.compareDocumentPosition(invalidTask)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(screen.queryByText('Invalid Date')).not.toBeInTheDocument();
+  });
+
+  it('uses the same active-task count for the stat card fallback and quick tasks', () => {
+    vi.mocked(stores.useTaskStore).mockReturnValue({
+      tasks: [
+        createTask({ id: 'active', title: 'Active task' }),
+        createTask({ id: 'future', title: 'Future task', start_date: '2024-01-05' }),
+        createTask({ id: 'deferred', title: 'Deferred task', defer_until: '2024-01-05' }),
+      ],
+      fetchTasks: vi.fn(),
+      completeTask: vi.fn().mockResolvedValue({ xp_earned: 10 }),
+      createTask: vi.fn().mockResolvedValue({}),
+    } as unknown as ReturnType<typeof stores.useTaskStore>);
+
+    render(<Dashboard />);
+
+    expect(screen.getByText('ACTIVE_TASKS').parentElement).toHaveTextContent('1');
     expect(screen.getByText('Active task')).toBeInTheDocument();
     expect(screen.queryByText('Future task')).not.toBeInTheDocument();
     expect(screen.queryByText('Deferred task')).not.toBeInTheDocument();

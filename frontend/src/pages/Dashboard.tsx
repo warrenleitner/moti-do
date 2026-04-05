@@ -118,21 +118,6 @@ export default function Dashboard() {
   const xpInLevel = totalXP - prevThreshold;
   const xpNeeded = nextThreshold - prevThreshold;
 
-  const badgesEarned = stats?.badges_earned ?? user?.badges.length ?? 0;
-  const streakCurrent = stats?.current_streak ?? 0;
-  const pendingTasks = stats?.pending_tasks ?? tasks.filter((t) => !t.is_complete).length;
-
-  const completedToday = useMemo(
-    () =>
-      tasks.filter(
-        (t) =>
-          t.is_complete &&
-          t.completion_date &&
-          new Date(t.completion_date).toDateString() === new Date().toDateString(),
-      ).length,
-    [tasks],
-  );
-
   const activeTasks = useMemo(
     () =>
       tasks
@@ -144,6 +129,21 @@ export default function Dashboard() {
         )
         .sort(sortActiveTasks),
     [systemStatus?.last_processed_date, tasks],
+  );
+
+  const badgesEarned = stats?.badges_earned ?? user?.badges.length ?? 0;
+  const streakCurrent = stats?.current_streak ?? 0;
+  const pendingTasks = activeTasks.length;
+
+  const completedToday = useMemo(
+    () =>
+      tasks.filter(
+        (t) =>
+          t.is_complete &&
+          t.completion_date &&
+          new Date(t.completion_date).toDateString() === new Date().toDateString(),
+      ).length,
+    [tasks],
   );
 
   const topTasks = activeTasks.slice(0, 8);
