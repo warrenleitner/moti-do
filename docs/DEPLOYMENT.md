@@ -146,7 +146,7 @@ createdb motido
 ./scripts/dev.sh --local
 ```
 
-Uses `docker-compose.test.yml` configuration:
+Uses `docker-compose.yml` configuration:
 - Port: 5433 (avoids conflict with local PostgreSQL)
 - User: `motido_test`
 - Password: `motido_test_password`

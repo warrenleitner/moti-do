@@ -246,9 +246,9 @@ cleanup() {
     if [ "$DOCKER_STARTED" = true ] && [ "$KEEP_DB" = false ]; then
         echo "Stopping Docker PostgreSQL container..."
         # Use detected docker-compose command, or fallback to docker-compose
-        ${DOCKER_COMPOSE:-docker-compose} -f docker-compose.test.yml down -v 2>/dev/null || true
+        ${DOCKER_COMPOSE:-docker-compose} -f docker-compose.yml down -v 2>/dev/null || true
     elif [ "$DOCKER_STARTED" = true ] && [ "$KEEP_DB" = true ]; then
-        echo -e "${BLUE}Keeping Docker PostgreSQL running (use 'docker-compose -f docker-compose.test.yml down -v' to stop)${NC}"
+        echo -e "${BLUE}Keeping Docker PostgreSQL running (use 'docker-compose -f docker-compose.yml down -v' to stop)${NC}"
     fi
 
     echo -e "${GREEN}Goodbye!${NC}"
@@ -323,7 +323,7 @@ elif [ "$MODE" = "local" ]; then
         echo -e "${YELLOW}Docker PostgreSQL already running on port ${TEST_DB_PORT}${NC}"
     else
         echo -e "${GREEN}Starting Docker PostgreSQL container...${NC}"
-        $DOCKER_COMPOSE -f docker-compose.test.yml up -d
+        $DOCKER_COMPOSE -f docker-compose.yml up -d
         DOCKER_STARTED=true
 
         # Wait for PostgreSQL to be ready
