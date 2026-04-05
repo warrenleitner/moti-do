@@ -8,6 +8,9 @@ import {
   Box,
   Group,
   Text,
+  Popover,
+  Stack,
+  DatePickerInput,
 } from '../../ui';
 import {
   IconEdit,
@@ -25,6 +28,8 @@ import {
   IconPlayerSkipForward,
   IconAlertTriangle,
   IconBolt,
+  IconFilter,
+  IconX,
 } from '../../ui/icons';
 import { ArcadeButton, DataBadge } from '../ui';
 import type { Task } from '../../types/models';
@@ -46,6 +51,19 @@ import ColumnConfigDialog from './ColumnConfigDialog';
 import { useSystemStatus } from '../../store/userStore';
 import { getCombinedTags } from '../../utils/tags';
 import { deriveLifecycleStatus, type LifecycleStatus } from '../../utils/taskStatus';
+
+type StatusFilter = 'all' | 'active' | 'completed' | 'blocked' | 'future';
+
+interface TaskFilters {
+  status: StatusFilter;
+  priorities: Priority[];
+  difficulties: Difficulty[];
+  durations: Duration[];
+  projects: string[];
+  tags: string[];
+  search?: string;
+  maxDueDate?: string;
+}
 
 export type ColumnId =
   | 'select'
@@ -97,6 +115,11 @@ interface TaskTableProps {
   onBulkDefer?: (taskIds: string[]) => void;
   onBulkJumpToCurrent?: (taskIds: string[]) => void;
   onActivateCrisisMode?: (taskIds: string[]) => void;
+  filters?: TaskFilters;
+  onFiltersChange?: (filters: Partial<TaskFilters>) => void;
+  onResetFilters?: () => void;
+  availableProjects?: string[];
+  availableTags?: string[];
 }
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
@@ -138,6 +161,11 @@ const TaskTable: React.FC<TaskTableProps> = ({
   onBulkDefer,
   onBulkJumpToCurrent,
   onActivateCrisisMode,
+  filters,
+  onFiltersChange,
+  onResetFilters,
+  availableProjects = [],
+  availableTags = [],
 }) => {
   const loadColumns = (): ColumnConfig[] => {
     const saved = localStorage.getItem('taskTableColumns');
@@ -873,6 +901,169 @@ const TaskTable: React.FC<TaskTableProps> = ({
     };
   };
 
+  // Helper to toggle a value in an array (for multi-select checkboxes)
+  const toggleArrayValue = <T,>(arr: T[], value: T): T[] => {
+    return arr.includes(value) ? arr.filter((x) => x !== value) : [...arr, value];
+  };
+
+  // Determine if a column has an active filter
+  const hasColumnFilter = (columnId: ColumnId): boolean => {
+    if (!filters) return false;
+    switch (columnId) {
+      case 'priority': return filters.priorities.length > 0;
+      case 'difficulty': return filters.difficulties.length > 0;
+      case 'duration': return filters.durations.length > 0;
+      case 'project': return filters.projects.length > 0;
+      case 'tags': return filters.tags.length > 0;
+      case 'due_date': return !!filters.maxDueDate;
+      case 'status': return filters.status !== 'active';
+      default: return false;
+    }
+  };
+
+  // Columns that support filtering
+  const filterableColumns = new Set<ColumnId>(['priority', 'difficulty', 'duration', 'project', 'tags', 'due_date', 'status']);
+
+  // Render filter popover content for a column
+  const renderFilterContent = (columnId: ColumnId) => {
+    if (!filters || !onFiltersChange) return null;
+
+    const checkboxLabelStyle = {
+      color: '#e6e7f5',
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '0.8125rem',
+    };
+
+    switch (columnId) {
+      case 'priority':
+        return (
+          <Stack gap={4}>
+            {[Priority.DEFCON_ONE, Priority.HIGH, Priority.MEDIUM, Priority.LOW, Priority.TRIVIAL].map((p) => (
+              <Checkbox
+                key={p}
+                label={`${PriorityEmoji[p]} ${p}`}
+                checked={filters.priorities.includes(p)}
+                onChange={() => onFiltersChange({ priorities: toggleArrayValue(filters.priorities, p) })}
+                size="xs"
+                styles={{ label: checkboxLabelStyle }}
+              />
+            ))}
+          </Stack>
+        );
+      case 'difficulty':
+        return (
+          <Stack gap={4}>
+            {[Difficulty.HERCULEAN, Difficulty.HIGH, Difficulty.MEDIUM, Difficulty.LOW, Difficulty.TRIVIAL].map((d) => (
+              <Checkbox
+                key={d}
+                label={`${DifficultyEmoji[d]} ${d}`}
+                checked={filters.difficulties.includes(d)}
+                onChange={() => onFiltersChange({ difficulties: toggleArrayValue(filters.difficulties, d) })}
+                size="xs"
+                styles={{ label: checkboxLabelStyle }}
+              />
+            ))}
+          </Stack>
+        );
+      case 'duration':
+        return (
+          <Stack gap={4}>
+            {[Duration.ODYSSEYAN, Duration.LONG, Duration.MEDIUM, Duration.SHORT, Duration.MINUSCULE].map((d) => (
+              <Checkbox
+                key={d}
+                label={`${DurationEmoji[d]} ${d}`}
+                checked={filters.durations.includes(d)}
+                onChange={() => onFiltersChange({ durations: toggleArrayValue(filters.durations, d) })}
+                size="xs"
+                styles={{ label: checkboxLabelStyle }}
+              />
+            ))}
+          </Stack>
+        );
+      case 'project':
+        return availableProjects.length > 0 ? (
+          <Stack gap={4}>
+            {availableProjects.map((p) => (
+              <Checkbox
+                key={p}
+                label={p}
+                checked={filters.projects.includes(p)}
+                onChange={() => onFiltersChange({ projects: toggleArrayValue(filters.projects, p) })}
+                size="xs"
+                styles={{ label: checkboxLabelStyle }}
+              />
+            ))}
+          </Stack>
+        ) : (
+          <Text size="xs" c="dimmed">No projects</Text>
+        );
+      case 'tags':
+        return availableTags.length > 0 ? (
+          <Stack gap={4}>
+            {availableTags.map((t) => (
+              <Checkbox
+                key={t}
+                label={t}
+                checked={filters.tags.includes(t)}
+                onChange={() => onFiltersChange({ tags: toggleArrayValue(filters.tags, t) })}
+                size="xs"
+                styles={{ label: checkboxLabelStyle }}
+              />
+            ))}
+          </Stack>
+        ) : (
+          <Text size="xs" c="dimmed">No tags</Text>
+        );
+      case 'due_date':
+        return (
+          <Stack gap={4}>
+            <Text size="xs" style={{ color: '#a8aab7', fontFamily: '"JetBrains Mono", monospace' }}>Due on or before</Text>
+            <DatePickerInput
+              size="xs"
+              value={filters.maxDueDate ? new Date(filters.maxDueDate + 'T00:00:00') : null}
+              onChange={(date: string | Date | null) => {
+                const d = date ? new Date(date) : null;
+                if (d && !isNaN(d.getTime())) {
+                  onFiltersChange({ maxDueDate: format(d, 'yyyy-MM-dd') });
+                } else {
+                  onFiltersChange({ maxDueDate: undefined });
+                }
+              }}
+              clearable
+              placeholder="Pick a date"
+              styles={{
+                input: {
+                  backgroundColor: '#0B0E17',
+                  borderColor: 'rgba(69, 71, 82, 0.15)',
+                  borderRadius: 0,
+                  color: '#e6e7f5',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.75rem',
+                },
+              }}
+            />
+          </Stack>
+        );
+      case 'status':
+        return (
+          <Stack gap={4}>
+            {(['active', 'blocked', 'future', 'completed', 'all'] as StatusFilter[]).map((s) => (
+              <Checkbox
+                key={s}
+                label={s.toUpperCase()}
+                checked={filters.status === s}
+                onChange={() => onFiltersChange({ status: s })}
+                size="xs"
+                styles={{ label: checkboxLabelStyle }}
+              />
+            ))}
+          </Stack>
+        );
+      default:
+        return null;
+    }
+  };
+
   const numSelected = selectedTasks.length;
 
   return (
@@ -1038,38 +1229,81 @@ const TaskTable: React.FC<TaskTableProps> = ({
                       onChange={(e) => onSelectAll(e.currentTarget.checked)}
                       size="sm"
                     />
-                  ) : col.sortable ? (
+                  ) : (
                     <Group
                       gap={4}
                       wrap="nowrap"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => handleSort(col.id)}
+                      align="center"
                     >
-                      <Text
-                        size="xs"
-                        fw={600}
-                        className="font-data"
-                        style={{ textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a8aab7' }}
-                      >
-                        {col.label}
-                      </Text>
-                      {getSortLabel(col.id)?.active && (
-                        <>
-                          {getSortLabel(col.id)?.direction === 'asc' ? (
-                            <IconChevronUp size={14} color="#81ecff" />
-                          ) : (
-                            <IconChevronDown size={14} color="#81ecff" />
+                      {col.sortable ? (
+                        <Group
+                          gap={4}
+                          wrap="nowrap"
+                          style={{ cursor: 'pointer', flex: 1 }}
+                          onClick={() => handleSort(col.id)}
+                        >
+                          <Text
+                            size="xs"
+                            fw={600}
+                            className="font-data"
+                            style={{ textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a8aab7' }}
+                          >
+                            {col.label}
+                          </Text>
+                          {getSortLabel(col.id)?.active && (
+                            <>
+                              {getSortLabel(col.id)?.direction === 'asc' ? (
+                                <IconChevronUp size={14} color="#81ecff" />
+                              ) : (
+                                <IconChevronDown size={14} color="#81ecff" />
+                              )}
+                              {getSortLabel(col.id)?.index && (
+                                <Text size="xs" fw={700} style={{ color: '#81ecff' }}>
+                                  {getSortLabel(col.id)?.index}
+                                </Text>
+                              )}
+                            </>
                           )}
-                          {getSortLabel(col.id)?.index && (
-                            <Text size="xs" fw={700} style={{ color: '#81ecff' }}>
-                              {getSortLabel(col.id)?.index}
-                            </Text>
-                          )}
-                        </>
+                        </Group>
+                      ) : (
+                        <Text
+                          size="xs"
+                          fw={600}
+                          className="font-data"
+                          style={{ textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a8aab7', flex: 1 }}
+                        >
+                          {col.label}
+                        </Text>
+                      )}
+                      {filters && onFiltersChange && filterableColumns.has(col.id) && (
+                        <Popover position="bottom" withArrow shadow="md" styles={{
+                          dropdown: {
+                            backgroundColor: '#181B25',
+                            border: '1px solid rgba(69, 71, 82, 0.15)',
+                            borderRadius: 0,
+                            padding: 8,
+                            minWidth: 160,
+                          },
+                        }}>
+                          <Popover.Target>
+                            <ActionIcon
+                              size="xs"
+                              variant="subtle"
+                              aria-label={`Filter ${col.label}`}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                color: hasColumnFilter(col.id) ? '#81ecff' : '#525560',
+                              }}
+                            >
+                              <IconFilter size={12} />
+                            </ActionIcon>
+                          </Popover.Target>
+                          <Popover.Dropdown>
+                            {renderFilterContent(col.id)}
+                          </Popover.Dropdown>
+                        </Popover>
                       )}
                     </Group>
-                  ) : (
-                    col.label
                   )}
                 </Table.Th>
               ))}

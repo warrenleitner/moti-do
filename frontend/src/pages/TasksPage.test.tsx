@@ -169,19 +169,10 @@ describe('TasksPage', () => {
     expect(tableViewButton).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('toggles filter visibility with persistence', async () => {
+  it('shows search input in table view', () => {
     localStorage.setItem('taskViewMode', 'table');
-    const { user } = render(<TasksPage />);
+    render(<TasksPage />);
 
-    expect(screen.getByText(/hide filters/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Search tasks...')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: /hide filters/i }));
-    expect(localStorage.getItem('taskFiltersVisible')).toBe('false');
-    expect(screen.queryByPlaceholderText('Search tasks...')).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: /show filters/i }));
-    expect(localStorage.getItem('taskFiltersVisible')).toBe('true');
     expect(screen.getByPlaceholderText('Search tasks...')).toBeInTheDocument();
   });
 

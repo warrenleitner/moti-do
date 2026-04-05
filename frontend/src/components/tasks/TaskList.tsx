@@ -13,7 +13,7 @@ import {
   IconListDetails,
 } from '../../ui/icons';
 import type { Task } from '../../types';
-import { EmptyState, FilterBar } from '../common';
+import { EmptyState, FilterDialog } from '../common';
 import TaskCard from './TaskCard';
 import SubtaskCard from './SubtaskCard';
 import { useTaskStore, useFilteredTasks } from '../../store';
@@ -71,7 +71,7 @@ export default function TaskList({
   return (
     <Box>
       {/* Filters */}
-      <FilterBar
+      <FilterDialog
         search={filters.search || ''}
         onSearchChange={(search) => setFilters({ search: search || undefined })}
         status={filters.status}
