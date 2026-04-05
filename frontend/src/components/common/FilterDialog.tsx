@@ -9,6 +9,7 @@ import {
   Modal,
   DatePickerInput,
   Indicator,
+  SegmentedControl,
 } from '../../ui';
 import { IconFilter, IconX } from '../../ui/icons';
 import { format, parseISO } from 'date-fns';
@@ -20,10 +21,9 @@ import {
   Duration,
   DurationEmoji,
 } from '../../types';
+import type { StatusFilter } from '../../types/filters';
 import { ArcadeButton } from '../ui';
 import SearchInput from './SearchInput';
-
-type StatusFilter = 'all' | 'active' | 'completed' | 'blocked' | 'future';
 
 interface FilterDialogProps {
   search: string;
@@ -74,8 +74,13 @@ const durationOptions: { value: Duration; label: string }[] = [
   { value: Duration.MINUSCULE, label: `${DurationEmoji[Duration.MINUSCULE]} Minuscule` },
 ];
 
-// Status tabs
-const statusOptions: { value: StatusFilter; label: string }[] = [
+// Helper to toggle a value in an array (for multi-select checkboxes)
+function toggleArrayValue<T>(arr: T[], value: T): T[] {
+  return arr.includes(value) ? arr.filter((x) => x !== value) : [...arr, value];
+}
+
+// Status options for SegmentedControl
+const STATUS_SEGMENT_DATA = [
   { value: 'active', label: 'ACTIVE' },
   { value: 'blocked', label: 'BLOCKED' },
   { value: 'future', label: 'FUTURE' },
@@ -83,13 +88,6 @@ const statusOptions: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'ALL' },
 ];
 
-// Helper to toggle a value in an array (for multi-select checkboxes)
-function toggleArrayValue<T>(arr: T[], value: T): T[] {
-  return arr.includes(value) ? arr.filter((x) => x !== value) : [...arr, value];
-}
-
-// UI component - tested via integration tests
-/* v8 ignore start */
 export default function FilterDialog({
   search,
   onSearchChange,
@@ -160,6 +158,17 @@ export default function FilterDialog({
     setDialogOpen(false);
   };
 
+  /* v8 ignore start -- DatePickerInput onChange callback not exercisable in JSDOM */
+  const handleDateChange = (date: string | Date | null) => {
+    const d = date ? new Date(date) : null;
+    if (d && !isNaN(d.getTime())) {
+      setLocalMaxDueDate(format(d, 'yyyy-MM-dd'));
+    } else {
+      setLocalMaxDueDate(undefined);
+    }
+  };
+  /* v8 ignore stop */
+
   const sectionLabelStyle = {
     fontFamily: '"JetBrains Mono", monospace',
     fontSize: '0.6875rem',
@@ -229,38 +238,26 @@ export default function FilterDialog({
           {/* Status filter */}
           <Box>
             <Text style={sectionLabelStyle} mb={6}>Status</Text>
-            <Box
-              style={{
-                display: 'flex',
-                gap: 0,
-                borderBottom: '1px solid rgba(69, 71, 82, 0.15)',
+            <SegmentedControl
+              value={localStatus}
+              onChange={(val) => setLocalStatus(val as StatusFilter)}
+              data={STATUS_SEGMENT_DATA}
+              fullWidth
+              size="xs"
+              styles={{
+                root: {
+                  backgroundColor: '#0B0E17',
+                  borderRadius: 0,
+                },
+                label: {
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.6875rem',
+                  letterSpacing: '0.05em',
+                  fontWeight: 600,
+                  padding: '6px 8px',
+                },
               }}
-            >
-              {statusOptions.map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setLocalStatus(tab.value)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    borderBottom: localStatus === tab.value ? '2px solid #81ecff' : '2px solid transparent',
-                    padding: '8px 16px',
-                    fontFamily: '"Space Grotesk", sans-serif',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    letterSpacing: '0.05em',
-                    color: localStatus === tab.value ? '#81ecff' : '#9BA3AF',
-                    cursor: 'pointer',
-                    transition: 'color 0.15s ease, border-color 0.15s ease',
-                    whiteSpace: 'nowrap',
-                    flex: 1,
-                    textAlign: 'center',
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </Box>
+            />
           </Box>
 
           <Divider style={{ borderColor: 'rgba(69, 71, 82, 0.15)' }} />
@@ -370,14 +367,7 @@ export default function FilterDialog({
             <DatePickerInput
               size="sm"
               value={localMaxDueDate ? parseISO(localMaxDueDate) : null}
-              onChange={(date: string | Date | null) => {
-                const d = date ? new Date(date) : null;
-                if (d && !isNaN(d.getTime())) {
-                  setLocalMaxDueDate(format(d, 'yyyy-MM-dd'));
-                } else {
-                  setLocalMaxDueDate(undefined);
-                }
-              }}
+              onChange={handleDateChange}
               clearable
               placeholder="Pick a date"
               styles={{
@@ -419,4 +409,3 @@ export default function FilterDialog({
     </Box>
   );
 }
-/* v8 ignore stop */

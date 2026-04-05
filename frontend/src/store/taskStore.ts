@@ -5,21 +5,11 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import type { Task, TaskCompletionResponse } from '../types';
-import { Priority, Difficulty, Duration } from '../types';
+import type { TaskFilters } from '../types';
+import { Priority } from '../types';
 import { taskApi, type BulkJumpToCurrentInstanceResponse } from '../services/api';
 import { getCombinedTags } from '../utils/tags';
 import { deriveLifecycleStatus } from '../utils/taskStatus';
-
-interface TaskFilters {
-  status: 'all' | 'active' | 'completed' | 'blocked' | 'future';
-  priorities: Priority[];
-  difficulties: Difficulty[];
-  durations: Duration[];
-  projects: string[];
-  tags: string[];
-  search?: string;
-  maxDueDate?: string; // ISO date string - show tasks due on or before this date
-}
 
 export type SubtaskViewMode = 'hidden' | 'inline' | 'top-level';
 

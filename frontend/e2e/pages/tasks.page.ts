@@ -272,11 +272,17 @@ export class TasksPage {
 
   /**
    * Filter by status.
-   * Status filter is now rendered as tab buttons (ACTIVE, COMPLETED, ALL, etc.)
+   * Status filter is now inside the FilterDialog modal, using a SegmentedControl.
    */
   async filterByStatus(status: 'Active' | 'Completed' | 'All'): Promise<void> {
-    // Status tabs are uppercase buttons: ACTIVE, BLOCKED, FUTURE, COMPLETED, ALL
-    await this.page.getByRole('button', { name: new RegExp(`^${status}$`, 'i') }).click();
+    // Open the filter dialog
+    await this.page.getByRole('button', { name: 'Open filters' }).click();
+    // Wait for dialog to appear
+    await this.page.getByText('FILTER TASKS').waitFor({ timeout: 5000 });
+    // Click the status segment (SegmentedControl renders labels with text)
+    await this.page.getByRole('radio', { name: new RegExp(`^${status}$`, 'i') }).click();
+    // Apply filters
+    await this.page.getByRole('button', { name: /APPLY FILTERS/i }).click();
   }
 
   /**

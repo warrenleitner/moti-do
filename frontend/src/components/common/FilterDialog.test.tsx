@@ -119,11 +119,11 @@ describe('FilterDialog', () => {
     render(
       <FilterDialog
         {...defaultProps}
+        status="completed"
         priorities={[Priority.HIGH]}
-        difficulties={[Difficulty.HIGH]}
       />
     );
-    // Badge should show count of 2
+    // Badge should show count of 2 (1 for non-active status + 1 priority)
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
@@ -138,10 +138,107 @@ describe('FilterDialog', () => {
     await user.click(screen.getByLabelText('Open filters'));
     // Wait for dialog to render
     await screen.findByText('COMPLETED');
-    // Click on COMPLETED status tab
+    // Click on COMPLETED segment
     await user.click(screen.getByText('COMPLETED'));
     // Click APPLY FILTERS
     await user.click(screen.getByText('APPLY FILTERS'));
     expect(onStatusChange).toHaveBeenCalledWith('completed');
+  });
+
+  it('applies priority filter when checkbox toggled and APPLY clicked', async () => {
+    const onPrioritiesChange = vi.fn();
+    const { user } = render(<FilterDialog {...defaultProps} onPrioritiesChange={onPrioritiesChange} />);
+    await user.click(screen.getByLabelText('Open filters'));
+    await screen.findByText(/Defcon One/);
+    // Toggle a priority checkbox
+    await user.click(screen.getByText(/Defcon One/));
+    await user.click(screen.getByText('APPLY FILTERS'));
+    expect(onPrioritiesChange).toHaveBeenCalledWith([Priority.DEFCON_ONE]);
+  });
+
+  it('toggles off a pre-selected priority', async () => {
+    const onPrioritiesChange = vi.fn();
+    const { user } = render(
+      <FilterDialog {...defaultProps} priorities={[Priority.HIGH]} onPrioritiesChange={onPrioritiesChange} />
+    );
+    await user.click(screen.getByLabelText('Open filters'));
+    // Find the High checkbox label that also contains the emoji
+    const highLabels = await screen.findAllByText(/High/);
+    // Click the first one (priority section)
+    await user.click(highLabels[0]);
+    await user.click(screen.getByText('APPLY FILTERS'));
+    expect(onPrioritiesChange).toHaveBeenCalledWith([]);
+  });
+
+  it('displays due date filter section', async () => {
+    const { user } = render(<FilterDialog {...defaultProps} />);
+    await user.click(screen.getByLabelText('Open filters'));
+    expect(await screen.findByText('Due Before')).toBeInTheDocument();
+  });
+
+  it('applies maxDueDate when set and APPLY clicked', async () => {
+    const onMaxDueDateChange = vi.fn();
+    const { user } = render(
+      <FilterDialog {...defaultProps} maxDueDate="2025-06-15" onMaxDueDateChange={onMaxDueDateChange} />
+    );
+    await user.click(screen.getByLabelText('Open filters'));
+    await screen.findByText('APPLY FILTERS');
+    await user.click(screen.getByText('APPLY FILTERS'));
+    expect(onMaxDueDateChange).toHaveBeenCalledWith('2025-06-15');
+  });
+
+  it('applies difficulty filter when toggled and APPLY clicked', async () => {
+    const onDifficultiesChange = vi.fn();
+    const { user } = render(<FilterDialog {...defaultProps} onDifficultiesChange={onDifficultiesChange} />);
+    await user.click(screen.getByLabelText('Open filters'));
+    await screen.findByText(/Herculean/);
+    await user.click(screen.getByText(/Herculean/));
+    await user.click(screen.getByText('APPLY FILTERS'));
+    expect(onDifficultiesChange).toHaveBeenCalledWith([Difficulty.HERCULEAN]);
+  });
+
+  it('applies duration filter when toggled and APPLY clicked', async () => {
+    const onDurationsChange = vi.fn();
+    const { user } = render(<FilterDialog {...defaultProps} onDurationsChange={onDurationsChange} />);
+    await user.click(screen.getByLabelText('Open filters'));
+    await screen.findByText(/Odysseyan/);
+    await user.click(screen.getByText(/Odysseyan/));
+    await user.click(screen.getByText('APPLY FILTERS'));
+    expect(onDurationsChange).toHaveBeenCalledWith([Duration.ODYSSEYAN]);
+  });
+
+  it('applies project filter when toggled and APPLY clicked', async () => {
+    const onProjectsChange = vi.fn();
+    const { user } = render(
+      <FilterDialog {...defaultProps} projects={['Work', 'Personal']} onProjectsChange={onProjectsChange} />
+    );
+    await user.click(screen.getByLabelText('Open filters'));
+    await screen.findByText('Work');
+    await user.click(screen.getByText('Work'));
+    await user.click(screen.getByText('APPLY FILTERS'));
+    expect(onProjectsChange).toHaveBeenCalledWith(['Work']);
+  });
+
+  it('applies tag filter when toggled and APPLY clicked', async () => {
+    const onTagsChange = vi.fn();
+    const { user } = render(
+      <FilterDialog {...defaultProps} tags={['urgent', 'later']} onTagsChange={onTagsChange} />
+    );
+    await user.click(screen.getByLabelText('Open filters'));
+    await screen.findByText('urgent');
+    await user.click(screen.getByText('urgent'));
+    await user.click(screen.getByText('APPLY FILTERS'));
+    expect(onTagsChange).toHaveBeenCalledWith(['urgent']);
+  });
+
+  it('closes dialog without applying when modal close is triggered', async () => {
+    const onStatusChange = vi.fn();
+    const { user } = render(<FilterDialog {...defaultProps} onStatusChange={onStatusChange} />);
+    await user.click(screen.getByLabelText('Open filters'));
+    await screen.findByText('FILTER TASKS');
+    // Press Escape to close the modal
+    await user.keyboard('{Escape}');
+    // onStatusChange should not have been called
+    expect(onStatusChange).not.toHaveBeenCalled();
   });
 });

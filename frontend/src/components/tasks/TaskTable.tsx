@@ -51,19 +51,7 @@ import ColumnConfigDialog from './ColumnConfigDialog';
 import { useSystemStatus } from '../../store/userStore';
 import { getCombinedTags } from '../../utils/tags';
 import { deriveLifecycleStatus, type LifecycleStatus } from '../../utils/taskStatus';
-
-type StatusFilter = 'all' | 'active' | 'completed' | 'blocked' | 'future';
-
-interface TaskFilters {
-  status: StatusFilter;
-  priorities: Priority[];
-  difficulties: Difficulty[];
-  durations: Duration[];
-  projects: string[];
-  tags: string[];
-  search?: string;
-  maxDueDate?: string;
-}
+import type { StatusFilter, TaskFilters } from '../../types/filters';
 
 export type ColumnId =
   | 'select'
@@ -140,6 +128,9 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: 'status', label: 'Status', visible: false, sortable: true, width: 120 },
   { id: 'actions', label: 'Actions', visible: true, sortable: false, width: 150 },
 ];
+
+// Columns that support filtering (module-scope to avoid re-creation on every render)
+const FILTERABLE_COLUMNS = new Set<ColumnId>(['priority', 'difficulty', 'duration', 'project', 'tags', 'due_date', 'status']);
 
 // UI component - tested via integration tests
 /* v8 ignore start */
@@ -920,7 +911,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
   };
 
   // Columns that support filtering
-  const filterableColumns = new Set<ColumnId>(['priority', 'difficulty', 'duration', 'project', 'tags', 'due_date', 'status']);
+  const filterableColumns = FILTERABLE_COLUMNS;
 
   // Render filter popover content for a column
   const renderFilterContent = (columnId: ColumnId) => {
