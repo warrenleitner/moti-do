@@ -27,7 +27,7 @@ from motido.core.utils import get_today_for_timezone, process_day
 app = FastAPI(
     title="Moti-Do API",
     description="Backend API for the Moti-Do task and habit tracker",
-    version="0.7.0",
+    version="0.7.1",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
@@ -76,7 +76,7 @@ app.include_router(views.router, prefix="/api")
 @app.get("/api/health")
 async def health_check() -> dict:
     """Health check endpoint."""
-    return {"status": "healthy", "version": "0.7.0"}
+    return {"status": "healthy", "version": "0.7.1"}
 
 
 @app.get("/api/health/db")
