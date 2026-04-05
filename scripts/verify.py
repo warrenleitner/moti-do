@@ -396,7 +396,7 @@ def e2e_setup_db(config: VerifyConfig, state: RuntimeState) -> None:
 
     # Reset DB state
     subprocess.run(
-        compose + ["-f", "docker-compose.test.yml", "down", "-v"],
+        compose + ["-f", "docker-compose.yml", "down", "-v"],
         cwd=str(PROJECT_ROOT),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -410,7 +410,7 @@ def e2e_setup_db(config: VerifyConfig, state: RuntimeState) -> None:
         check=False,
     )
     subprocess.run(
-        compose + ["-f", "docker-compose.test.yml", "up", "-d"],
+        compose + ["-f", "docker-compose.yml", "up", "-d"],
         cwd=str(PROJECT_ROOT),
         check=True,
     )
@@ -617,8 +617,7 @@ def cleanup(state: RuntimeState, config: VerifyConfig) -> None:
     if state.docker_started and not config.keep_db:
         if state.docker_compose_cmd:
             subprocess.run(
-                state.docker_compose_cmd
-                + ["-f", "docker-compose.test.yml", "down", "-v"],
+                state.docker_compose_cmd + ["-f", "docker-compose.yml", "down", "-v"],
                 cwd=str(PROJECT_ROOT),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
