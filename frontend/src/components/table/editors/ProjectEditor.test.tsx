@@ -33,13 +33,13 @@ describe('ProjectEditor', () => {
       render(<ProjectEditor {...defaultProps} />);
 
       expect(screen.getByTestId('project-editor')).toBeInTheDocument();
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
+      expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 
     it('renders with existing value', () => {
       render(<ProjectEditor {...defaultProps} value="Work" />);
 
-      expect(screen.getByRole('textbox')).toHaveValue('Work');
+      expect(screen.getByRole('combobox')).toHaveValue('Work');
     });
 
     it('renders with placeholder when no value', () => {
@@ -54,7 +54,7 @@ describe('ProjectEditor', () => {
       const user = userEvent.setup();
       render(<ProjectEditor {...defaultProps} />);
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByRole('combobox');
       // Mantine Autocomplete renders options in the DOM (may be hidden in jsdom)
       await user.type(input, 'W');
 
@@ -72,7 +72,7 @@ describe('ProjectEditor', () => {
 
       render(<ProjectEditor {...defaultProps} onChange={onChange} onSave={onSave} />);
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByRole('combobox');
       // Type to trigger dropdown
       await user.type(input, 'W');
 
@@ -95,7 +95,7 @@ describe('ProjectEditor', () => {
 
       render(<ProjectEditor {...defaultProps} onChange={onChange} />);
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByRole('combobox');
       await user.type(input, 'New Project');
 
       expect(onChange).toHaveBeenCalled();
@@ -107,7 +107,7 @@ describe('ProjectEditor', () => {
       const onClose = vi.fn();
       render(<ProjectEditor {...defaultProps} onClose={onClose} />);
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByRole('combobox');
       fireEvent.keyDown(input, { key: 'Escape' });
 
       expect(onClose).toHaveBeenCalled();
@@ -119,7 +119,7 @@ describe('ProjectEditor', () => {
       const onSave = vi.fn();
       render(<ProjectEditor {...defaultProps} value="Work" onSave={onSave} />);
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByRole('combobox');
       fireEvent.blur(input);
 
       await waitFor(() => {
@@ -135,7 +135,7 @@ describe('ProjectEditor', () => {
 
       render(<ProjectEditor {...defaultProps} value="Work" onChange={onChange} />);
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByRole('combobox');
       await user.clear(input);
 
       expect(onChange).toHaveBeenCalledWith(undefined);
@@ -151,7 +151,7 @@ describe('ProjectEditor', () => {
 
     it('handles undefined initial value', () => {
       render(<ProjectEditor {...defaultProps} value={undefined} />);
-      expect(screen.getByRole('textbox')).toHaveValue('');
+      expect(screen.getByRole('combobox')).toHaveValue('');
     });
   });
 });
