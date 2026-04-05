@@ -25,6 +25,7 @@ import {
   IconBeach,
   IconBell,
   IconHistory,
+  IconListDetails,
   IconTag,
   IconFolder,
   IconPencil,
@@ -49,6 +50,7 @@ import {
   type ProjectDefinition,
   type ScoringConfig,
 } from '../services/api';
+import { useLayoutStore } from '../store';
 import { useUserStore, useSystemStatus, useUserStats } from '../store/userStore';
 import { GlowCard, ArcadeButton, DataBadge } from '../components/ui';
 import {
@@ -130,12 +132,19 @@ export default function SettingsPage() {
     projects: true,
     dateProcessing: true,
     xpWithdraw: true,
+    layout: true,
     notifications: true,
     vacation: true,
     backup: true,
     security: true,
     about: false,
   });
+  const {
+    desktopNavCollapsed,
+    setDesktopNavCollapsed,
+    tasksViewUseFullWidth,
+    setTasksViewUseFullWidth,
+  } = useLayoutStore();
 
   const toggleSection = (key: string) => {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -1505,6 +1514,55 @@ export default function SettingsPage() {
           <Text className="font-data" size="xs" style={{ color: '#525560', marginTop: '0.5rem' }}>
             You can go into XP debt if you withdraw more than your current balance.
           </Text>
+        </Collapse>
+      </GlowCard>
+
+      {/* ═══════════════════════════════════════════════
+          Layout
+          ═══════════════════════════════════════════════ */}
+      <GlowCard accentColor="cyan" accentPosition="left" className="settings-section" style={{ marginBottom: '1.5rem' }}>
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => toggleSection('layout')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleSection('layout')}
+        >
+          {expandedSections.layout ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          <IconListDetails size={14} style={{ color: '#81ecff' }} />
+          LAYOUT
+        </div>
+
+        <Collapse in={expandedSections.layout}>
+          <Stack gap="md">
+            <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '0.25rem' }}>
+              Desktop-only layout preferences are saved locally in this browser.
+            </Text>
+
+            <Switch
+              checked={desktopNavCollapsed}
+              onChange={(e) => setDesktopNavCollapsed(e.currentTarget.checked)}
+              label={desktopNavCollapsed ? 'COMPACT DESKTOP NAVIGATION ENABLED' : 'ENABLE COMPACT DESKTOP NAVIGATION'}
+              aria-label="Compact Desktop Navigation"
+              color="cyan"
+              styles={{ label: { fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', letterSpacing: '0.05em' } }}
+            />
+
+            <Switch
+              checked={tasksViewUseFullWidth}
+              onChange={(e) => setTasksViewUseFullWidth(e.currentTarget.checked)}
+              label={tasksViewUseFullWidth ? 'TASKS PAGE USES FULL WIDTH' : 'EXPAND TASKS PAGE TO FULL WIDTH'}
+              aria-label="Use Full Width For Tasks Page"
+              color="cyan"
+              styles={{ label: { fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', letterSpacing: '0.05em' } }}
+            />
+
+            <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(129, 236, 255, 0.2)', padding: '0.75rem' }}>
+              <Text className="font-data" size="xs" style={{ color: '#81ecff' }}>
+                ✓ Collapse the left navigation to an icon rail, or let the desktop tasks page use more horizontal space.
+              </Text>
+            </Box>
+          </Stack>
         </Collapse>
       </GlowCard>
 

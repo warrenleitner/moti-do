@@ -6,6 +6,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '../test/utils';
 import SettingsPage from './SettingsPage';
 import { dataApi } from '../services/api';
+import {
+  defaultLayoutPreferences,
+  useLayoutStore,
+} from '../store/layoutStore';
 
 // Mock the APIs
 vi.mock('../services/api', () => ({
@@ -65,6 +69,10 @@ global.URL.revokeObjectURL = vi.fn();
 describe('SettingsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useLayoutStore.setState({
+      ...defaultLayoutPreferences,
+    });
+    window.localStorage.removeItem('motido-layout-store');
   });
 
   afterEach(() => {
@@ -75,11 +83,30 @@ describe('SettingsPage', () => {
     it('should render settings page with all sections', () => {
       render(<SettingsPage />);
 
+      expect(screen.getByText('LAYOUT')).toBeInTheDocument();
       expect(screen.getByText('DATA_BACKUP_RESTORE')).toBeInTheDocument();
       expect(screen.getByText('SECURITY_CONFIG')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /export data/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /import data/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /change password/i })).toBeInTheDocument();
+    });
+
+    it('should update layout preferences from the new layout section', async () => {
+      render(<SettingsPage />);
+
+      fireEvent.click(
+        screen.getByRole('switch', { name: /compact desktop navigation/i })
+      );
+      fireEvent.click(
+        screen.getByRole('switch', {
+          name: /use full width for tasks page/i,
+        })
+      );
+
+      await waitFor(() => {
+        expect(useLayoutStore.getState().desktopNavCollapsed).toBe(true);
+        expect(useLayoutStore.getState().tasksViewUseFullWidth).toBe(true);
+      });
     });
 
     it('should render warning message about import', () => {
