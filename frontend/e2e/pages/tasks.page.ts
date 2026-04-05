@@ -279,7 +279,7 @@ export class TasksPage {
     await this.page.getByRole('button', { name: 'Open filters' }).click();
     // Wait for dialog to appear
     await this.page.getByText('FILTER TASKS').waitFor({ timeout: 5000 });
-    // Click the status segment (SegmentedControl renders labels with text)
+    // Click the status segment (Mantine SegmentedControl renders each option as role="radio")
     await this.page.getByRole('radio', { name: new RegExp(`^${status}$`, 'i') }).click();
     // Apply filters
     await this.page.getByRole('button', { name: /APPLY FILTERS/i }).click();
