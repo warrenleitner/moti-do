@@ -11,7 +11,7 @@ import {
   Indicator,
 } from '../../ui';
 import { IconFilter, IconX } from '../../ui/icons';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import {
   Priority,
   PriorityEmoji,
@@ -369,7 +369,7 @@ export default function FilterDialog({
             <Text style={sectionLabelStyle} mb={6}>Due Before</Text>
             <DatePickerInput
               size="sm"
-              value={localMaxDueDate ? new Date(localMaxDueDate + 'T00:00:00') : null}
+              value={localMaxDueDate ? parseISO(localMaxDueDate) : null}
               onChange={(date: string | Date | null) => {
                 const d = date ? new Date(date) : null;
                 if (d && !isNaN(d.getTime())) {

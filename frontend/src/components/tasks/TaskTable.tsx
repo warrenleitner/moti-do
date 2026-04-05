@@ -10,6 +10,7 @@ import {
   Text,
   Popover,
   Stack,
+  Radio,
   DatePickerInput,
 } from '../../ui';
 import {
@@ -1045,7 +1046,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
         return (
           <Stack gap={4}>
             {(['active', 'blocked', 'future', 'completed', 'all'] as StatusFilter[]).map((s) => (
-              <Checkbox
+              <Radio
                 key={s}
                 label={s.toUpperCase()}
                 checked={filters.status === s}
