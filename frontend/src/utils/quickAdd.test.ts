@@ -6,9 +6,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   parseQuickAddInput,
   parseDateExpression,
+  parseRecurrenceExpression,
   quickAddResultToTask,
+  parseBulkQuickAddInput,
 } from './quickAdd';
-import { Priority } from '../types';
+import { Priority, RecurrenceType } from '../types';
 
 describe('parseDateExpression', () => {
   beforeEach(() => {
@@ -242,6 +244,12 @@ describe('parseQuickAddInput', () => {
       expect(result.title).toBe('Task');
     });
 
+    it('parses @today', () => {
+      const result = parseQuickAddInput('Task @today');
+      expect(result.dueDate).toEqual(new Date(2024, 11, 24));
+      expect(result.title).toBe('Task');
+    });
+
     it('parses @friday', () => {
       const result = parseQuickAddInput('Task @friday');
       expect(result.dueDate).toEqual(new Date(2024, 11, 27));
@@ -261,6 +269,34 @@ describe('parseQuickAddInput', () => {
       const result = parseQuickAddInput('Task @invalid');
       expect(result.dueDate).toBeUndefined();
       expect(result.title).toBe('Task @invalid');
+    });
+  });
+
+  describe('start date parsing', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2024, 11, 24, 10, 0, 0));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('parses ^today', () => {
+      const result = parseQuickAddInput('Task ^today');
+      expect(result.startDate).toEqual(new Date(2024, 11, 24));
+      expect(result.title).toBe('Task');
+    });
+
+    it('parses ^friday', () => {
+      const result = parseQuickAddInput('Task ^friday');
+      expect(result.startDate).toEqual(new Date(2024, 11, 27));
+    });
+
+    it('ignores invalid start date expression', () => {
+      const result = parseQuickAddInput('Task ^invalid');
+      expect(result.startDate).toBeUndefined();
+      expect(result.title).toBe('Task ^invalid');
     });
   });
 
@@ -294,19 +330,23 @@ describe('parseQuickAddInput', () => {
     });
 
     it('parses all modifiers together', () => {
-      const result = parseQuickAddInput('Buy groceries !high #personal @friday ~home');
+      const result = parseQuickAddInput(
+        'Buy groceries !high #personal ^today @friday ~home'
+      );
       expect(result.title).toBe('Buy groceries');
       expect(result.priority).toBe(Priority.HIGH);
       expect(result.tags).toEqual(['personal']);
+      expect(result.startDate).toEqual(new Date(2024, 11, 24));
       expect(result.dueDate).toEqual(new Date(2024, 11, 27));
       expect(result.project).toBe('home');
     });
 
     it('handles modifiers in any order', () => {
-      const result = parseQuickAddInput('#work ~office !high @tomorrow Task');
+      const result = parseQuickAddInput('#work ^today ~office !high @tomorrow Task');
       expect(result.title).toBe('Task');
       expect(result.priority).toBe(Priority.HIGH);
       expect(result.tags).toEqual(['work']);
+      expect(result.startDate).toEqual(new Date(2024, 11, 24));
       expect(result.project).toBe('office');
       expect(result.dueDate).toEqual(new Date(2024, 11, 25));
     });
@@ -343,13 +383,330 @@ describe('quickAddResultToTask', () => {
   });
 
   it('converts full result to task', () => {
-    const result = parseQuickAddInput('Buy groceries !high #personal @friday ~home');
+    const result = parseQuickAddInput(
+      'Buy groceries !high #personal ^today @friday ~home'
+    );
     const task = quickAddResultToTask(result);
 
     expect(task.title).toBe('Buy groceries');
     expect(task.priority).toBe(Priority.HIGH);
     expect(task.tags).toEqual(['personal']);
+    expect(task.start_date).toBe(new Date(2024, 11, 24).toISOString());
     expect(task.due_date).toBe(new Date(2024, 11, 27).toISOString());
     expect(task.project).toBe('home');
+  });
+
+  it('converts recurrence result to task with is_habit and recurrence_type', () => {
+    const result = parseQuickAddInput('Morning run &daily:strict');
+    const task = quickAddResultToTask(result);
+
+    expect(task.title).toBe('Morning run');
+    expect(task.recurrence_rule).toBe('FREQ=DAILY');
+    expect(task.recurrence_type).toBe(RecurrenceType.STRICT);
+    expect(task.is_habit).toBe(true);
+  });
+
+  it('defaults recurrence type to Strict when not specified', () => {
+    const result = parseQuickAddInput('Exercise &weekly');
+    const task = quickAddResultToTask(result);
+
+    expect(task.recurrence_rule).toBe('FREQ=WEEKLY');
+    expect(task.recurrence_type).toBe(RecurrenceType.STRICT);
+    expect(task.is_habit).toBe(true);
+  });
+
+  it('converts description result to task with text_description', () => {
+    const result = parseQuickAddInput('Task "some details here"');
+    const task = quickAddResultToTask(result);
+
+    expect(task.title).toBe('Task');
+    expect(task.text_description).toBe('some details here');
+  });
+});
+
+describe('parseRecurrenceExpression', () => {
+  it('parses daily', () => {
+    expect(parseRecurrenceExpression('daily')).toBe('FREQ=DAILY');
+  });
+
+  it('parses weekly', () => {
+    expect(parseRecurrenceExpression('weekly')).toBe('FREQ=WEEKLY');
+  });
+
+  it('parses weekly with a single weekday', () => {
+    expect(parseRecurrenceExpression('weekly-wed')).toBe('FREQ=WEEKLY;BYDAY=WE');
+  });
+
+  it('parses weekly with multiple weekdays', () => {
+    expect(parseRecurrenceExpression('weekly-mon,wed,fri')).toBe(
+      'FREQ=WEEKLY;BYDAY=MO,WE,FR'
+    );
+  });
+
+  it('parses weekly weekdays shorthand', () => {
+    expect(parseRecurrenceExpression('weekly-weekdays')).toBe(
+      'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR'
+    );
+  });
+
+  it('parses weekly weekends shorthand', () => {
+    expect(parseRecurrenceExpression('weekly-weekends')).toBe(
+      'FREQ=WEEKLY;BYDAY=SA,SU'
+    );
+  });
+
+  it('parses every-2-weeks with weekdays', () => {
+    expect(parseRecurrenceExpression('every-2-weeks-mon,thu')).toBe(
+      'FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,TH'
+    );
+  });
+
+  it('parses every-1-week with weekdays without interval', () => {
+    expect(parseRecurrenceExpression('every-1-week-wed')).toBe(
+      'FREQ=WEEKLY;BYDAY=WE'
+    );
+  });
+
+  it('parses monthly', () => {
+    expect(parseRecurrenceExpression('monthly')).toBe('FREQ=MONTHLY');
+  });
+
+  it('parses yearly', () => {
+    expect(parseRecurrenceExpression('yearly')).toBe('FREQ=YEARLY');
+  });
+
+  it('parses every-2-weeks', () => {
+    expect(parseRecurrenceExpression('every-2-weeks')).toBe('FREQ=WEEKLY;INTERVAL=2');
+  });
+
+  it('parses every-3-days', () => {
+    expect(parseRecurrenceExpression('every-3-days')).toBe('FREQ=DAILY;INTERVAL=3');
+  });
+
+  it('parses every-6-months', () => {
+    expect(parseRecurrenceExpression('every-6-months')).toBe('FREQ=MONTHLY;INTERVAL=6');
+  });
+
+  it('parses every-1-week as simple FREQ without INTERVAL', () => {
+    expect(parseRecurrenceExpression('every-1-week')).toBe('FREQ=WEEKLY');
+  });
+
+  it('returns null for invalid expression', () => {
+    expect(parseRecurrenceExpression('invalid')).toBeNull();
+  });
+
+  it('returns null for invalid weekly weekday expression', () => {
+    expect(parseRecurrenceExpression('weekly-funday')).toBeNull();
+  });
+
+  it('returns null for invalid every-n-weeks weekday expression', () => {
+    expect(parseRecurrenceExpression('every-2-weeks-funday')).toBeNull();
+  });
+
+  it('is case insensitive', () => {
+    expect(parseRecurrenceExpression('DAILY')).toBe('FREQ=DAILY');
+  });
+});
+
+describe('parseQuickAddInput - recurrence', () => {
+  it('parses &daily recurrence', () => {
+    const result = parseQuickAddInput('Task &daily');
+    expect(result.recurrenceRule).toBe('FREQ=DAILY');
+    expect(result.title).toBe('Task');
+  });
+
+  it('parses &weekly recurrence', () => {
+    const result = parseQuickAddInput('Task &weekly');
+    expect(result.recurrenceRule).toBe('FREQ=WEEKLY');
+  });
+
+  it('parses weekday-qualified weekly recurrence', () => {
+    const result = parseQuickAddInput('Dermaroll &weekly-wed:completion');
+    expect(result.recurrenceRule).toBe('FREQ=WEEKLY;BYDAY=WE');
+    expect(result.recurrenceType).toBe(RecurrenceType.FROM_COMPLETION);
+    expect(result.title).toBe('Dermaroll');
+  });
+
+  it('parses multi-day weekly recurrence', () => {
+    const result = parseQuickAddInput(
+      'Time Tracking &weekly-mon,tue,wed,thu,fri:completion'
+    );
+    expect(result.recurrenceRule).toBe('FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR');
+    expect(result.recurrenceType).toBe(RecurrenceType.FROM_COMPLETION);
+    expect(result.title).toBe('Time Tracking');
+  });
+
+  it('parses weekly weekdays shorthand recurrence', () => {
+    const result = parseQuickAddInput('Time Tracking &weekly-weekdays:completion');
+    expect(result.recurrenceRule).toBe('FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR');
+    expect(result.recurrenceType).toBe(RecurrenceType.FROM_COMPLETION);
+  });
+
+  it('parses &every-2-weeks recurrence', () => {
+    const result = parseQuickAddInput('Task &every-2-weeks');
+    expect(result.recurrenceRule).toBe('FREQ=WEEKLY;INTERVAL=2');
+    expect(result.title).toBe('Task');
+  });
+
+  it('parses recurrence with strict type', () => {
+    const result = parseQuickAddInput('Task &daily:strict');
+    expect(result.recurrenceRule).toBe('FREQ=DAILY');
+    expect(result.recurrenceType).toBe(RecurrenceType.STRICT);
+  });
+
+  it('parses recurrence with completion type', () => {
+    const result = parseQuickAddInput('Task &weekly:completion');
+    expect(result.recurrenceRule).toBe('FREQ=WEEKLY');
+    expect(result.recurrenceType).toBe(RecurrenceType.FROM_COMPLETION);
+  });
+
+  it('parses recurrence with from-completion type', () => {
+    const result = parseQuickAddInput('Task &monthly:from-completion');
+    expect(result.recurrenceRule).toBe('FREQ=MONTHLY');
+    expect(result.recurrenceType).toBe(RecurrenceType.FROM_COMPLETION);
+  });
+
+  it('parses recurrence with due type', () => {
+    const result = parseQuickAddInput('Task &weekly:due');
+    expect(result.recurrenceRule).toBe('FREQ=WEEKLY');
+    expect(result.recurrenceType).toBe(RecurrenceType.FROM_DUE_DATE);
+  });
+
+  it('parses recurrence with from-due type', () => {
+    const result = parseQuickAddInput('Task &monthly:from-due');
+    expect(result.recurrenceRule).toBe('FREQ=MONTHLY');
+    expect(result.recurrenceType).toBe(RecurrenceType.FROM_DUE_DATE);
+  });
+
+  it('ignores invalid recurrence type', () => {
+    const result = parseQuickAddInput('Task &daily:unknown');
+    expect(result.recurrenceRule).toBe('FREQ=DAILY');
+    expect(result.recurrenceType).toBeUndefined();
+  });
+
+  it('ignores invalid recurrence expression', () => {
+    const result = parseQuickAddInput('Task &invalid');
+    expect(result.recurrenceRule).toBeUndefined();
+    expect(result.title).toBe('Task &invalid');
+  });
+
+  it('handles recurrence at start of input', () => {
+    const result = parseQuickAddInput('&daily Task');
+    expect(result.recurrenceRule).toBe('FREQ=DAILY');
+    expect(result.title).toBe('Task');
+  });
+
+  it('combines recurrence with other modifiers', () => {
+    const result = parseQuickAddInput('Morning run !high #fitness &daily:strict ~health');
+    expect(result.title).toBe('Morning run');
+    expect(result.priority).toBe(Priority.HIGH);
+    expect(result.tags).toEqual(['fitness']);
+    expect(result.recurrenceRule).toBe('FREQ=DAILY');
+    expect(result.recurrenceType).toBe(RecurrenceType.STRICT);
+    expect(result.project).toBe('health');
+  });
+});
+
+describe('parseQuickAddInput - description', () => {
+  it('parses quoted description', () => {
+    const result = parseQuickAddInput('Task "This is a description"');
+    expect(result.description).toBe('This is a description');
+    expect(result.title).toBe('Task');
+  });
+
+  it('parses description with modifiers', () => {
+    const result = parseQuickAddInput('Task !high "Important details" #work');
+    expect(result.description).toBe('Important details');
+    expect(result.title).toBe('Task');
+    expect(result.priority).toBe(Priority.HIGH);
+    expect(result.tags).toEqual(['work']);
+  });
+
+  it('preserves modifiers inside quoted description', () => {
+    const result = parseQuickAddInput('Task "Use !high and #tags inside"');
+    expect(result.description).toBe('Use !high and #tags inside');
+    expect(result.title).toBe('Task');
+    expect(result.priority).toBeUndefined();
+    expect(result.tags).toEqual([]);
+  });
+
+  it('handles description at start of input', () => {
+    const result = parseQuickAddInput('"A description" Task');
+    expect(result.description).toBe('A description');
+    expect(result.title).toBe('Task');
+  });
+
+  it('does not parse empty quotes', () => {
+    const result = parseQuickAddInput('Task ""');
+    expect(result.description).toBeUndefined();
+    expect(result.title).toBe('Task ""');
+  });
+
+  it('does not parse unclosed quotes', () => {
+    const result = parseQuickAddInput('Task "unclosed');
+    expect(result.description).toBeUndefined();
+    expect(result.title).toBe('Task "unclosed');
+  });
+});
+
+describe('parseBulkQuickAddInput', () => {
+  it('parses multiple lines into multiple results', () => {
+    const input = 'Task 1 !high\nTask 2 #work\nTask 3 ~home';
+    const results = parseBulkQuickAddInput(input);
+
+    expect(results).toHaveLength(3);
+    expect(results[0].title).toBe('Task 1');
+    expect(results[0].priority).toBe(Priority.HIGH);
+    expect(results[1].title).toBe('Task 2');
+    expect(results[1].tags).toEqual(['work']);
+    expect(results[2].title).toBe('Task 3');
+    expect(results[2].project).toBe('home');
+  });
+
+  it('skips empty lines', () => {
+    const input = 'Task 1\n\nTask 2\n\n\nTask 3';
+    const results = parseBulkQuickAddInput(input);
+
+    expect(results).toHaveLength(3);
+    expect(results[0].title).toBe('Task 1');
+    expect(results[1].title).toBe('Task 2');
+    expect(results[2].title).toBe('Task 3');
+  });
+
+  it('skips whitespace-only lines', () => {
+    const input = 'Task 1\n   \nTask 2';
+    const results = parseBulkQuickAddInput(input);
+
+    expect(results).toHaveLength(2);
+  });
+
+  it('skips lines with only modifiers and no title', () => {
+    const input = 'Task 1\n!high #tag\nTask 2';
+    const results = parseBulkQuickAddInput(input);
+
+    expect(results).toHaveLength(2);
+    expect(results[0].title).toBe('Task 1');
+    expect(results[1].title).toBe('Task 2');
+  });
+
+  it('returns empty array for empty input', () => {
+    expect(parseBulkQuickAddInput('')).toEqual([]);
+  });
+
+  it('handles single line input', () => {
+    const results = parseBulkQuickAddInput('Single task !high');
+    expect(results).toHaveLength(1);
+    expect(results[0].title).toBe('Single task');
+    expect(results[0].priority).toBe(Priority.HIGH);
+  });
+
+  it('parses each line independently with all modifiers', () => {
+    const input = 'Task 1 !high #work &daily\nTask 2 !low "desc" ~home';
+    const results = parseBulkQuickAddInput(input);
+
+    expect(results).toHaveLength(2);
+    expect(results[0].recurrenceRule).toBe('FREQ=DAILY');
+    expect(results[1].description).toBe('desc');
+    expect(results[1].project).toBe('home');
   });
 });
