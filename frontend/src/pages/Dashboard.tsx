@@ -19,6 +19,7 @@ import {
   ArcadeButton,
   TerminalInput,
 } from '../components/ui';
+import { isTaskDeferred, isTaskFuture } from '../utils/taskStatus';
 import type { Task, Priority } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -56,13 +57,37 @@ const priorityOrder: Record<Priority, number> = {
   Trivial: 1,
 };
 
+const getTaskDueDate = (dueDate?: string): Date | undefined => {
+  if (!dueDate) return undefined;
+
+  const dateOnly = dueDate.includes('T') ? dueDate.split('T')[0] : dueDate;
+  const [year, month, day] = dateOnly.split('-').map(Number);
+
+  if (![year, month, day].every(Number.isFinite)) {
+    return undefined;
+  }
+
+  const parsedDate = new Date(year, month - 1, day);
+  if (
+    parsedDate.getFullYear() !== year ||
+    parsedDate.getMonth() !== month - 1 ||
+    parsedDate.getDate() !== day
+  ) {
+    return undefined;
+  }
+
+  return parsedDate;
+};
+
 const sortActiveTasks = (a: Task, b: Task) => {
   const pa = priorityOrder[a.priority] ?? 0;
   const pb = priorityOrder[b.priority] ?? 0;
   if (pa !== pb) return pb - pa;
-  if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
-  if (a.due_date) return -1;
-  if (b.due_date) return 1;
+  const aDueDate = getTaskDueDate(a.due_date);
+  const bDueDate = getTaskDueDate(b.due_date);
+  if (aDueDate && bDueDate) return aDueDate.getTime() - bDueDate.getTime();
+  if (aDueDate) return -1;
+  if (bDueDate) return 1;
   return 0;
 };
 
@@ -111,9 +136,14 @@ export default function Dashboard() {
   const activeTasks = useMemo(
     () =>
       tasks
-        .filter((t) => !t.is_complete)
+        .filter(
+          (t) =>
+            !t.is_complete &&
+            !isTaskFuture(t, systemStatus?.last_processed_date) &&
+            !isTaskDeferred(t, systemStatus?.last_processed_date),
+        )
         .sort(sortActiveTasks),
-    [tasks],
+    [systemStatus?.last_processed_date, tasks],
   );
 
   const topTasks = activeTasks.slice(0, 8);
@@ -266,7 +296,11 @@ export default function Dashboard() {
       </span>
 
       {/* Due date */}
-      {task.due_date && (
+      {(() => {
+        const dueDate = getTaskDueDate(task.due_date);
+        if (!dueDate) return null;
+
+        return (
         <span
           className="font-data"
           style={{
@@ -275,12 +309,13 @@ export default function Dashboard() {
             whiteSpace: 'nowrap',
           }}
         >
-          {new Date(task.due_date + 'T00:00:00').toLocaleDateString(undefined, {
+          {dueDate.toLocaleDateString(undefined, {
             month: 'short',
             day: 'numeric',
           })}
         </span>
-      )}
+        );
+      })()}
 
       {/* XP badge */}
       <DataBadge
