@@ -4,14 +4,15 @@
  * Supports:
  * - Priority: !trivial, !low, !medium, !high, !critical (or !1-5)
  * - Tags: #tagname (multiple allowed)
- * - Due date: @tomorrow, @friday, @next-week, @dec-25
+ * - Due date: @today, @tomorrow, @friday, @next-week, @dec-25
+ * - Start date: ^today, ^tomorrow, ^friday, ^next-week, ^dec-25
  * - Project: ~projectname
  * - Recurrence: &daily, &weekly, &weekly-wed, &weekly-mon,wed,fri,
  *   &monthly, &yearly, &every-2-weeks
  *   - Optional style: &daily:strict, &weekly-wed:completion, &monthly:due
  * - Description: "quoted description text"
  *
- * Example: "Buy groceries !high #personal @friday ~home &weekly"
+ * Example: "Buy groceries !high #personal ^today @friday ~home &weekly"
  */
 
 import { Priority, RecurrenceType } from '../types';
@@ -289,6 +290,8 @@ export interface QuickAddResult {
   tags: string[];
   /** Parsed due date, if specified */
   dueDate?: Date;
+  /** Parsed start date, if specified */
+  startDate?: Date;
   /** Extracted project name */
   project?: string;
   /** Recurrence rule (rrule string), if specified */
@@ -357,6 +360,17 @@ export function parseQuickAddInput(input: string): QuickAddResult {
     }
   }
 
+  // Extract start date (^expression) - only remove if parsed successfully
+  const startDateMatch = remaining.match(/\s*\^([\w-]+)/);
+  if (startDateMatch) {
+    const startDateExpr = startDateMatch[1];
+    const parsedStartDate = parseDateExpression(startDateExpr);
+    if (parsedStartDate) {
+      result.startDate = parsedStartDate;
+      remaining = remaining.replace(startDateMatch[0], ' ');
+    }
+  }
+
   // Extract project (~word)
   const projectMatch = remaining.match(/\s*~([\w-]+)/);
   if (projectMatch) {
@@ -406,6 +420,10 @@ export function quickAddResultToTask(result: QuickAddResult): Partial<Task> {
 
   if (result.dueDate) {
     task.due_date = result.dueDate.toISOString();
+  }
+
+  if (result.startDate) {
+    task.start_date = result.startDate.toISOString();
   }
 
   if (result.project) {

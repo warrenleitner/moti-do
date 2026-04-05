@@ -244,6 +244,12 @@ describe('parseQuickAddInput', () => {
       expect(result.title).toBe('Task');
     });
 
+    it('parses @today', () => {
+      const result = parseQuickAddInput('Task @today');
+      expect(result.dueDate).toEqual(new Date(2024, 11, 24));
+      expect(result.title).toBe('Task');
+    });
+
     it('parses @friday', () => {
       const result = parseQuickAddInput('Task @friday');
       expect(result.dueDate).toEqual(new Date(2024, 11, 27));
@@ -263,6 +269,34 @@ describe('parseQuickAddInput', () => {
       const result = parseQuickAddInput('Task @invalid');
       expect(result.dueDate).toBeUndefined();
       expect(result.title).toBe('Task @invalid');
+    });
+  });
+
+  describe('start date parsing', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2024, 11, 24, 10, 0, 0));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('parses ^today', () => {
+      const result = parseQuickAddInput('Task ^today');
+      expect(result.startDate).toEqual(new Date(2024, 11, 24));
+      expect(result.title).toBe('Task');
+    });
+
+    it('parses ^friday', () => {
+      const result = parseQuickAddInput('Task ^friday');
+      expect(result.startDate).toEqual(new Date(2024, 11, 27));
+    });
+
+    it('ignores invalid start date expression', () => {
+      const result = parseQuickAddInput('Task ^invalid');
+      expect(result.startDate).toBeUndefined();
+      expect(result.title).toBe('Task ^invalid');
     });
   });
 
@@ -296,19 +330,23 @@ describe('parseQuickAddInput', () => {
     });
 
     it('parses all modifiers together', () => {
-      const result = parseQuickAddInput('Buy groceries !high #personal @friday ~home');
+      const result = parseQuickAddInput(
+        'Buy groceries !high #personal ^today @friday ~home'
+      );
       expect(result.title).toBe('Buy groceries');
       expect(result.priority).toBe(Priority.HIGH);
       expect(result.tags).toEqual(['personal']);
+      expect(result.startDate).toEqual(new Date(2024, 11, 24));
       expect(result.dueDate).toEqual(new Date(2024, 11, 27));
       expect(result.project).toBe('home');
     });
 
     it('handles modifiers in any order', () => {
-      const result = parseQuickAddInput('#work ~office !high @tomorrow Task');
+      const result = parseQuickAddInput('#work ^today ~office !high @tomorrow Task');
       expect(result.title).toBe('Task');
       expect(result.priority).toBe(Priority.HIGH);
       expect(result.tags).toEqual(['work']);
+      expect(result.startDate).toEqual(new Date(2024, 11, 24));
       expect(result.project).toBe('office');
       expect(result.dueDate).toEqual(new Date(2024, 11, 25));
     });
@@ -345,12 +383,15 @@ describe('quickAddResultToTask', () => {
   });
 
   it('converts full result to task', () => {
-    const result = parseQuickAddInput('Buy groceries !high #personal @friday ~home');
+    const result = parseQuickAddInput(
+      'Buy groceries !high #personal ^today @friday ~home'
+    );
     const task = quickAddResultToTask(result);
 
     expect(task.title).toBe('Buy groceries');
     expect(task.priority).toBe(Priority.HIGH);
     expect(task.tags).toEqual(['personal']);
+    expect(task.start_date).toBe(new Date(2024, 11, 24).toISOString());
     expect(task.due_date).toBe(new Date(2024, 11, 27).toISOString());
     expect(task.project).toBe('home');
   });

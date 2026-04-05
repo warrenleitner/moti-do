@@ -128,6 +128,8 @@ describe('QuickAddBox', () => {
     await user.click(helpButton);
 
     expect(screen.getByText(/quick-add syntax/i)).toBeInTheDocument();
+    expect(screen.getByText('@today')).toBeInTheDocument();
+    expect(screen.getByText('^today')).toBeInTheDocument();
   });
 
   it('shows priority chip when priority modifier used', async () => {
@@ -201,6 +203,22 @@ describe('QuickAddBox', () => {
         expect.objectContaining({
           title: 'Test task',
           project: 'home',
+        })
+      );
+    });
+  });
+
+  it('parses start date and passes to createTask', async () => {
+    const { user } = render(<QuickAddBox />);
+
+    const input = screen.getByPlaceholderText(/DEPLOY NEW TASK/i);
+    await user.type(input, 'Test task ^2025-01-15{Enter}');
+
+    await waitFor(() => {
+      expect(mockCreateTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Test task',
+          start_date: new Date(2025, 0, 15).toISOString(),
         })
       );
     });

@@ -4,7 +4,8 @@
  * Supports inline modifiers:
  * - Priority: !high, !low, !medium, !critical
  * - Tags: #tagname
- * - Due date: @tomorrow, @friday, @next-week
+ * - Due date: @today, @tomorrow, @friday, @next-week
+ * - Start date: ^today, ^tomorrow, ^friday, ^next-week
  * - Project: ~projectname
  * - Recurrence: &daily, &weekly, &weekly-wed, &weekly-mon,wed,fri,
  *   &monthly, &every-2-weeks
@@ -103,6 +104,7 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
     parsed.priority ||
     parsed.tags.length > 0 ||
     parsed.dueDate ||
+    parsed.startDate ||
     parsed.project ||
     parsed.recurrenceRule ||
     parsed.description;
@@ -232,7 +234,7 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
           ) : (
             <TextInput
               ref={inputRef}
-              placeholder='DEPLOY NEW TASK: [TITLE] /PRIORITY /DUE...'
+                placeholder='DEPLOY NEW TASK: [TITLE] /PRIORITY /START /DUE...'
               value={input}
               onChange={(e) => setInput(e.currentTarget.value)}
               onKeyDown={handleKeyDown}
@@ -342,6 +344,12 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
                 color="amber"
               />
             )}
+            {parsed.startDate && (
+              <DataBadge
+                value={`START: ${parsed.startDate.toLocaleDateString()}`}
+                color="muted"
+              />
+            )}
             {parsed.project && (
               <DataBadge value={`~${parsed.project.toUpperCase()}`} color="cyan" />
             )}
@@ -382,8 +390,11 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
               <br />
               <code style={{ color: '#FFC775' }}>#tagname</code> — Add tags (multiple allowed)
               <br />
-              <code style={{ color: '#FFC775' }}>@tomorrow</code>, <code style={{ color: '#FFC775' }}>@friday</code>, <code style={{ color: '#FFC775' }}>@next-week</code>,{' '}
+              <code style={{ color: '#FFC775' }}>@today</code>, <code style={{ color: '#FFC775' }}>@tomorrow</code>, <code style={{ color: '#FFC775' }}>@friday</code>, <code style={{ color: '#FFC775' }}>@next-week</code>,{' '}
               <code style={{ color: '#FFC775' }}>@dec-25</code> — Due date
+              <br />
+              <code style={{ color: '#FFC775' }}>^today</code>, <code style={{ color: '#FFC775' }}>^tomorrow</code>, <code style={{ color: '#FFC775' }}>^friday</code>,{' '}
+              <code style={{ color: '#FFC775' }}>^next-week</code>, <code style={{ color: '#FFC775' }}>^dec-25</code> — Start date
               <br />
               <code style={{ color: '#FFC775' }}>~project</code> — Project name
               <br />
@@ -396,7 +407,7 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
               <code style={{ color: '#FFC775' }}>&quot;description text&quot;</code> — Add a description
               <br />
               <br />
-              <em style={{ color: '#525560' }}>Example: Dermaroll &amp;weekly-wed:completion</em>
+              <em style={{ color: '#525560' }}>Example: Dermaroll ^today &amp;weekly-wed:completion</em>
               <br />
               <em style={{ color: '#525560' }}>Bulk mode: click the list icon to add multiple tasks (one per line)</em>
               <br />
@@ -432,13 +443,14 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
             }}
           >
             <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Title</Table.Th>
-                <Table.Th>Priority</Table.Th>
-                <Table.Th>Tags</Table.Th>
-                <Table.Th>Due</Table.Th>
-                <Table.Th>Recurrence</Table.Th>
-              </Table.Tr>
+                <Table.Tr>
+                  <Table.Th>Title</Table.Th>
+                  <Table.Th>Priority</Table.Th>
+                  <Table.Th>Tags</Table.Th>
+                  <Table.Th>Start</Table.Th>
+                  <Table.Th>Due</Table.Th>
+                  <Table.Th>Recurrence</Table.Th>
+                </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {bulkPreview.map((result, idx) => (
@@ -451,6 +463,9 @@ export default function QuickAddBox({ onTaskCreated }: QuickAddBoxProps) {
                   </Table.Td>
                   <Table.Td>
                     {result.tags.length > 0 ? result.tags.map((t) => `#${t}`).join(' ') : '—'}
+                  </Table.Td>
+                  <Table.Td>
+                    {result.startDate ? result.startDate.toLocaleDateString() : '—'}
                   </Table.Td>
                   <Table.Td>
                     {result.dueDate ? result.dueDate.toLocaleDateString() : '—'}
