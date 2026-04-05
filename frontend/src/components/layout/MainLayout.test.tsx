@@ -7,6 +7,7 @@ import * as hooks from '../../hooks';
 
 vi.mock('../../store', () => ({
   useUserStore: vi.fn(),
+  useLayoutStore: vi.fn(),
 }));
 
 vi.mock('../../hooks', () => ({
@@ -27,6 +28,14 @@ describe('MainLayout', () => {
       user: { id: '1', username: 'test', email: 'test@test.com', xp: 100, level: 1, current_streak: 5, best_streak: 10 },
       logout: vi.fn(),
     } as unknown as ReturnType<typeof stores.useUserStore>);
+    vi.mocked(stores.useLayoutStore).mockReturnValue({
+      desktopNavCollapsed: false,
+      tasksViewUseFullWidth: false,
+      toggleDesktopNavCollapsed: vi.fn(),
+      setDesktopNavCollapsed: vi.fn(),
+      setTasksViewUseFullWidth: vi.fn(),
+    } as unknown as ReturnType<typeof stores.useLayoutStore>);
+    window.history.pushState({}, '', '/');
   });
 
   it('renders without crashing', () => {
@@ -174,5 +183,40 @@ describe('MainLayout', () => {
 
     const refreshButton = screen.getByText(/REFRESH/i);
     expect(refreshButton.closest('button')).toBeDisabled();
+  });
+
+  it('calls the desktop navigation toggle when clicked', async () => {
+    const toggleDesktopNavCollapsed = vi.fn();
+    vi.mocked(stores.useLayoutStore).mockReturnValue({
+      desktopNavCollapsed: false,
+      tasksViewUseFullWidth: false,
+      toggleDesktopNavCollapsed,
+      setDesktopNavCollapsed: vi.fn(),
+      setTasksViewUseFullWidth: vi.fn(),
+    } as unknown as ReturnType<typeof stores.useLayoutStore>);
+
+    const { user } = render(<MainLayout><div>Content</div></MainLayout>);
+
+    await user.click(screen.getByRole('button', { name: /collapse desktop navigation/i }));
+
+    expect(toggleDesktopNavCollapsed).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks the tasks page as full width when the preference is enabled', () => {
+    window.history.pushState({}, '', '/tasks');
+    vi.mocked(stores.useLayoutStore).mockReturnValue({
+      desktopNavCollapsed: false,
+      tasksViewUseFullWidth: true,
+      toggleDesktopNavCollapsed: vi.fn(),
+      setDesktopNavCollapsed: vi.fn(),
+      setTasksViewUseFullWidth: vi.fn(),
+    } as unknown as ReturnType<typeof stores.useLayoutStore>);
+
+    render(<MainLayout><div>Content</div></MainLayout>);
+
+    expect(screen.getByTestId('desktop-main-content')).toHaveAttribute(
+      'data-full-width',
+      'true'
+    );
   });
 });

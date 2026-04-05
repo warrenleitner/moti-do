@@ -11,14 +11,19 @@ import {
   IconLogout,
   IconRefresh,
   IconPlus,
+  IconChevronLeft,
+  IconChevronRight,
 } from '../../ui/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useUserStore } from '../../store';
+import { useLayoutStore, useUserStore } from '../../store';
 import { authApi } from '../../services/api';
 import { useRefresh } from '../../hooks';
 import PullToRefreshWrapper from '../common/PullToRefreshWrapper';
 import { BottomNav } from './BottomNav';
 import { MobileHeader } from './MobileHeader';
+
+const DESKTOP_SIDEBAR_WIDTH = 256;
+const DESKTOP_SIDEBAR_COLLAPSED_WIDTH = 72;
 
 interface NavItem {
   text: string;
@@ -47,7 +52,17 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useUserStore();
+  const {
+    desktopNavCollapsed,
+    tasksViewUseFullWidth,
+    toggleDesktopNavCollapsed,
+  } = useLayoutStore();
   const { refresh, isRefreshing } = useRefresh();
+  const sidebarWidth = desktopNavCollapsed
+    ? DESKTOP_SIDEBAR_COLLAPSED_WIDTH
+    : DESKTOP_SIDEBAR_WIDTH;
+  const isTasksRoute = location.pathname.startsWith('/tasks');
+  const useFullWidthTasksLayout = isTasksRoute && tasksViewUseFullWidth;
 
   const handleNavClick = (path: string) => {
     navigate(path);
@@ -95,8 +110,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <Box
         component="nav"
         data-testid="desktop-sidebar"
+        data-collapsed={desktopNavCollapsed}
         style={{
-          width: 256,
+          width: sidebarWidth,
           flexShrink: 0,
           backgroundColor: '#181B25',
           borderRight: '1px solid rgba(69, 71, 82, 0.15)',
@@ -111,13 +127,80 @@ export default function MainLayout({ children }: MainLayoutProps) {
         }}
       >
         {/* Logo */}
-        <Box p="md" style={{ borderBottom: '1px solid rgba(69, 71, 82, 0.15)', display: 'flex', justifyContent: 'center' }}>
-          <img src="/logo-wordmark.png" alt="Motodo" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+        <Box
+          p="md"
+          style={{
+            borderBottom: '1px solid rgba(69, 71, 82, 0.15)',
+            display: 'flex',
+            justifyContent: desktopNavCollapsed ? 'center' : 'space-between',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <img
+            src={desktopNavCollapsed ? '/logo-large.png' : '/logo-wordmark.png'}
+            alt="Motodo"
+            style={{
+              height: desktopNavCollapsed ? 28 : 32,
+              width: 'auto',
+              maxWidth: desktopNavCollapsed ? 28 : '100%',
+              objectFit: 'contain',
+            }}
+          />
+          <Box
+            component="button"
+            type="button"
+            onClick={toggleDesktopNavCollapsed}
+            aria-label={
+              desktopNavCollapsed
+                ? 'Expand desktop navigation'
+                : 'Collapse desktop navigation'
+            }
+            title={
+              desktopNavCollapsed
+                ? 'Expand desktop navigation'
+                : 'Collapse desktop navigation'
+            }
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              border: '1px solid rgba(129, 236, 255, 0.2)',
+              backgroundColor: '#10131C',
+              color: '#81ecff',
+              cursor: 'pointer',
+              padding: 0,
+              flexShrink: 0,
+            }}
+          >
+            {desktopNavCollapsed ? (
+              <IconChevronRight size={16} />
+            ) : (
+              <IconChevronLeft size={16} />
+            )}
+          </Box>
         </Box>
         {/* Profile Section */}
         {user && (
-          <Box p="md" className="scanline-subtle" style={{ borderBottom: '1px solid rgba(69, 71, 82, 0.15)', position: 'relative' }}>
-            <Box style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <Box
+            p="md"
+            className="scanline-subtle"
+            style={{
+              borderBottom: '1px solid rgba(69, 71, 82, 0.15)',
+              position: 'relative',
+            }}
+          >
+            <Box
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: desktopNavCollapsed ? 0 : 12,
+                marginBottom: desktopNavCollapsed ? 0 : 12,
+                justifyContent: desktopNavCollapsed ? 'center' : 'flex-start',
+              }}
+            >
               <Avatar
                 size={40}
                 radius={0}
@@ -131,65 +214,71 @@ export default function MainLayout({ children }: MainLayoutProps) {
               >
                 {currentLevel}
               </Avatar>
-              <Box>
-                <Text
-                  size="xs"
-                  style={{
-                    fontFamily: '"JetBrains Mono", monospace',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    color: '#81ecff',
-                    fontWeight: 600,
-                  }}
-                >
-                  LVL {currentLevel} OPERATOR
-                </Text>
+              {!desktopNavCollapsed && (
+                <Box>
+                  <Text
+                    size="xs"
+                    style={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      color: '#81ecff',
+                      fontWeight: 600,
+                    }}
+                  >
+                    LVL {currentLevel} OPERATOR
+                  </Text>
+                  <Text
+                    size="xs"
+                    style={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      color: '#a8aab7',
+                      fontSize: '0.625rem',
+                    }}
+                  >
+                    {user.username}
+                  </Text>
+                </Box>
+              )}
+            </Box>
+
+            {/* XP Progress Bar */}
+            {!desktopNavCollapsed && (
+              <Box style={{ marginBottom: 8 }}>
                 <Text
                   size="xs"
                   style={{
                     fontFamily: '"JetBrains Mono", monospace',
                     color: '#a8aab7',
                     fontSize: '0.625rem',
+                    marginBottom: 4,
                   }}
                 >
-                  {user.username}
+                  {currentXP.toLocaleString()} / {xpForNextLevel.toLocaleString()} XP
                 </Text>
+                <Progress
+                  value={xpProgress}
+                  color="#81ecff"
+                  size={4}
+                  radius={0}
+                  styles={{
+                    root: { backgroundColor: '#272A34' },
+                    section: { boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)' },
+                  }}
+                />
               </Box>
-            </Box>
-
-            {/* XP Progress Bar */}
-            <Box style={{ marginBottom: 8 }}>
-              <Text
-                size="xs"
-                style={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  color: '#a8aab7',
-                  fontSize: '0.625rem',
-                  marginBottom: 4,
-                }}
-              >
-                {currentXP.toLocaleString()} / {xpForNextLevel.toLocaleString()} XP
-              </Text>
-              <Progress
-                value={xpProgress}
-                color="#81ecff"
-                size={4}
-                radius={0}
-                styles={{
-                  root: { backgroundColor: '#272A34' },
-                  section: { boxShadow: '0 0 8px rgba(129, 236, 255, 0.3)' },
-                }}
-              />
-            </Box>
+            )}
 
             {/* New Mission Button */}
             <Box
               component="button"
               onClick={() => navigate('/tasks')}
+              aria-label="Open tasks page"
+              title="Open tasks page"
               className="arcade-btn arcade-btn-gradient"
               style={{
                 width: '100%',
-                padding: '8px 16px',
+                padding: desktopNavCollapsed ? '8px' : '8px 16px',
                 fontSize: '0.75rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -198,7 +287,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               }}
             >
               <IconPlus size={14} />
-              NEW MISSION
+              {!desktopNavCollapsed && 'NEW MISSION'}
             </Box>
           </Box>
         )}
@@ -216,9 +305,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 12,
+                  justifyContent: desktopNavCollapsed ? 'center' : 'flex-start',
+                  gap: desktopNavCollapsed ? 0 : 12,
                   width: '100%',
-                  padding: '10px 16px',
+                  padding: desktopNavCollapsed ? '10px 0' : '10px 16px',
                   border: 'none',
                   borderLeft: isActive ? '4px solid #ff6b9b' : '4px solid transparent',
                   backgroundColor: isActive ? '#10131C' : 'transparent',
@@ -231,6 +321,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   letterSpacing: '0.05em',
                   textAlign: 'left' as const,
                 }}
+                aria-label={item.text}
+                title={item.text}
                 onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
                   if (!isActive) {
                     e.currentTarget.style.backgroundColor = '#272A34';
@@ -245,7 +337,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 }}
               >
                 {item.icon}
-                {item.text}
+                {!desktopNavCollapsed && item.text}
               </Box>
             );
           })}
@@ -260,15 +352,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
         >
           <Box
             component="button"
-            onClick={refresh}
-            disabled={isRefreshing}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              width: '100%',
-              padding: '6px 0',
-              border: 'none',
+              onClick={refresh}
+              disabled={isRefreshing}
+              aria-label="Refresh data"
+              title="Refresh data"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: desktopNavCollapsed ? 'center' : 'flex-start',
+                gap: desktopNavCollapsed ? 0 : 8,
+                width: '100%',
+                padding: '6px 0',
+                border: 'none',
               backgroundColor: 'transparent',
               color: '#a8aab7',
               cursor: 'pointer',
@@ -284,15 +379,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
               }}
             />
-            REFRESH
+            {!desktopNavCollapsed && 'REFRESH'}
           </Box>
           <Box
             component="button"
             onClick={handleLogout}
+            aria-label="Logout"
+            title="Logout"
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
+              justifyContent: desktopNavCollapsed ? 'center' : 'flex-start',
+              gap: desktopNavCollapsed ? 0 : 8,
               width: '100%',
               padding: '6px 0',
               border: 'none',
@@ -306,33 +404,44 @@ export default function MainLayout({ children }: MainLayoutProps) {
             }}
           >
             <IconLogout size={16} />
-            LOGOUT
+            {!desktopNavCollapsed && 'LOGOUT'}
           </Box>
-          <Text
-            mt="xs"
-            ta="center"
-            style={{
-              fontFamily: '"JetBrains Mono", monospace',
-              fontSize: '0.5625rem',
-              color: '#525560',
-              letterSpacing: '0.1em',
-            }}
-          >
-            v{__APP_VERSION__}
-          </Text>
+          {!desktopNavCollapsed && (
+            <Text
+              mt="xs"
+              ta="center"
+              style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '0.5625rem',
+                color: '#525560',
+                letterSpacing: '0.1em',
+              }}
+            >
+              v{__APP_VERSION__}
+            </Text>
+          )}
         </Box>
       </Box>
 
       {/* Main Content Area */}
       <Box
         component="main"
+        data-testid="desktop-main-content"
+        data-full-width={useFullWidthTasksLayout}
         style={{
           flex: 1,
-          marginLeft: 256,
+          marginLeft: sidebarWidth,
           minHeight: '100vh',
         }}
       >
-        <Box px="xl" py="lg" maw={1200} mx="auto" className="page-content-enter">
+        <Box
+          px={useFullWidthTasksLayout ? 'md' : 'xl'}
+          py="lg"
+          maw={useFullWidthTasksLayout ? undefined : 1200}
+          mx={useFullWidthTasksLayout ? undefined : 'auto'}
+          w="100%"
+          className="page-content-enter"
+        >
           {children}
         </Box>
       </Box>

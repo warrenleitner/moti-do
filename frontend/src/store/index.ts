@@ -6,5 +6,6 @@ export {
   useSelectedTask,
   useVisibleTasks,
 } from './taskStore';
+export { useLayoutStore } from './layoutStore';
 export { useUserStore, useUserLevel, useUserXP, useUserBadges } from './userStore';
 /* v8 ignore stop */
