@@ -1525,6 +1525,7 @@ export default function SettingsPage() {
           type="button"
           style={sectionHeaderStyle}
           onClick={() => toggleSection('layout')}
+          aria-label="Toggle layout settings section"
           aria-expanded={expandedSections.layout}
           aria-controls="settings-layout-section"
         >
