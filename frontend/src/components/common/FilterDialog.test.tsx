@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '../../test/utils';
+import { render, screen } from '../../test/utils';
 import { vi } from 'vitest';
 import FilterDialog from './FilterDialog';
 import { Priority, Difficulty, Duration } from '../../types';

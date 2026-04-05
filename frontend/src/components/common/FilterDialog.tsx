@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Group,
   Stack,
   Checkbox,
-  CloseButton,
   Divider,
   Text,
   Modal,
@@ -123,18 +122,17 @@ export default function FilterDialog({
   const [localTags, setLocalTags] = useState(selectedTags);
   const [localMaxDueDate, setLocalMaxDueDate] = useState(maxDueDate);
 
-  // Sync local state when dialog opens
-  useEffect(() => {
-    if (dialogOpen) {
-      setLocalStatus(status);
-      setLocalPriorities(priorities);
-      setLocalDifficulties(difficulties);
-      setLocalDurations(durations);
-      setLocalProjects(selectedProjects);
-      setLocalTags(selectedTags);
-      setLocalMaxDueDate(maxDueDate);
-    }
-  }, [dialogOpen, status, priorities, difficulties, durations, selectedProjects, selectedTags, maxDueDate]);
+  // Sync local state from props when dialog opens
+  const openDialog = () => {
+    setLocalStatus(status);
+    setLocalPriorities(priorities);
+    setLocalDifficulties(difficulties);
+    setLocalDurations(durations);
+    setLocalProjects(selectedProjects);
+    setLocalTags(selectedTags);
+    setLocalMaxDueDate(maxDueDate);
+    setDialogOpen(true);
+  };
 
   // Count active filters for badge (excluding search)
   const activeFilterCount =
@@ -186,7 +184,7 @@ export default function FilterDialog({
           <ArcadeButton
             variant="ghost"
             size="xs"
-            onClick={() => setDialogOpen(true)}
+            onClick={openDialog}
             aria-label="Open filters"
           >
             <Group gap={4}>

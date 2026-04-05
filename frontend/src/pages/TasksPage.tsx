@@ -69,7 +69,6 @@ export default function TasksPage() {
     tasks: allTasks,
     filters,
     setFilters,
-    resetFilters,
     fetchTasks,
     hasCompletedData,
     previewJumpToCurrentInstance,
@@ -597,7 +596,6 @@ export default function TasksPage() {
             onActivateCrisisMode={handleActivateCrisisModeClick}
             filters={filters}
             onFiltersChange={setFilters}
-            onResetFilters={resetFilters}
             availableProjects={projects}
             availableTags={tags}
           />

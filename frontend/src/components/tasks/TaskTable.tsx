@@ -29,7 +29,6 @@ import {
   IconAlertTriangle,
   IconBolt,
   IconFilter,
-  IconX,
 } from '../../ui/icons';
 import { ArcadeButton, DataBadge } from '../ui';
 import type { Task } from '../../types/models';
@@ -117,7 +116,6 @@ interface TaskTableProps {
   onActivateCrisisMode?: (taskIds: string[]) => void;
   filters?: TaskFilters;
   onFiltersChange?: (filters: Partial<TaskFilters>) => void;
-  onResetFilters?: () => void;
   availableProjects?: string[];
   availableTags?: string[];
 }
@@ -163,7 +161,6 @@ const TaskTable: React.FC<TaskTableProps> = ({
   onActivateCrisisMode,
   filters,
   onFiltersChange,
-  onResetFilters,
   availableProjects = [],
   availableTags = [],
 }) => {
