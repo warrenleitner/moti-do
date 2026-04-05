@@ -1521,19 +1521,19 @@ export default function SettingsPage() {
           Layout
           ═══════════════════════════════════════════════ */}
       <GlowCard accentColor="cyan" accentPosition="left" className="settings-section" style={{ marginBottom: '1.5rem' }}>
-        <div
+        <button
+          type="button"
           style={sectionHeaderStyle}
           onClick={() => toggleSection('layout')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && toggleSection('layout')}
+          aria-expanded={expandedSections.layout}
+          aria-controls="settings-layout-section"
         >
           {expandedSections.layout ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
           <IconListDetails size={14} style={{ color: '#81ecff' }} />
           LAYOUT
-        </div>
+        </button>
 
-        <Collapse in={expandedSections.layout}>
+        <Collapse in={expandedSections.layout} id="settings-layout-section">
           <Stack gap="md">
             <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '0.25rem' }}>
               Desktop-only layout preferences are saved locally in this browser.

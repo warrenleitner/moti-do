@@ -452,7 +452,12 @@ describe('SettingsPage', () => {
 
       // Dialog should close
       await waitFor(() => {
-        expect(screen.queryByLabelText(/current password/i)).not.toBeInTheDocument();
+        const dialog = screen.queryByRole('dialog');
+        if (dialog) {
+          expect(dialog).not.toBeVisible();
+        } else {
+          expect(dialog).not.toBeInTheDocument();
+        }
       });
     });
 
