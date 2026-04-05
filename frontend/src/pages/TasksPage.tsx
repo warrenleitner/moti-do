@@ -11,7 +11,6 @@ import {
   IconList,
   IconTable,
   IconCalendar,
-  IconFilter,
 } from '../ui/icons';
 import { ArcadeButton, DataBadge } from '../components/ui';
 import { AxiosError } from 'axios';
@@ -19,7 +18,8 @@ import { TaskList, TaskForm } from '../components/tasks';
 import TaskTable from '../components/tasks/TaskTable';
 import JumpToCurrentInstanceDialog from '../components/tasks/JumpToCurrentInstanceDialog';
 import QuickAddBox from '../components/tasks/QuickAddBox';
-import { ConfirmDialog, FilterBar } from '../components/common';
+import { ConfirmDialog } from '../components/common';
+import SearchInput from '../components/common/SearchInput';
 import DeferDialog from '../components/common/DeferDialog';
 import { useTaskStore } from '../store';
 import { useFilteredTasks } from '../store/taskStore';
@@ -69,7 +69,6 @@ export default function TasksPage() {
     tasks: allTasks,
     filters,
     setFilters,
-    resetFilters,
     fetchTasks,
     hasCompletedData,
     previewJumpToCurrentInstance,
@@ -91,10 +90,6 @@ export default function TasksPage() {
     return (saved as 'list' | 'table') || 'list';
   });
   const [visibleRowCount, setVisibleRowCount] = useState(DEFAULT_VISIBLE_COUNT);
-  const [filtersVisible, setFiltersVisible] = useState(() => {
-    const saved = localStorage.getItem('taskFiltersVisible');
-    return saved === null ? true : saved === 'true';
-  });
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -127,12 +122,12 @@ export default function TasksPage() {
   );
 
   useEffect(() => {
-    if ((filters.status === 'completed' || filters.status === 'all') && !hasCompletedData) {
+    if ((filters.statuses.includes('completed') || filters.statuses.includes('all')) && !hasCompletedData) {
       fetchTasks({ includeCompleted: true }).catch(() => {
         // Errors surface via store error state/snackbar elsewhere
       });
     }
-  }, [fetchTasks, filters.status, hasCompletedData]);
+  }, [fetchTasks, filters.statuses, hasCompletedData]);
 
   // Update visible row count when filtered tasks change
   useEffect(() => {
@@ -147,14 +142,6 @@ export default function TasksPage() {
   const handleViewModeChange = (newMode: string) => {
     setViewMode(newMode as 'list' | 'table');
     localStorage.setItem('taskViewMode', newMode);
-  };
-
-  const handleToggleFilters = () => {
-    setFiltersVisible((prev) => {
-      const next = !prev;
-      localStorage.setItem('taskFiltersVisible', String(next));
-      return next;
-    });
   };
 
   const handleLoadMore = () => {
@@ -581,41 +568,15 @@ export default function TasksPage() {
         />
       ) : (
         <>
-          <Group justify="flex-end" mb={filtersVisible ? 0 : 'sm'}>
-            <ArcadeButton
-              variant="ghost"
-              size="xs"
-              onClick={handleToggleFilters}
-            >
-              <Group gap={4}>
-                <IconFilter size={16} />
-                {filtersVisible ? 'HIDE FILTERS' : 'SHOW FILTERS'}
-              </Group>
-            </ArcadeButton>
+          <Group mb="sm" gap="sm" align="center">
+            <Box style={{ flex: 1, maxWidth: 300 }}>
+              <SearchInput
+                value={filters.search || ''}
+                onChange={(search) => setFilters({ search: search || undefined })}
+                placeholder="Search tasks..."
+              />
+            </Box>
           </Group>
-          {filtersVisible && (
-            <FilterBar
-              search={filters.search || ''}
-              onSearchChange={(search) => setFilters({ search: search || undefined })}
-              status={filters.status}
-              onStatusChange={(status) => setFilters({ status })}
-              priorities={filters.priorities}
-              onPrioritiesChange={(priorities) => setFilters({ priorities })}
-              difficulties={filters.difficulties}
-              onDifficultiesChange={(difficulties) => setFilters({ difficulties })}
-              durations={filters.durations}
-              onDurationsChange={(durations) => setFilters({ durations })}
-              selectedProjects={filters.projects}
-              onProjectsChange={(projects) => setFilters({ projects })}
-              selectedTags={filters.tags}
-              onTagsChange={(tags) => setFilters({ tags })}
-              projects={projects}
-              tags={tags}
-              maxDueDate={filters.maxDueDate}
-              onMaxDueDateChange={(maxDueDate) => setFilters({ maxDueDate })}
-              onReset={resetFilters}
-            />
-          )}
           <TaskTable
             tasks={visibleTasks}
             allTasks={allTasks}
@@ -633,6 +594,10 @@ export default function TasksPage() {
             onBulkDefer={handleBulkDeferClick}
             onBulkJumpToCurrent={handleBulkJumpClick}
             onActivateCrisisMode={handleActivateCrisisModeClick}
+            filters={filters}
+            onFiltersChange={setFilters}
+            availableProjects={projects}
+            availableTags={tags}
           />
           <Group justify="space-between" mt="sm">
             <Text size="xs" className="font-data" style={{ color: '#525560', letterSpacing: '0.05em' }}>

@@ -13,7 +13,7 @@ import {
   IconListDetails,
 } from '../../ui/icons';
 import type { Task } from '../../types';
-import { EmptyState, FilterBar } from '../common';
+import { EmptyState, FilterDialog } from '../common';
 import TaskCard from './TaskCard';
 import SubtaskCard from './SubtaskCard';
 import { useTaskStore, useFilteredTasks } from '../../store';
@@ -71,11 +71,11 @@ export default function TaskList({
   return (
     <Box>
       {/* Filters */}
-      <FilterBar
+      <FilterDialog
         search={filters.search || ''}
         onSearchChange={(search) => setFilters({ search: search || undefined })}
-        status={filters.status}
-        onStatusChange={(status) => setFilters({ status })}
+        statuses={filters.statuses}
+        onStatusesChange={(statuses) => setFilters({ statuses })}
         priorities={filters.priorities}
         onPrioritiesChange={(priorities) => setFilters({ priorities })}
         difficulties={filters.difficulties}
@@ -88,8 +88,14 @@ export default function TaskList({
         onTagsChange={(tags) => setFilters({ tags })}
         projects={projects}
         tags={tags}
+        minDueDate={filters.minDueDate}
         maxDueDate={filters.maxDueDate}
+        onMinDueDateChange={(minDueDate) => setFilters({ minDueDate })}
         onMaxDueDateChange={(maxDueDate) => setFilters({ maxDueDate })}
+        minStartDate={filters.minStartDate}
+        maxStartDate={filters.maxStartDate}
+        onMinStartDateChange={(minStartDate) => setFilters({ minStartDate })}
+        onMaxStartDateChange={(maxStartDate) => setFilters({ maxStartDate })}
         onReset={resetFilters}
       />
 
