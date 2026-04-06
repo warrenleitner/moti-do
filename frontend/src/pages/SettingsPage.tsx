@@ -64,6 +64,7 @@ import {
   startNotificationScheduler,
   stopNotificationScheduler,
 } from '../services/notifications';
+import { reloadPage } from '../utils/navigation';
 
 // Pre-compute the list of IANA timezone identifiers
 const TIMEZONE_OPTIONS = Intl.supportedValuesOf('timeZone');
@@ -274,7 +275,7 @@ export default function SettingsPage() {
 
       // Reload page after 2 seconds to show fresh data
       setTimeout(() => {
-        window.location.reload();
+        reloadPage();
       }, 2000);
     } catch (error: unknown) {
       console.error('Import error:', error);

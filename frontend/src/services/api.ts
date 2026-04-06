@@ -4,6 +4,7 @@
 
 import axios, { type AxiosInstance } from 'axios';
 import type { Task, TaskCompletionResponse } from '../types';
+import { navigateTo } from '../utils/navigation';
 
 // API base URL - configurable via environment variable
 // In production, use relative URL (/api) for same-origin requests
@@ -42,7 +43,7 @@ apiClient.interceptors.response.use(
     // In dev mode, don't redirect on 401
     if (error.response?.status === 401 && import.meta.env.PROD) {
       localStorage.removeItem('auth_token');
-      window.location.href = '/login';
+      navigateTo('/login');
     }
     return Promise.reject(error);
   }
@@ -263,7 +264,7 @@ export const authApi = {
   // Logout (clear token)
   logout: () => {
     localStorage.removeItem('auth_token');
-    window.location.href = '/login';
+    navigateTo('/login');
   },
 
   // Check if user is authenticated

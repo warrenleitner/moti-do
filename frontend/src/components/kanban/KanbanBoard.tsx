@@ -169,7 +169,7 @@ export default function KanbanBoard({
             comparison = a.score - b.score;
             break;
           default:
-            comparison = 0;
+            break;
         }
 
         return sort.order === 'asc' ? comparison : -comparison;

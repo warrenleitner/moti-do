@@ -349,7 +349,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
             break;
           }
           default:
-            comparison = 0;
+            break;
         }
 
         if (comparison !== 0) {

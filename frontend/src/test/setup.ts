@@ -5,10 +5,20 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { WritableStream as WS, ReadableStream as RS, TransformStream as TS } from 'stream/web';
+
+// Polyfill Web Streams API globals for vmForks pool compatibility with jsdom 29+
+// MSW's SSE module references these globals at module load time, which may not be
+// available in an isolated VM context.
+if (typeof globalThis.WritableStream === 'undefined') {
+  (globalThis as Record<string, unknown>).WritableStream = WS;
+  (globalThis as Record<string, unknown>).ReadableStream = RS;
+  (globalThis as Record<string, unknown>).TransformStream = TS;
+}
 
 // Define global constants that Vite injects at build time
 // These are used for version display in the UI
-(globalThis as Record<string, unknown>).__APP_VERSION__ = '0.8.3';
+(globalThis as Record<string, unknown>).__APP_VERSION__ = '0.8.4';
 (globalThis as Record<string, unknown>).__BUILD_TIMESTAMP__ = new Date().toISOString();
 
 // Mock localStorage for Zustand persist middleware

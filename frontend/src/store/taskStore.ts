@@ -666,7 +666,7 @@ export const useFilteredTasks = (lastProcessedDate?: string) => {
         comparison = a.score - b.score;
         break;
       default:
-        comparison = 0;
+        break;
     }
 
     return sort.order === 'asc' ? comparison : -comparison;

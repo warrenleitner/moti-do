@@ -124,9 +124,8 @@ export class CalendarPage {
   async findEventByTitle(title: string, project?: string): Promise<Locator> {
     // Only attempt filtering if project is provided
     if (project) {
-      let filtered = false;
       for (let attempt = 0; attempt < 3; attempt += 1) {
-        filtered = await this.filterCalendarProject(project).catch(() => false);
+        const filtered = await this.filterCalendarProject(project).catch(() => false);
         if (filtered) break;
         await this.page.waitForTimeout(500);
       }

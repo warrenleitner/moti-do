@@ -31,8 +31,15 @@ vi.mock('axios', () => ({
   },
 }));
 
+// Mock navigation utility so tests don't try to navigate in jsdom
+vi.mock('../utils/navigation', () => ({
+  navigateTo: vi.fn(),
+  reloadPage: vi.fn(),
+}));
+
 // Import after mock setup
 import { authApi, dataApi, taskApi, userApi, viewsApi, systemApi } from './api';
+import { navigateTo } from '../utils/navigation';
 
 // Reference mock instance for tests
 const mockAxiosInstance = {
@@ -53,7 +60,6 @@ describe('API Tests', () => {
   };
 
   const originalLocalStorage = global.localStorage;
-  const originalLocation = global.window.location;
 
   beforeEach(() => {
     // Mock localStorage
@@ -61,11 +67,6 @@ describe('API Tests', () => {
       value: mockLocalStorage,
       writable: true,
     });
-
-    // Mock window.location
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete (global.window as any).location;
-    global.window.location = { ...originalLocation, href: '' } as Location;
 
     vi.clearAllMocks();
   });
@@ -75,7 +76,6 @@ describe('API Tests', () => {
       value: originalLocalStorage,
       writable: true,
     });
-    global.window.location = originalLocation;
   });
 
   describe('authApi', () => {
@@ -104,7 +104,7 @@ describe('API Tests', () => {
         authApi.logout();
 
         expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('auth_token');
-        expect(global.window.location.href).toBe('/login');
+        expect(navigateTo).toHaveBeenCalledWith('/login');
       });
     });
 

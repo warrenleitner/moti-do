@@ -10,6 +10,7 @@ import {
   defaultLayoutPreferences,
   useLayoutStore,
 } from '../store/layoutStore';
+import { reloadPage } from '../utils/navigation';
 
 // Mock the APIs
 vi.mock('../services/api', () => ({
@@ -57,10 +58,11 @@ vi.mock('../services/api', () => ({
   },
 }));
 
-// Mock window.location.reload
-const originalLocation = window.location;
-delete (window as { location?: Location }).location;
-window.location = { ...originalLocation, reload: vi.fn() };
+// Mock navigation utilities to prevent actual page reloads/navigation in tests
+vi.mock('../utils/navigation', () => ({
+  navigateTo: vi.fn(),
+  reloadPage: vi.fn(),
+}));
 
 // Mock URL.createObjectURL and revokeObjectURL
 global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
@@ -319,7 +321,7 @@ describe('SettingsPage', () => {
       // Wait for reload to be called
       await waitFor(
         () => {
-          expect(window.location.reload).toHaveBeenCalled();
+          expect(reloadPage).toHaveBeenCalled();
         },
         { timeout: 3000 }
       );
