@@ -40,8 +40,8 @@ export class TasksPage {
     this.searchInput = page.getByPlaceholder('Search tasks...');
     // Status filter is now rendered as tab buttons (ACTIVE, COMPLETED, ALL, etc.)
     this.statusFilter = page.getByRole('button', { name: /^active$/i });
-    this.priorityFilter = page.getByRole('textbox', { name: 'Priority', exact: true });
-    this.projectFilter = page.getByRole('textbox', { name: 'Project', exact: true });
+    this.priorityFilter = page.getByRole('combobox', { name: 'Priority', exact: true });
+    this.projectFilter = page.getByRole('combobox', { name: 'Project', exact: true });
 
     // Quick Add Box - the persistent input at the top of TasksPage
     // Placeholder is now terminal-style: "DEPLOY NEW TASK: [TITLE] /PRIORITY /DUE..."

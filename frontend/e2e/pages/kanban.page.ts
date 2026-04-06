@@ -15,13 +15,13 @@ export class KanbanPage {
 
   constructor(page: Page) {
     this.page = page;
-    // Mantine Select renders <input readonly> with implicit textbox role
-    this.projectFilter = page.getByRole('textbox', { name: 'Project', exact: true });
-    this.tagFilter = page.getByRole('textbox', { name: 'Tag', exact: true });
+    // Mantine 9 Select renders <input readonly> with combobox role
+    this.projectFilter = page.getByRole('combobox', { name: 'Project', exact: true });
+    this.tagFilter = page.getByRole('combobox', { name: 'Tag', exact: true });
     this.taskCountText = page.getByText(/\d+ tasks?/i);
     this.snackbar = page.getByRole('alert').first();
-    this.sortBySelect = page.getByRole('textbox', { name: 'Sort by', exact: true });
-    this.sortOrderSelect = page.getByRole('textbox', { name: 'Order', exact: true });
+    this.sortBySelect = page.getByRole('combobox', { name: 'Sort by', exact: true });
+    this.sortOrderSelect = page.getByRole('combobox', { name: 'Order', exact: true });
   }
 
   /**
