@@ -635,7 +635,7 @@ export default function SettingsPage() {
           XP_TRANSACTION_LEDGER
         </div>
 
-        <Collapse in={expandedSections.xpLedger}>
+        <Collapse expanded={expandedSections.xpLedger}>
           {loadingXP ? (
             <Group justify="center" py="md">
               <Loader size="sm" />
@@ -730,7 +730,7 @@ export default function SettingsPage() {
           Configure how task scores are calculated. Higher scores mean higher priority.
         </Text>
 
-        <Collapse in={expandedSections.scoring}>
+        <Collapse expanded={expandedSections.scoring}>
           {loadingScoringConfig ? (
             <Group justify="center" p="lg">
               <Loader size="sm" />
@@ -1006,7 +1006,7 @@ export default function SettingsPage() {
           TAG_DEFINITIONS
         </div>
 
-        <Collapse in={expandedSections.tags}>
+        <Collapse expanded={expandedSections.tags}>
           <Group justify="space-between" mb="md">
             <Text className="font-data" size="xs" style={{ color: '#525560' }}>
               Manage tags and set XP multipliers. Multiplier {'>'} 1.0 = bonus XP.
@@ -1178,7 +1178,7 @@ export default function SettingsPage() {
           PROJECT_DEFINITIONS
         </div>
 
-        <Collapse in={expandedSections.projects}>
+        <Collapse expanded={expandedSections.projects}>
           <Group justify="space-between" mb="md">
             <Text className="font-data" size="xs" style={{ color: '#525560' }}>
               Manage projects and XP multipliers.
@@ -1333,7 +1333,7 @@ export default function SettingsPage() {
           DATE_PROCESSING
         </div>
 
-        <Collapse in={expandedSections.dateProcessing}>
+        <Collapse expanded={expandedSections.dateProcessing}>
           <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '1rem' }}>
             Process pending days to apply overdue penalties and generate recurring tasks.
           </Text>
@@ -1475,7 +1475,7 @@ export default function SettingsPage() {
           XP_WITHDRAWAL
         </div>
 
-        <Collapse in={expandedSections.xpWithdraw}>
+        <Collapse expanded={expandedSections.xpWithdraw}>
           <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '0.75rem' }}>
             Spend earned XP on rewards. Current balance:{' '}
             <DataBadge value={`${stats?.total_xp ?? 0} XP`} color="cyan" size="sm" />
@@ -1534,7 +1534,7 @@ export default function SettingsPage() {
           LAYOUT
         </button>
 
-        <Collapse in={expandedSections.layout} id="settings-layout-section">
+        <Collapse expanded={expandedSections.layout} id="settings-layout-section">
           <Stack gap="md">
             <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '0.25rem' }}>
               Desktop-only layout preferences are saved locally in this browser.
@@ -1583,7 +1583,7 @@ export default function SettingsPage() {
           NOTIFICATIONS
         </div>
 
-        <Collapse in={expandedSections.notifications}>
+        <Collapse expanded={expandedSections.notifications}>
           <Text className="font-data" size="xs" style={{ color: '#5A5E66', marginBottom: '0.75rem' }}>
             Get a daily browser notification reminding you to complete your check-in.
           </Text>
@@ -1682,7 +1682,7 @@ export default function SettingsPage() {
           VACATION_MODE
         </div>
 
-        <Collapse in={expandedSections.vacation}>
+        <Collapse expanded={expandedSections.vacation}>
           <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '0.75rem' }}>
             Pause streak penalties and due date enforcement while away.
           </Text>
@@ -1723,7 +1723,7 @@ export default function SettingsPage() {
           DATA_BACKUP_RESTORE
         </div>
 
-        <Collapse in={expandedSections.backup}>
+        <Collapse expanded={expandedSections.backup}>
           <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '1rem' }}>
             Export data as JSON backup or restore from a previous backup.
           </Text>
@@ -1783,7 +1783,7 @@ export default function SettingsPage() {
           SECURITY_CONFIG
         </div>
 
-        <Collapse in={expandedSections.security}>
+        <Collapse expanded={expandedSections.security}>
           <Text className="font-data" size="xs" style={{ color: '#525560', marginBottom: '0.75rem' }}>
             Manage account security settings.
           </Text>
@@ -1815,7 +1815,7 @@ export default function SettingsPage() {
           SYSTEM_INFO
         </div>
 
-        <Collapse in={expandedSections.about}>
+        <Collapse expanded={expandedSections.about}>
           <Box style={{ backgroundColor: '#0B0E17', border: '1px solid rgba(69, 71, 82, 0.15)', overflow: 'hidden' }}>
             <table
               style={{

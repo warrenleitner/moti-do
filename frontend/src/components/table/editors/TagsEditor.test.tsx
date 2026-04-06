@@ -33,7 +33,7 @@ describe('TagsEditor', () => {
       render(<TagsEditor {...defaultProps} />);
 
       expect(screen.getByTestId('tags-editor')).toBeInTheDocument();
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
+      expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 
     it('renders with existing tags', () => {
@@ -61,7 +61,7 @@ describe('TagsEditor', () => {
       const user = userEvent.setup();
       render(<TagsEditor {...defaultProps} />);
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByRole('combobox');
       // Mantine TagsInput renders options in DOM (may be hidden in jsdom)
       await user.type(input, 'u');
 
@@ -78,7 +78,7 @@ describe('TagsEditor', () => {
 
       render(<TagsEditor {...defaultProps} onChange={onChange} onSave={onSave} />);
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByRole('combobox');
       await user.type(input, 'u');
 
       await waitFor(() => {
@@ -100,7 +100,7 @@ describe('TagsEditor', () => {
 
       render(<TagsEditor {...defaultProps} value={['urgent']} onChange={onChange} onSave={onSave} />);
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByRole('combobox');
       await user.type(input, 'w');
 
       await waitFor(() => {
@@ -121,7 +121,7 @@ describe('TagsEditor', () => {
       const onClose = vi.fn();
       render(<TagsEditor {...defaultProps} onClose={onClose} />);
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByRole('combobox');
       fireEvent.keyDown(input, { key: 'Escape' });
 
       expect(onClose).toHaveBeenCalled();
@@ -133,7 +133,7 @@ describe('TagsEditor', () => {
       const onSave = vi.fn();
       render(<TagsEditor {...defaultProps} value={['urgent']} onSave={onSave} />);
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByRole('combobox');
       fireEvent.blur(input);
 
       await waitFor(() => {
