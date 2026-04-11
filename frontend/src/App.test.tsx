@@ -7,6 +7,13 @@ import { render, screen, waitFor } from './test/utils';
 import App from './App';
 import { useAppInitialization } from './hooks';
 
+const suspendedRoutes = {
+  dashboard: false,
+  login: false,
+};
+
+const neverResolvingPromise = new Promise<never>(() => {});
+
 // Mock the hooks module
 vi.mock('./hooks', () => ({
   useAppInitialization: vi.fn(),
@@ -18,15 +25,48 @@ vi.mock('./components/auth', () => ({
 }));
 
 // Mock pages to keep tests simple
-vi.mock('./pages', () => ({
-  Dashboard: () => <div data-testid="dashboard">Dashboard Page</div>,
-  TasksPage: () => <div>Tasks Page</div>,
-  HabitsPage: () => <div>Habits Page</div>,
-  CalendarPage: () => <div>Calendar Page</div>,
-  KanbanPage: () => <div>Kanban Page</div>,
-  GraphPage: () => <div>Graph Page</div>,
-  SettingsPage: () => <div>Settings Page</div>,
-  LoginPage: () => <div data-testid="login-page">Login Page</div>,
+vi.mock('./pages/Dashboard', () => ({
+  default: () => {
+    if (suspendedRoutes.dashboard) {
+      throw neverResolvingPromise;
+    }
+
+    return <div data-testid="dashboard">Dashboard Page</div>;
+  },
+}));
+
+vi.mock('./pages/TasksPage', () => ({
+  default: () => <div>Tasks Page</div>,
+}));
+
+vi.mock('./pages/HabitsPage', () => ({
+  default: () => <div>Habits Page</div>,
+}));
+
+vi.mock('./pages/CalendarPage', () => ({
+  default: () => <div>Calendar Page</div>,
+}));
+
+vi.mock('./pages/KanbanPage', () => ({
+  default: () => <div>Kanban Page</div>,
+}));
+
+vi.mock('./pages/GraphPage', () => ({
+  default: () => <div>Graph Page</div>,
+}));
+
+vi.mock('./pages/SettingsPage', () => ({
+  default: () => <div>Settings Page</div>,
+}));
+
+vi.mock('./pages/LoginPage', () => ({
+  default: () => {
+    if (suspendedRoutes.login) {
+      throw neverResolvingPromise;
+    }
+
+    return <div data-testid="login-page">Login Page</div>;
+  },
 }));
 
 // Mock layout components
@@ -41,6 +81,9 @@ vi.mock('./components/common/InstallPrompt', () => ({
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    suspendedRoutes.dashboard = false;
+    suspendedRoutes.login = false;
+    window.history.pushState({}, 'Dashboard', '/');
   });
 
   it('should show loading state while initializing', () => {
@@ -53,11 +96,11 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    expect(screen.getByTestId('app-loading-state')).toBeInTheDocument();
     expect(screen.getByText('Loading Motodo...')).toBeInTheDocument();
   });
 
-  it('should not show loading when already initialized', () => {
+  it('should not show app initialization loading when already initialized', async () => {
     vi.mocked(useAppInitialization).mockReturnValue({
       isLoading: true,
       isInitialized: true,
@@ -67,7 +110,11 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('dashboard')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('app-loading-state')).not.toBeInTheDocument();
     expect(screen.queryByText('Loading Motodo...')).not.toBeInTheDocument();
   });
 
@@ -128,6 +175,22 @@ describe('App', () => {
     });
   });
 
+  it('should show route loading fallback while a protected page is still loading', () => {
+    suspendedRoutes.dashboard = true;
+
+    vi.mocked(useAppInitialization).mockReturnValue({
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      retry: vi.fn(),
+    });
+
+    render(<App />);
+
+    expect(screen.getByTestId('route-loading-state')).toBeInTheDocument();
+    expect(screen.queryByTestId('app-loading-state')).not.toBeInTheDocument();
+  });
+
   it('should render login page for /login route', async () => {
     vi.mocked(useAppInitialization).mockReturnValue({
       isLoading: false,
@@ -144,6 +207,48 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByTestId('login-page')).toBeInTheDocument();
     });
+  });
+
+  it.each([
+    ['/tasks', 'Tasks Page'],
+    ['/habits', 'Habits Page'],
+    ['/calendar', 'Calendar Page'],
+    ['/kanban', 'Kanban Page'],
+    ['/graph', 'Graph Page'],
+    ['/settings', 'Settings Page'],
+  ])('should render the %s route when initialized', async (path, expectedText) => {
+    vi.mocked(useAppInitialization).mockReturnValue({
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      retry: vi.fn(),
+    });
+
+    window.history.pushState({}, expectedText, path);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(expectedText)).toBeInTheDocument();
+    });
+  });
+
+  it('should show full-page loading fallback while the login page is still loading', () => {
+    suspendedRoutes.login = true;
+
+    vi.mocked(useAppInitialization).mockReturnValue({
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      retry: vi.fn(),
+    });
+
+    window.history.pushState({}, 'Login', '/login');
+
+    render(<App />);
+
+    expect(screen.getByTestId('app-loading-state')).toBeInTheDocument();
+    expect(screen.getByText('Loading Motodo...')).toBeInTheDocument();
   });
 
   it('should render with InstallPrompt component in protected routes', async () => {

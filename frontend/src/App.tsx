@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Center, Loader, Text, Button, Alert, Stack } from './ui';
@@ -5,33 +6,49 @@ import MainLayout from './components/layout/MainLayout';
 import { InstallPrompt } from './components/common/InstallPrompt';
 import CrisisModeBanner from './components/common/CrisisModeBanner';
 import { ProtectedRoute } from './components/auth';
-import {
-  Dashboard,
-  TasksPage,
-  HabitsPage,
-  CalendarPage,
-  KanbanPage,
-  GraphPage,
-  SettingsPage,
-  LoginPage,
-} from './pages';
 import { useAppInitialization } from './hooks';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const TasksPage = lazy(() => import('./pages/TasksPage'));
+const HabitsPage = lazy(() => import('./pages/HabitsPage'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const KanbanPage = lazy(() => import('./pages/KanbanPage'));
+const GraphPage = lazy(() => import('./pages/GraphPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+
+function FullPageLoader() {
+  return (
+    <Center mih="100vh" data-testid="app-loading-state">
+      <Stack align="center" gap="md">
+        <Loader size={48} role="progressbar" />
+        <Text size="lg" c="dimmed">
+          Loading Motodo...
+        </Text>
+      </Stack>
+    </Center>
+  );
+}
+
+function RouteLoader() {
+  return (
+    <Center mih="60vh" data-testid="route-loading-state">
+      <Stack align="center" gap="md">
+        <Loader size={40} role="progressbar" />
+        <Text size="md" c="dimmed">
+          Loading page...
+        </Text>
+      </Stack>
+    </Center>
+  );
+}
 
 function App() {
   const { isLoading, error, retry, isInitialized } = useAppInitialization();
 
   // Show loading state while initializing
   if (isLoading && !isInitialized) {
-    return (
-      <Center mih="100vh">
-        <Stack align="center" gap="md">
-          <Loader size={48} role="progressbar" />
-          <Text size="lg" c="dimmed">
-            Loading Motodo...
-          </Text>
-        </Stack>
-      </Center>
-    );
+    return <FullPageLoader />;
   }
 
   // Show error state if initialization failed
@@ -57,7 +74,14 @@ function App() {
     <>
       <Routes>
         {/* Public route - Login page */}
-        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/login"
+          element={
+            <Suspense fallback={<FullPageLoader />}>
+              <LoginPage />
+            </Suspense>
+          }
+        />
 
         {/* Protected routes - require authentication */}
         <Route
@@ -66,15 +90,17 @@ function App() {
             <ProtectedRoute>
               <MainLayout>
                 <CrisisModeBanner />
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/tasks" element={<TasksPage />} />
-                  <Route path="/habits" element={<HabitsPage />} />
-                  <Route path="/calendar" element={<CalendarPage />} />
-                  <Route path="/kanban" element={<KanbanPage />} />
-                  <Route path="/graph" element={<GraphPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                </Routes>
+                <Suspense fallback={<RouteLoader />}>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/tasks" element={<TasksPage />} />
+                    <Route path="/habits" element={<HabitsPage />} />
+                    <Route path="/calendar" element={<CalendarPage />} />
+                    <Route path="/kanban" element={<KanbanPage />} />
+                    <Route path="/graph" element={<GraphPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                  </Routes>
+                </Suspense>
                 <InstallPrompt />
               </MainLayout>
             </ProtectedRoute>
