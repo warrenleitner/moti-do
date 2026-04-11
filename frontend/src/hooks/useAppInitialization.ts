@@ -26,10 +26,12 @@ interface InitializationState {
  * Re-initializes when auth state changes (e.g., after login).
  */
 export function useAppInitialization(): InitializationState {
+  const initialAuthState = authApi.isAuthenticated();
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(initialAuthState);
   const [error, setError] = useState<string | null>(null);
   const initializingRef = useRef(false);
+  const lastAuthStateRef = useRef(initialAuthState);
   const location = useLocation();
 
   const fetchTasks = useTaskStore((state) => state.fetchTasks);
@@ -37,10 +39,12 @@ export function useAppInitialization(): InitializationState {
 
   const initialize = useCallback(async () => {
     const isAuthenticated = authApi.isAuthenticated();
+    lastAuthStateRef.current = isAuthenticated;
 
     // Don't initialize if not authenticated - let routing handle redirect to login
     if (!isAuthenticated) {
       setIsInitialized(false);
+      setError(null);
       setIsLoading(false);
       return;
     }
@@ -80,15 +84,23 @@ export function useAppInitialization(): InitializationState {
 
   useEffect(() => {
     const isAuthenticated = authApi.isAuthenticated();
+    const authChanged = lastAuthStateRef.current !== isAuthenticated;
+
+    if (authChanged) {
+      lastAuthStateRef.current = isAuthenticated;
+    }
+
+    if (!isAuthenticated) {
+      if (authChanged) {
+        initialize();
+      }
+      return;
+    }
 
     // Initialize if authenticated but not yet initialized
     // This handles the case where user logs in and navigates to a protected route
-    if (isAuthenticated && !isInitialized && !initializingRef.current) {
+    if (!isInitialized && !initializingRef.current) {
       initialize();
-    }
-    // Handle case where user is not authenticated
-    else if (!isAuthenticated && !isInitialized) {
-      setIsLoading(false);
     }
   }, [location.pathname, isInitialized, initialize]);
 

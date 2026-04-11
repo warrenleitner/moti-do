@@ -17,39 +17,46 @@ export default function SearchInput({
   debounceMs = 300,
   fullWidth = false,
 }: SearchInputProps) {
-  const [localValue, setLocalValue] = useState(value);
-
-  // Sync external value changes
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
+  const [{ localValue, syncedValue }, setInputState] = useState(() => ({
+    localValue: value,
+    syncedValue: value,
+  }));
+  const displayValue = value !== syncedValue ? value : localValue;
 
   // Debounce the onChange callback
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (localValue !== value) {
-        onChange(localValue);
+      if (displayValue !== value) {
+        onChange(displayValue);
       }
     }, debounceMs);
 
     return () => clearTimeout(timer);
-  }, [localValue, debounceMs, onChange, value]);
+  }, [displayValue, debounceMs, onChange, value]);
 
   const handleClear = () => {
-    setLocalValue('');
+    setInputState({
+      localValue: '',
+      syncedValue: value,
+    });
     onChange('');
   };
 
   return (
     <TextInput
-      value={localValue}
-      onChange={(e) => setLocalValue(e.target.value)}
+      value={displayValue}
+      onChange={(e) =>
+        setInputState({
+          localValue: e.target.value,
+          syncedValue: value,
+        })
+      }
       placeholder={placeholder}
       size="sm"
       w={fullWidth ? '100%' : undefined}
       leftSection={<IconSearch size={16} color="gray" />}
       rightSection={
-        localValue ? (
+        displayValue ? (
           <CloseButton size="sm" onClick={handleClear} aria-label="Clear search" />
         ) : null
       }

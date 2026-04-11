@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Box, Loader, useClickOutside } from '../../ui';
 import type { Task } from '../../types/models';
 
@@ -32,13 +32,6 @@ export function EditableCell<T>({
   const [pendingValue, setPendingValue] = useState<T>(value);
   const [isSaving, setIsSaving] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-
-  // Sync pendingValue when value changes externally
-  useEffect(() => {
-    if (!isEditing) {
-      setPendingValue(value);
-    }
-  }, [value, isEditing]);
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
