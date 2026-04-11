@@ -18,7 +18,7 @@ if (typeof globalThis.WritableStream === 'undefined') {
 
 // Define global constants that Vite injects at build time
 // These are used for version display in the UI
-(globalThis as Record<string, unknown>).__APP_VERSION__ = '0.8.6';
+(globalThis as Record<string, unknown>).__APP_VERSION__ = '0.8.7';
 (globalThis as Record<string, unknown>).__BUILD_TIMESTAMP__ = new Date().toISOString();
 
 // Mock localStorage for Zustand persist middleware
