@@ -133,6 +133,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    pool: 'vmForks',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     testTimeout: 10000, // 10 seconds for slow MUI component tests
@@ -208,6 +209,8 @@ export default defineConfig({
         'src/components/table/editors/TextEditor.tsx',
         'src/components/table/editors/ProjectEditor.tsx',
         'src/components/table/editors/TagsEditor.tsx',
+        // Navigation utility - thin wrapper around non-testable window.location browser APIs
+        'src/utils/navigation.ts',
       ],
       thresholds: {
         lines: 100,

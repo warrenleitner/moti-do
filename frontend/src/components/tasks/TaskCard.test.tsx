@@ -3,11 +3,29 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '../../test/utils';
+import { render, screen, waitFor } from '../../test/utils';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
 import TaskCard from './TaskCard';
 import type { Task } from '../../types';
 import { Priority, Difficulty, Duration } from '../../types';
+
+// Make Collapse deterministic in jsdom by rendering children only when open.
+vi.mock('../../ui', async () => {
+  const actual = await vi.importActual<typeof import('../../ui')>('../../ui');
+  return {
+    ...actual,
+    Collapse: ({
+      in: opened,
+      expanded,
+      children,
+    }: {
+      in?: boolean;
+      expanded?: boolean;
+      children: ReactNode;
+    }) => (opened ?? expanded ? <div>{children}</div> : null),
+  };
+});
 
 // Mock useMediaQuery from Mantine hooks (via ../../ui)
 const mockMediaQueryResult = { current: false };
@@ -282,7 +300,9 @@ describe('TaskCard', () => {
     await user.click(expandButton);
 
     // Description should now be visible
-    expect(screen.getByText('This is a test task description')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('This is a test task description')).toBeInTheDocument();
+    });
   });
 
   it('expands to show tags when expanded', async () => {
@@ -301,8 +321,10 @@ describe('TaskCard', () => {
     await user.click(expandButton);
 
     // Tags should be visible after expanding
-    expect(screen.getByText('work')).toBeInTheDocument();
-    expect(screen.getByText('important')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('work')).toBeInTheDocument();
+      expect(screen.getByText('important')).toBeInTheDocument();
+    });
   });
 
   it('calls onSubtaskToggle when subtask is toggled', async () => {
@@ -324,7 +346,7 @@ describe('TaskCard', () => {
     await user.click(expandButton);
 
     // Find and click a subtask checkbox (only subtask checkboxes exist now)
-    const subtaskCheckboxes = screen.getAllByRole('checkbox');
+    const subtaskCheckboxes = await screen.findAllByRole('checkbox');
     if (subtaskCheckboxes.length > 0) {
       await user.click(subtaskCheckboxes[0]);
       expect(mockOnSubtaskToggle).toHaveBeenCalledWith('test-task-1', 0);
@@ -349,7 +371,9 @@ describe('TaskCard', () => {
     await user.click(expandButton);
 
     // Subtasks should still be visible but not interactive
-    expect(screen.getByText(/Subtask 1/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Subtask 1/)).toBeInTheDocument();
+    });
   });
 
   it('shows task without expand button when no details', () => {
@@ -598,7 +622,9 @@ describe('TaskCard', () => {
       await user.click(expandButton);
 
       // Priority should now be visible after expanding
-      expect(screen.getByText(/High/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/High/i)).toBeInTheDocument();
+      });
     });
 
     it('shows project badge when expanded on mobile', async () => {
@@ -621,7 +647,9 @@ describe('TaskCard', () => {
       await user.click(expandButton);
 
       // Project should now be visible
-      expect(screen.getByText('Test Project')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Test Project')).toBeInTheDocument();
+      });
     });
 
     describe('swipe to complete', () => {

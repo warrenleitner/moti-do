@@ -178,15 +178,14 @@ test.describe('Task CRUD Operations', () => {
       await expect(task).toBeVisible();
 
       // Click the expand button to show full task details including tags
-      const expandButton = task.locator('button').filter({ has: page.locator('svg') }).first();
-      if (await expandButton.isVisible()) {
+      const expandButton = task.getByRole('button', { name: /expand details/i });
+      if (await expandButton.isVisible().catch(() => false)) {
         await expandButton.click();
         await page.waitForTimeout(300);
       }
 
-      // Task should show the tag chip (may need scrolling into view)
-      const tagChip = task.getByText('work');
-      await tagChip.scrollIntoViewIfNeeded();
+      // Task should show the tag chip once details are expanded
+      const tagChip = task.getByText(/work/i).first();
       await expect(tagChip).toBeVisible({ timeout: 5000 });
     });
   });

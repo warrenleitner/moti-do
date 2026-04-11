@@ -4,12 +4,31 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '../test/utils';
+import type { ReactNode } from 'react';
 import SettingsPage from './SettingsPage';
 import { dataApi } from '../services/api';
 import {
   defaultLayoutPreferences,
   useLayoutStore,
 } from '../store/layoutStore';
+import { reloadPage } from '../utils/navigation';
+
+// Make Collapse deterministic in jsdom by rendering children only when open.
+vi.mock('../ui', async () => {
+  const actual = await vi.importActual<typeof import('../ui')>('../ui');
+  return {
+    ...actual,
+    Collapse: ({
+      in: opened,
+      expanded,
+      children,
+    }: {
+      in?: boolean;
+      expanded?: boolean;
+      children: ReactNode;
+    }) => (opened ?? expanded ? <div>{children}</div> : null),
+  };
+});
 
 // Mock the APIs
 vi.mock('../services/api', () => ({
@@ -57,10 +76,11 @@ vi.mock('../services/api', () => ({
   },
 }));
 
-// Mock window.location.reload
-const originalLocation = window.location;
-delete (window as { location?: Location }).location;
-window.location = { ...originalLocation, reload: vi.fn() };
+// Mock navigation utilities to prevent actual page reloads/navigation in tests
+vi.mock('../utils/navigation', () => ({
+  navigateTo: vi.fn(),
+  reloadPage: vi.fn(),
+}));
 
 // Mock URL.createObjectURL and revokeObjectURL
 global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
@@ -79,6 +99,19 @@ describe('SettingsPage', () => {
     vi.restoreAllMocks();
   });
 
+  const getChangePasswordTriggerButton = (): HTMLElement => {
+    const buttons = screen.getAllByRole('button', { name: /change password/i });
+    const triggerButton = buttons.find(
+      (button) => button.closest('[role="dialog"]') === null
+    );
+
+    if (!triggerButton) {
+      throw new Error('Change password trigger button not found');
+    }
+
+    return triggerButton;
+  };
+
   describe('Rendering', () => {
     it('should render settings page with all sections', () => {
       render(<SettingsPage />);
@@ -88,7 +121,7 @@ describe('SettingsPage', () => {
       expect(screen.getByText('SECURITY_CONFIG')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /export data/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /import data/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /change password/i })).toBeInTheDocument();
+      expect(getChangePasswordTriggerButton()).toBeInTheDocument();
     });
 
     it('should update layout preferences from the new layout section', async () => {
@@ -192,7 +225,7 @@ describe('SettingsPage', () => {
     it('should show change password dialog when button is clicked', async () => {
       render(<SettingsPage />);
 
-      const changePasswordButton = screen.getByRole('button', { name: /change password/i });
+      const changePasswordButton = getChangePasswordTriggerButton();
       fireEvent.click(changePasswordButton);
 
       expect(await screen.findByLabelText(/current password/i)).toBeInTheDocument();
@@ -203,7 +236,7 @@ describe('SettingsPage', () => {
     it('should have password change submit button disabled when fields are empty', async () => {
       render(<SettingsPage />);
 
-      const changePasswordButton = screen.getByRole('button', { name: /change password/i });
+      const changePasswordButton = getChangePasswordTriggerButton();
       fireEvent.click(changePasswordButton);
 
       await screen.findByLabelText(/current password/i);
@@ -220,7 +253,7 @@ describe('SettingsPage', () => {
     it('should close password change dialog when cancel is clicked', async () => {
       render(<SettingsPage />);
 
-      const changePasswordButton = screen.getByRole('button', { name: /change password/i });
+      const changePasswordButton = getChangePasswordTriggerButton();
       fireEvent.click(changePasswordButton);
 
       await screen.findByLabelText(/current password/i);
@@ -319,7 +352,7 @@ describe('SettingsPage', () => {
       // Wait for reload to be called
       await waitFor(
         () => {
-          expect(window.location.reload).toHaveBeenCalled();
+          expect(reloadPage).toHaveBeenCalled();
         },
         { timeout: 3000 }
       );
@@ -381,7 +414,7 @@ describe('SettingsPage', () => {
     it('should show error when passwords do not match', async () => {
       render(<SettingsPage />);
 
-      const changePasswordButton = screen.getByRole('button', { name: /change password/i });
+      const changePasswordButton = getChangePasswordTriggerButton();
       fireEvent.click(changePasswordButton);
 
       await screen.findByLabelText(/current password/i);
@@ -403,7 +436,7 @@ describe('SettingsPage', () => {
     it('should show error when password is too short', async () => {
       render(<SettingsPage />);
 
-      const changePasswordButton = screen.getByRole('button', { name: /change password/i });
+      const changePasswordButton = getChangePasswordTriggerButton();
       fireEvent.click(changePasswordButton);
 
       await screen.findByLabelText(/current password/i);
@@ -428,7 +461,7 @@ describe('SettingsPage', () => {
 
       render(<SettingsPage />);
 
-      const changePasswordButton = screen.getByRole('button', { name: /change password/i });
+      const changePasswordButton = getChangePasswordTriggerButton();
       fireEvent.click(changePasswordButton);
 
       await screen.findByLabelText(/current password/i);
@@ -470,7 +503,7 @@ describe('SettingsPage', () => {
 
       render(<SettingsPage />);
 
-      const changePasswordButton = screen.getByRole('button', { name: /change password/i });
+      const changePasswordButton = getChangePasswordTriggerButton();
       fireEvent.click(changePasswordButton);
 
       await screen.findByLabelText(/current password/i);
@@ -495,7 +528,7 @@ describe('SettingsPage', () => {
 
       render(<SettingsPage />);
 
-      const changePasswordButton = screen.getByRole('button', { name: /change password/i });
+      const changePasswordButton = getChangePasswordTriggerButton();
       fireEvent.click(changePasswordButton);
 
       await screen.findByLabelText(/current password/i);

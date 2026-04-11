@@ -129,12 +129,6 @@ export default function TasksPage() {
     }
   }, [fetchTasks, filters.statuses, hasCompletedData]);
 
-  // Update visible row count when filtered tasks change
-  useEffect(() => {
-    setVisibleRowCount((prev) => (filteredTasks.length > prev ? filteredTasks.length : prev));
-    // Intentionally updating state in effect based on external data
-  }, [filteredTasks.length]);
-
   const showNotification = (message: string, color: 'green' | 'red', autoClose = 3000) => {
     notifications.show({ message, color, autoClose });
   };

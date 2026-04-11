@@ -3,7 +3,22 @@
  * Tests data export/import, vacation mode, password change, and XP history.
  * Authentication is handled by auth.setup.ts via stored auth state.
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+async function ensureSectionExpanded(
+  page: Page,
+  sectionName: string
+): Promise<void> {
+  const sectionToggle = page.getByRole('button', { name: sectionName, exact: true });
+  await expect(sectionToggle).toBeVisible();
+
+  const isCollapsed = (await sectionToggle.locator('svg.tabler-icon-chevron-right').count()) > 0;
+  if (isCollapsed) {
+    await sectionToggle.click();
+  }
+
+  await expect(sectionToggle.locator('svg.tabler-icon-chevron-down')).toBeVisible();
+}
 
 test.describe('Settings Page', () => {
   // No login needed - tests use pre-authenticated state from auth.setup.ts
@@ -32,18 +47,22 @@ test.describe('Settings Page', () => {
     test('should have export data button', async ({ page }) => {
       await page.goto('/settings');
 
-      const exportButton = page.getByRole('button', { name: /export/i });
+      await ensureSectionExpanded(page, 'DATA_BACKUP_RESTORE');
+      const exportButton = page.locator('button:has-text("EXPORT DATA")').first();
       await expect(exportButton).toBeVisible();
     });
 
     test('should trigger download on export', async ({ page }) => {
       await page.goto('/settings');
 
+      await ensureSectionExpanded(page, 'DATA_BACKUP_RESTORE');
+      const exportButton = page.locator('button:has-text("EXPORT DATA")').first();
+      await expect(exportButton).toBeVisible();
+
       // Set up download listener
       const downloadPromise = page.waitForEvent('download');
 
       // Click export button
-      const exportButton = page.getByRole('button', { name: /export/i });
       await exportButton.click();
 
       // Verify download started
@@ -56,9 +75,9 @@ test.describe('Settings Page', () => {
     test('should have import data option', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for import section/button - use first() for multiple matches
-      const importElement = page.getByText(/import/i).first();
-      await expect(importElement).toBeVisible();
+      await ensureSectionExpanded(page, 'DATA_BACKUP_RESTORE');
+      const importButton = page.locator('button:has-text("IMPORT DATA")').first();
+      await expect(importButton).toBeVisible();
     });
   });
 
@@ -66,9 +85,11 @@ test.describe('Settings Page', () => {
     test('should toggle vacation mode on', async ({ page }) => {
       await page.goto('/settings');
 
+      await ensureSectionExpanded(page, 'VACATION_MODE');
+
       // Find vacation mode toggle - Mantine Switch component
       // The label is "ENABLE VACATION MODE" or "VACATION MODE ACTIVE"
-      const vacationToggle = page.getByRole('switch', { name: /vacation mode/i });
+      const vacationToggle = page.getByLabel('Vacation Mode').first();
       await expect(vacationToggle).toBeVisible();
 
       // Wait for the switch to be enabled (loading to complete)
@@ -98,8 +119,10 @@ test.describe('Settings Page', () => {
       // Check for vacation mode section header (now uppercase with underscores)
       await expect(page.getByText('VACATION_MODE')).toBeVisible();
 
+      await ensureSectionExpanded(page, 'VACATION_MODE');
+
       // Check for vacation mode switch and label using the form control
-      const vacationSwitch = page.getByRole('switch', { name: /vacation mode/i });
+      const vacationSwitch = page.getByLabel('Vacation Mode').first();
       await expect(vacationSwitch).toBeVisible();
 
       // Verify the vacation mode toggle or label is present
@@ -113,45 +136,50 @@ test.describe('Settings Page', () => {
     test('should have password change option', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for password change section - use first() for multiple matches
-      const passwordSection = page.getByText(/password/i).first();
-      await expect(passwordSection).toBeVisible();
+      await ensureSectionExpanded(page, 'SECURITY_CONFIG');
+      const changePasswordBtn = page.locator('button:has-text("CHANGE PASSWORD")').first();
+      await expect(changePasswordBtn).toBeVisible();
     });
 
     test('should show password change form', async ({ page }) => {
       await page.goto('/settings');
 
+      await ensureSectionExpanded(page, 'SECURITY_CONFIG');
+
       // Click on change password button if exists
-      const changePasswordBtn = page.getByRole('button', { name: /change password/i });
+      const changePasswordBtn = page.locator('button:has-text("CHANGE PASSWORD")').first();
 
       if (await changePasswordBtn.isVisible()) {
         await changePasswordBtn.click();
 
         // Should show form with current and new password fields
         await expect(page.getByLabel(/current password/i)).toBeVisible();
-        await expect(page.getByLabel('New Password')).toBeVisible();
+        await expect(page.getByLabel(/^New Password$/i)).toBeVisible();
       }
     });
 
     test('should validate password change inputs', async ({ page }) => {
       await page.goto('/settings');
 
-      const changePasswordBtn = page.getByRole('button', { name: /change password/i });
+      await ensureSectionExpanded(page, 'SECURITY_CONFIG');
+
+      const changePasswordBtn = page.locator('button:has-text("CHANGE PASSWORD")').first();
 
       if (await changePasswordBtn.isVisible()) {
         await changePasswordBtn.click();
 
         // Try to submit with short password
         const currentPasswordInput = page.getByLabel(/current password/i);
-        const newPasswordInput = page.getByLabel('New Password');
-        const confirmPasswordInput = page.getByLabel(/confirm new password/i);
+        const newPasswordInput = page.getByLabel(/^New Password$/i);
+        const confirmPasswordInput = page.getByLabel(/^Confirm New Password$/i);
 
         await currentPasswordInput.fill('testpassword123');
         await newPasswordInput.fill('short');
         await confirmPasswordInput.fill('short');
 
         // Submit
-        const submitBtn = page.getByRole('button', { name: /save|submit|change/i });
+        const passwordDialog = page.getByRole('dialog');
+        const submitBtn = passwordDialog.getByRole('button', { name: /change password/i });
         await submitBtn.click();
 
         // Should show validation error
@@ -239,16 +267,20 @@ test.describe('Settings Page', () => {
     test('should have new tag button', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for add tag button (ArcadeButton text is "ADD TAG", case-insensitive match)
-      const addTagButton = page.getByRole('button', { name: /ADD TAG/i });
+      await ensureSectionExpanded(page, 'TAG_DEFINITIONS');
+      const addTagButton = page.locator('button:has-text("ADD TAG")').first();
       await expect(addTagButton).toBeVisible();
     });
 
     test('should create a new tag with multiplier', async ({ page }) => {
       await page.goto('/settings');
 
+      await ensureSectionExpanded(page, 'TAG_DEFINITIONS');
+      const tagsSection = page.getByTestId('tags-section');
+      const addTagButton = page.locator('button:has-text("ADD TAG")').first();
+      await expect(addTagButton).toBeVisible();
+
       // Click add tag button
-      const addTagButton = page.getByRole('button', { name: /ADD TAG/i });
       await addTagButton.click();
 
       // Wait for form row to appear
@@ -256,12 +288,11 @@ test.describe('Settings Page', () => {
 
       // Fill in tag name (first textbox in the form row - Tags section)
       const tagName = `TestTag${Date.now()}`;
-      const tagsSection = page.locator('[data-testid="tags-section"]');
       const nameInput = tagsSection.getByRole('textbox').first();
       await nameInput.fill(tagName);
 
       // Click a quick multiplier button instead of typing
-      await page.getByRole('button', { name: '1.5x' }).click();
+      await tagsSection.getByRole('button', { name: '1.5x' }).click();
 
       // Submit form by clicking the save button (now an icon-only button with a check icon)
       await tagsSection.locator('button:has(.tabler-icon-check)').first().click();
@@ -273,18 +304,22 @@ test.describe('Settings Page', () => {
     test('should show multiplier quick buttons', async ({ page }) => {
       await page.goto('/settings');
 
+      await ensureSectionExpanded(page, 'TAG_DEFINITIONS');
+      const tagsSection = page.getByTestId('tags-section');
+      const addTagButton = page.locator('button:has-text("ADD TAG")').first();
+      await expect(addTagButton).toBeVisible();
+
       // Click add tag button
-      const addTagButton = page.getByRole('button', { name: /ADD TAG/i });
       await addTagButton.click();
 
       // Wait for form to appear
       await page.waitForTimeout(300);
 
       // Check for quick multiplier buttons (note: 1x and 2x, not 1.0x and 2.0x)
-      await expect(page.getByRole('button', { name: '0.5x' })).toBeVisible();
-      await expect(page.getByRole('button', { name: '1x' })).toBeVisible();
-      await expect(page.getByRole('button', { name: '1.5x' })).toBeVisible();
-      await expect(page.getByRole('button', { name: '2x' })).toBeVisible();
+      await expect(tagsSection.getByRole('button', { name: '0.5x' })).toBeVisible();
+      await expect(tagsSection.getByRole('button', { name: '1x' })).toBeVisible();
+      await expect(tagsSection.getByRole('button', { name: '1.5x' })).toBeVisible();
+      await expect(tagsSection.getByRole('button', { name: '2x' })).toBeVisible();
     });
   });
 
@@ -299,16 +334,20 @@ test.describe('Settings Page', () => {
     test('should have new project button', async ({ page }) => {
       await page.goto('/settings');
 
-      // Check for add project button (ArcadeButton text is "ADD PROJECT", case-insensitive match)
-      const addProjectButton = page.getByRole('button', { name: /ADD PROJECT/i });
+      await ensureSectionExpanded(page, 'PROJECT_DEFINITIONS');
+      const addProjectButton = page.locator('button:has-text("ADD PROJECT")').first();
       await expect(addProjectButton).toBeVisible();
     });
 
     test('should create a new project with multiplier', async ({ page }) => {
       await page.goto('/settings');
 
+      await ensureSectionExpanded(page, 'PROJECT_DEFINITIONS');
+      const projectsSection = page.getByTestId('projects-section');
+      const addProjectButton = page.locator('button:has-text("ADD PROJECT")').first();
+      await expect(addProjectButton).toBeVisible();
+
       // Click add project button
-      const addProjectButton = page.getByRole('button', { name: /ADD PROJECT/i });
       await addProjectButton.click();
 
       // Wait for form row to appear
@@ -316,7 +355,6 @@ test.describe('Settings Page', () => {
 
       // Fill in project name (first textbox in the form row - Projects section)
       const projectName = `TestProject${Date.now()}`;
-      const projectsSection = page.locator('[data-testid="projects-section"]');
       const nameInput = projectsSection.getByRole('textbox').first();
       await nameInput.fill(projectName);
 

@@ -16,12 +16,24 @@ export class KanbanPage {
   constructor(page: Page) {
     this.page = page;
     // Mantine 9 Select renders <input readonly> with combobox role
-    this.projectFilter = page.getByRole('combobox', { name: 'Project', exact: true });
-    this.tagFilter = page.getByRole('combobox', { name: 'Tag', exact: true });
+    this.projectFilter = page
+      .getByRole('combobox', { name: 'Project', exact: true })
+      .or(page.getByRole('textbox', { name: 'Project', exact: true }))
+      .first();
+    this.tagFilter = page
+      .getByRole('combobox', { name: 'Tag', exact: true })
+      .or(page.getByRole('textbox', { name: 'Tag', exact: true }))
+      .first();
     this.taskCountText = page.getByText(/\d+ tasks?/i);
     this.snackbar = page.getByRole('alert').first();
-    this.sortBySelect = page.getByRole('combobox', { name: 'Sort by', exact: true });
-    this.sortOrderSelect = page.getByRole('combobox', { name: 'Order', exact: true });
+    this.sortBySelect = page
+      .getByRole('combobox', { name: 'Sort by', exact: true })
+      .or(page.getByRole('textbox', { name: 'Sort by', exact: true }))
+      .first();
+    this.sortOrderSelect = page
+      .getByRole('combobox', { name: 'Order', exact: true })
+      .or(page.getByRole('textbox', { name: 'Order', exact: true }))
+      .first();
   }
 
   /**
