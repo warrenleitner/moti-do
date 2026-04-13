@@ -191,9 +191,38 @@ In the Vercel dashboard, add these environment variables:
 
 ### Step 5: Deploy
 
-1. Push to the main branch
-2. Vercel automatically builds and deploys
-3. Tables are created automatically on first run
+1. Push to the main branch to trigger an automatic production deployment.
+2. Open or update a pull request to trigger the preview workflow in GitHub Actions.
+3. Approve the `vercel-preview` environment when GitHub prompts for review.
+4. After approval, the workflow builds and deploys a Vercel preview and comments on the pull request with the preview URL.
+5. Tables are created automatically on first run.
+
+### Preview PR Approval Flow
+
+Preview deployments are intentionally gated behind GitHub environment approval,
+while `main` production deploys remain automatic.
+
+Repository configuration:
+
+- `vercel.json` disables Vercel Git auto-deployments for every branch except `main`.
+- `.github/workflows/vercel-preview.yml` deploys previews from pull requests after environment approval.
+- The preview workflow skips fork-based pull requests because GitHub does not expose repository secrets to `pull_request` workflows from forks.
+
+GitHub setup required:
+
+1. Create a GitHub environment named `vercel-preview`.
+2. Add one or more required reviewers to that environment.
+3. Enable the setting that prevents self-approval if you want the same review rule to apply to your own PRs.
+4. Add these environment secrets to `vercel-preview`:
+  - `VERCEL_TOKEN`
+  - `VERCEL_ORG_ID`
+  - `VERCEL_PROJECT_ID`
+
+Vercel setup required:
+
+1. Keep the project connected to GitHub so pushes to `main` still deploy automatically.
+2. Do not re-enable automatic preview deployments for non-`main` branches in the Vercel dashboard.
+3. If you want forked PRs to remain manually deployable from Vercel, leave Git Fork Protection enabled.
 
 ### Vercel Configuration Details
 
