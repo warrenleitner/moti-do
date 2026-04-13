@@ -234,7 +234,7 @@ describe('TasksPage undo notifications', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Complete task' }));
 
     const undoButton = await screen.findByRole('button', { name: 'Undo' });
-    expect(screen.getByText('Task completed! XP earned.')).toBeInTheDocument();
+    expect(screen.getByText('Task completed!')).toBeInTheDocument();
 
     fireEvent.click(undoButton);
 

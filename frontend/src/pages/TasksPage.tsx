@@ -146,7 +146,7 @@ export default function TasksPage() {
       for (const pendingAction of pendingUndoActions.values()) {
         window.clearTimeout(pendingAction.timeoutId);
         void pendingAction.commit().catch(() => {
-          // The component is gone, so there is no safe place to surface a rollback.
+          // Commit fails silently during unmount because the component can no longer show errors.
         });
       }
       pendingUndoActions.clear();
@@ -164,7 +164,11 @@ export default function TasksPage() {
 
   const restoreDeletedTaskLocally = (task: Task, index: number) => {
     const { tasks, setTasks } = useTaskStore.getState();
-    if (tasks.some((existingTask) => existingTask.id === task.id)) {
+    const existingIndex = tasks.findIndex((existingTask) => existingTask.id === task.id);
+    if (existingIndex >= 0) {
+      const restoredTasks = [...tasks];
+      restoredTasks[existingIndex] = task;
+      setTasks(restoredTasks);
       return;
     }
     const restoredTasks = [...tasks];
@@ -318,7 +322,7 @@ export default function TasksPage() {
       } else {
         replaceTaskLocally({ ...task, is_complete: true });
         showUndoableNotification({
-          message: 'Task completed! XP earned.',
+          message: 'Task completed!',
           rollback: () => replaceTaskLocally(task),
           commit: async () => {
             const response = await taskApi.completeTask(taskId);
@@ -331,7 +335,7 @@ export default function TasksPage() {
             if (response.next_instance && response.next_instance.due_date) {
               if (crisisModeActive) {
                 showNotification(
-                  'The next recurring instance was created and hidden until you exit crisis mode.',
+                  `+${response.xp_earned} XP. The next recurring instance was created and hidden until you exit crisis mode.`,
                   'green',
                 );
               } else {
@@ -340,7 +344,7 @@ export default function TasksPage() {
                 notifications.show({
                   message: (
                     <>
-                      Next due:{' '}
+                      +{response.xp_earned} XP. Next due:{' '}
                       <Text
                         component="button"
                         size="sm"
@@ -364,6 +368,8 @@ export default function TasksPage() {
                   autoClose: 6000,
                 });
               }
+            } else {
+              showNotification(`Task completed! +${response.xp_earned} XP`, 'green');
             }
           },
           commitErrorFallback: 'Failed to update task',
@@ -385,23 +391,19 @@ export default function TasksPage() {
       const taskIndex = tasks.findIndex((task) => task.id === taskToDelete);
       const deletedTask = taskIndex >= 0 ? tasks[taskIndex] : null;
 
-      try {
-        removeTask(taskToDelete);
-        showUndoableNotification({
-          message: 'Task deleted',
-          rollback: () => {
-            if (deletedTask) {
-              restoreDeletedTaskLocally(deletedTask, taskIndex);
-            }
-          },
-          commit: async () => {
-            await taskApi.deleteTask(taskToDelete);
-          },
-          commitErrorFallback: 'Failed to delete task',
-        });
-      } catch (error) {
-        showNotification(getErrorMessage(error, 'Failed to delete task'), 'red');
-      }
+      removeTask(taskToDelete);
+      showUndoableNotification({
+        message: 'Task deleted',
+        rollback: () => {
+          if (deletedTask) {
+            restoreDeletedTaskLocally(deletedTask, taskIndex);
+          }
+        },
+        commit: async () => {
+          await taskApi.deleteTask(taskToDelete);
+        },
+        commitErrorFallback: 'Failed to delete task',
+      });
     }
     setDeleteDialogOpen(false);
     setTaskToDelete(null);
