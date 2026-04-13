@@ -159,8 +159,7 @@ def test_create_tables(
     ]
 
     assert any(
-        "CREATE TABLE IF NOT EXISTS users" in sql
-        for sql in executed_sql_statements
+        "CREATE TABLE IF NOT EXISTS users" in sql for sql in executed_sql_statements
     )
     assert any(
         "CREATE TABLE IF NOT EXISTS tasks" in sql and "recurrence_ended_at TEXT" in sql
