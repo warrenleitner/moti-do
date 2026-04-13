@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Center, Loader, Text, Button, Alert, Stack } from './ui';
+import AppUpdatePrompt from './components/common/AppUpdatePrompt';
 import MainLayout from './components/layout/MainLayout';
 import { InstallPrompt } from './components/common/InstallPrompt';
 import CrisisModeBanner from './components/common/CrisisModeBanner';
@@ -107,6 +108,7 @@ function App() {
           }
         />
       </Routes>
+      <AppUpdatePrompt />
       <SpeedInsights />
     </>
   );

@@ -78,6 +78,10 @@ vi.mock('./components/common/InstallPrompt', () => ({
   InstallPrompt: () => <div data-testid="install-prompt">Install Prompt</div>,
 }));
 
+vi.mock('./components/common/AppUpdatePrompt', () => ({
+  default: () => <div data-testid="app-update-prompt">App Update Prompt</div>,
+}));
+
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -266,6 +270,21 @@ describe('App', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('install-prompt')).toBeInTheDocument();
+    });
+  });
+
+  it('should render the global app update prompt when initialized', async () => {
+    vi.mocked(useAppInitialization).mockReturnValue({
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      retry: vi.fn(),
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('app-update-prompt')).toBeInTheDocument();
     });
   });
 
