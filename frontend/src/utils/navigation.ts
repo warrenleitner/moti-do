@@ -9,6 +9,11 @@ export const navigateTo = (url: string): void => {
   window.location.assign(url);
 };
 
+export const replaceCurrentLocation = (url: string): void => {
+  /* v8 ignore next - wraps window.location.replace; tested indirectly via appUpdate.test */
+  window.location.replace(url);
+};
+
 export const reloadPage = (): void => {
   /* v8 ignore next - wraps window.location.reload; tested indirectly via SettingsPage.test */
   window.location.reload();

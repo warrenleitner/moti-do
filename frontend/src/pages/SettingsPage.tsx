@@ -64,6 +64,11 @@ import {
   startNotificationScheduler,
   stopNotificationScheduler,
 } from '../services/notifications';
+import {
+  forceAppUpdate,
+  isAppUpdateAvailable,
+  subscribeToAppUpdate,
+} from '../services/appUpdate';
 import { reloadPage } from '../utils/navigation';
 
 // Pre-compute the list of IANA timezone identifiers
@@ -119,6 +124,8 @@ export default function SettingsPage() {
   const [resettingScoringConfig, setResettingScoringConfig] = useState(false);
   // Backend version state
   const [backendVersion, setBackendVersion] = useState<string | null>(null);
+  const [frontendUpdateAvailable, setFrontendUpdateAvailable] = useState(isAppUpdateAvailable());
+  const [forcingFrontendUpdate, setForcingFrontendUpdate] = useState(false);
 
   // Notification state
   const [notificationsEnabled, setNotificationsEnabled] = useState(getNotificationEnabled());
@@ -216,6 +223,29 @@ export default function SettingsPage() {
     fetchScoringConfig();
     fetchBackendVersion();
   }, []);
+
+  useEffect(() => subscribeToAppUpdate(setFrontendUpdateAvailable), []);
+
+  const handleForceFrontendUpdate = async () => {
+    setForcingFrontendUpdate(true);
+    setMessage({
+      type: 'success',
+      text: frontendUpdateAvailable
+        ? 'Applying the waiting frontend update...'
+        : 'Checking Vercel for the latest frontend build...',
+    });
+
+    try {
+      await forceAppUpdate();
+    } catch (error) {
+      console.error('Failed to force frontend update:', error);
+      setMessage({
+        type: 'error',
+        text: 'Failed to refresh the frontend build. Please try again.',
+      });
+      setForcingFrontendUpdate(false);
+    }
+  };
 
   const handleExport = async () => {
     setLoading(true);
@@ -1854,6 +1884,22 @@ export default function SettingsPage() {
               </tbody>
             </table>
           </Box>
+
+          <Text className="font-data" size="xs" mt="md" style={{ color: '#525560', lineHeight: 1.7 }}>
+            If the frontend stays behind the backend after deploy, use this to apply any waiting
+            app update and fall back to a fresh network reload from Vercel.
+          </Text>
+
+          <ArcadeButton
+            variant={frontendUpdateAvailable ? 'secondary' : 'ghost'}
+            leftSection={<IconRefresh size={16} />}
+            onClick={handleForceFrontendUpdate}
+            disabled={forcingFrontendUpdate}
+            loading={forcingFrontendUpdate}
+            style={{ minHeight: 44, marginTop: '1rem' }}
+          >
+            {frontendUpdateAvailable ? 'APPLY WAITING FRONTEND UPDATE' : 'FORCE FRONTEND UPDATE'}
+          </ArcadeButton>
         </Collapse>
       </GlowCard>
 

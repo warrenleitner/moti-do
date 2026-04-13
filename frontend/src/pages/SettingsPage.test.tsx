@@ -11,6 +11,7 @@ import {
   defaultLayoutPreferences,
   useLayoutStore,
 } from '../store/layoutStore';
+import { forceAppUpdate } from '../services/appUpdate';
 import { reloadPage } from '../utils/navigation';
 
 // Make Collapse deterministic in jsdom by rendering children only when open.
@@ -79,7 +80,15 @@ vi.mock('../services/api', () => ({
 // Mock navigation utilities to prevent actual page reloads/navigation in tests
 vi.mock('../utils/navigation', () => ({
   navigateTo: vi.fn(),
+  replaceCurrentLocation: vi.fn(),
   reloadPage: vi.fn(),
+}));
+
+vi.mock('../services/appUpdate', () => ({
+  forceAppUpdate: vi.fn(),
+  initializeAppUpdate: vi.fn(),
+  isAppUpdateAvailable: vi.fn(() => false),
+  subscribeToAppUpdate: vi.fn(() => vi.fn()),
 }));
 
 // Mock URL.createObjectURL and revokeObjectURL
@@ -110,6 +119,10 @@ describe('SettingsPage', () => {
     }
 
     return triggerButton;
+  };
+
+  const openSystemInfoSection = (): void => {
+    fireEvent.click(screen.getByRole('button', { name: /system_info/i }));
   };
 
   describe('Rendering', () => {
@@ -146,6 +159,26 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       expect(screen.getByText(/IMPORTING DATA WILL REPLACE ALL CURRENT DATA/i)).toBeInTheDocument();
+    });
+
+    it('should render the force frontend update action', () => {
+      render(<SettingsPage />);
+      openSystemInfoSection();
+
+      expect(screen.getByRole('button', { name: /force frontend update/i })).toBeInTheDocument();
+    });
+
+    it('should trigger a forced frontend update from system info', async () => {
+      vi.mocked(forceAppUpdate).mockResolvedValue(undefined);
+
+      render(<SettingsPage />);
+      openSystemInfoSection();
+
+      fireEvent.click(screen.getByRole('button', { name: /force frontend update/i }));
+
+      await waitFor(() => {
+        expect(forceAppUpdate).toHaveBeenCalledTimes(1);
+      });
     });
   });
 

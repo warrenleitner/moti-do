@@ -11,6 +11,7 @@ import './index.css';
 import App from './App';
 import { theme as mantineTheme } from './theme';
 import { CrisisModeHandler } from './CrisisModeHandler';
+import { initializeAppUpdate } from './services/appUpdate';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +21,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+initializeAppUpdate();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
