@@ -173,7 +173,7 @@ def _get_recurring_series(task: Task, user: User) -> list[Task]:
         for child in children_by_parent.get(current_id, []):
             pending_ids.append(child.id)
 
-    return [tasks_by_id[task_id] for task_id in related_ids if task_id in tasks_by_id]
+    return [tasks_by_id[task_id] for task_id in related_ids]
 
 
 @router.get("", response_model=list[TaskResponse])

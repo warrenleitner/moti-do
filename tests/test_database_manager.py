@@ -154,12 +154,17 @@ def test_create_tables(
     # Call the method directly with mock connection
     manager._create_tables(connection)
 
-    executed_sql = [mock_call.args[0] for mock_call in cursor.execute.call_args_list]
+    executed_sql_statements = [
+        mock_call.args[0] for mock_call in cursor.execute.call_args_list
+    ]
 
-    assert any("CREATE TABLE IF NOT EXISTS users" in sql for sql in executed_sql)
+    assert any(
+        "CREATE TABLE IF NOT EXISTS users" in sql
+        for sql in executed_sql_statements
+    )
     assert any(
         "CREATE TABLE IF NOT EXISTS tasks" in sql and "recurrence_ended_at TEXT" in sql
-        for sql in executed_sql
+        for sql in executed_sql_statements
     )
 
     expected_calls = [

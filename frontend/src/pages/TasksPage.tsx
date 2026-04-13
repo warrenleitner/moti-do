@@ -657,7 +657,7 @@ export default function TasksPage() {
       <ConfirmDialog
         open={endRecurrenceDialogOpen}
         title="End Recurrence"
-        message="Are you sure you want to end this recurring task? Existing history will be preserved for exports, but the recurring series will stop and disappear from active views."
+        message="Are you sure you want to end this recurring task? Existing history will be preserved for exports, but the recurring series will stop and be hidden from active views."
         confirmLabel="End Recurrence"
         confirmColor="warning"
         onConfirm={handleEndRecurrenceConfirm}
