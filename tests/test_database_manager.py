@@ -158,8 +158,7 @@ def test_create_tables(
 
     assert any("CREATE TABLE IF NOT EXISTS users" in sql for sql in executed_sql)
     assert any(
-        "CREATE TABLE IF NOT EXISTS tasks" in sql
-        and "recurrence_ended_at TEXT" in sql
+        "CREATE TABLE IF NOT EXISTS tasks" in sql and "recurrence_ended_at TEXT" in sql
         for sql in executed_sql
     )
 
@@ -384,7 +383,8 @@ def test_load_user_no_tasks(
             "SELECT id, title, text_description, priority, difficulty, duration, "
             "is_complete, creation_date, due_date, start_date, icon, tags, "
             "project, subtasks, dependencies, history, is_habit, recurrence_rule, "
-            "recurrence_type, streak_current, streak_best, parent_habit_id, recurrence_ended_at, defer_until FROM tasks "
+            "recurrence_type, streak_current, streak_best, parent_habit_id, "
+            "recurrence_ended_at, defer_until FROM tasks "
             "WHERE user_username = ?",
             (username,),
         ),

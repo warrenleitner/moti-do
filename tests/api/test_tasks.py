@@ -11,6 +11,7 @@ from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 
 from motido.api.routers.tasks import (  # pylint: disable=protected-access
+    _get_recurring_series,
     jump_tasks_to_current_instance,
     parse_subtask_recurrence_mode,
 )
@@ -268,6 +269,49 @@ class TestTaskEndRecurrence:
 
         assert response.status_code == 400
         assert response.json()["detail"] == "Task is not a recurring task"
+
+    def test_end_recurrence_missing_task(self, client: TestClient) -> None:
+        """Ending recurrence should return 404 for unknown tasks."""
+        response = client.post("/api/tasks/missing-task/end-recurrence")
+
+        assert response.status_code == 404
+
+    def test_get_recurring_series_skips_missing_parent(self) -> None:
+        """Lineage traversal should tolerate broken parent links."""
+        user = User(username="series-test")
+        task = Task(
+            title="Broken Chain",
+            creation_date=datetime.now(),
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            parent_habit_id="missing-parent",
+        )
+        user.add_task(task)
+
+        related = _get_recurring_series(task, user)
+
+        assert related == [task]
+
+    def test_undo_recurrence_end_restores_timestamp(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Undo should clear the recurrence tombstone entry."""
+        habit = Task(
+            title="Undo Habit",
+            creation_date=datetime.now(),
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            recurrence_type=RecurrenceType.STRICT,
+        )
+        test_user.add_task(habit)
+
+        response = client.post(f"/api/tasks/{habit.id}/end-recurrence")
+        assert response.status_code == 204
+
+        undo_response = client.post(f"/api/tasks/{habit.id}/undo")
+
+        assert undo_response.status_code == 200
+        assert undo_response.json()["recurrence_ended_at"] is None
 
 
 class TestTaskComplete:

@@ -357,14 +357,14 @@ def _recover_orphaned_from_completion(  # pylint: disable=too-many-locals
     # Find the latest completed instance for each orphaned FROM_COMPLETION habit
     orphaned: dict[str, Task] = {}
     for task in user.tasks:
-        if (
+        is_recoverable_orphan = (
             task.is_habit
             and task.is_complete
             and task.recurrence_rule
             and task.recurrence_ended_at is None
             and task.recurrence_type == RecurrenceType.FROM_COMPLETION
-            and task.title not in active_habit_titles
-        ):
+        )
+        if is_recoverable_orphan and task.title not in active_habit_titles:
             existing = orphaned.get(task.title)
             if existing is None or (
                 task.due_date
