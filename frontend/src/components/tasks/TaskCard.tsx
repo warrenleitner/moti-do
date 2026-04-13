@@ -12,6 +12,7 @@ import {
   IconChevronUp,
   IconEdit,
   IconTrash,
+  IconBan,
   IconRepeat,
   IconCopy,
   IconLink,
@@ -44,6 +45,7 @@ interface TaskCardProps {
   onComplete: (id: string) => void;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  onEndRecurrence?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onSubtaskToggle?: (taskId: string, subtaskIndex: number) => void;
   onUndo?: (id: string) => void;
@@ -79,6 +81,7 @@ export default function TaskCard({
   onComplete,
   onEdit,
   onDelete,
+  onEndRecurrence,
   onDuplicate,
   onSubtaskToggle,
   onUndo,
@@ -468,6 +471,18 @@ export default function TaskCard({
               style={{ color: '#a8aab7' }}
             >
               <IconCopy size={16} />
+            </ActionIcon>
+          )}
+          {onEndRecurrence && task.is_habit && task.recurrence_rule && !task.recurrence_ended_at && (
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              onClick={() => onEndRecurrence(task.id)}
+              title="End recurrence"
+              aria-label="End recurrence"
+              style={{ color: '#FFC775' }}
+            >
+              <IconBan size={16} />
             </ActionIcon>
           )}
           <ActionIcon

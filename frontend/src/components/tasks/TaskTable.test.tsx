@@ -110,6 +110,29 @@ describe('TaskTable', () => {
     expect(mockOnDelete).toHaveBeenCalledWith('1');
   });
 
+  it('calls onEndRecurrence when end recurrence button is clicked', () => {
+    const recurringTask = {
+      ...mockTask,
+      is_habit: true,
+      recurrence_rule: 'FREQ=DAILY',
+    };
+    const mockOnEndRecurrence = vi.fn();
+
+    render(
+      <TaskTable
+        tasks={[recurringTask]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onEndRecurrence={mockOnEndRecurrence}
+        onComplete={mockOnComplete}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'End recurrence' }));
+
+    expect(mockOnEndRecurrence).toHaveBeenCalledWith('1');
+  });
+
   it('calls onComplete when complete button is clicked', () => {
     render(
       <TaskTable

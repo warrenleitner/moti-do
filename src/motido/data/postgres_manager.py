@@ -173,7 +173,8 @@ class PostgresDataManager(DataManager):
                         streak_best INTEGER NOT NULL DEFAULT 0,
                         parent_habit_id TEXT,
                         habit_start_delta INTEGER,
-                        subtask_recurrence_mode TEXT DEFAULT 'default'
+                        subtask_recurrence_mode TEXT DEFAULT 'default',
+                        recurrence_ended_at TEXT
                     )
                 """)
 
@@ -227,6 +228,14 @@ class PostgresDataManager(DataManager):
                             WHERE table_name = 'tasks' AND column_name = 'defer_until'
                         ) THEN
                             ALTER TABLE tasks ADD COLUMN defer_until TEXT;
+                        END IF;
+
+                        -- recurrence_ended_at
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'tasks' AND column_name = 'recurrence_ended_at'
+                        ) THEN
+                            ALTER TABLE tasks ADD COLUMN recurrence_ended_at TEXT;
                         END IF;
                     END $$;
                     """)
@@ -505,6 +514,12 @@ class PostgresDataManager(DataManager):
             subtask_recurrence_mode=self._parse_subtask_recurrence_mode(
                 row.get("subtask_recurrence_mode")
             ),
+            recurrence_ended_at=(
+                datetime.fromisoformat(row["recurrence_ended_at"])
+                if row.get("recurrence_ended_at")
+                and isinstance(row["recurrence_ended_at"], str)
+                else row.get("recurrence_ended_at")
+            ),
             defer_until=(
                 datetime.fromisoformat(row["defer_until"])
                 if row.get("defer_until") and isinstance(row["defer_until"], str)
@@ -654,6 +669,11 @@ class PostgresDataManager(DataManager):
                     task.habit_start_delta,
                     task.subtask_recurrence_mode.value,
                     (
+                        task.recurrence_ended_at.strftime("%Y-%m-%d %H:%M:%S")
+                        if task.recurrence_ended_at
+                        else None
+                    ),
+                    (
                         task.defer_until.strftime("%Y-%m-%d %H:%M:%S")
                         if task.defer_until
                         else None
@@ -669,7 +689,7 @@ class PostgresDataManager(DataManager):
                     icon, tags, project, subtasks, dependencies, history,
                     user_username, is_habit, recurrence_rule, recurrence_type,
                     streak_current, streak_best, parent_habit_id, habit_start_delta,
-                    subtask_recurrence_mode, defer_until
+                    subtask_recurrence_mode, recurrence_ended_at, defer_until
                 ) VALUES %s
                 ON CONFLICT (id) DO UPDATE SET
                     title = EXCLUDED.title,
@@ -696,6 +716,7 @@ class PostgresDataManager(DataManager):
                     parent_habit_id = EXCLUDED.parent_habit_id,
                     habit_start_delta = EXCLUDED.habit_start_delta,
                     subtask_recurrence_mode = EXCLUDED.subtask_recurrence_mode,
+                    recurrence_ended_at = EXCLUDED.recurrence_ended_at,
                     defer_until = EXCLUDED.defer_until
                 """
 
@@ -706,14 +727,14 @@ class PostgresDataManager(DataManager):
                     icon, tags, project, subtasks, dependencies, history,
                     user_username, is_habit, recurrence_rule, recurrence_type,
                     streak_current, streak_best, parent_habit_id, habit_start_delta,
-                    subtask_recurrence_mode, defer_until
+                    subtask_recurrence_mode, recurrence_ended_at, defer_until
                 ) VALUES (
                     %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s,
                     %s, %s, %s, %s,
-                    %s, %s
+                    %s, %s, %s
                 )
                 ON CONFLICT (id) DO UPDATE SET
                     title = EXCLUDED.title,
@@ -740,6 +761,7 @@ class PostgresDataManager(DataManager):
                     parent_habit_id = EXCLUDED.parent_habit_id,
                     habit_start_delta = EXCLUDED.habit_start_delta,
                     subtask_recurrence_mode = EXCLUDED.subtask_recurrence_mode,
+                    recurrence_ended_at = EXCLUDED.recurrence_ended_at,
                     defer_until = EXCLUDED.defer_until
                 """
 

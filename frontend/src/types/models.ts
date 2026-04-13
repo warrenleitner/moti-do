@@ -102,6 +102,7 @@ export interface Task {
   current_count: number; // Current progress toward target (default 0)
   // Defer/delay field
   defer_until?: string; // ISO datetime string, task is deferred until this date
+  recurrence_ended_at?: string; // ISO datetime string marking an intentionally ended recurring series
 }
 
 export interface TaskCompletionResponse {

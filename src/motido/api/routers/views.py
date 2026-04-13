@@ -44,6 +44,8 @@ async def get_calendar_events(
         end_date = date.today().replace(day=1) + timedelta(days=60)
 
     for task in user.tasks:
+        if task.recurrence_ended_at is not None:
+            continue
         if task.due_date is None:
             continue
 
@@ -151,6 +153,8 @@ async def get_kanban_data(
     }
 
     for task in user.tasks:
+        if task.recurrence_ended_at is not None:
+            continue
         # Skip habits (they have their own view)
         if task.is_habit:
             continue
@@ -212,6 +216,8 @@ async def get_habits(
 
     for task in user.tasks:
         if not task.is_habit:
+            continue
+        if task.recurrence_ended_at is not None:
             continue
 
         # Skip child instances unless requested
