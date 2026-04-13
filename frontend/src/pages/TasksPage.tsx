@@ -145,8 +145,8 @@ export default function TasksPage() {
     return () => {
       for (const pendingAction of pendingUndoActions.values()) {
         window.clearTimeout(pendingAction.timeoutId);
-        void pendingAction.commit().catch(() => {
-          // Commit fails silently during unmount because the component can no longer show errors.
+        void pendingAction.commit().catch((error) => {
+          console.error('Failed to commit pending action during unmount:', error);
         });
       }
       pendingUndoActions.clear();
@@ -295,6 +295,7 @@ export default function TasksPage() {
     const { tasks } = useTaskStore.getState();
     const originalTask = tasks.find((task) => task.id === taskId);
     if (!originalTask) {
+      console.warn(`Unable to find task ${taskId} for inline edit undo handling.`);
       return;
     }
 
@@ -353,7 +354,7 @@ export default function TasksPage() {
                         style={{ cursor: 'pointer', border: 'none', background: 'none', padding: 0 }}
                         onClick={() => {
                           const { tasks: storeTasks } = useTaskStore.getState();
-                          const nextTask = storeTasks.find((storeTask) => storeTask.id === nextId);
+                          const nextTask = storeTasks.find((task) => task.id === nextId);
                           if (nextTask) {
                             setEditingTask(nextTask);
                             setFormOpen(true);
