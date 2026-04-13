@@ -141,14 +141,15 @@ export default function TasksPage() {
   }, [fetchTasks, filters.statuses, hasCompletedData]);
 
   useEffect(() => {
+    const pendingUndoActions = pendingUndoActionsRef.current;
     return () => {
-      for (const pendingAction of pendingUndoActionsRef.current.values()) {
+      for (const pendingAction of pendingUndoActions.values()) {
         window.clearTimeout(pendingAction.timeoutId);
         void pendingAction.commit().catch(() => {
           pendingAction.rollback();
         });
       }
-      pendingUndoActionsRef.current.clear();
+      pendingUndoActions.clear();
     };
   }, []);
 
