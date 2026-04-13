@@ -146,7 +146,7 @@ export default function TasksPage() {
       for (const pendingAction of pendingUndoActions.values()) {
         window.clearTimeout(pendingAction.timeoutId);
         void pendingAction.commit().catch(() => {
-          pendingAction.rollback();
+          // The component is gone, so there is no safe place to surface a rollback.
         });
       }
       pendingUndoActions.clear();
@@ -167,9 +167,9 @@ export default function TasksPage() {
     if (tasks.some((existingTask) => existingTask.id === task.id)) {
       return;
     }
-    const nextTasks = [...tasks];
-    nextTasks.splice(Math.min(index, nextTasks.length), 0, task);
-    setTasks(nextTasks);
+    const restoredTasks = [...tasks];
+    restoredTasks.splice(Math.min(index, restoredTasks.length), 0, task);
+    setTasks(restoredTasks);
   };
 
   const showUndoableNotification = (options: {
@@ -294,21 +294,16 @@ export default function TasksPage() {
       return;
     }
 
-    try {
-      useTaskStore.getState().updateTask(taskId, updates);
-      showUndoableNotification({
-        message: 'Task updated successfully',
-        rollback: () => replaceTaskLocally(originalTask),
-        commit: async () => {
-          const updatedTask = await taskApi.updateTask(taskId, updates);
-          replaceTaskLocally(updatedTask);
-        },
-        commitErrorFallback: 'Failed to update task',
-      });
-    } catch (error) {
-      showNotification(getErrorMessage(error, 'Failed to update task'), 'red');
-      throw error; // Re-throw to let EditableCell handle rollback
-    }
+    useTaskStore.getState().updateTask(taskId, updates);
+    showUndoableNotification({
+      message: 'Task updated successfully',
+      rollback: () => replaceTaskLocally(originalTask),
+      commit: async () => {
+        const updatedTask = await taskApi.updateTask(taskId, updates);
+        replaceTaskLocally(updatedTask);
+      },
+      commitErrorFallback: 'Failed to update task',
+    });
   };
 
   const handleComplete = async (taskId: string) => {
@@ -321,7 +316,7 @@ export default function TasksPage() {
         await uncompleteTask(taskId);
         showNotification('Task marked as incomplete', 'green');
       } else {
-        useTaskStore.getState().updateTask(taskId, { is_complete: true });
+        replaceTaskLocally({ ...task, is_complete: true });
         showUndoableNotification({
           message: 'Task completed! XP earned.',
           rollback: () => replaceTaskLocally(task),

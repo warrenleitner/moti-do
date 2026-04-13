@@ -238,8 +238,10 @@ describe('TasksPage undo notifications', () => {
 
     fireEvent.click(undoButton);
 
-    expect(storeState.updateTask).toHaveBeenCalledWith('task-1', { is_complete: true });
-    expect(storeState.setTasks).toHaveBeenCalledWith([
+    expect(storeState.setTasks).toHaveBeenNthCalledWith(1, [
+      expect.objectContaining({ id: 'task-1', is_complete: true }),
+    ]);
+    expect(storeState.setTasks).toHaveBeenNthCalledWith(2, [
       expect.objectContaining({ id: 'task-1', is_complete: false }),
     ]);
     expect(taskApi.completeTask).not.toHaveBeenCalled();
