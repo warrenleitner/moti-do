@@ -2,6 +2,7 @@ name: Vercel Preview Deploy
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 env:
