@@ -11,11 +11,13 @@ from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 
 from motido.api.routers.tasks import (  # pylint: disable=protected-access
+    _get_recurring_series,
     jump_tasks_to_current_instance,
     parse_subtask_recurrence_mode,
 )
 from motido.api.schemas import BulkJumpToCurrentInstanceRequest
 from motido.core.models import RecurrenceType, SubtaskRecurrenceMode, Task, User
+from motido.core.utils import _process_recurrences  # pylint: disable=protected-access
 
 
 class TestTaskList:
@@ -205,6 +207,111 @@ class TestTaskDelete:
         """Test deleting a non-existent task."""
         response = client.delete("/api/tasks/nonexistent-id")
         assert response.status_code == 404
+
+
+class TestTaskEndRecurrence:
+    """Tests for POST /api/tasks/{task_id}/end-recurrence endpoint."""
+
+    def test_end_recurrence_marks_series_and_hides_tasks(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Ending recurrence should tombstone the full lineage and stop regeneration."""
+        root_habit = Task(
+            title="Daily Stretch",
+            creation_date=datetime.now() - timedelta(days=3),
+            due_date=datetime.now() - timedelta(days=2),
+            is_complete=True,
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            recurrence_type=RecurrenceType.STRICT,
+        )
+        current_instance = Task(
+            title="Daily Stretch",
+            creation_date=datetime.now() - timedelta(days=2),
+            due_date=datetime.now() - timedelta(days=1),
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            recurrence_type=RecurrenceType.STRICT,
+            parent_habit_id=root_habit.id,
+        )
+        test_user.add_task(root_habit)
+        test_user.add_task(current_instance)
+
+        response = client.post(f"/api/tasks/{current_instance.id}/end-recurrence")
+
+        assert response.status_code == 204
+        assert root_habit.recurrence_ended_at is not None
+        assert current_instance.recurrence_ended_at is not None
+        assert root_habit.history[-1]["field"] == "recurrence_ended_at"
+        assert current_instance.history[-1]["field"] == "recurrence_ended_at"
+
+        visible_tasks = client.get("/api/tasks").json()
+        visible_ids = {task["id"] for task in visible_tasks}
+        assert root_habit.id not in visible_ids
+        assert current_instance.id not in visible_ids
+
+        stretch_task_count = len(
+            [task for task in test_user.tasks if task.title == "Daily Stretch"]
+        )
+        _process_recurrences(test_user, date.today() + timedelta(days=2))
+        assert (
+            len([task for task in test_user.tasks if task.title == "Daily Stretch"])
+            == stretch_task_count
+        )
+
+    def test_end_recurrence_rejects_non_recurring_task(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Ending recurrence should fail for non-recurring tasks."""
+        task_id = test_user.tasks[0].id
+
+        response = client.post(f"/api/tasks/{task_id}/end-recurrence")
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Task is not a recurring task"
+
+    def test_end_recurrence_missing_task(self, client: TestClient) -> None:
+        """Ending recurrence should return 404 for unknown tasks."""
+        response = client.post("/api/tasks/missing-task/end-recurrence")
+
+        assert response.status_code == 404
+
+    def test_get_recurring_series_skips_missing_parent(self) -> None:
+        """Lineage traversal should tolerate broken parent links."""
+        user = User(username="series-test")
+        task = Task(
+            title="Broken Chain",
+            creation_date=datetime.now(),
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            parent_habit_id="missing-parent",
+        )
+        user.add_task(task)
+
+        related = _get_recurring_series(task, user)
+
+        assert related == [task]
+
+    def test_undo_recurrence_end_restores_timestamp(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Undo should clear the recurrence tombstone entry."""
+        habit = Task(
+            title="Undo Habit",
+            creation_date=datetime.now(),
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            recurrence_type=RecurrenceType.STRICT,
+        )
+        test_user.add_task(habit)
+
+        response = client.post(f"/api/tasks/{habit.id}/end-recurrence")
+        assert response.status_code == 204
+
+        undo_response = client.post(f"/api/tasks/{habit.id}/undo")
+
+        assert undo_response.status_code == 200
+        assert undo_response.json()["recurrence_ended_at"] is None
 
 
 class TestTaskComplete:

@@ -106,6 +106,27 @@ class TestCalendarEndpoint:
         assert event is not None
         assert event["color"] == "#9e9e9e"  # Gray
 
+    def test_calendar_excludes_ended_recurring_tasks(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Ended recurring tasks should be hidden from calendar views."""
+        task = Task(
+            title="Ended Calendar Habit",
+            creation_date=datetime.now(),
+            due_date=datetime.now() + timedelta(days=1),
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            recurrence_ended_at=datetime.now(),
+        )
+        test_user.tasks.append(task)
+
+        response = client.get("/api/views/calendar")
+
+        assert response.status_code == 200
+        assert not any(
+            event["title"] == "Ended Calendar Habit" for event in response.json()
+        )
+
 
 class TestHeatmapEndpoint:
     """Tests for GET /api/views/heatmap endpoint."""
@@ -268,6 +289,26 @@ class TestKanbanEndpoint:
         blocked_column = next(c for c in data if c["id"] == "blocked")
         assert any(t["title"] == "Blocked Task" for t in blocked_column["tasks"])
 
+    def test_kanban_excludes_ended_tasks(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Ended recurring tasks should not appear on the kanban board."""
+        task = Task(
+            title="Ended Kanban Habit",
+            creation_date=datetime.now(),
+            recurrence_ended_at=datetime.now(),
+        )
+        test_user.tasks.append(task)
+
+        response = client.get("/api/views/kanban")
+        all_tasks = [
+            task_data for column in response.json() for task_data in column["tasks"]
+        ]
+
+        assert not any(
+            task_data["title"] == "Ended Kanban Habit" for task_data in all_tasks
+        )
+
 
 class TestHabitsEndpoint:
     """Tests for GET /api/views/habits endpoint."""
@@ -334,3 +375,21 @@ class TestHabitsEndpoint:
             habit = data[0]
             assert "streak_current" in habit
             assert "streak_best" in habit
+
+    def test_get_habits_excludes_ended_recurring_tasks(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Ended recurring habits should be hidden from the habits view."""
+        ended_habit = Task(
+            title="Ended Habit",
+            creation_date=datetime.now(),
+            is_habit=True,
+            recurrence_rule="FREQ=DAILY",
+            recurrence_ended_at=datetime.now(),
+        )
+        test_user.tasks.append(ended_habit)
+
+        response = client.get("/api/views/habits")
+
+        assert response.status_code == 200
+        assert not any(task["title"] == "Ended Habit" for task in response.json())

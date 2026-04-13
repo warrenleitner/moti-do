@@ -365,6 +365,16 @@ describe('API Tests', () => {
       });
     });
 
+    describe('endRecurrence', () => {
+      it('should end a recurring task series', async () => {
+        mockAxiosInstance.post.mockResolvedValue({});
+
+        await taskApi.endRecurrence('task-1');
+
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith('/tasks/task-1/end-recurrence');
+      });
+    });
+
     describe('completeTask', () => {
       it('should complete a task', async () => {
         const completedTask = {

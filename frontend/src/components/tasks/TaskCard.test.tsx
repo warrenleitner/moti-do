@@ -196,6 +196,24 @@ describe('TaskCard', () => {
     expect(mockOnDelete).toHaveBeenCalledWith('test-task-1');
   });
 
+  it('calls onEndRecurrence when end recurrence button is clicked', async () => {
+    const user = userEvent.setup();
+    const mockOnEndRecurrence = vi.fn();
+    render(
+      <TaskCard
+        task={mockHabit}
+        onComplete={mockOnComplete}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onEndRecurrence={mockOnEndRecurrence}
+      />
+    );
+
+    const endButton = screen.getByTitle('End recurrence');
+    await user.click(endButton);
+    expect(mockOnEndRecurrence).toHaveBeenCalledWith(mockHabit.id);
+  });
+
   it('shows habit icon for habit tasks', () => {
     const { container } = render(
       <TaskCard

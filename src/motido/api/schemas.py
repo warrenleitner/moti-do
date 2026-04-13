@@ -61,6 +61,7 @@ class TaskBase(BaseModel):
     target_count: int | None = None  # Target count to reach (None = not a counter task)
     # Defer/delay field
     defer_until: datetime | None = None
+    recurrence_ended_at: datetime | None = None
 
 
 class TaskCreate(TaskBase):
