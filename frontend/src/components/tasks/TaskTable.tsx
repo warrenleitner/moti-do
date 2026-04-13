@@ -90,6 +90,7 @@ interface TaskTableProps {
   allTasks?: Task[];
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
+  onEndRecurrence?: (taskId: string) => void;
   onComplete: (taskId: string) => void;
   onInlineEdit?: (taskId: string, updates: Partial<Task>) => Promise<void>;
   selectedTasks?: string[];
@@ -138,6 +139,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
   allTasks,
   onEdit,
   onDelete,
+  onEndRecurrence,
   onComplete,
   onInlineEdit,
   selectedTasks = [],
@@ -861,6 +863,13 @@ const TaskTable: React.FC<TaskTableProps> = ({
               <Tooltip label="Duplicate">
                 <ActionIcon size="sm" variant="subtle" onClick={() => onDuplicate(task.id)} aria-label="Duplicate" style={{ color: '#a8aab7' }}>
                   <IconCopy size={16} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+            {onEndRecurrence && task.is_habit && task.recurrence_rule && !task.recurrence_ended_at && (
+              <Tooltip label="End recurrence">
+                <ActionIcon size="sm" variant="subtle" onClick={() => onEndRecurrence(task.id)} aria-label="End recurrence" style={{ color: '#FFC775' }}>
+                  <IconBan size={16} />
                 </ActionIcon>
               </Tooltip>
             )}

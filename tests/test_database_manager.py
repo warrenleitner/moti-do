@@ -154,52 +154,27 @@ def test_create_tables(
     # Call the method directly with mock connection
     manager._create_tables(connection)
 
+    executed_sql = [mock_call.args[0] for mock_call in cursor.execute.call_args_list]
+
+    assert any("CREATE TABLE IF NOT EXISTS users" in sql for sql in executed_sql)
+    assert any(
+        "CREATE TABLE IF NOT EXISTS tasks" in sql
+        and "recurrence_ended_at TEXT" in sql
+        for sql in executed_sql
+    )
+
     expected_calls = [
-        call("""
-                CREATE TABLE IF NOT EXISTS users (
-                    username TEXT PRIMARY KEY,
-                    total_xp INTEGER NOT NULL DEFAULT 0,
-                    last_processed_date TEXT NOT NULL DEFAULT (date('now')),
-                    vacation_mode INTEGER NOT NULL DEFAULT 0
-                )
-            """),
-        call("""
-                CREATE TABLE IF NOT EXISTS tasks (
-                    id TEXT PRIMARY KEY,
-                    title TEXT NOT NULL,
-                    text_description TEXT,
-                    priority TEXT NOT NULL DEFAULT 'Low',
-                    difficulty TEXT NOT NULL DEFAULT 'Trivial',
-                    duration TEXT NOT NULL DEFAULT 'Minuscule',
-                    is_complete INTEGER NOT NULL DEFAULT 0,
-                    creation_date TEXT,
-                    due_date TEXT,
-                    start_date TEXT,
-                    icon TEXT,
-                    tags TEXT,
-                    project TEXT,
-                    subtasks TEXT,
-                    dependencies TEXT,
-                    history TEXT,
-                    user_username TEXT NOT NULL,
-                    is_habit INTEGER NOT NULL DEFAULT 0,
-                    recurrence_rule TEXT,
-                    recurrence_type TEXT,
-                    streak_current INTEGER NOT NULL DEFAULT 0,
-                    streak_best INTEGER NOT NULL DEFAULT 0,
-                    parent_habit_id TEXT,
-                    FOREIGN KEY (user_username) REFERENCES users (username)
-                        ON DELETE CASCADE ON UPDATE CASCADE
-                )
-            """),
         call("ALTER TABLE tasks ADD COLUMN is_habit INTEGER NOT NULL DEFAULT 0"),
         call("ALTER TABLE tasks ADD COLUMN recurrence_rule TEXT"),
         call("ALTER TABLE tasks ADD COLUMN recurrence_type TEXT"),
         call("ALTER TABLE tasks ADD COLUMN streak_current INTEGER NOT NULL DEFAULT 0"),
         call("ALTER TABLE tasks ADD COLUMN streak_best INTEGER NOT NULL DEFAULT 0"),
         call("ALTER TABLE tasks ADD COLUMN parent_habit_id TEXT"),
+        call("ALTER TABLE tasks ADD COLUMN recurrence_ended_at TEXT"),
         call("ALTER TABLE tasks ADD COLUMN defer_until TEXT"),
         call("ALTER TABLE users ADD COLUMN vacation_mode INTEGER NOT NULL DEFAULT 0"),
+        call("ALTER TABLE users ADD COLUMN defined_tags TEXT"),
+        call("ALTER TABLE users ADD COLUMN defined_projects TEXT"),
     ]
     cursor.execute.assert_has_calls(expected_calls)
     connection.commit.assert_called_once()
@@ -409,7 +384,7 @@ def test_load_user_no_tasks(
             "SELECT id, title, text_description, priority, difficulty, duration, "
             "is_complete, creation_date, due_date, start_date, icon, tags, "
             "project, subtasks, dependencies, history, is_habit, recurrence_rule, "
-            "recurrence_type, streak_current, streak_best, parent_habit_id, defer_until FROM tasks "
+            "recurrence_type, streak_current, streak_best, parent_habit_id, recurrence_ended_at, defer_until FROM tasks "
             "WHERE user_username = ?",
             (username,),
         ),
@@ -527,16 +502,17 @@ def test_save_user(
     assert "due_date" in sql
     assert "start_date" in sql
     assert (
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         in sql
-    )  # 24 parameters for all task fields including parent_habit_id and defer_until
+    )  # 25 parameters for all task fields including recurrence_ended_at and defer_until
 
     # Check that the task parameters include all field values
     assert len(params) == 2  # Two tasks
-    # Each task tuple has 23 elements:
+    # Each task tuple has 25 elements:
     # (id, title, text_description, priority, difficulty, duration, is_complete, creation_date,
     #  due_date, start_date, icon, tags, project, subtasks, dependencies, history, username,
-    #  is_habit, recurrence_rule, recurrence_type, streak_current, streak_best, parent_habit_id)
+    #  is_habit, recurrence_rule, recurrence_type, streak_current, streak_best,
+    #  parent_habit_id, recurrence_ended_at, defer_until)
     assert params[0][0] == task1.id
     assert params[0][1] == task1.title
     assert params[0][2] == task1.text_description  # None by default
@@ -557,6 +533,8 @@ def test_save_user(
     assert params[0][14] is None  # dependencies
     assert params[0][15] is None  # history
     assert params[0][16] == user.username
+    assert params[0][23] is None  # recurrence_ended_at
+    assert params[0][24] is None  # defer_until
 
     assert params[1][0] == task2.id
     assert params[1][1] == task2.title

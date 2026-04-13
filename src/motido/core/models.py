@@ -277,6 +277,7 @@ class Task:  # pylint: disable=too-many-instance-attributes
     defer_until: datetime | None = (
         None  # Task is hidden from active view until this date
     )
+    recurrence_ended_at: datetime | None = None
 
     # Computed scoring fields (not persisted, calculated at runtime)
     score: float = field(default=0.0)

@@ -273,6 +273,7 @@ def _process_recurrences(
         if (
             task.is_habit
             and task.recurrence_rule
+            and task.recurrence_ended_at is None
             and task.recurrence_type != RecurrenceType.FROM_COMPLETION
         ):
             current = task
@@ -343,7 +344,10 @@ def _recover_orphaned_from_completion(  # pylint: disable=too-many-locals
     active_habit_titles = {
         t.title
         for t in user.tasks
-        if t.is_habit and t.recurrence_rule and not t.is_complete
+        if t.is_habit
+        and t.recurrence_rule
+        and t.recurrence_ended_at is None
+        and not t.is_complete
     }
     # Also count titles already being recovered in this pass
     for t in new_tasks:
@@ -357,6 +361,7 @@ def _recover_orphaned_from_completion(  # pylint: disable=too-many-locals
             task.is_habit
             and task.is_complete
             and task.recurrence_rule
+            and task.recurrence_ended_at is None
             and task.recurrence_type == RecurrenceType.FROM_COMPLETION
             and task.title not in active_habit_titles
         ):

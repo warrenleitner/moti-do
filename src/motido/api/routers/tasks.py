@@ -91,6 +91,7 @@ def task_to_response(
         target_count=task.target_count,
         current_count=task.current_count,
         defer_until=task.defer_until,
+        recurrence_ended_at=task.recurrence_ended_at,
     )
 
 
@@ -138,6 +139,43 @@ def parse_subtask_recurrence_mode(value: str | None) -> SubtaskRecurrenceMode:
     return SubtaskRecurrenceMode.DEFAULT
 
 
+def _is_visible_task(task: Task) -> bool:
+    """Return whether a task should appear in active task-facing APIs."""
+    return task.recurrence_ended_at is None
+
+
+def _get_recurring_series(task: Task, user: User) -> list[Task]:
+    """Collect all tasks in the same recurring lineage as the given task."""
+    tasks_by_id = {user_task.id: user_task for user_task in user.tasks}
+    children_by_parent: dict[str, list[Task]] = {}
+    for user_task in user.tasks:
+        if user_task.parent_habit_id:
+            children_by_parent.setdefault(user_task.parent_habit_id, []).append(
+                user_task
+            )
+
+    related_ids: set[str] = set()
+    pending_ids = [task.id]
+
+    while pending_ids:
+        current_id = pending_ids.pop()
+        if current_id in related_ids:
+            continue
+        related_ids.add(current_id)
+
+        current_task = tasks_by_id.get(current_id)
+        if current_task is None:
+            continue
+
+        if current_task.parent_habit_id:
+            pending_ids.append(current_task.parent_habit_id)
+
+        for child in children_by_parent.get(current_id, []):
+            pending_ids.append(child.id)
+
+    return [tasks_by_id[task_id] for task_id in related_ids if task_id in tasks_by_id]
+
+
 @router.get("", response_model=list[TaskResponse])
 async def list_tasks(
     user: CurrentUser,
@@ -151,7 +189,7 @@ async def list_tasks(
     """
     List all tasks with optional filters.
     """
-    tasks = user.tasks
+    tasks = [task for task in user.tasks if _is_visible_task(task)]
 
     # Apply filters
     if status_filter == "pending":
@@ -525,6 +563,39 @@ async def delete_task(
     manager.save_user(user)
 
 
+@router.post("/{task_id}/end-recurrence", status_code=status.HTTP_204_NO_CONTENT)
+async def end_task_recurrence(
+    task_id: str,
+    user: CurrentUser,
+    manager: ManagerDep,
+) -> None:
+    """End a recurring task series while preserving an exportable tombstone."""
+    task = user.find_task_by_id(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task with ID {task_id} not found",
+        )
+
+    if not task.is_habit or not task.recurrence_rule:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Task is not a recurring task",
+        )
+
+    ended_at = datetime.now()
+    for related_task in _get_recurring_series(task, user):
+        record_history(
+            related_task,
+            "recurrence_ended_at",
+            related_task.recurrence_ended_at,
+            ended_at,
+        )
+        related_task.recurrence_ended_at = ended_at
+
+    manager.save_user(user)
+
+
 @router.post("/{task_id}/undo", response_model=TaskResponse)
 async def undo_task_change(
     task_id: str,
@@ -587,6 +658,10 @@ async def undo_task_change(
         task.is_complete = old_value
     elif field == "defer_until":
         task.defer_until = old_value
+    elif field == "recurrence_ended_at":
+        task.recurrence_ended_at = (
+            datetime.fromisoformat(old_value) if old_value else None
+        )
 
     manager.save_user(user)
 

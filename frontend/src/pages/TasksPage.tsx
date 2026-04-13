@@ -60,6 +60,7 @@ export default function TasksPage() {
     createTask,
     saveTask,
     deleteTask,
+    endRecurrence,
     completeTask,
     uncompleteTask,
     undoTask,
@@ -94,6 +95,8 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [endRecurrenceDialogOpen, setEndRecurrenceDialogOpen] = useState(false);
+  const [taskToEndRecurrence, setTaskToEndRecurrence] = useState<string | null>(null);
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [tasksToDelete, setTasksToDelete] = useState<string[]>([]);
@@ -255,6 +258,24 @@ export default function TasksPage() {
     }
     setDeleteDialogOpen(false);
     setTaskToDelete(null);
+  };
+
+  const handleEndRecurrenceClick = (taskId: string) => {
+    setTaskToEndRecurrence(taskId);
+    setEndRecurrenceDialogOpen(true);
+  };
+
+  const handleEndRecurrenceConfirm = async () => {
+    if (taskToEndRecurrence) {
+      try {
+        await endRecurrence(taskToEndRecurrence);
+        showNotification('Recurring task ended', 'green');
+      } catch (error) {
+        showNotification(getErrorMessage(error, 'Failed to end recurrence'), 'red');
+      }
+    }
+    setEndRecurrenceDialogOpen(false);
+    setTaskToEndRecurrence(null);
   };
 
   const handleSubtaskToggle = async (taskId: string, subtaskIndex: number) => {
@@ -554,6 +575,7 @@ export default function TasksPage() {
         <TaskList
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
+          onEndRecurrence={handleEndRecurrenceClick}
           onDuplicate={handleDuplicate}
           onComplete={handleComplete}
           onSubtaskToggle={handleSubtaskToggle}
@@ -576,6 +598,7 @@ export default function TasksPage() {
             allTasks={allTasks}
             onEdit={handleEdit}
             onDelete={handleDeleteClick}
+            onEndRecurrence={handleEndRecurrenceClick}
             onComplete={handleComplete}
             onInlineEdit={handleInlineEdit}
             selectedTasks={visibleSelectedTasks}
@@ -628,6 +651,19 @@ export default function TasksPage() {
         onCancel={() => {
           setDeleteDialogOpen(false);
           setTaskToDelete(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={endRecurrenceDialogOpen}
+        title="End Recurrence"
+        message="Are you sure you want to end this recurring task? Existing history will be preserved for exports, but the recurring series will stop and disappear from active views."
+        confirmLabel="End Recurrence"
+        confirmColor="warning"
+        onConfirm={handleEndRecurrenceConfirm}
+        onCancel={() => {
+          setEndRecurrenceDialogOpen(false);
+          setTaskToEndRecurrence(null);
         }}
       />
 

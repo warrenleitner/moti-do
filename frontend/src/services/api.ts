@@ -362,6 +362,11 @@ export const taskApi = {
     await apiClient.delete(`/tasks/${id}`);
   },
 
+  // End a recurring task series while preserving a tombstone in storage/export data
+  endRecurrence: async (id: string): Promise<void> => {
+    await apiClient.post(`/tasks/${id}/end-recurrence`);
+  },
+
   // Complete task (returns completion response with next instance for recurring tasks)
   completeTask: async (id: string): Promise<TaskCompletionResponse> => {
     const response = await apiClient.post<TaskCompletionResponse>(`/tasks/${id}/complete`);
