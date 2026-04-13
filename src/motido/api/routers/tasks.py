@@ -173,7 +173,12 @@ def _get_recurring_series(task: Task, user: User) -> list[Task]:
         for child in children_by_parent.get(current_id, []):
             pending_ids.append(child.id)
 
-    return [tasks_by_id[task_id] for task_id in related_ids]
+    related_tasks: list[Task] = []
+    for task_id in related_ids:
+        related_task = tasks_by_id.get(task_id)
+        if related_task is not None:
+            related_tasks.append(related_task)
+    return related_tasks
 
 
 @router.get("", response_model=list[TaskResponse])
@@ -660,7 +665,9 @@ async def undo_task_change(
         task.defer_until = old_value
     elif field == "recurrence_ended_at":
         task.recurrence_ended_at = (
-            datetime.fromisoformat(old_value) if old_value else None
+            datetime.fromisoformat(old_value)
+            if isinstance(old_value, str)
+            else old_value
         )
 
     manager.save_user(user)
