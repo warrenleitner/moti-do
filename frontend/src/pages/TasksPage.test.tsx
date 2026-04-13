@@ -68,6 +68,7 @@ describe('TasksPage', () => {
   const mockCreateTask = vi.fn();
   const mockSaveTask = vi.fn();
   const mockDeleteTask = vi.fn();
+  const mockEndRecurrence = vi.fn();
   const mockCompleteTask = vi.fn();
   const mockUncompleteTask = vi.fn();
   const mockFetchStats = vi.fn();
@@ -93,6 +94,7 @@ describe('TasksPage', () => {
       createTask: mockCreateTask,
       saveTask: mockSaveTask,
       deleteTask: mockDeleteTask,
+      endRecurrence: mockEndRecurrence,
       completeTask: mockCompleteTask,
       uncompleteTask: mockUncompleteTask,
       undoTask: vi.fn(),
@@ -216,6 +218,56 @@ describe('TasksPage', () => {
     await user.click(screen.getByRole('button', { name: /^activate$/i }));
 
     expect(mockActivateCrisisMode).toHaveBeenCalledWith(['task-1']);
+  });
+
+  it('confirms ending recurrence from the task list', async () => {
+    const recurringTask = {
+      ...mockTask,
+      is_habit: true,
+      recurrence_rule: 'FREQ=DAILY',
+    };
+
+    vi.mocked(stores.useTaskStore).mockReturnValue({
+      tasks: [recurringTask],
+      filters: { ...defaultFilters },
+      sort: { field: 'score' as const, order: 'desc' as const },
+      setFilters: vi.fn(),
+      resetFilters: vi.fn(),
+      setSort: vi.fn(),
+      fetchTasks: vi.fn(),
+      hasCompletedData: false,
+      createTask: mockCreateTask,
+      saveTask: mockSaveTask,
+      deleteTask: mockDeleteTask,
+      endRecurrence: mockEndRecurrence,
+      completeTask: mockCompleteTask,
+      uncompleteTask: mockUncompleteTask,
+      undoTask: vi.fn(),
+      duplicateTask: vi.fn(),
+      previewJumpToCurrentInstance: mockPreviewJumpToCurrentInstance,
+      jumpToCurrentInstance: mockJumpToCurrentInstance,
+      activateCrisisMode: mockActivateCrisisMode,
+      crisisModeActive: false,
+      crisisTaskIds: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof stores.useTaskStore>);
+    (stores.useTaskStore as unknown as { getState: () => { tasks: Task[] } }).getState = vi.fn(() => ({
+      tasks: [recurringTask],
+    }));
+    vi.mocked(stores.useFilteredTasks).mockReturnValue([recurringTask]);
+    vi.mocked(taskStore.useFilteredTasks).mockReturnValue([recurringTask]);
+
+    const { user } = render(<TasksPage />);
+
+    await user.click(screen.getByRole('button', { name: 'End recurrence' }));
+    const confirmButton = screen
+      .getAllByRole('button', { name: /^end recurrence$/i })
+      .find((button) => button.getAttribute('aria-label') !== 'End recurrence');
+
+    expect(confirmButton).toBeDefined();
+    await user.click(confirmButton!);
+
+    expect(mockEndRecurrence).toHaveBeenCalledWith('task-1');
   });
 
   it.skip('loads additional tasks with load more control', async () => {

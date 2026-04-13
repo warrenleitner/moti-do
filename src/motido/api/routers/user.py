@@ -489,6 +489,11 @@ async def export_user_data(user: CurrentUser) -> Response:
             "streak_current": task.streak_current,
             "streak_best": task.streak_best,
             "parent_habit_id": task.parent_habit_id,
+            "recurrence_ended_at": (
+                task.recurrence_ended_at.strftime("%Y-%m-%d %H:%M:%S")
+                if task.recurrence_ended_at
+                else None
+            ),
         }
         for task in user.tasks
     ]

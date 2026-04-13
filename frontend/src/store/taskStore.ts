@@ -57,6 +57,7 @@ interface TaskState {
   createTask: (task: Partial<Task>) => Promise<Task>;
   saveTask: (id: string, updates: Partial<Task>) => Promise<Task>;
   deleteTask: (id: string) => Promise<void>;
+  endRecurrence: (id: string) => Promise<void>;
   completeTask: (id: string) => Promise<TaskCompletionResponse>;
   uncompleteTask: (id: string) => Promise<Task>;
   undoTask: (id: string) => Promise<Task>;
@@ -285,6 +286,29 @@ export const useTaskStore = create<TaskState>()(
             // Revert on error
             set({ tasks: originalTasks });
             const message = error instanceof Error ? error.message : 'Failed to delete task';
+            set({ error: message });
+            throw error;
+          }
+        },
+
+        endRecurrence: async (id) => {
+          const { tasks, selectedTaskId } = get();
+          const originalTasks = [...tasks];
+
+          set({
+            tasks: tasks.filter((t) => t.id !== id),
+            selectedTaskId: selectedTaskId === id ? null : selectedTaskId,
+            crisisTaskIds: get().crisisTaskIds.filter((taskId) => taskId !== id),
+            crisisModeActive:
+              get().crisisModeActive &&
+              get().crisisTaskIds.some((taskId) => taskId !== id),
+          });
+
+          try {
+            await taskApi.endRecurrence(id);
+          } catch (error) {
+            set({ tasks: originalTasks });
+            const message = error instanceof Error ? error.message : 'Failed to end recurrence';
             set({ error: message });
             throw error;
           }

@@ -146,6 +146,7 @@ class TestExport:
         assert task["id"] == "task-1"
         assert task["title"] == "Test Task"
         assert task["priority"] == "Medium"  # Enum values are capitalized
+        assert task["recurrence_ended_at"] is None
 
         # Verify badges
         assert len(user_data["badges"]) == 1
@@ -155,6 +156,21 @@ class TestExport:
         # Verify tags and projects
         assert len(user_data["defined_tags"]) == 1
         assert len(user_data["defined_projects"]) == 1
+
+    def test_export_includes_recurrence_end_marker(
+        self, authenticated_client: TestClient, test_user_with_data: User
+    ) -> None:
+        """Ended recurring tasks should keep their tombstone in exports."""
+        ended_at = datetime(2024, 1, 2, 9, 30, 0)
+        test_user_with_data.tasks[0].is_habit = True
+        test_user_with_data.tasks[0].recurrence_rule = "FREQ=DAILY"
+        test_user_with_data.tasks[0].recurrence_ended_at = ended_at
+
+        response = authenticated_client.get("/api/user/export")
+
+        assert response.status_code == 200
+        exported_task = response.json()["tasks"][0]
+        assert exported_task["recurrence_ended_at"] == "2024-01-02 09:30:00"
 
     def test_export_no_auth(self, client: TestClient) -> None:
         """Test export without authentication."""
