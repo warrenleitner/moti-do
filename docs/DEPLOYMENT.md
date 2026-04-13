@@ -214,9 +214,9 @@ GitHub setup required:
 2. Add one or more required reviewers to that environment.
 3. Enable the setting that prevents self-approval if you want the same review rule to apply to your own PRs.
 4. Add these environment secrets to `vercel-preview`:
-  - `VERCEL_TOKEN`
-  - `VERCEL_ORG_ID`
-  - `VERCEL_PROJECT_ID`
+   - `VERCEL_TOKEN`
+   - `VERCEL_ORG_ID`
+   - `VERCEL_PROJECT_ID`
 
 Vercel setup required:
 
