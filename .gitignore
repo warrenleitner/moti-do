@@ -64,6 +64,9 @@ frontend/playwright/.auth/user.json
 .copilot-tracking/
 # Note: frontend/e2e/snapshots/ is NOT ignored - visual regression baselines must be committed
 
+# Vercel local linkage metadata (created by `vercel pull`)
+.vercel/
+
 # Script lock files (prevent dev/e2e conflicts)
 .run/
 
