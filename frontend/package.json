@@ -33,7 +33,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "@tanstack/react-query": "^5.96.2",
     "@vercel/speed-insights": "^2.0.0",
-    "@xyflow/react": "^12.10.0",
+    "@xyflow/react": "^12.10.2",
     "axios": "^1.15.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.20",
