@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
+  Button,
   Group,
   Text,
   ActionIcon,
@@ -26,7 +27,7 @@ import { useFilteredTasks } from '../store/taskStore';
 import { useUserStore, useSystemStatus, useDefinedProjects } from '../store/userStore';
 import type { Task } from '../types';
 import { getCombinedTags } from '../utils/tags';
-import type { JumpToCurrentInstancePreview } from '../services/api';
+import { taskApi, type JumpToCurrentInstancePreview } from '../services/api';
 
 // UI orchestration component - tested via integration tests
 /* v8 ignore start */
@@ -54,6 +55,14 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
 const DEFAULT_VISIBLE_COUNT = 50;
 const LOAD_MORE_STEP = 50;
+const UNDO_AUTO_CLOSE = 5000;
+
+interface PendingUndoAction {
+  timeoutId: number;
+  rollback: () => void;
+  commit: () => Promise<void>;
+}
+
 export default function TasksPage() {
   // Use API actions from the store
   const {
@@ -112,6 +121,8 @@ export default function TasksPage() {
   const [jumpApplying, setJumpApplying] = useState(false);
   const [bulkCrisisDialogOpen, setBulkCrisisDialogOpen] = useState(false);
   const [tasksForCrisisMode, setTasksForCrisisMode] = useState<string[]>([]);
+  const pendingUndoActionsRef = useRef<Map<string, PendingUndoAction>>(new Map());
+  const undoNotificationIdRef = useRef(0);
   const visibleTasks = useMemo(
     () => filteredTasks.slice(0, Math.min(filteredTasks.length, visibleRowCount)),
     [filteredTasks, visibleRowCount]
@@ -132,8 +143,110 @@ export default function TasksPage() {
     }
   }, [fetchTasks, filters.statuses, hasCompletedData]);
 
+  useEffect(() => {
+    const pendingUndoActions = pendingUndoActionsRef.current;
+    return () => {
+      for (const pendingAction of pendingUndoActions.values()) {
+        window.clearTimeout(pendingAction.timeoutId);
+        void pendingAction.commit().catch((error) => {
+          console.error('Failed to commit pending action during unmount:', error);
+        });
+      }
+      pendingUndoActions.clear();
+    };
+  }, []);
+
   const showNotification = (message: string, color: 'green' | 'red', autoClose = 3000) => {
     notifications.show({ message, color, autoClose });
+  };
+
+  const replaceTaskLocally = (updatedTask: Task) => {
+    const { tasks, setTasks } = useTaskStore.getState();
+    setTasks(tasks.map((task) => (task.id === updatedTask.id ? updatedTask : task)));
+  };
+
+  const restoreDeletedTaskLocally = (task: Task, index: number) => {
+    const { tasks, setTasks } = useTaskStore.getState();
+    const existingIndex = tasks.findIndex((existingTask) => existingTask.id === task.id);
+    if (existingIndex >= 0) {
+      const restoredTasks = [...tasks];
+      restoredTasks[existingIndex] = task;
+      setTasks(restoredTasks);
+      return;
+    }
+    const restoredTasks = [...tasks];
+    restoredTasks.splice(Math.min(index, restoredTasks.length), 0, task);
+    setTasks(restoredTasks);
+  };
+
+  const showUndoableNotification = (options: {
+    message: string;
+    rollback: () => void;
+    commit: () => Promise<void>;
+    commitErrorFallback: string;
+    undoSuccessMessage?: string;
+  }) => {
+    const {
+      message,
+      rollback,
+      commit,
+      commitErrorFallback,
+      undoSuccessMessage = 'Action undone',
+    } = options;
+    const notificationId = `task-undo-${undoNotificationIdRef.current++}`;
+
+    const undoAction = () => {
+      const pendingAction = pendingUndoActionsRef.current.get(notificationId);
+      if (!pendingAction) {
+        return;
+      }
+
+      window.clearTimeout(pendingAction.timeoutId);
+      pendingUndoActionsRef.current.delete(notificationId);
+      pendingAction.rollback();
+      notifications.hide(notificationId);
+      showNotification(undoSuccessMessage, 'green');
+    };
+
+    const commitAction = async () => {
+      const pendingAction = pendingUndoActionsRef.current.get(notificationId);
+      if (!pendingAction) {
+        return;
+      }
+
+      pendingUndoActionsRef.current.delete(notificationId);
+      try {
+        await pendingAction.commit();
+      } catch (error) {
+        pendingAction.rollback();
+        notifications.hide(notificationId);
+        showNotification(getErrorMessage(error, commitErrorFallback), 'red');
+      }
+    };
+
+    pendingUndoActionsRef.current.set(notificationId, {
+      timeoutId: window.setTimeout(() => {
+        void commitAction();
+      }, UNDO_AUTO_CLOSE),
+      rollback,
+      commit,
+    });
+
+    notifications.show({
+      id: notificationId,
+      color: 'green',
+      autoClose: UNDO_AUTO_CLOSE,
+      message: (
+        <Group gap="xs" justify="space-between" wrap="nowrap">
+          <Text size="sm" style={{ flex: 1 }}>
+            {message}
+          </Text>
+          <Button size="xs" variant="light" onClick={undoAction}>
+            Undo
+          </Button>
+        </Group>
+      ),
+    });
   };
 
   const handleViewModeChange = (newMode: string) => {
@@ -158,9 +271,17 @@ export default function TasksPage() {
   const handleSave = async (taskData: Partial<Task>) => {
     try {
       if (editingTask) {
-        // Update existing task via API
-        await saveTask(editingTask.id, taskData);
-        showNotification('Task updated successfully', 'green');
+        const originalTask = editingTask;
+        useTaskStore.getState().updateTask(editingTask.id, taskData);
+        showUndoableNotification({
+          message: 'Task updated successfully',
+          rollback: () => replaceTaskLocally(originalTask),
+          commit: async () => {
+            const updatedTask = await taskApi.updateTask(editingTask.id, taskData);
+            replaceTaskLocally(updatedTask);
+          },
+          commitErrorFallback: 'Failed to save task',
+        });
       } else {
         // Create new task via API
         await createTask(taskData);
@@ -174,12 +295,23 @@ export default function TasksPage() {
   };
 
   const handleInlineEdit = async (taskId: string, updates: Partial<Task>) => {
-    try {
-      await saveTask(taskId, updates);
-    } catch (error) {
-      showNotification(getErrorMessage(error, 'Failed to update task'), 'red');
-      throw error; // Re-throw to let EditableCell handle rollback
+    const { tasks } = useTaskStore.getState();
+    const originalTask = tasks.find((task) => task.id === taskId);
+    if (!originalTask) {
+      console.warn(`Unable to find task ${taskId} for inline edit undo handling.`);
+      return;
     }
+
+    useTaskStore.getState().updateTask(taskId, updates);
+    showUndoableNotification({
+      message: 'Task updated successfully',
+      rollback: () => replaceTaskLocally(originalTask),
+      commit: async () => {
+        const updatedTask = await taskApi.updateTask(taskId, updates);
+        replaceTaskLocally(updatedTask);
+      },
+      commitErrorFallback: 'Failed to update task',
+    });
   };
 
   const handleComplete = async (taskId: string) => {
@@ -192,50 +324,60 @@ export default function TasksPage() {
         await uncompleteTask(taskId);
         showNotification('Task marked as incomplete', 'green');
       } else {
-        const response = await completeTask(taskId);
-        // Refresh user stats to update XP display
-        await fetchStats();
+        replaceTaskLocally({ ...task, is_complete: true });
+        showUndoableNotification({
+          message: 'Task completed!',
+          rollback: () => replaceTaskLocally(task),
+          commit: async () => {
+            const response = await taskApi.completeTask(taskId);
+            replaceTaskLocally(response.task);
+            if (response.next_instance) {
+              useTaskStore.getState().addTask(response.next_instance);
+            }
+            await fetchStats();
 
-        // Show next instance info for recurring tasks
-        if (response.next_instance && response.next_instance.due_date) {
-          if (crisisModeActive) {
-            showNotification(
-              'Task completed! XP earned. The next recurring instance was created and hidden until you exit crisis mode.',
-              'green',
-            );
-          } else {
-            const nextId = response.next_instance.id;
-            const nextDue = response.next_instance.due_date;
-            notifications.show({
-              message: (
-                <>
-                  Task completed! XP earned. Next due:{' '}
-                  <Text
-                    component="button"
-                    size="sm"
-                    fw={700}
-                    td="underline"
-                    style={{ cursor: 'pointer', border: 'none', background: 'none', padding: 0 }}
-                    onClick={() => {
-                      const { tasks: storeTasks } = useTaskStore.getState();
-                      const nextTask = storeTasks.find((t) => t.id === nextId);
-                      if (nextTask) {
-                        setEditingTask(nextTask);
-                        setFormOpen(true);
-                      }
-                    }}
-                  >
-                    {formatNextDueDate(nextDue)}
-                  </Text>
-                </>
-              ),
-              color: 'green',
-              autoClose: 6000,
-            });
-          }
-        } else {
-          showNotification('Task completed! XP earned.', 'green');
-        }
+            if (response.next_instance && response.next_instance.due_date) {
+              if (crisisModeActive) {
+                showNotification(
+                  `+${response.xp_earned} XP. The next recurring instance was created and hidden until you exit crisis mode.`,
+                  'green',
+                );
+              } else {
+                const nextId = response.next_instance.id;
+                const nextDue = response.next_instance.due_date;
+                notifications.show({
+                  message: (
+                    <>
+                      +{response.xp_earned} XP. Next due:{' '}
+                      <Text
+                        component="button"
+                        size="sm"
+                        fw={700}
+                        td="underline"
+                        style={{ cursor: 'pointer', border: 'none', background: 'none', padding: 0 }}
+                        onClick={() => {
+                          const { tasks: storeTasks } = useTaskStore.getState();
+                          const nextTask = storeTasks.find((task) => task.id === nextId);
+                          if (nextTask) {
+                            setEditingTask(nextTask);
+                            setFormOpen(true);
+                          }
+                        }}
+                      >
+                        {formatNextDueDate(nextDue)}
+                      </Text>
+                    </>
+                  ),
+                  color: 'green',
+                  autoClose: 6000,
+                });
+              }
+            } else {
+              showNotification(`Task completed! +${response.xp_earned} XP`, 'green');
+            }
+          },
+          commitErrorFallback: 'Failed to update task',
+        });
       }
     } catch (error) {
       showNotification(getErrorMessage(error, 'Failed to update task'), 'red');
@@ -249,12 +391,23 @@ export default function TasksPage() {
 
   const handleDeleteConfirm = async () => {
     if (taskToDelete) {
-      try {
-        await deleteTask(taskToDelete);
-        showNotification('Task deleted', 'green');
-      } catch (error) {
-        showNotification(getErrorMessage(error, 'Failed to delete task'), 'red');
-      }
+      const { tasks, removeTask } = useTaskStore.getState();
+      const taskIndex = tasks.findIndex((task) => task.id === taskToDelete);
+      const deletedTask = taskIndex >= 0 ? tasks[taskIndex] : null;
+
+      removeTask(taskToDelete);
+      showUndoableNotification({
+        message: 'Task deleted',
+        rollback: () => {
+          if (deletedTask) {
+            restoreDeletedTaskLocally(deletedTask, taskIndex);
+          }
+        },
+        commit: async () => {
+          await taskApi.deleteTask(taskToDelete);
+        },
+        commitErrorFallback: 'Failed to delete task',
+      });
     }
     setDeleteDialogOpen(false);
     setTaskToDelete(null);
